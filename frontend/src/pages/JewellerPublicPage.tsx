@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { fetchJewellerStorefront, type JewellerStorefrontDTO } from '@/lib/marketplaceApi'
+import { useLiveCridoraBase } from '@/hooks/useLiveCridoraBase'
 
 function formatInr(n: number, fractionDigits = 0): string {
   return n.toLocaleString('en-IN', { maximumFractionDigits: fractionDigits })
@@ -16,6 +17,7 @@ export function JewellerPublicPage() {
   const numericId = id ? Number.parseInt(id, 10) : NaN
   const [row, setRow] = useState<JewellerStorefrontDTO | null>(null)
   const [error, setError] = useState('')
+  const { data: liveBase, refresh: refreshLiveBase } = useLiveCridoraBase()
 
   useEffect(() => {
     if (!Number.isFinite(numericId)) {
@@ -37,6 +39,13 @@ export function JewellerPublicPage() {
       cancel = true
     }
   }, [numericId])
+
+  useEffect(() => {
+    const t = window.setInterval(() => {
+      void refreshLiveBase()
+    }, 60_000)
+    return () => window.clearInterval(t)
+  }, [refreshLiveBase])
 
   if (error || !Number.isFinite(numericId)) {
     return (
@@ -103,6 +112,16 @@ export function JewellerPublicPage() {
             gap: '1rem',
           }}
         >
+          <div className="card" style={{ padding: '1rem', borderRadius: 20 }}>
+            <p style={{ margin: 0, fontSize: '0.6rem', color: 'var(--text-faint)', fontWeight: 800 }}>Cridora 22K (live)</p>
+            <p style={{ margin: '0.35rem 0 0', fontSize: '1.2rem', fontWeight: 800, color: 'var(--success)' }} className="tabular">
+              ₹{liveBase?.platformBaseInrPerGram22k ? formatInr(parseNum(liveBase.platformBaseInrPerGram22k), 2) : '—'}/g
+            </p>
+            <p style={{ margin: '0.35rem 0 0', fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+              {liveBase?.source ? liveBase.source.replace(/_/g, ' ') : '—'} · jeweller reference ₹
+              {formatInr(parseNum(row.reference_metal_inr_per_gram), 2)}/g
+            </p>
+          </div>
           <div className="card" style={{ padding: '1rem', borderRadius: 20 }}>
             <p style={{ margin: 0, fontSize: '0.6rem', color: 'var(--text-faint)', fontWeight: 800 }}>Typical making</p>
             <p style={{ margin: '0.35rem 0 0', fontSize: '1.2rem', fontWeight: 800 }} className="tabular">

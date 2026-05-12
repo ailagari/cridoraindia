@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'r
 import { Link } from 'react-router-dom'
 import { mergeJewellerListWithDemos } from '@/lib/jewellerMarketplaceDemos'
 import { fetchVerifiedJewellers, type JewellerStorefrontDTO } from '@/lib/marketplaceApi'
+import { useLiveCridoraBase } from '@/hooks/useLiveCridoraBase'
 
 const filterBarInput: CSSProperties = {
   width: '100%',
@@ -97,6 +98,8 @@ export function JewellerMarketplaceGrid({ intro }: Props) {
   const [selectedCity, setSelectedCity] = useState('All Cities')
   const [sortBy, setSortBy] = useState<JewellerSortKey>('name')
 
+  const { data: liveBase, refresh: refreshLiveBase } = useLiveCridoraBase()
+
   const refresh = useCallback(async () => {
     const data = await fetchVerifiedJewellers()
     setRows(mergeJewellerListWithDemos(data))
@@ -105,6 +108,14 @@ export function JewellerMarketplaceGrid({ intro }: Props) {
   useEffect(() => {
     void refresh()
   }, [refresh])
+
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      void refresh()
+      void refreshLiveBase()
+    }, 60_000)
+    return () => window.clearInterval(id)
+  }, [refresh, refreshLiveBase])
 
   const cities = useMemo(() => {
     const set = new Set<string>()
@@ -164,6 +175,30 @@ export function JewellerMarketplaceGrid({ intro }: Props) {
           {intro}
         </p>
       ) : null}
+
+      <div
+        className="card"
+        style={{
+          marginBottom: '1rem',
+          padding: '0.65rem 1rem',
+          borderRadius: 16,
+          fontSize: '0.78rem',
+          color: 'var(--text-muted)',
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: '0.75rem 1.25rem',
+          alignItems: 'center',
+        }}
+      >
+        <span style={{ fontWeight: 700, color: 'var(--gold-light)' }}>Cridora 22K (live)</span>
+        <span className="tabular">
+          ₹{liveBase?.platformBaseInrPerGram22k ? formatInr(parseNum(liveBase.platformBaseInrPerGram22k), 2) : '—'}/g
+        </span>
+        <span style={{ color: 'var(--text-faint)' }}>
+          {liveBase?.source ? liveBase.source.replace(/_/g, ' ') : ''}
+        </span>
+        <span style={{ color: 'var(--text-faint)', marginLeft: 'auto' }}>Directory refreshes every minute</span>
+      </div>
 
       <div
         className="card"

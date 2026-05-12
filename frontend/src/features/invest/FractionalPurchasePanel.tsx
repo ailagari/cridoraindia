@@ -9,6 +9,7 @@ import {
   type FractionalQuoteDTO,
 } from '@/lib/fractionalPurchaseApi'
 import { fetchGoldWallet } from '@/lib/goldTransferApi'
+import { useLiveCridoraBase } from '@/hooks/useLiveCridoraBase'
 
 function formatInr(s: string): string {
   const n = Number.parseFloat(s)
@@ -31,6 +32,7 @@ export function FractionalPurchasePanel() {
   const [orderMsg, setOrderMsg] = useState('')
   const [lastOrder, setLastOrder] = useState<FractionalPurchaseDTO | null>(null)
   const [balanceHint, setBalanceHint] = useState('')
+  const { data: liveBase } = useLiveCridoraBase()
 
   const refreshOrders = useCallback(async () => {
     setOrders(await fractionalListOrders())
@@ -143,9 +145,23 @@ export function FractionalPurchasePanel() {
   return (
     <div className="dash-panel-max">
       <p className="dash-panel-lead">
-        Buy fractional gold at your jeweller&apos;s live metal rate (platform base + their markup). GST on gold value is
+        Buy fractional gold at your jeweller&apos;s live metal rate (Cridora 22K reference + their markup). GST on gold value is
         included in the quote. Pay with UPI (confirm here once paid) or at the showroom — your jeweller verifies counter
         payments before grams appear in your wallet.
+      </p>
+
+      <p style={{ margin: '-0.75rem 0 1.25rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+        Cridora 22K (live):{' '}
+        <strong className="tabular">
+          ₹
+          {liveBase?.platformBaseInrPerGram22k
+            ? Number.parseFloat(liveBase.platformBaseInrPerGram22k).toLocaleString('en-IN', {
+                maximumFractionDigits: 2,
+              })
+            : '—'}
+          /g
+        </strong>
+        {liveBase?.source ? <span> · {liveBase.source.replace(/_/g, ' ')}</span> : null}
       </p>
 
       <div className="card" style={{ marginBottom: '1.25rem', maxWidth: 560 }}>

@@ -7,6 +7,7 @@ import { HomePage } from '@/pages/HomePage'
 import { WhyCridoraPage } from '@/pages/WhyCridoraPage'
 import { FeaturesPage } from '@/pages/FeaturesPage'
 import { ProductMarketplacePage } from '@/pages/ProductMarketplacePage'
+import { MarketplaceProductDetailPage } from '@/pages/MarketplaceProductDetailPage'
 import { JewellerDirectoryPage } from '@/pages/JewellerDirectoryPage'
 import { JewellerPublicPage } from '@/pages/JewellerPublicPage'
 import { LoginPage } from '@/pages/LoginPage'
@@ -32,6 +33,7 @@ export default function App() {
             <Route path="verified-jewellers" element={<Navigate to="/jewellers" replace />} />
             <Route path="jewellers" element={<JewellerDirectoryPage />} />
             <Route path="jewellers/:id" element={<JewellerPublicPage />} />
+            <Route path="marketplace/product/:productId" element={<MarketplaceProductDetailPage />} />
             <Route path="marketplace" element={<ProductMarketplacePage />} />
             <Route path="login" element={<LoginPage />} />
             <Route path="signup" element={<SignupPage />} />

@@ -62,6 +62,21 @@ class MarketplaceProductsPublicView(APIView):
         return Response({"results": [ser.to_representation(p) for p in qs]})
 
 
+class MarketplaceProductPublicDetailView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, pk):
+        try:
+            product = MarketplaceProduct.objects.select_related("jeweller").get(
+                pk=pk,
+                is_published=True,
+                moderation_status=MarketplaceProduct.MOD_APPROVED,
+            )
+        except MarketplaceProduct.DoesNotExist:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        return Response(PublicMarketplaceProductSerializer().to_representation(product))
+
+
 class MarketplaceJewellersPublicView(APIView):
     permission_classes = [AllowAny]
 

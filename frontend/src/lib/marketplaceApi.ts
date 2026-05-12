@@ -93,6 +93,14 @@ export type JewellerStorefrontDTO = {
   feat_cross_redemption: boolean
 }
 
+export async function fetchMarketplaceProduct(id: number): Promise<MarketplaceProductDTO | null> {
+  const res = await apiFetch(`/api/v1/marketplace/products/${id}/`)
+  if (!res.ok) {
+    return null
+  }
+  return (await res.json()) as MarketplaceProductDTO
+}
+
 export async function fetchGoldTicker(): Promise<GoldTickerPayload | null> {
   const res = await apiFetch('/api/v1/marketplace/gold-ticker/')
   if (!res.ok) {
