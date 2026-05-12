@@ -8,19 +8,26 @@ export function ThemeToggle({ compact = false }: Props) {
 
   const modeLabel =
     preference === 'system'
-      ? `Auto (matches device — ${isLight ? 'light' : 'dark'} now)`
+      ? `Match device (light UI only when device/browser is set to light — now ${isLight ? 'light' : 'dark'})`
       : preference === 'light'
-        ? 'Light (fixed)'
-        : 'Dark (fixed)'
-  const nextLabel = 'Next: ' + (preference === 'system' ? 'always light' : preference === 'light' ? 'always dark' : 'auto (device)')
+        ? 'Light (always)'
+        : 'Dark (always)'
+  const nextHint =
+    preference === 'system'
+      ? 'Next: always light'
+      : preference === 'light'
+        ? 'Next: always dark'
+        : 'Next: match device'
 
   return (
     <button
       type="button"
-      className={`theme-toggle${compact ? ' theme-toggle--compact' : ''}${preference === 'system' ? ' theme-toggle--auto' : ''}`}
+      className={`theme-toggle${compact ? ' theme-toggle--compact' : ''}${
+        preference === 'system' ? ' theme-toggle--auto' : ''
+      }`}
       onClick={cycleTheme}
-      aria-label={`Theme — ${modeLabel}. ${nextLabel}.`}
-      title={`${modeLabel}. Click to cycle: device → light → dark.`}
+      aria-label={`${modeLabel}. ${nextHint}.`}
+      title={`${modeLabel}. Click: device → always light → always dark.`}
     >
       {isLight ? (
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">

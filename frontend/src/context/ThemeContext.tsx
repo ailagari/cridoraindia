@@ -11,7 +11,11 @@ import {
 /** What the UI looks like (applied to `data-theme` on `<html>`). */
 export type ThemeMode = 'dark' | 'light'
 
-/** Stored choice; `system` follows the OS / browser `prefers-color-scheme`. */
+/**
+ * Stored choice.
+ * - `system`: dark by default; uses light theme only when the OS / browser is set to **light** (`prefers-color-scheme: light`).
+ * - `light` / `dark`: always that appearance (same palettes as system-resolved light/dark).
+ */
 export type ThemePreference = 'system' | 'light' | 'dark'
 
 const STORAGE_KEY = 'cridora_theme'
@@ -34,21 +38,22 @@ function persistPreference(p: ThemePreference): void {
   }
 }
 
-function getSystemIsDark(): boolean {
-  return window.matchMedia('(prefers-color-scheme: dark)').matches
+/** True only when the user agent reports an explicit light color scheme. */
+function getSystemPrefersLight(): boolean {
+  return window.matchMedia('(prefers-color-scheme: light)').matches
 }
 
-function resolveTheme(preference: ThemePreference, systemIsDark: boolean): ThemeMode {
+function resolveTheme(preference: ThemePreference, systemPrefersLight: boolean): ThemeMode {
   if (preference === 'light') return 'light'
   if (preference === 'dark') return 'dark'
-  return systemIsDark ? 'dark' : 'light'
+  return systemPrefersLight ? 'light' : 'dark'
 }
 
 function applyDom(theme: ThemeMode): void {
   document.documentElement.dataset.theme = theme
   const meta = document.querySelector('meta[name="theme-color"]')
   if (meta) {
-    meta.setAttribute('content', theme === 'light' ? '#f5f2eb' : '#000814')
+    meta.setAttribute('content', theme === 'light' ? '#e8ecf6' : '#000814')
   }
 }
 
@@ -65,16 +70,16 @@ const ThemeContext = createContext<ThemeContextValue | null>(null)
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [preference, setPreferenceState] = useState<ThemePreference>(() => readStoredPreference())
-  const [systemIsDark, setSystemIsDark] = useState(() => getSystemIsDark())
+  const [systemPrefersLight, setSystemPrefersLight] = useState(() => getSystemPrefersLight())
 
   useEffect(() => {
-    const mq = window.matchMedia('(prefers-color-scheme: dark)')
-    const onChange = () => setSystemIsDark(mq.matches)
+    const mq = window.matchMedia('(prefers-color-scheme: light)')
+    const onChange = () => setSystemPrefersLight(mq.matches)
     mq.addEventListener('change', onChange)
     return () => mq.removeEventListener('change', onChange)
   }, [])
 
-  const theme = resolveTheme(preference, systemIsDark)
+  const theme = resolveTheme(preference, systemPrefersLight)
 
   useLayoutEffect(() => {
     applyDom(theme)
