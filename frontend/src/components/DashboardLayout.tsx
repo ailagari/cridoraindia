@@ -3,7 +3,6 @@ import { Link, useNavigate } from 'react-router-dom'
 import { CridoraLogo } from '@/components/CridoraLogo'
 import { NavHubIcon } from '@/components/NavHubIcon'
 import { GoldTickerStrip } from '@/components/GoldTickerStrip'
-import { ThemeToggle } from '@/components/ThemeToggle'
 import { NotificationBell } from '@/components/NotificationBell'
 import { useAuth } from '@/context/AuthContext'
 import type { DashboardNavGroup } from '@/lib/mobileNav/types'
@@ -223,7 +222,6 @@ export function DashboardLayout({
           </div>
           <div className="dash-topbar-right" style={{ alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
             {(role === 'jeweller' || role === 'admin') ? <GoldTickerStrip variant="dash" /> : null}
-            <ThemeToggle compact />
             <NotificationBell compact />
             <Link to="/" className="dash-public-link">
               Public site

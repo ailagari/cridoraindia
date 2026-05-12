@@ -2,7 +2,6 @@ import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { CridoraLogo } from '@/components/CridoraLogo'
 import { PublicHeaderActions, PublicMobileChrome } from '@/components/PublicMobileChrome'
 import { GoldTickerStrip } from '@/components/GoldTickerStrip'
-import { ThemeToggle } from '@/components/ThemeToggle'
 import { useAuth } from '@/context/AuthContext'
 import { userDashboardPath } from '@/lib/routes'
 
@@ -58,7 +57,6 @@ export function PublicLayout() {
             ))}
           </nav>
           <div className="public-header-end">
-            <ThemeToggle />
             <div className="public-mobile-actions">
               <PublicHeaderActions />
             </div>
