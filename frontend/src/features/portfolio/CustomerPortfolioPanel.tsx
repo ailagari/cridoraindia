@@ -150,7 +150,7 @@ export function CustomerPortfolioPanel() {
         <article className="pf-card pf-card--lift pf-card--wide pf-card--ledger">
           <header className="pf-card__head">
             <h3 className="pf-card__title">Holding mix</h3>
-            <p className="pf-card__meta">Three Phase 1 types: fractional, deposit, GoldNest</p>
+            <p className="pf-card__meta">Three holding types: fractional, deposit, GoldNest</p>
           </header>
           <div className="pf-donut-row">
             <div className="pf-donut-wrap pf-donut-wrap--compact">

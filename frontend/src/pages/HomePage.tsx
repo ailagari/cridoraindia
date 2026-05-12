@@ -24,7 +24,7 @@ const EXPLORE = [
   },
   {
     title: 'Features',
-    blurb: 'Phase 1 modules: marketplace, portfolio, ornament & cash redemption, loans, transfers, emergency funds.',
+    blurb: 'Marketplace, portfolio, ornament and cash redemption, loans, transfers, and emergency funds — how each path works.',
     to: '/features',
     primary: false,
     cta: 'View features',
@@ -60,7 +60,7 @@ export function HomePage() {
           <div className="grid-2">
             <div>
               <span className={`pill cridora-reveal`} style={sd(d())}>
-                Phase 1 MVP · {TAGLINE}
+                {TAGLINE}
               </span>
               <h1
                 className="cridora-reveal"
@@ -258,8 +258,8 @@ export function HomePage() {
             ...sd(d()),
           }}
         >
-          Start from a small amount, compare jewellers, and use gold as a utility — with KYC, KYB, and admin gates on
-          every public listing. Phase 1 scope: gold, BIS 916, India only. Deeper narrative on{' '}
+          Start from a small amount, compare jewellers, and use gold as a utility — with KYC, KYB, and admin review on
+          public listings. Today’s network focuses on gold, BIS 916, and India. Deeper narrative on{' '}
           <Link to="/why-cridora">Why Cridora</Link>.
         </p>
         <div

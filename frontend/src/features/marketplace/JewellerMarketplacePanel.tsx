@@ -5,7 +5,7 @@ import { MAKING_FIXED_PER_GRAM, MAKING_PERCENT_OF_METAL } from '@/lib/marketplac
 
 type ProductRow = Record<string, unknown>
 
-/** API shape for jeweller pricing + marketplace card fields (Phase 1). */
+/** API shape for jeweller pricing + marketplace card fields. */
 type ProfileApi = Record<string, unknown>
 
 function formatInr(n: number, fractionDigits = 2): string {
@@ -518,7 +518,7 @@ export function JewellerMarketplacePanel() {
           Storefront pricing &amp; sellback
         </h2>
         <p className="dash-coming__text" style={{ marginBottom: '1rem' }}>
-          Phase 1 product listings use the platform 22K (BIS 916) base plus your default markup. Set customer-facing sellback
+          Product listings use the platform 22K (BIS 916) base plus your default markup. Set customer-facing sellback
           (percentage off reference metal or fixed ₹/g haircut) so cash redemption cards can show live rate, sellback rate,
           deductions, and final receivable. Optional headline buyback overrides the public preview.
         </p>
@@ -772,8 +772,8 @@ export function JewellerMarketplacePanel() {
                   </label>
                 </td>
                 <td style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                  Phase 1 highlights zero-interest gold loans with a 2% processing fee; use 0 if you follow that model.
-                  Non-zero values appear as APR for directory sorting.
+                  The network messaging assumes zero-interest gold loans with a 2% processing fee; enter 0 if that matches your
+                  programme. Non-zero values appear as APR for directory sorting.
                 </td>
               </tr>
               <tr>
@@ -871,7 +871,7 @@ export function JewellerMarketplacePanel() {
             </label>
           )}
           <div className="field" style={{ margin: 0 }}>
-            <span>Purity (Phase 1)</span>
+            <span>Purity</span>
             <p style={{ margin: '0.35rem 0 0', fontWeight: 700, color: 'var(--gold-light)' }}>BIS 916 (22K) only</p>
           </div>
           <label className="field" style={{ gridColumn: '1 / -1' }}>

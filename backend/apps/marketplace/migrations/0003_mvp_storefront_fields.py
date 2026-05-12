@@ -1,4 +1,4 @@
-# Generated manually for Phase 1 MVP storefront fields
+# Storefront comparison and card fields for jeweller marketplace listings
 
 from decimal import Decimal
 

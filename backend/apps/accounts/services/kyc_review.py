@@ -1,4 +1,4 @@
-"""KYC/KYB readiness and review-queue helpers (aligned with Cridora v2 admin patterns)."""
+"""KYC/KYB readiness and admin review-queue helpers."""
 
 from django.contrib.auth import get_user_model
 

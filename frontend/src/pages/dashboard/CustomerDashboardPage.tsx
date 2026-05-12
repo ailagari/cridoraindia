@@ -75,7 +75,7 @@ export function CustomerDashboardPage() {
       {active === 'portfolio_holdings' ? (
         <HubPlaceholder
           title="Holdings & ledgers"
-          children="Per-jeweller ledgers for the three Phase 1 holding types — fractional gold, gold deposit, and GoldNest — with grams, dates, lock-in, current value, and redemption eligibility once APIs are wired."
+          children="Per-jeweller ledgers for fractional gold, gold deposit, and GoldNest — grams, dates, lock-in, live value, and redemption eligibility once APIs expose full detail."
         />
       ) : null}
       {active === 'portfolio_pnl' ? (

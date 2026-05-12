@@ -211,7 +211,7 @@ class KYDocument(models.Model):
 
 
 class GoldBalance(models.Model):
-    """Single MVP wallet: total redeemable gold grams per user (custodian on each transfer)."""
+    """Per-customer redeemable gold balance in grams (credited via purchases and transfers)."""
 
     user = models.OneToOneField(
         User, on_delete=models.CASCADE, related_name="gold_balance"

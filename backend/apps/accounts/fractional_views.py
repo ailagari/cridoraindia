@@ -216,7 +216,7 @@ class FractionalOrdersView(APIView):
 
 
 class FractionalOrderConfirmUpiView(APIView):
-    """MVP: customer confirms UPI payment; credits gold immediately (no PSP webhook)."""
+    """Customer confirms UPI payment manually; credits gold immediately (no PSP webhook yet)."""
 
     permission_classes = [IsAuthenticated]
 

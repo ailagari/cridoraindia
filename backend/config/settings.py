@@ -1,5 +1,5 @@
 """
-Django settings for Cridora India v2 (development defaults).
+Django settings for Cridora India (defaults suit local development).
 """
 import os
 from pathlib import Path
@@ -71,17 +71,44 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "config.wsgi.application"
 
+
 def _database_url_from_env() -> str:
-    """Prefer a public Postgres URL when the default is Railway private DNS (only works in-network)."""
+    """
+    Railway (and similar) often set DATABASE_URL to a private hostname (*.railway.internal)
+    that only resolves inside their network. Local `railway run` cannot use that.
+
+    Fix in Railway dashboard: on your **web/Django** service, add variable
+    DATABASE_PUBLIC_URL = ${{ Postgres.DATABASE_PUBLIC_URL }}  (match your DB service name).
+
+    Or set DATABASE_EXTERNAL_URL to the full public postgresql://... string (TCP proxy).
+
+    Override: DJANGO_USE_PUBLIC_DATABASE=1 forces the first available public-style URL below.
+    """
     private = (os.environ.get("DATABASE_URL") or "").strip()
-    public = (os.environ.get("DATABASE_PUBLIC_URL") or "").strip()
-    if (
-        public
-        and private
-        and (".railway.internal" in private or "railway.internal" in private)
-    ):
-        return public
-    return private or public
+    public_raw = (
+        (os.environ.get("DATABASE_PUBLIC_URL") or "").strip()
+        or (os.environ.get("DATABASE_EXTERNAL_URL") or "").strip()
+    )
+    force_public = os.environ.get("DJANGO_USE_PUBLIC_DATABASE", "").lower() in (
+        "1",
+        "true",
+        "yes",
+    )
+
+    uses_private_dns = bool(
+        private
+        and (
+            ".railway.internal" in private or "railway.internal" in private
+        )
+    )
+
+    if force_public and public_raw:
+        return public_raw
+
+    if uses_private_dns and public_raw:
+        return public_raw
+
+    return private or public_raw
 
 
 DATABASE_URL = _database_url_from_env()

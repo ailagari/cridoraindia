@@ -31,7 +31,7 @@ export function AdminPortfolioPanel({ stats }: { stats: AdminPortfolioStats }) {
   return (
     <div className="dash-panel-max pf-scope">
       <p className="dash-panel-lead pf-lead-intro">
-        Network cohort view for Phase 1 — KYC/KYB queues, verified users, and jewellers on the live gold savings and
+        Network cohort view — KYC/KYB queues, verified users, and jewellers on the live gold savings and
         redemption platform. Series are illustrative until ledger endpoints connect.
       </p>
 

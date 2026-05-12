@@ -12,7 +12,7 @@ const items = [
   },
   {
     title: 'GoldNest',
-    body: 'Single MVP scheme model: recurring contributions, live accumulation, maturity tracking, jeweller-defined benefits, optional making-charge perks — no advanced multi-scheme engine yet.',
+    body: 'Recurring contributions, live accumulation, maturity tracking, jeweller-defined benefits, and optional making-charge perks — one clear plan shape per jeweller today.',
   },
   {
     title: 'Portfolio and ledger',
@@ -20,7 +20,7 @@ const items = [
   },
   {
     title: 'Ornament redemption',
-    body: 'Primary MVP flow. Same jeweller: 0% or reduced making charges, special pricing, faster path. Cross-jeweller: making, GST on making, cross-platform fee; you still spend grams; liability transfers and Cridora settles.',
+    body: 'Same jeweller: often 0% or reduced making charges, special pricing, and a faster path. Cross-jeweller: making, GST on making, and a cross-platform fee; you still spend grams while Cridora settles liability between partners.',
   },
   {
     title: 'Cash redemption (sellback)',
@@ -56,15 +56,14 @@ export function FeaturesPage() {
   return (
     <div className="container page">
       <span className="pill cridora-reveal" style={{ ['--reveal-delay' as string]: '0s' }}>
-        Cridora Phase 1 MVP
+        Platform features
       </span>
       <h1 className="h1-page cridora-reveal" style={{ ['--reveal-delay' as string]: '0.05s' }}>
         User features
       </h1>
       <p className="lead lead-tight cridora-reveal" style={{ ['--reveal-delay' as string]: '0.1s' }}>
-        Aligned with the Phase 1 launch architecture: gold accumulation, portfolio utility, redemption flexibility, jeweller
-        trust network, and live value — simple to understand; jeweller and admin tooling stay gated until APIs enforce
-        each path.
+        How savers move through gold accumulation, portfolio tracking, redemption, and liquidity — in plain language. Some
+        jeweller and admin controls still land in-dashboard as APIs harden each flow.
       </p>
 
       <div

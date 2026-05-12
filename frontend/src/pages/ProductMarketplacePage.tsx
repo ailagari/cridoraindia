@@ -47,7 +47,7 @@ function hasStoneOrOtherMetal(p: MarketplaceProductDTO): boolean {
   return Number.isFinite(comp) && comp > 0
 }
 
-function MarketplaceProductCardPricing({ p }: { p: MarketplaceProductDTO }) {
+function MarketplaceProductPricingBreakdown({ p }: { p: MarketplaceProductDTO }) {
   const weightG = Number.parseFloat(p.gold_weight_grams)
   const metalRate = Number.parseFloat(p.metal_rate_inr_per_gram_used)
   const rateTimesG = metalRate * weightG
@@ -65,7 +65,6 @@ function MarketplaceProductCardPricing({ p }: { p: MarketplaceProductDTO }) {
         borderRadius: 14,
         background: 'var(--veil-25)',
         border: '1px solid var(--border-soft)',
-        marginBottom: '0.85rem',
         display: 'flex',
         flexDirection: 'column',
         gap: '0.35rem',
@@ -81,7 +80,7 @@ function MarketplaceProductCardPricing({ p }: { p: MarketplaceProductDTO }) {
           color: 'var(--text-faint)',
         }}
       >
-        Pricing (estimate)
+        Price breakdown (estimate)
       </p>
       <CardPriceRow label="Rate / gram" value={`₹${formatInr(metalRate, 2)}/g`} />
       <CardPriceRow label="Total grams (gold)" value={`${formatInr(weightG, 3)}g`} />
@@ -152,6 +151,23 @@ function MarketplaceProductCardPricing({ p }: { p: MarketplaceProductDTO }) {
           ? 'If vault grams match this piece’s gold weight, cash is mainly making + GST on making (after same‑store MC discounts), plus other bill lines.'
           : 'Demo vault is smaller than this piece — choose grams at checkout; cash covers the rest after vault credit.'}
       </p>
+    </div>
+  )
+}
+
+function MarketplaceProductCardSummary({ p }: { p: MarketplaceProductDTO }) {
+  const weightG = Number.parseFloat(p.gold_weight_grams)
+  const total = calculateCheckoutPrice(p, 0, USER_VAULT_BALANCE).finalAmount
+
+  return (
+    <div style={{ marginBottom: '0.85rem' }}>
+      <p style={{ margin: '0 0 0.35rem', fontSize: '0.88rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+        {Number.isFinite(weightG) ? `${formatInr(weightG, 3)} g` : '—'} <span style={{ color: 'var(--text-faint)' }}>gold</span>
+      </p>
+      <p style={{ margin: 0, fontSize: '1.35rem', fontWeight: 800, color: 'var(--gold-light)' }} className="tabular">
+        ₹{formatInr(total)}
+      </p>
+      <p style={{ margin: '0.35rem 0 0', fontSize: '0.68rem', color: 'var(--text-faint)' }}>Incl. taxes · estimate</p>
     </div>
   )
 }
@@ -598,13 +614,8 @@ function QuickViewModal({
   onClose: () => void
   onCheckout: (p: MarketplaceProductDTO) => void
 }) {
-  const metalRate = Number.parseFloat(product.metal_rate_inr_per_gram_used)
   const stoneCompVal = Number.parseFloat(product.stone_component_inr)
   const showStone = hasStoneOrOtherMetal(product)
-  const qvTotals = calculateCheckoutPrice(product, 0, USER_VAULT_BALANCE)
-  const weightQv = Number.parseFloat(product.gold_weight_grams)
-  const qvVault = calculateCheckoutPrice(product, Math.min(weightQv, USER_VAULT_BALANCE), USER_VAULT_BALANCE)
-  const qvFullGoldVaultMatch = vaultCanCoverFullGoldWeight(product) && qvVault.goldFromVault + 1e-9 >= weightQv
 
   return (
     <div
@@ -725,31 +736,9 @@ function QuickViewModal({
               wordBreak: 'break-word',
             }}
           >
-            {product.category ? `${product.category} · ` : ''}BIS 916 · Gold rate ₹{formatInr(metalRate, 2)}/g · Making{' '}
-            {makingChargesShortLabel(product)}
+            {product.category ? `${product.category} · ` : ''}
+            BIS 916 (22K)
           </p>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.65rem' }}>
-            <div className="card" style={{ padding: '0.75rem', textAlign: 'center', borderRadius: 14, margin: 0 }}>
-              <p style={{ margin: 0, fontSize: '0.62rem', color: 'var(--text-faint)', fontWeight: 800 }}>Weight</p>
-              <p style={{ margin: '0.25rem 0 0', fontWeight: 800 }}>{product.gold_weight_grams}g</p>
-            </div>
-            <div className="card" style={{ padding: '0.75rem', textAlign: 'center', borderRadius: 14, margin: 0 }}>
-              <p style={{ margin: 0, fontSize: '0.62rem', color: 'var(--text-faint)', fontWeight: 800 }}>Purity</p>
-              <p style={{ margin: '0.25rem 0 0', fontWeight: 800, color: 'var(--gold-light)' }}>BIS 916</p>
-            </div>
-            <div className="card" style={{ padding: '0.75rem', textAlign: 'center', borderRadius: 14, margin: 0 }}>
-              <p style={{ margin: 0, fontSize: '0.62rem', color: 'var(--text-faint)', fontWeight: 800 }}>Making</p>
-              <p style={{ margin: '0.25rem 0 0', fontWeight: 800, fontSize: '0.78rem', lineHeight: 1.3 }} className="tabular">
-                {makingChargesShortLabel(product)}
-              </p>
-            </div>
-            <div className="card" style={{ padding: '0.75rem', textAlign: 'center', borderRadius: 14, margin: 0 }}>
-              <p style={{ margin: 0, fontSize: '0.62rem', color: 'var(--text-faint)', fontWeight: 800 }}>Gold rate</p>
-              <p style={{ margin: '0.25rem 0 0', fontWeight: 800 }} className="tabular">
-                ₹{formatInr(metalRate, 2)}/g
-              </p>
-            </div>
-          </div>
           {showStone ? (
             <p style={{ marginTop: '0.85rem', fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: 1.45, wordBreak: 'break-word' }}>
               <strong style={{ color: 'var(--text)' }}>Stone / other:</strong>{' '}
@@ -764,10 +753,16 @@ function QuickViewModal({
                   : ''}
             </p>
           ) : null}
-          <p style={{ marginTop: '1rem', marginBottom: 0, fontSize: '0.76rem', lineHeight: 1.45, color: 'var(--text-muted)' }}>
-            <strong style={{ color: 'var(--text)' }}>Checkout:</strong> pay with cash / UPI or your Cridora account — full
-            breakdown on the next step.
-          </p>
+          {(product.same_store_benefit_note ?? '').trim() ? (
+            <p style={{ marginTop: '1rem', marginBottom: 0, fontSize: '0.76rem', lineHeight: 1.45, color: 'var(--text-muted)' }}>
+              <strong style={{ color: 'var(--text)' }}>Jeweller note:</strong> {product.same_store_benefit_note}
+            </p>
+          ) : (
+            <p style={{ marginTop: '1rem', marginBottom: 0, fontSize: '0.76rem', lineHeight: 1.45, color: 'var(--text-muted)' }}>
+              <strong style={{ color: 'var(--text)' }}>Checkout:</strong> pay with cash / UPI or apply vault grams — adjust
+              splits on the payment step.
+            </p>
+          )}
         </div>
         <div
           style={{
@@ -777,65 +772,41 @@ function QuickViewModal({
             boxSizing: 'border-box',
             display: 'flex',
             flexDirection: 'column',
+            gap: '1rem',
           }}
         >
-          <h3 style={{ margin: '0 0 1rem', fontSize: '1rem' }}>At checkout</h3>
-          <p style={{ margin: '0 0 1rem', fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
-            Final amount includes metal, making, and GST. Adjust vault grams on the payment page.
-          </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', fontSize: '0.88rem', marginBottom: '1rem' }}>
-            <Row label="Gold rate (this listing)" value={`₹${formatInr(metalRate, 2)}/g`} />
-            <Row label="Making" value={makingChargesShortLabel(product)} />
-            <Row label="Weight" value={`${product.gold_weight_grams}g`} />
+          <div>
+            <h3 style={{ margin: '0 0 0.65rem', fontSize: '1rem' }}>Rates, taxes &amp; vault</h3>
+            <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
+              Metal rate, GST on metal and making, making charges, estimated payable cash after vault credit (demo balance{' '}
+              {USER_VAULT_BALANCE.toFixed(3)}g).
+            </p>
           </div>
+          <MarketplaceProductPricingBreakdown p={product} />
           <div
             style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'baseline',
-              gap: '0.75rem',
-              marginBottom: '1rem',
-              padding: '0.75rem 0',
-              borderTop: '1px solid var(--border-soft)',
-              borderBottom: '1px solid var(--border-soft)',
+              padding: '0.85rem',
+              borderRadius: 14,
+              border: '1px solid var(--border-soft)',
+              background: 'var(--veil-35)',
+              fontSize: '0.78rem',
             }}
           >
-            <span style={{ color: 'var(--text-muted)', fontWeight: 700, fontSize: '0.88rem' }}>Est. final (incl. taxes)</span>
-            <span
-              className="tabular"
-              style={{ fontWeight: 800, fontSize: '1.15rem', color: 'var(--gold-light)' }}
-            >
-              ₹{formatInr(qvTotals.finalAmount)}
-            </span>
+            <Row
+              label="Indicative sellback"
+              value={`₹${formatInr(Number.parseFloat(product.sellback_indicative_inr_per_gram), 2)}/g`}
+              muted
+            />
+            <Row
+              label="Sellback deduction"
+              value={`${product.sellback_deduction_percent}% + ₹${product.sellback_fixed_inr_per_gram}/g`}
+              muted
+            />
+            {product.gold_deposit_note ? (
+              <p style={{ margin: '0.65rem 0 0', color: 'var(--text-muted)', lineHeight: 1.45 }}>{product.gold_deposit_note}</p>
+            ) : null}
           </div>
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'baseline',
-              gap: '0.75rem',
-              padding: '0.5rem 0',
-              borderBottom: '1px solid var(--border-soft)',
-            }}
-          >
-            <span style={{ color: 'var(--text-muted)', fontWeight: 600, fontSize: '0.82rem' }}>
-              Price with vault ({qvVault.goldFromVault.toFixed(3)}g)
-            </span>
-            <span className="tabular" style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--success)' }}>
-              ₹{formatInr(qvVault.payableAmount)}
-            </span>
-          </div>
-          <p style={{ margin: '0.65rem 0 1rem', fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: 1.45 }}>
-            {qvFullGoldVaultMatch
-              ? 'When vault grams match gold weight, cash is mostly making + GST on making (same‑store MC discounts apply), plus other bill lines.'
-              : 'Partial vault in this demo; at checkout you choose grams and pay the balance in cash / UPI.'}
-          </p>
-          <button
-            type="button"
-            className="btn btn-primary"
-            style={{ width: '100%', marginTop: 'auto' }}
-            onClick={() => onCheckout(product)}
-          >
+          <button type="button" className="btn btn-primary" style={{ width: '100%', marginTop: 'auto' }} onClick={() => onCheckout(product)}>
             Go to checkout
           </button>
         </div>
@@ -1000,7 +971,7 @@ export function ProductMarketplacePage() {
           }}
         />
         <div className="container" style={{ position: 'relative', zIndex: 1 }}>
-          <span className="pill">Phase 1 · BIS 916 · jeweller storefronts</span>
+          <span className="pill">BIS 916 · Verified jewellers</span>
           <h1
             style={{
               fontSize: 'clamp(1.75rem, 4vw, 2.75rem)',
@@ -1234,8 +1205,8 @@ export function ProductMarketplacePage() {
 
         {sortedProducts.length === 0 ? (
           <p style={{ color: 'var(--text-muted)' }}>
-            No approved listings yet. Jewellers submit SKUs from their dashboard; admins approve under Marketplace → Product
-            approval (Phase 1 gate).
+            No approved listings yet. Jewellers publish SKUs from their dashboard; Cridora admins approve them under
+            Marketplace → Product approval before they appear here.
           </p>
         ) : (
           <div
@@ -1245,161 +1216,78 @@ export function ProductMarketplacePage() {
               gap: '1.25rem',
             }}
           >
-            {sortedProducts.map((p, idx) => {
-              const stoneCompVal = Number.parseFloat(p.stone_component_inr)
-              const showStoneDetails = hasStoneOrOtherMetal(p)
-              return (
-                <article
-                  key={p.id}
-                  className="card cridora-card-motion cridora-reveal"
-                  style={{
-                    padding: 0,
-                    overflow: 'hidden',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    borderRadius: 24,
-                    ['--reveal-delay' as string]: `${idx * 0.055}s`,
-                  } as CSSProperties}
-                >
-                  <div className="media-frame media-frame--product-card">
+            {sortedProducts.map((p, idx) => (
+              <article
+                key={p.id}
+                className="card cridora-card-motion cridora-reveal"
+                style={{
+                  padding: 0,
+                  overflow: 'hidden',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  borderRadius: 24,
+                  ['--reveal-delay' as string]: `${idx * 0.055}s`,
+                } as CSSProperties}
+              >
+                <div className="media-frame media-frame--product-card">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedProduct(p)}
+                    className="media-frame__hit"
+                    aria-label={`View details for ${p.name}`}
+                  >
+                    <ProductPhoto src={p.image_url} alt="" />
+                  </button>
+                  <div
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      background: 'var(--gradient-image-fade)',
+                      pointerEvents: 'none',
+                    }}
+                  />
+                </div>
+                <div style={{ padding: '1.25rem', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                  <h2 style={{ margin: '0 0 0.85rem', fontSize: '1.05rem', lineHeight: 1.25 }}>{p.name}</h2>
+                  <MarketplaceProductCardSummary p={p} />
+                  <div
+                    style={{
+                      marginTop: 'auto',
+                      paddingTop: '1rem',
+                      borderTop: '1px solid var(--border-soft)',
+                      display: 'grid',
+                      gridTemplateColumns: '1fr 1fr',
+                      gap: '0.5rem',
+                    }}
+                  >
                     <button
                       type="button"
-                      onClick={() => setSelectedProduct(p)}
-                      className="media-frame__hit"
-                      aria-label={`View details for ${p.name}`}
+                      className="btn btn-ghost"
+                      style={{ padding: '0.5rem 0.65rem' }}
+                      onClick={() => addToCart(p)}
                     >
-                      <ProductPhoto src={p.image_url} alt="" />
+                      Add to cart
                     </button>
-                    <div
-                      style={{
-                        position: 'absolute',
-                        inset: 0,
-                        background: 'var(--gradient-image-fade)',
-                        pointerEvents: 'none',
-                      }}
-                    />
-                    <div
-                      style={{
-                        position: 'absolute',
-                        bottom: 10,
-                        right: 10,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 4,
-                        background: 'var(--veil-50)',
-                        border: '1px solid var(--border-soft)',
-                        padding: '0.2rem 0.5rem',
-                        borderRadius: 8,
-                        fontSize: '0.68rem',
-                        fontWeight: 800,
-                        color: 'var(--gold-light)',
-                      }}
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      style={{ padding: '0.5rem 0.65rem' }}
+                      onClick={() => openCheckout(p)}
                     >
-                      ★ {p.rating}
-                    </div>
+                      Buy now
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-ghost"
+                      style={{ padding: '0.5rem 0.65rem', gridColumn: '1 / -1' }}
+                      onClick={() => setSelectedProduct(p)}
+                    >
+                      Details
+                    </button>
                   </div>
-                  <div style={{ padding: '1.25rem', flex: 1, display: 'flex', flexDirection: 'column' }}>
-                    <p
-                      style={{
-                        margin: '0 0 0.35rem',
-                        fontSize: '0.65rem',
-                        fontWeight: 800,
-                        letterSpacing: '0.1em',
-                        textTransform: 'uppercase',
-                        color: 'var(--text-faint)',
-                      }}
-                    >
-                      <Link
-                        to={`/jewellers/${p.jeweller_id}`}
-                        style={{ color: 'var(--gold-light)', textDecoration: 'none' }}
-                      >
-                        {p.jeweller_name}
-                      </Link>
-                      {p.jeweller_city ? ` · ${p.jeweller_city}` : ''}
-                    </p>
-                    <h2 style={{ margin: '0 0 0.75rem', fontSize: '1.05rem', lineHeight: 1.25 }}>{p.name}</h2>
-                    <p style={{ margin: '0 0 0.65rem', fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                      {p.category}
-                      {p.category ? ' · ' : null}
-                      BIS 916 (22K) · Phase 1 catalogue
-                    </p>
-                    {showStoneDetails ? (
-                      <p style={{ margin: '0 0 0.65rem', fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: 1.45 }}>
-                        <strong style={{ color: 'var(--text)' }}>Stone / other:</strong>{' '}
-                        {p.stone_included ? p.stone_type || 'Included' : 'Component in quote'}
-                        {(p.stone_weight_grams ?? '').toString().trim() !== ''
-                          ? ` · ${p.stone_weight_grams}g`
-                          : ''}
-                        {(p.stone_cost_inr ?? '').toString().trim() !== ''
-                          ? ` · ₹${p.stone_cost_inr}`
-                          : stoneCompVal > 0
-                            ? ` · ₹${formatInr(stoneCompVal)}`
-                            : ''}
-                      </p>
-                    ) : null}
-                    <MarketplaceProductCardPricing p={p} />
-                    {(p.same_store_benefit_note ?? '').trim() ? (
-                      <div
-                        style={{
-                          padding: '0.65rem',
-                          borderRadius: 14,
-                          border: '1px solid var(--border-soft)',
-                          background: 'var(--veil-25)',
-                          marginBottom: '0.85rem',
-                          fontSize: '0.72rem',
-                          color: 'var(--text-muted)',
-                          lineHeight: 1.45,
-                        }}
-                      >
-                        <p
-                          style={{
-                            margin: '0 0 0.35rem',
-                            fontSize: '0.58rem',
-                            fontWeight: 800,
-                            letterSpacing: '0.08em',
-                            textTransform: 'uppercase',
-                            color: 'var(--text-faint)',
-                          }}
-                        >
-                          Jeweller note
-                        </p>
-                        <p style={{ margin: 0 }}>{p.same_store_benefit_note}</p>
-                      </div>
-                    ) : null}
-                    <div
-                      style={{
-                        marginTop: 'auto',
-                        paddingTop: '1rem',
-                        borderTop: '1px solid var(--border-soft)',
-                        display: 'grid',
-                        gridTemplateColumns: '1fr 1fr',
-                        gap: '0.5rem',
-                      }}
-                    >
-                      <button
-                        type="button"
-                        className="btn btn-ghost"
-                        style={{ padding: '0.5rem 0.65rem' }}
-                        onClick={() => addToCart(p)}
-                      >
-                        Add to cart
-                      </button>
-                      <button type="button" className="btn btn-primary" style={{ padding: '0.5rem 0.65rem' }} onClick={() => openCheckout(p)}>
-                        Buy now
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-ghost"
-                        style={{ padding: '0.5rem 0.65rem', gridColumn: '1 / -1' }}
-                        onClick={() => setSelectedProduct(p)}
-                      >
-                        Quick view
-                      </button>
-                    </div>
-                  </div>
-                </article>
-              )
-            })}
+                </div>
+              </article>
+            ))}
           </div>
         )}
 

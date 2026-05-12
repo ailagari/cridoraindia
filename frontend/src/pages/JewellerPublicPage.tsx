@@ -74,7 +74,7 @@ export function JewellerPublicPage() {
               ← Directory
             </Link>
           </p>
-          <span className="pill">Phase 1 · KYB-verified partner</span>
+          <span className="pill">KYB-verified partner</span>
           <h1 className="h1-page" style={{ marginTop: '0.75rem' }}>
             {row.business_name}
           </h1>

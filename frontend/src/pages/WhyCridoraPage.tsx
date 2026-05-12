@@ -28,7 +28,7 @@ const USER_REASONS: { title: string; body: string }[] = [
   },
   {
     title: 'Physical jewellery redemption',
-    body: 'Convert holdings to BIS 916 ornaments and coins from real jewellers — Phase 1 focuses on jewellery utility, not abstract balance-only gold.',
+    body: 'Convert holdings to BIS 916 ornaments and coins from real jewellers — designed around jewellery you wear or gift, not a passive balance line.',
   },
   {
     title: 'Better making-charge benefits',
@@ -361,11 +361,11 @@ export function WhyCridoraPage() {
 
       <div style={{ display: 'grid', gap: '1.25rem', marginTop: '3rem' }}>
         <div className="card cridora-reveal cridora-card-motion" style={{ ...staggerStyle(next()), borderRadius: 20 }}>
-          <h2 style={{ marginTop: 0, fontSize: '1.35rem' }}>Phase 1 MVP scope</h2>
+          <h2 style={{ marginTop: 0, fontSize: '1.35rem' }}>What ships today</h2>
           <p style={{ color: 'var(--text-muted)', marginBottom: 0 }}>
-            Three holding types on every ledger: fractional gold, gold deposit, GoldNest. Public messaging stays focused:
-            buy gold, track gold, use gold, redeem anywhere in the jeweller network. BIS 916, gold-only, India-only;
-            multiple metals and purities stay off public surfaces until later phases.
+            Three holding types on every ledger: fractional gold, gold deposit, and GoldNest. Messaging stays simple — buy
+            gold, track it, use it, redeem across the jeweller network. Surfaces today centre on BIS 916 gold in India;
+            other metals and purities stay off public flows until the product expands.
           </p>
         </div>
 

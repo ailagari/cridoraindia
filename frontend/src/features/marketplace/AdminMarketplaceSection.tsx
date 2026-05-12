@@ -58,7 +58,7 @@ export function AdminGoldTickerPanel() {
         Gold ticker (22K benchmark)
       </h2>
       <p className="dash-coming__text">
-        Phase 1 live gold benchmark for BIS 916 listings: reference ₹/g is the upstream quote; admin markup % sets the platform
+        Live gold benchmark for BIS 916 listings: reference ₹/g is the upstream quote; admin markup % sets the platform
         base shown to jewellers and public marketplace. SKUs priced “spot + markup” inherit this base.
       </p>
       {error ? <p className="form-error">{error}</p> : null}
@@ -140,7 +140,7 @@ export function AdminMarketplaceModerationPanel() {
         Product approval
       </h2>
       <p className="dash-coming__text">
-        Phase 1 gate: BIS 916 ornaments and related SKUs stay private until approved. Configure the live 22K benchmark under
+        BIS 916 ornaments and related SKUs stay private until approved. Configure the live 22K benchmark under
         Control → Gold ticker.
       </p>
       <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1rem' }}>

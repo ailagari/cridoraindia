@@ -116,9 +116,9 @@ export function PublicLayout() {
       >
         <div className="container">
           <p style={{ margin: '0 0 1rem', color: 'var(--text-muted)' }}>
-            Cridora Phase 1 — live gold savings, portfolio tracking, and redemption across a KYB jeweller network (BIS 916,
-            India). Users: buy, track, use, and redeem gold. Jewellers: customers, rates, listings, settlements, credibility.
-            Admin: KYC/KYB, product approval, moderation, settlements, emergency monitoring.
+            Cridora connects savers and verified jewellers for live gold savings, portfolio tracking, and redemption (BIS 916,
+            India). Customers buy, track, use, and redeem; jewellers manage storefronts, rates, and listings; Cridora
+            administers KYC/KYB, listing review, and network safeguards.
           </p>
           <div className="nav-links" style={{ gap: '0.75rem 1.25rem' }}>
             <Link to="/why-cridora">Why Cridora</Link>

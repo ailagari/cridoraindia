@@ -67,20 +67,20 @@ export function JewellerDashboardPage() {
       {active.startsWith('cust_') ? (
         <JewellerComing
           title="Customer management"
-          body="Phase 1 jeweller desk: customer roster, KYC status, holdings by type, and liability snapshots when jeweller-scoped ledger APIs are available."
+          body="Customer roster, KYC posture, holdings by type, and liability snapshots once jeweller-scoped ledger APIs land."
         />
       ) : null}
       {active === 'mkt_products' ? <JewellerMarketplacePanel /> : null}
       {active === 'mkt_schemes' ? (
         <JewellerComing
           title="GoldNest"
-          body="Single GoldNest structure for MVP: recurring contributions, live accumulation, maturity tracking, jeweller-defined benefits, and optional making-charge perks — admin-approved before publish."
+          body="GoldNest today is one recurring plan shape per jeweller: contributions, live accumulation, maturity tracking, benefits, and optional making-charge perks — publish only after Cridora admin approval."
         />
       ) : null}
       {active === 'mkt_rates' ? (
         <JewellerComing
           title="Live gold & sellback"
-          body="Publish live gold rate and customer-facing sellback rate; ornament redemption and cash sellback flows read these values. Card-style sellback preview (live rate, sellback rate, deductions, final receivable) matches the Phase 1 cash redemption spec."
+          body="Publish live gold rate and customer-facing sellback; ornament redemption and cash sellback read these values. The sellback preview (live rate, deductions, amount receivable) follows the cash redemption logic customers see at checkout."
         />
       ) : null}
       {active === 'mkt_rules' ? (
@@ -144,7 +144,7 @@ function JewellerOverview() {
         <div className={`dash-spot dash-spot--${tone}`}>
           <span className="dash-spot__eyebrow">KYB status</span>
           <p className="dash-spot__value">{user?.kyc_status}</p>
-          <p className="dash-spot__sub">Phase 1: KYB-verified jewellers join the live gold savings and redemption network — public listings only after admin approval.</p>
+          <p className="dash-spot__sub">Verified jewellers join the live savings and redemption network; storefront and listings stay private until Cridora admin approval.</p>
         </div>
         <div className="dash-spot dash-spot--gold">
           <span className="dash-spot__eyebrow">Business profile</span>
@@ -169,7 +169,7 @@ function JewellerPlaceholder({ kind }: { kind: 'catalog' | 'payments' }) {
       <div className={`dash-coming dash-coming--${kind}`}>
         <h2 className="dash-coming__title">{kind === 'catalog' ? 'Catalogue' : 'Payouts'}</h2>
         <p className="dash-coming__text">
-          Payout rails and jeweller settlement batches align with Phase 1 ledger and settlement tracking once payment models exist on this API.
+          Payout rails and jeweller settlement batches follow the shared ledger model once payment APIs ship on this stack.
         </p>
       </div>
     </div>

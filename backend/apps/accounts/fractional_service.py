@@ -11,7 +11,7 @@ from apps.marketplace.pricing import reference_metal_rate_inr_per_gram_for_jewel
 
 User = get_user_model()
 
-GST_PERCENT = Decimal("3")  # GST on gold value (Phase 1; aligns with marketplace metal GST band)
+GST_PERCENT = Decimal("3")  # GST on gold value; aligned with marketplace metal GST handling
 MIN_TOTAL_INR = Decimal("500")
 MIN_GRAMS = Decimal("0.001")
 

@@ -1,4 +1,4 @@
-"""Seed local test accounts: admin, customer, jewellers, and marketplace demo catalog (reference: seed_users in Cridora v2)."""
+"""Seed local test accounts: admin, customer, jewellers, and marketplace demo data for UI/API smoke tests."""
 
 import os
 
@@ -44,7 +44,7 @@ _DUMMY_JEWELLERS = (
             "making": "680.00",
             "deposit_apr": "6.000",
             "loan_apr": "11.500",
-            "deposit_note": "Dummy Kochi: gold deposit scheme yield shown for UI demo only.",
+            "deposit_note": "Illustrative deposit yield on this demo storefront — not live pricing.",
         },
     },
     {
@@ -65,7 +65,7 @@ _DUMMY_JEWELLERS = (
             "making": "920.00",
             "deposit_apr": "4.750",
             "loan_apr": "13.250",
-            "deposit_note": "Dummy Mumbai: locker-linked deposits and loan APRs are illustrative.",
+            "deposit_note": "Locker-linked deposits and loan APRs are illustrative for this demo storefront.",
         },
     },
     {
@@ -86,7 +86,7 @@ _DUMMY_JEWELLERS = (
             "making": "790.00",
             "deposit_apr": "5.250",
             "loan_apr": "12.750",
-            "deposit_note": "Dummy Bengaluru: compare with other dummy showrooms on the jeweller marketplace.",
+            "deposit_note": "Demo storefront — compare rates and disclosures with other partner cards.",
         },
     },
 )
@@ -116,7 +116,7 @@ class Command(BaseCommand):
         self.stdout.write("  Cridora admin   admin@cridora.test")
         self.stdout.write("  Customer (user) customer@cridora.test  -> SPA /userdashboard")
         self.stdout.write("  Jeweller        jeweller@cridora.test")
-        self.stdout.write("  Dummy jewellers (same password):")
+        self.stdout.write("  Demo jewellers (same password):")
         for row in _DUMMY_JEWELLERS:
             self.stdout.write(f"    {row['email']}")
         self.stdout.write(f"  Password        (the value you set; default demo: {_DEFAULT_PASSWORD})")
@@ -246,9 +246,9 @@ class Command(BaseCommand):
             user.save()
             self._attach_verified_kyb(user, now)
             created_any = True
-            self.stdout.write(self.style.SUCCESS(f"  [ok] Dummy jeweller: {email}"))
+            self.stdout.write(self.style.SUCCESS(f"  [ok] Demo jeweller: {email}"))
         if not created_any:
-            self.stdout.write(self.style.WARNING("  [skip] Dummy jewellers already exist."))
+            self.stdout.write(self.style.WARNING("  [skip] Demo jewellers already exist."))
 
     def _apply_pricing_profile(self, profile, pe: dict):
         from decimal import Decimal

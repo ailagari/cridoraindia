@@ -313,8 +313,8 @@ export function FractionalPurchasePanel() {
           lastOrder.status === 'pending_payment' ? (
             <div className="dash-form-stack" style={{ marginTop: '0.5rem' }}>
               <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                MVP: complete your bank UPI transfer for ₹{formatInr(lastOrder.total_inr)} to the jeweller or platform
-                account you were given, then confirm here so your gold is credited.
+                Complete your bank UPI transfer for ₹{formatInr(lastOrder.total_inr)} to the jeweller or platform account you
+                were given, then confirm here so your gold is credited.
               </p>
               <button type="button" className="btn btn-primary btn--block" disabled={busy} onClick={() => void confirmUpi()}>
                 I have paid via UPI — credit my gold

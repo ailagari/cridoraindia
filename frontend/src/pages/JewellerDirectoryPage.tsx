@@ -41,7 +41,7 @@ export function JewellerDirectoryPage() {
       </section>
 
       <div className="container" style={{ marginTop: '2rem' }}>
-        <JewellerMarketplaceGrid intro="Phase 1 jeweller cards surface identity, live & sellback rates, lock-in, minimum redeemable quantity, same-store making-charge benefits, cross-redemption fee, credibility, and CTAs. Demo rows appear when the API list is still sparse; verified KYB rows replace matching names automatically. Sort by making charge, buyback, deposit yield, or listed loan indicator." />
+        <JewellerMarketplaceGrid intro="Each card summarises identity, live and sellback rates, lock-in rules, minimum redeemable gold, same-store making benefits, cross-redemption fees, credibility signals, and shortcuts to products or signup. Preview rows fill in when live data is thin; verified KYB listings replace matching names automatically. Sort by making charge, buyback, deposit yield, or loan availability." />
       </div>
     </div>
   )

@@ -32,7 +32,7 @@ export function JewellerPortfolioPanel() {
     <div className="dash-panel-max pf-scope">
       <p className="dash-panel-lead pf-lead-intro">
         Jeweller desk pulse for inventory and customer demand — illustrative until catalog and gram liability APIs feed this
-        view. Phase 1 focuses on BIS 916 listings, sellback transparency, and redemption queue readiness.
+        view. Cards emphasise BIS 916 listings, transparent sellback, and readiness for redemption queues.
       </p>
 
       <div className="pf-grid pf-grid--kpis pf-stagger">

@@ -288,8 +288,8 @@ export function AdminDashboardPage() {
           <div className="dash-coming dash-coming--payments">
             <h2 className="dash-coming__title">Settlement monitoring</h2>
             <p className="dash-coming__text">
-              Track INR settlements, UPI/card rails, cross-jeweller redemption liability transfers, and jeweller payout batches
-              for the Phase 1 redemption network. Lists stay empty until payment models are enabled.
+              Track INR settlements, UPI and card rails, cross-jeweller redemption liability, and jeweller payout batches for
+              the live network. Lists stay empty until payment models are enabled.
             </p>
           </div>
         ) : null}
@@ -298,8 +298,8 @@ export function AdminDashboardPage() {
           <div className="dash-coming dash-coming--ledger">
             <h2 className="dash-coming__title">Ledger &amp; reconciliation</h2>
             <p className="dash-coming__text">
-              Gold gram ledger with buy, sellback, ornament redemption, loan utilisation, transfer, and emergency-fund rows —
-              BIS 916, India-only scope in MVP; feeds mirror admin settlement monitoring.
+              Gold gram ledger across buy, sellback, ornament redemption, loan use, transfer, and emergency rows — scoped to
+              BIS 916 gold in India; feeds mirror settlement monitoring as they connect.
             </p>
           </div>
         ) : null}
@@ -321,7 +321,7 @@ export function AdminDashboardPage() {
             </h2>
             <p className="dash-coming__text">
               {active === 'mkt_schemes'
-                ? 'Review recurring GoldNest plans (single MVP structure), benefits text, and jeweller disclosures before customers subscribe.'
+                ? 'Review recurring GoldNest plans (one plan structure per jeweller today), benefits text, and disclosures before customers subscribe.'
                 : active === 'mkt_offers'
                   ? 'Moderate listings, abusive content, and trust signals on jeweller and product surfaces before they reach the public network.'
                   : 'Settlement anomalies, cross-redemption exposure, default patterns on emergency draws, and jeweller concentration — dashboards plug into risk APIs when ready.'}
@@ -343,8 +343,8 @@ export function AdminDashboardPage() {
           <div className="dash-coming dash-coming--ledger">
             <h2 className="dash-coming__title">Platform settings</h2>
             <p className="dash-coming__text">
-              Feature flags, fee templates, Phase 1 scope (BIS 916, gold-only, India-only), and integration keys — Django
-              admin stays canonical for sensitive toggles until these move in-app.
+              Feature flags, fee templates, launch scope (BIS 916, gold-only, India-only), and integration keys — Django admin
+              stays canonical for sensitive toggles until these move in-app.
             </p>
           </div>
         ) : null}
@@ -497,8 +497,8 @@ function QueueTable({
               <tr>
                 <td colSpan={5} style={{ color: 'var(--text-muted)', padding: '1.25rem' }}>
                   {kind === 'kyc'
-                    ? 'Queue clear — no customers awaiting Phase 1 KYC review right now.'
-                    : 'Queue clear — no jewellers awaiting Phase 1 verification right now.'}
+                    ? 'Queue clear — no customers awaiting KYC review right now.'
+                    : 'Queue clear — no jewellers awaiting KYB verification right now.'}
                 </td>
               </tr>
             ) : (
