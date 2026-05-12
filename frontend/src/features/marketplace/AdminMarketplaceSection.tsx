@@ -1,0 +1,235 @@
+import { useCallback, useEffect, useState } from 'react'
+import { authFetch } from '@/lib/api'
+
+type Ticker = {
+  reference_price_inr_per_gram_22k: string
+  admin_markup_percent: string
+  platform_base_inr_per_gram_22k: string
+  updated_at: string
+}
+
+export function AdminGoldTickerPanel() {
+  const [data, setData] = useState<Ticker | null>(null)
+  const [refDraft, setRefDraft] = useState('')
+  const [mkDraft, setMkDraft] = useState('')
+  const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  const load = useCallback(async () => {
+    setError('')
+    const res = await authFetch('/api/v1/admin/gold-ticker/')
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}))
+      setError((j as { detail?: string }).detail ?? 'Could not load ticker.')
+      return
+    }
+    const j = (await res.json()) as Ticker
+    setData(j)
+    setRefDraft(j.reference_price_inr_per_gram_22k)
+    setMkDraft(j.admin_markup_percent)
+  }, [])
+
+  useEffect(() => {
+    void load()
+  }, [load])
+
+  const save = async () => {
+    setBusy(true)
+    setError('')
+    const res = await authFetch('/api/v1/admin/gold-ticker/', {
+      method: 'PATCH',
+      jsonBody: {
+        reference_price_inr_per_gram_22k: refDraft.trim(),
+        admin_markup_percent: mkDraft.trim(),
+      },
+    })
+    setBusy(false)
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}))
+      setError(JSON.stringify(j))
+      return
+    }
+    await load()
+  }
+
+  return (
+    <section className="card" style={{ padding: '1.25rem', borderRadius: 18 }}>
+      <h2 className="dash-coming__title" style={{ marginTop: 0 }}>
+        Gold ticker (22K benchmark)
+      </h2>
+      <p className="dash-coming__text">
+        Phase 1 live gold benchmark for BIS 916 listings: reference ₹/g is the upstream quote; admin markup % sets the platform
+        base shown to jewellers and public marketplace. SKUs priced “spot + markup” inherit this base.
+      </p>
+      {error ? <p className="form-error">{error}</p> : null}
+      {data ? (
+        <p className="dash-footnote" style={{ marginBottom: '1rem' }}>
+          Current platform base: <strong>{data.platform_base_inr_per_gram_22k}</strong> ₹/g · Updated {data.updated_at}
+        </p>
+      ) : null}
+      <div style={{ display: 'grid', gap: '0.85rem', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
+        <label className="field">
+          <span>Reference price (₹/g)</span>
+          <input value={refDraft} onChange={(e) => setRefDraft(e.target.value)} />
+        </label>
+        <label className="field">
+          <span>Admin markup (%)</span>
+          <input value={mkDraft} onChange={(e) => setMkDraft(e.target.value)} />
+        </label>
+      </div>
+      <button type="button" className="btn btn-primary" style={{ marginTop: '1rem' }} disabled={busy} onClick={() => void save()}>
+        Save ticker
+      </button>
+    </section>
+  )
+}
+
+type ProductAdminRow = Record<string, unknown>
+
+export function AdminMarketplaceModerationPanel() {
+  const [rows, setRows] = useState<ProductAdminRow[]>([])
+  const [filter, setFilter] = useState<'pending' | 'all'>('pending')
+  const [error, setError] = useState('')
+  const [busyId, setBusyId] = useState<number | null>(null)
+  const [rejectReason, setRejectReason] = useState('')
+
+  const load = useCallback(async () => {
+    setError('')
+    const q = filter === 'pending' ? '?status=pending' : ''
+    const res = await authFetch(`/api/v1/admin/marketplace/products/${q}`)
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}))
+      setError((j as { detail?: string }).detail ?? 'Could not load products.')
+      return
+    }
+    const j = (await res.json()) as { results: ProductAdminRow[] }
+    setRows(j.results ?? [])
+  }, [filter])
+
+  useEffect(() => {
+    void load()
+  }, [load])
+
+  const moderate = async (id: number, action: 'approve' | 'reject') => {
+    if (action === 'reject' && !rejectReason.trim()) {
+      setError('Add a rejection reason.')
+      return
+    }
+    setBusyId(id)
+    setError('')
+    const res = await authFetch(`/api/v1/admin/marketplace/products/${id}/moderate/`, {
+      method: 'POST',
+      jsonBody:
+        action === 'approve'
+          ? { action: 'approve' }
+          : { action: 'reject', reason: rejectReason.trim() },
+    })
+    setBusyId(null)
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}))
+      setError(JSON.stringify(j))
+      return
+    }
+    setRejectReason('')
+    await load()
+  }
+
+  return (
+    <section className="card" style={{ padding: '1.25rem', borderRadius: 18 }}>
+      <h2 className="dash-coming__title" style={{ marginTop: 0 }}>
+        Product approval
+      </h2>
+      <p className="dash-coming__text">
+        Phase 1 gate: BIS 916 ornaments and related SKUs stay private until approved. Configure the live 22K benchmark under
+        Control → Gold ticker.
+      </p>
+      <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
+        <button
+          type="button"
+          className="btn btn-ghost"
+          style={
+            filter === 'pending'
+              ? { borderColor: 'var(--gold)', color: 'var(--gold-light)' }
+              : undefined
+          }
+          onClick={() => setFilter('pending')}
+        >
+          Pending
+        </button>
+        <button
+          type="button"
+          className="btn btn-ghost"
+          style={
+            filter === 'all' ? { borderColor: 'var(--gold)', color: 'var(--gold-light)' } : undefined
+          }
+          onClick={() => setFilter('all')}
+        >
+          All
+        </button>
+        <button type="button" className="btn btn-ghost" onClick={() => void load()}>
+          Refresh
+        </button>
+      </div>
+      {error ? <p className="form-error">{error}</p> : null}
+      <label className="field">
+        <span>Rejection reason (required to reject)</span>
+        <textarea className="dash-textarea" rows={2} value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} />
+      </label>
+      <div className="dash-table-scroll card" style={{ marginTop: '1rem' }}>
+        <table className="admin-user-table">
+          <thead>
+            <tr>
+              <th>SKU</th>
+              <th>Jeweller</th>
+              <th>Status</th>
+              <th>Metal ₹/g</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.length === 0 ? (
+              <tr>
+                <td colSpan={5} style={{ padding: '1rem', color: 'var(--text-muted)' }}>
+                  Nothing in this queue.
+                </td>
+              </tr>
+            ) : (
+              rows.map((row) => {
+                const id = Number(row.id)
+                return (
+                  <tr key={id}>
+                    <td>{String(row.name ?? '')}</td>
+                    <td>{String(row.jeweller_name ?? row.jeweller_email ?? '')}</td>
+                    <td>{String(row.moderation_status ?? '')}</td>
+                    <td className="tabular">{String(row.metal_rate_inr_per_gram_used ?? '')}</td>
+                    <td>
+                      <div className="kyb-actions">
+                        <button
+                          type="button"
+                          className="btn btn-primary kyb-btn-sm"
+                          disabled={busyId === id || row.moderation_status === 'approved'}
+                          onClick={() => void moderate(id, 'approve')}
+                        >
+                          Approve
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-ghost kyb-btn-sm"
+                          disabled={busyId === id}
+                          style={{ borderColor: 'rgba(217,83,79,0.45)', color: '#f0a8a5' }}
+                          onClick={() => void moderate(id, 'reject')}
+                        >
+                          Reject
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  )
+}

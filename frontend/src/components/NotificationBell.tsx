@@ -1,0 +1,77 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { MOCK_NOTIFICATIONS, type AppNotification } from '@/lib/mockNotifications'
+
+function kindClass(k: AppNotification['kind']): string {
+  if (k === 'transaction') return 'notif-kind notif-kind--tx'
+  if (k === 'kyc') return 'notif-kind notif-kind--kyc'
+  if (k === 'promo') return 'notif-kind notif-kind--promo'
+  return 'notif-kind notif-kind--alert'
+}
+
+type Props = {
+  /** When true, use compact icon-only button for dense headers. */
+  compact?: boolean
+}
+
+export function NotificationBell({ compact = false }: Props) {
+  const [open, setOpen] = useState(false)
+  const [items, setItems] = useState<AppNotification[]>(() => [...MOCK_NOTIFICATIONS])
+  const rootRef = useRef<HTMLDivElement>(null)
+
+  const unread = useMemo(() => items.filter((i) => !i.read).length, [items])
+
+  useEffect(() => {
+    if (!open) return
+    const onDoc = (e: MouseEvent) => {
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', onDoc)
+    return () => document.removeEventListener('mousedown', onDoc)
+  }, [open])
+
+  const markAllRead = useCallback(() => {
+    setItems((prev) => prev.map((i) => ({ ...i, read: true })))
+  }, [])
+
+  return (
+    <div className="notif-bell-wrap" ref={rootRef}>
+      <button
+        type="button"
+        className={`notif-bell-btn${compact ? ' notif-bell-btn--compact' : ''}`}
+        aria-expanded={open}
+        aria-haspopup="true"
+        aria-label={unread ? `Notifications, ${unread} unread` : 'Notifications'}
+        onClick={() => setOpen((o) => !o)}
+      >
+        <span className="notif-bell-ico" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 6a4 4 0 0 0-4 4v3l-1.5 2.5h11L16 13v-3a4 4 0 0 0-4-4" />
+            <path strokeLinecap="round" d="M10 18a2 2 0 0 0 4 0" />
+          </svg>
+        </span>
+        {unread > 0 ? <span className="notif-bell-badge">{unread > 9 ? '9+' : unread}</span> : null}
+      </button>
+      {open ? (
+        <div className="notif-panel card" role="dialog" aria-label="Notifications">
+          <div className="notif-panel-head">
+            <h2 className="notif-panel-title">Alerts</h2>
+            <button type="button" className="btn btn-ghost notif-panel-clear" onClick={markAllRead}>
+              Mark read
+            </button>
+          </div>
+          <p className="notif-panel-hint">Live push will use the same inbox when `/api/notifications/` ships.</p>
+          <ul className="notif-list">
+            {items.map((n) => (
+              <li key={n.id} className={`notif-item${n.read ? '' : ' notif-item--unread'}`}>
+                <span className={kindClass(n.kind)}>{n.kind}</span>
+                <p className="notif-item-title">{n.title}</p>
+                <p className="notif-item-body">{n.body}</p>
+                <p className="notif-item-time">{n.time}</p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+    </div>
+  )
+}

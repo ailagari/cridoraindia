@@ -1,0 +1,16 @@
+# Python / Django
+backend/.venv/
+backend/__pycache__/
+backend/**/__pycache__/
+backend/*.sqlite3
+backend/media/
+backend/staticfiles/
+*.pyc
+
+# Node / Vite
+frontend/node_modules/
+frontend/dist/
+
+# IDE
+.idea/
+.vscode/

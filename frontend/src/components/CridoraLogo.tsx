@@ -1,0 +1,65 @@
+import { useId } from 'react'
+
+type Props = { size?: 'sm' | 'md'; showWordmark?: boolean; className?: string }
+
+const box = { sm: 36, md: 44 } as const
+
+export function CridoraLogo({ size = 'sm', showWordmark = true, className = '' }: Props) {
+  const gid = `cg-${useId().replace(/[^a-zA-Z0-9_-]/g, '')}`
+  const s = box[size]
+
+  return (
+    <span className={className} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.65rem' }}>
+      <span
+        style={{
+          flexShrink: 0,
+          width: s,
+          height: s,
+          borderRadius: '22%',
+          border: '1px solid var(--border-soft)',
+          background: 'var(--bg-deep)',
+          boxShadow: '0 8px 28px rgba(0, 8, 20, 0.5), 0 0 0 1px rgba(200, 162, 77, 0.12)',
+          display: 'grid',
+          placeItems: 'center',
+        }}
+      >
+        <svg width={s - 8} height={s - 8} viewBox="0 0 40 40" fill="none" aria-hidden>
+          <circle cx="20" cy="20" r="18" stroke={`url(#${gid})`} strokeWidth="2.5" />
+          <path
+            d="M14 20C14 16.6863 16.6863 14 20 14"
+            stroke="#d4a85c"
+            strokeWidth="3"
+            strokeLinecap="round"
+          />
+          <path
+            d="M26 20C26 23.3137 23.3137 26 20 26"
+            stroke="#a67a28"
+            strokeWidth="3"
+            strokeLinecap="round"
+          />
+          <defs>
+            <linearGradient id={gid} x1="2" y1="2" x2="38" y2="38" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stopColor="#e0bc78" />
+              <stop offset="55%" stopColor="#a67a28" />
+              <stop offset="100%" stopColor="#5c2f0a" />
+            </linearGradient>
+          </defs>
+        </svg>
+      </span>
+      {showWordmark ? (
+        <span
+          style={{
+            fontFamily: 'var(--font)',
+            fontWeight: 700,
+            fontSize: size === 'md' ? '1.2rem' : '1.05rem',
+            color: 'var(--text)',
+            lineHeight: 1.05,
+            letterSpacing: '-0.02em',
+          }}
+        >
+          Cridora <span style={{ color: 'var(--gold-light)' }}>India</span>
+        </span>
+      ) : null}
+    </span>
+  )
+}
