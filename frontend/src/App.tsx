@@ -1,4 +1,5 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { ScrollToTop } from '@/components/ScrollToTop'
 import { AuthProvider } from '@/context/AuthContext'
 import { PublicLayout } from '@/components/PublicLayout'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
@@ -21,6 +22,7 @@ import '@/styles/index.css'
 export default function App() {
   return (
     <BrowserRouter>
+      <ScrollToTop />
       <AuthProvider>
         <Routes>
           <Route element={<PublicLayout />}>

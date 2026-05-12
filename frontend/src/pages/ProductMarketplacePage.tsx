@@ -15,6 +15,8 @@ import {
   vaultCanCoverFullGoldWeight,
   type PriceBreakdown,
 } from '@/lib/marketplacePricing'
+import { mergeJewellerListWithDemos } from '@/lib/jewellerMarketplaceDemos'
+import { mergeProductCatalogWithDemos } from '@/lib/productMarketplaceDemos'
 
 function formatInr(n: number, fractionDigits = 0): string {
   return n.toLocaleString('en-IN', { maximumFractionDigits: fractionDigits })
@@ -881,16 +883,21 @@ export function ProductMarketplacePage() {
 
   const refreshCatalog = useCallback(async () => {
     setLoadError('')
+    const jewellerApiId =
+      jewellerFilterId != null && jewellerFilterId > 0 ? jewellerFilterId : undefined
     const rows = await fetchMarketplaceProducts({
-      category: activeCategory,
-      jewellerId: jewellerFilterId,
+      jewellerId: jewellerApiId,
     })
-    setCatalog(rows)
-    const first = rows[0]
+    let merged = mergeProductCatalogWithDemos(rows)
+    if (jewellerFilterId != null) {
+      merged = merged.filter((p) => p.jeweller_id === jewellerFilterId)
+    }
+    setCatalog(merged)
+    const first = merged[0]
     if (first) {
       setLiveRateLabel(first.platform_base_inr_per_gram_22k)
     }
-  }, [activeCategory, jewellerFilterId])
+  }, [jewellerFilterId])
 
   useEffect(() => {
     void refreshCatalog()
@@ -899,7 +906,7 @@ export function ProductMarketplacePage() {
   useEffect(() => {
     let cancel = false
     void fetchVerifiedJewellers().then((list) => {
-      if (!cancel) setJewellerOptions(list)
+      if (!cancel) setJewellerOptions(mergeJewellerListWithDemos(list))
     })
     return () => {
       cancel = true
