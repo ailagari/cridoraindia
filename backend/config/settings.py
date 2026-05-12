@@ -71,7 +71,20 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "config.wsgi.application"
 
-DATABASE_URL = (os.environ.get("DATABASE_URL") or "").strip()
+def _database_url_from_env() -> str:
+    """Prefer a public Postgres URL when the default is Railway private DNS (only works in-network)."""
+    private = (os.environ.get("DATABASE_URL") or "").strip()
+    public = (os.environ.get("DATABASE_PUBLIC_URL") or "").strip()
+    if (
+        public
+        and private
+        and (".railway.internal" in private or "railway.internal" in private)
+    ):
+        return public
+    return private or public
+
+
+DATABASE_URL = _database_url_from_env()
 if DATABASE_URL:
     DATABASES = {
         "default": dj_database_url.parse(
