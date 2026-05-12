@@ -7,6 +7,18 @@ export type GoldTickerPayload = {
   updated_at: string
 }
 
+export type SpotPricesPayload = {
+  currency: string
+  unit: string
+  source: string
+  note?: string
+  usd_to_inr?: number
+  usd_to_inr_source?: string
+  gold: Record<string, number>
+  silver?: Record<string, number>
+  ticker_items?: Array<{ label: string; value?: number; text?: string }>
+}
+
 export type MarketplaceProductDTO = {
   id: number
   jeweller_id: number
@@ -82,6 +94,14 @@ export async function fetchGoldTicker(): Promise<GoldTickerPayload | null> {
     return null
   }
   return (await res.json()) as GoldTickerPayload
+}
+
+export async function fetchSpotPrices(): Promise<SpotPricesPayload | null> {
+  const res = await apiFetch('/api/v1/marketplace/spot-prices/', { cache: 'no-store' })
+  if (!res.ok) {
+    return null
+  }
+  return (await res.json()) as SpotPricesPayload
 }
 
 export async function fetchMarketplaceProducts(opts?: {

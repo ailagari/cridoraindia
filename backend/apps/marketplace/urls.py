@@ -1,5 +1,6 @@
 from django.urls import path
 
+from .spot_prices import MarketplaceSpotPricesView
 from .views import (
     AdminGoldTickerView,
     AdminMarketplaceProductListView,
@@ -14,6 +15,7 @@ from .views import (
 )
 
 urlpatterns = [
+    path("marketplace/spot-prices/", MarketplaceSpotPricesView.as_view()),
     path("marketplace/gold-ticker/", MarketplaceGoldTickerPublicView.as_view()),
     path("marketplace/jewellers/", MarketplaceJewellersPublicView.as_view()),
     path("marketplace/jewellers/<int:pk>/", MarketplaceJewellerDetailPublicView.as_view()),
