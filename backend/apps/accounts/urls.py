@@ -34,8 +34,18 @@ from .fractional_views import (
     JewellerFractionalPendingView,
     JewellerFractionalVerifyView,
 )
+from .views_push import (
+    WebPushAdminSelfTestView,
+    WebPushSubscribeView,
+    WebPushUnsubscribeView,
+    WebPushVapidPublicKeyView,
+)
 
 urlpatterns = [
+    path("push/vapid-public-key/", WebPushVapidPublicKeyView.as_view()),
+    path("push/subscribe/", WebPushSubscribeView.as_view()),
+    path("push/unsubscribe/", WebPushUnsubscribeView.as_view()),
+    path("admin/push/test/", WebPushAdminSelfTestView.as_view()),
     path("health/", HealthView.as_view()),
     path("auth/login/", LoginView.as_view()),
     path("auth/register/", CustomerRegisterView.as_view()),

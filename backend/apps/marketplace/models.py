@@ -16,6 +16,19 @@ class GoldTickerConfig(models.Model):
     admin_markup_percent = models.DecimalField(
         max_digits=8, decimal_places=3, default=Decimal("0")
     )
+    rate_move_alert_threshold_inr = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=Decimal("10.00"),
+        help_text="Push to subscribers when resolved 22K ₹/g moves by ≥ this vs last alert. Use 0 to disable.",
+    )
+    rate_alert_baseline_inr_per_gram_22k = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Last resolved 22K rate at which alerts were checked (internal).",
+    )
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from decimal import Decimal
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
@@ -28,6 +29,8 @@ SILVER_FINENESS = {
     "999": 1.0,
     "925": 0.925,
 }
+
+logger = logging.getLogger(__name__)
 
 _CACHE_KEY_INR = "marketplace_spot_prices_inr"
 _CACHE_TTL = 30
@@ -191,4 +194,10 @@ class MarketplaceSpotPricesView(APIView):
 
         cache.set(_CACHE_KEY_INR, data, timeout=_CACHE_TTL)
         cache.set(_CACHE_KEY_LAST_GOOD, data, timeout=_CACHE_TTL_LAST_GOOD)
+        try:
+            from .gold_rate_alerts import maybe_notify_gold_rate_move
+
+            maybe_notify_gold_rate_move()
+        except Exception:
+            logger.exception("Gold rate alert check failed after spot refresh")
         return Response(data)

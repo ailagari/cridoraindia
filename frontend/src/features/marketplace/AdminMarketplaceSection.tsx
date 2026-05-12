@@ -4,6 +4,8 @@ import { authFetch } from '@/lib/api'
 type Ticker = {
   reference_price_inr_per_gram_22k: string
   admin_markup_percent: string
+  rate_move_alert_threshold_inr: string
+  rate_alert_baseline_inr_per_gram_22k: string | null
   platform_base_inr_per_gram_22k: string
   cridora_base_source?: string
   updated_at: string
@@ -13,6 +15,7 @@ export function AdminGoldTickerPanel() {
   const [data, setData] = useState<Ticker | null>(null)
   const [refDraft, setRefDraft] = useState('')
   const [mkDraft, setMkDraft] = useState('')
+  const [alertDraft, setAlertDraft] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
 
@@ -28,6 +31,7 @@ export function AdminGoldTickerPanel() {
     setData(j)
     setRefDraft(j.reference_price_inr_per_gram_22k)
     setMkDraft(j.admin_markup_percent)
+    setAlertDraft(j.rate_move_alert_threshold_inr ?? '10')
   }, [])
 
   useEffect(() => {
@@ -42,6 +46,7 @@ export function AdminGoldTickerPanel() {
       jsonBody: {
         reference_price_inr_per_gram_22k: refDraft.trim(),
         admin_markup_percent: mkDraft.trim(),
+        rate_move_alert_threshold_inr: alertDraft.trim(),
       },
     })
     setBusy(false)
@@ -63,6 +68,11 @@ export function AdminGoldTickerPanel() {
         unavailable. When spot is live, the resolved Cridora base (shown in the read-only ticker below) is used for all
         jeweller pricing unless a jeweller chooses a manual rate.
       </p>
+      <p className="dash-coming__text" style={{ marginTop: '0.5rem' }}>
+        <strong>Rate alerts:</strong> subscribers who enabled device notifications get a push when resolved 22K ₹/g moves
+        by at least the threshold below (vs the rate at the last alert). Set to <strong>0</strong> to turn alerts off.
+        Requires VAPID keys on the server.
+      </p>
       {error ? <p className="form-error">{error}</p> : null}
       {data ? (
         <p className="dash-footnote" style={{ marginBottom: '1rem' }}>
@@ -73,7 +83,9 @@ export function AdminGoldTickerPanel() {
               ({data.cridora_base_source.replace(/_/g, ' ')})
             </>
           ) : null}{' '}
-          · Ticker admin fields updated {data.updated_at}
+          · Alert baseline (internal):{' '}
+          <strong>{data.rate_alert_baseline_inr_per_gram_22k ?? '—'}</strong> ₹/g · Ticker admin fields updated{' '}
+          {data.updated_at}
         </p>
       ) : null}
       <div style={{ display: 'grid', gap: '0.85rem', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
@@ -84,6 +96,16 @@ export function AdminGoldTickerPanel() {
         <label className="field">
           <span>Admin markup (%)</span>
           <input value={mkDraft} onChange={(e) => setMkDraft(e.target.value)} />
+        </label>
+        <label className="field">
+          <span>Alert swing threshold (₹/g)</span>
+          <input
+            type="text"
+            inputMode="decimal"
+            value={alertDraft}
+            onChange={(e) => setAlertDraft(e.target.value)}
+            placeholder="10"
+          />
         </label>
       </div>
       <button type="button" className="btn btn-primary" style={{ marginTop: '1rem' }} disabled={busy} onClick={() => void save()}>

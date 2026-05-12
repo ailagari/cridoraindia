@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { MOCK_NOTIFICATIONS, type AppNotification } from '@/lib/mockNotifications'
+import { useAuth } from '@/context/AuthContext'
+import {
+  getBrowserPushActive,
+  pushNotificationsSupported,
+  registerWebPushSubscription,
+  unregisterWebPushSubscription,
+} from '@/lib/webPushApi'
 
 function kindClass(k: AppNotification['kind']): string {
   if (k === 'transaction') return 'notif-kind notif-kind--tx'
@@ -14,11 +21,34 @@ type Props = {
 }
 
 export function NotificationBell({ compact = false }: Props) {
+  const { user } = useAuth()
   const [open, setOpen] = useState(false)
   const [items, setItems] = useState<AppNotification[]>(() => [...MOCK_NOTIFICATIONS])
+  const [pushActive, setPushActive] = useState(false)
+  const [pushBusy, setPushBusy] = useState(false)
+  const [pushError, setPushError] = useState('')
   const rootRef = useRef<HTMLDivElement>(null)
 
   const unread = useMemo(() => items.filter((i) => !i.read).length, [items])
+
+  const refreshPushState = useCallback(async () => {
+    if (!user || !pushNotificationsSupported()) {
+      setPushActive(false)
+      return
+    }
+    try {
+      setPushError('')
+      const on = await getBrowserPushActive()
+      setPushActive(on)
+    } catch {
+      setPushActive(false)
+    }
+  }, [user])
+
+  useEffect(() => {
+    if (!open || !user) return
+    void refreshPushState()
+  }, [open, user, refreshPushState])
 
   useEffect(() => {
     if (!open) return
@@ -28,6 +58,35 @@ export function NotificationBell({ compact = false }: Props) {
     document.addEventListener('mousedown', onDoc)
     return () => document.removeEventListener('mousedown', onDoc)
   }, [open])
+
+  const enablePush = useCallback(async () => {
+    if (!user) return
+    setPushBusy(true)
+    setPushError('')
+    try {
+      await registerWebPushSubscription()
+      setPushActive(true)
+    } catch (e) {
+      setPushError(e instanceof Error ? e.message : 'Could not enable push.')
+    } finally {
+      setPushBusy(false)
+    }
+  }, [user])
+
+  const disablePush = useCallback(async () => {
+    setPushBusy(true)
+    setPushError('')
+    try {
+      await unregisterWebPushSubscription()
+      setPushActive(false)
+    } catch (e) {
+      setPushError(e instanceof Error ? e.message : 'Could not disable push.')
+    } finally {
+      setPushBusy(false)
+    }
+  }, [])
+
+  const pushSupported = pushNotificationsSupported()
 
   const markAllRead = useCallback(() => {
     setItems((prev) => prev.map((i) => ({ ...i, read: true })))
@@ -59,7 +118,52 @@ export function NotificationBell({ compact = false }: Props) {
               Mark read
             </button>
           </div>
-          <p className="notif-panel-hint">Live push will use the same inbox when `/api/notifications/` ships.</p>
+          <p className="notif-panel-hint">
+            In-app alerts below are samples. Turn on browser notifications to get real alerts on this device (HTTPS or
+            localhost; install the PWA on iOS 16.4+ for Web Push).
+          </p>
+          {user ? (
+            <div className="notif-push-row">
+              <div className="notif-push-copy">
+                <span className="notif-push-label">Device notifications</span>
+                {!pushSupported ? (
+                  <span className="notif-push-status">Not supported in this browser or context.</span>
+                ) : Notification.permission === 'denied' ? (
+                  <span className="notif-push-status">Blocked in browser settings — allow notifications for this site.</span>
+                ) : pushActive ? (
+                  <span className="notif-push-status notif-push-status--on">On for this device</span>
+                ) : (
+                  <span className="notif-push-status">Off</span>
+                )}
+                {pushError ? <span className="notif-push-err">{pushError}</span> : null}
+              </div>
+              {pushSupported && Notification.permission !== 'denied' ? (
+                pushActive ? (
+                  <button
+                    type="button"
+                    className="btn btn-ghost notif-push-btn"
+                    disabled={pushBusy}
+                    onClick={() => void disablePush()}
+                  >
+                    Turn off
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="btn btn-primary notif-push-btn"
+                    disabled={pushBusy}
+                    onClick={() => void enablePush()}
+                  >
+                    Enable
+                  </button>
+                )
+              ) : null}
+            </div>
+          ) : (
+            <p className="notif-panel-hint" style={{ marginTop: '-0.35rem' }}>
+              Sign in to enable device notifications.
+            </p>
+          )}
           <ul className="notif-list">
             {items.map((n) => (
               <li key={n.id} className={`notif-item${n.read ? '' : ' notif-item--unread'}`}>

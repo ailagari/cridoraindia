@@ -309,3 +309,24 @@ class FractionalGoldPurchase(models.Model):
 
     def __str__(self):
         return f"FractionalGoldPurchase({self.customer_id}, {self.grams}g, {self.status})"
+
+
+class WebPushSubscription(models.Model):
+    """Browser Web Push subscription (VAPID); one row per push endpoint."""
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="web_push_subscriptions",
+    )
+    endpoint = models.TextField(unique=True)
+    p256dh = models.CharField(max_length=255)
+    auth = models.CharField(max_length=255)
+    user_agent = models.CharField(max_length=512, blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"WebPushSubscription(user={self.user_id})"

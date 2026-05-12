@@ -30,6 +30,8 @@ class GoldTickerReadSerializer(serializers.ModelSerializer):
         fields = (
             "reference_price_inr_per_gram_22k",
             "admin_markup_percent",
+            "rate_move_alert_threshold_inr",
+            "rate_alert_baseline_inr_per_gram_22k",
             "platform_base_inr_per_gram_22k",
             "cridora_base_source",
             "updated_at",
@@ -48,7 +50,16 @@ class GoldTickerReadSerializer(serializers.ModelSerializer):
 class GoldTickerAdminSerializer(serializers.ModelSerializer):
     class Meta:
         model = GoldTickerConfig
-        fields = ("reference_price_inr_per_gram_22k", "admin_markup_percent")
+        fields = (
+            "reference_price_inr_per_gram_22k",
+            "admin_markup_percent",
+            "rate_move_alert_threshold_inr",
+        )
+
+    def validate_rate_move_alert_threshold_inr(self, value):
+        if value < 0:
+            raise serializers.ValidationError("Must be zero or greater (0 disables alerts).")
+        return value
 
 
 class JewellerPricingProfileSerializer(serializers.ModelSerializer):

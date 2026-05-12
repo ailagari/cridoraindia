@@ -1,3 +1,5 @@
+import logging
+
 from django.contrib.auth import get_user_model
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -18,6 +20,7 @@ from .serializers import (
 )
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 
 def _forbid_non_jeweller(request):
@@ -40,6 +43,12 @@ class MarketplaceGoldTickerPublicView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
+        try:
+            from .gold_rate_alerts import maybe_notify_gold_rate_move
+
+            maybe_notify_gold_rate_move()
+        except Exception:
+            logger.exception("Gold rate alert check failed")
         ticker = get_or_create_ticker()
         return Response(GoldTickerReadSerializer(ticker).data)
 
@@ -217,6 +226,12 @@ class AdminGoldTickerView(APIView):
             return Response(ser.errors, status=status.HTTP_400_BAD_REQUEST)
         ser.save()
         ticker.refresh_from_db()
+        try:
+            from .gold_rate_alerts import maybe_notify_gold_rate_move
+
+            maybe_notify_gold_rate_move(force=True)
+        except Exception:
+            logger.exception("Gold rate alert check failed after ticker save")
         return Response(GoldTickerReadSerializer(ticker).data)
 
 
