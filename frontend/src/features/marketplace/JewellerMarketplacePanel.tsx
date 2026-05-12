@@ -55,6 +55,10 @@ export function JewellerMarketplacePanel() {
   const [busy, setBusy] = useState(false)
 
   const [pfDraft, setPfDraft] = useState({
+    gold_rate_source: 'live_cridora' as 'live_cridora' | 'manual',
+    manual_gold_rate_inr_per_gram: '',
+    live_markup_percent: '',
+    live_markup_inr_per_gram: '',
     default_gold_markup_percent: '',
     sellback_deduction_percent: '',
     sellback_fixed_inr_per_gram: '',
@@ -125,6 +129,13 @@ export function JewellerMarketplacePanel() {
     const pJson = (await pr.json()) as ProfileApi
     const lJson = (await ls.json()) as { results: ProductRow[] }
     setPfDraft({
+      gold_rate_source:
+        pJson.gold_rate_source === 'manual'
+          ? 'manual'
+          : 'live_cridora',
+      manual_gold_rate_inr_per_gram: String(pJson.manual_gold_rate_inr_per_gram ?? ''),
+      live_markup_percent: String(pJson.live_markup_percent ?? '0'),
+      live_markup_inr_per_gram: String(pJson.live_markup_inr_per_gram ?? '0'),
       default_gold_markup_percent: String(pJson.default_gold_markup_percent ?? ''),
       sellback_deduction_percent: String(pJson.sellback_deduction_percent ?? ''),
       sellback_fixed_inr_per_gram: String(pJson.sellback_fixed_inr_per_gram ?? ''),
@@ -183,6 +194,13 @@ export function JewellerMarketplacePanel() {
     const res = await authFetch('/api/v1/jeweller/marketplace/profile/', {
       method: 'PATCH',
       jsonBody: {
+        gold_rate_source: pfDraft.gold_rate_source,
+        manual_gold_rate_inr_per_gram:
+          pfDraft.gold_rate_source === 'manual' && pfDraft.manual_gold_rate_inr_per_gram.trim() !== ''
+            ? numOrZero(pfDraft.manual_gold_rate_inr_per_gram)
+            : null,
+        live_markup_percent: numOrZero(pfDraft.live_markup_percent),
+        live_markup_inr_per_gram: numOrZero(pfDraft.live_markup_inr_per_gram),
         default_gold_markup_percent: numOrZero(pfDraft.default_gold_markup_percent),
         sellback_deduction_percent: sellbackPct,
         sellback_fixed_inr_per_gram: sellbackFix,
@@ -317,22 +335,38 @@ export function JewellerMarketplacePanel() {
     [ticker],
   )
 
+  const jewellerStore22k = useMemo(() => {
+    if (pfDraft.gold_rate_source === 'manual') {
+      const m = parseN(pfDraft.manual_gold_rate_inr_per_gram)
+      return m > 0 ? m : platformBaseInr
+    }
+    const lp = parseN(pfDraft.live_markup_percent)
+    const lf = parseN(pfDraft.live_markup_inr_per_gram)
+    return platformBaseInr * (1 + lp / 100) + lf
+  }, [
+    pfDraft.gold_rate_source,
+    pfDraft.manual_gold_rate_inr_per_gram,
+    pfDraft.live_markup_percent,
+    pfDraft.live_markup_inr_per_gram,
+    platformBaseInr,
+  ])
+
   const referenceMetalInr = useMemo(() => {
     const m = parseN(pfDraft.default_gold_markup_percent)
-    return platformBaseInr * (1 + m / 100)
-  }, [platformBaseInr, pfDraft.default_gold_markup_percent])
+    return jewellerStore22k * (1 + m / 100)
+  }, [jewellerStore22k, pfDraft.default_gold_markup_percent])
 
   const indicativeBuybackPreview = useMemo(
     () =>
       previewIndicativeBuyback(
-        platformBaseInr,
+        jewellerStore22k,
         parseN(pfDraft.default_gold_markup_percent),
         sellbackDeductionMode,
         pfDraft.sellback_deduction_percent,
         pfDraft.sellback_fixed_inr_per_gram,
       ),
     [
-      platformBaseInr,
+      jewellerStore22k,
       pfDraft.default_gold_markup_percent,
       sellbackDeductionMode,
       pfDraft.sellback_deduction_percent,
@@ -518,9 +552,11 @@ export function JewellerMarketplacePanel() {
           Storefront pricing &amp; sellback
         </h2>
         <p className="dash-coming__text" style={{ marginBottom: '1rem' }}>
-          Product listings use the platform 22K (BIS 916) base plus your default markup. Set customer-facing sellback
-          (percentage off reference metal or fixed ₹/g haircut) so cash redemption cards can show live rate, sellback rate,
-          deductions, and final receivable. Optional headline buyback overrides the public preview.
+          Cridora&apos;s resolved 22K base (global spot with INR FX, then admin fallback) is your starting point. Choose
+          <strong> live Cridora</strong> and add your markup % and/or fixed ₹/g on that base, or choose <strong>manual</strong>{' '}
+          and set your own 22K ₹/g for all spot-linked SKUs. Default gold markup then applies on top of your store 22K
+          reference for listings without a per-SKU override. Product-level manual rates still override everything for that
+          SKU. Fractional gold buys and buyback previews follow the same reference metal.
         </p>
 
         <div
@@ -564,10 +600,15 @@ export function JewellerMarketplacePanel() {
                 <strong className="tabular">{formatInr(adminMarkupTicker, 3)}%</strong>
               </span>
               <span>
-                <span style={{ color: 'var(--text-muted)' }}>Platform base </span>
+                <span style={{ color: 'var(--text-muted)' }}>Resolved Cridora 22K </span>
                 <strong className="tabular" style={{ color: 'var(--gold-light)' }}>
                   ₹{formatInr(platformBaseInr, 2)}/g
                 </strong>
+                {ticker.cridora_base_source ? (
+                  <span style={{ color: 'var(--text-faint)', fontSize: '0.75rem', marginLeft: 8 }}>
+                    ({ticker.cridora_base_source.replace(/_/g, ' ')})
+                  </span>
+                ) : null}
               </span>
               <span style={{ color: 'var(--text-faint)', fontSize: '0.75rem' }}>
                 Updated {new Date(ticker.updated_at).toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' })}
@@ -591,15 +632,81 @@ export function JewellerMarketplacePanel() {
             </thead>
             <tbody>
               <tr>
-                <td>Your reference metal (after default markup)</td>
+                <td>Your store 22K (before default SKU markup)</td>
                 <td className="tabular" style={{ fontWeight: 700 }}>
-                  ₹{formatInr(referenceMetalInr, 2)}/g
+                  ₹{formatInr(jewellerStore22k, 2)}/g
                 </td>
                 <td style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                  Platform base × (1 + default markup ÷ 100). Used for sellback preview and jeweller directory buyback when no
-                  headline override.
+                  From Cridora live + your live markups, or your manual 22K rate.
                 </td>
               </tr>
+              <tr>
+                <td>Gold rate source</td>
+                <td colSpan={2}>
+                  <select
+                    style={{ ...tableInput, maxWidth: 280 }}
+                    value={pfDraft.gold_rate_source}
+                    onChange={(e) =>
+                      setPfDraft((p) => ({
+                        ...p,
+                        gold_rate_source: e.target.value === 'manual' ? 'manual' : 'live_cridora',
+                      }))
+                    }
+                  >
+                    <option value="live_cridora">Cridora live 22K + my markups</option>
+                    <option value="manual">Manual 22K ₹/g (fixed)</option>
+                  </select>
+                </td>
+              </tr>
+              {pfDraft.gold_rate_source === 'live_cridora' ? (
+                <>
+                  <tr>
+                    <td>Markup on Cridora 22K (%)</td>
+                    <td>
+                      <input
+                        style={tableInput}
+                        inputMode="decimal"
+                        value={pfDraft.live_markup_percent}
+                        onChange={(e) => setPfDraft((p) => ({ ...p, live_markup_percent: e.target.value }))}
+                      />
+                    </td>
+                    <td style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                      Percent applied to resolved Cridora 22K before ₹/g add-on.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>Extra on live 22K (₹/g)</td>
+                    <td>
+                      <input
+                        style={tableInput}
+                        inputMode="decimal"
+                        value={pfDraft.live_markup_inr_per_gram}
+                        onChange={(e) => setPfDraft((p) => ({ ...p, live_markup_inr_per_gram: e.target.value }))}
+                      />
+                    </td>
+                    <td style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                      Added after percent markup on Cridora 22K.
+                    </td>
+                  </tr>
+                </>
+              ) : (
+                <tr>
+                  <td>Manual 22K rate (₹/g)</td>
+                  <td>
+                    <input
+                      style={tableInput}
+                      inputMode="decimal"
+                      value={pfDraft.manual_gold_rate_inr_per_gram}
+                      onChange={(e) =>
+                        setPfDraft((p) => ({ ...p, manual_gold_rate_inr_per_gram: e.target.value }))
+                      }
+                    />
+                  </td>
+                  <td style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                    Required for manual mode; drives all spot-linked SKUs and fractional quotes.
+                  </td>
+                </tr>
+              )}
               <tr>
                 <td>Default gold markup</td>
                 <td>
@@ -611,11 +718,20 @@ export function JewellerMarketplacePanel() {
                       value={pfDraft.default_gold_markup_percent}
                       onChange={(e) => setPfDraft((p) => ({ ...p, default_gold_markup_percent: e.target.value }))}
                     />
-                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>% on platform base</span>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>% on your store 22K</span>
                   </label>
                 </td>
                 <td style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
                   Applies to spot-linked SKUs without a per-SKU markup override.
+                </td>
+              </tr>
+              <tr>
+                <td>Your reference metal (after default SKU markup)</td>
+                <td className="tabular" style={{ fontWeight: 700 }}>
+                  ₹{formatInr(referenceMetalInr, 2)}/g
+                </td>
+                <td style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                  Store 22K × (1 + default markup ÷ 100). Used for sellback preview and directory when no headline override.
                 </td>
               </tr>
               <tr>

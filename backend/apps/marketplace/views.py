@@ -66,7 +66,6 @@ class MarketplaceJewellersPublicView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
-        ticker = get_or_create_ticker()
         qs = User.objects.filter(
             user_type=User.JEWELLER,
             kyc_status=User.KYC_VERIFIED,
@@ -74,7 +73,7 @@ class MarketplaceJewellersPublicView(APIView):
         city = (request.query_params.get("city") or "").strip()
         if city:
             qs = qs.filter(city__iexact=city)
-        rows = [public_jeweller_storefront(u, ticker) for u in qs]
+        rows = [public_jeweller_storefront(u) for u in qs]
         return Response({"results": rows})
 
 
@@ -82,7 +81,6 @@ class MarketplaceJewellerDetailPublicView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request, pk):
-        ticker = get_or_create_ticker()
         try:
             jeweller = User.objects.get(
                 pk=pk,
@@ -91,7 +89,7 @@ class MarketplaceJewellerDetailPublicView(APIView):
             )
         except User.DoesNotExist:
             return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
-        return Response(public_jeweller_storefront(jeweller, ticker))
+        return Response(public_jeweller_storefront(jeweller))
 
 
 class JewellerPricingProfileView(APIView):

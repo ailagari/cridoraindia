@@ -33,10 +33,41 @@ class GoldTickerConfig(models.Model):
 class JewellerPricingProfile(models.Model):
     """Sellback rules and default spot markup for a jeweller storefront."""
 
+    GOLD_RATE_LIVE_CRIDORA = "live_cridora"
+    GOLD_RATE_MANUAL = "manual"
+    GOLD_RATE_SOURCE_CHOICES = [
+        (GOLD_RATE_LIVE_CRIDORA, "Cridora live 22K (global spot)"),
+        (GOLD_RATE_MANUAL, "Manual 22K rate"),
+    ]
+
     jeweller = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="jeweller_pricing_profile",
+    )
+    gold_rate_source = models.CharField(
+        max_length=20,
+        choices=GOLD_RATE_SOURCE_CHOICES,
+        default=GOLD_RATE_LIVE_CRIDORA,
+    )
+    manual_gold_rate_inr_per_gram = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Fixed 22K ₹/g for all spot-linked pricing when source is manual.",
+    )
+    live_markup_percent = models.DecimalField(
+        max_digits=8,
+        decimal_places=3,
+        default=Decimal("0"),
+        help_text="Percent markup on Cridora live 22K (before default per-SKU markup).",
+    )
+    live_markup_inr_per_gram = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=Decimal("0"),
+        help_text="Extra ₹/g after percent, on Cridora live 22K.",
     )
     default_gold_markup_percent = models.DecimalField(
         max_digits=8, decimal_places=3, default=Decimal("0")

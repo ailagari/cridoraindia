@@ -17,7 +17,7 @@ from .fractional_service import (
     validate_minimums,
 )
 from .models import FractionalGoldPurchase, GoldBalance
-from apps.marketplace.models import get_or_create_ticker
+from apps.marketplace.spot_prices import resolve_cridora_base_22k_inr
 
 User = get_user_model()
 
@@ -106,13 +106,12 @@ class FractionalQuoteView(APIView):
         err = validate_minimums(b)
         if err:
             return Response({"detail": err}, status=status.HTTP_400_BAD_REQUEST)
-        ticker = get_or_create_ticker()
-        platform_base = ticker.platform_base_inr_per_gram()
+        cridora_base, _ = resolve_cridora_base_22k_inr()
         return Response(
             {
                 "jeweller": _ser_jeweller_brief(jeweller),
                 "metal_rate_inr_per_gram": str(rate),
-                "platform_base_inr_per_gram_22k": str(platform_base),
+                "platform_base_inr_per_gram_22k": str(cridora_base),
                 "grams": str(b["grams"]),
                 "gold_value_inr_pre_gst": str(b["gold_value_inr_pre_gst"]),
                 "gst_percent": str(b["gst_percent"]),

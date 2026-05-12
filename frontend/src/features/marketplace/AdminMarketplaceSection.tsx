@@ -5,6 +5,7 @@ type Ticker = {
   reference_price_inr_per_gram_22k: string
   admin_markup_percent: string
   platform_base_inr_per_gram_22k: string
+  cridora_base_source?: string
   updated_at: string
 }
 
@@ -58,13 +59,21 @@ export function AdminGoldTickerPanel() {
         Gold ticker (22K benchmark)
       </h2>
       <p className="dash-coming__text">
-        Live gold benchmark for BIS 916 listings: reference ₹/g is the upstream quote; admin markup % sets the platform
-        base shown to jewellers and public marketplace. SKUs priced “spot + markup” inherit this base.
+        Reference and admin markup define the <strong>fallback</strong> 22K benchmark when the live global spot feed is
+        unavailable. When spot is live, the resolved Cridora base (shown in the read-only ticker below) is used for all
+        jeweller pricing unless a jeweller chooses a manual rate.
       </p>
       {error ? <p className="form-error">{error}</p> : null}
       {data ? (
         <p className="dash-footnote" style={{ marginBottom: '1rem' }}>
-          Current platform base: <strong>{data.platform_base_inr_per_gram_22k}</strong> ₹/g · Updated {data.updated_at}
+          Resolved Cridora 22K: <strong>{data.platform_base_inr_per_gram_22k}</strong> ₹/g
+          {data.cridora_base_source ? (
+            <>
+              {' '}
+              ({data.cridora_base_source.replace(/_/g, ' ')})
+            </>
+          ) : null}{' '}
+          · Ticker admin fields updated {data.updated_at}
         </p>
       ) : null}
       <div style={{ display: 'grid', gap: '0.85rem', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>

@@ -121,6 +121,34 @@ def _build_spot_inr_from_feed() -> dict | None:
     }
 
 
+def resolve_cridora_base_22k_inr() -> tuple[Decimal, str]:
+    """
+    Single source of truth for platform 22K ₹/g: live spot cache/feed, then last-good spot,
+    then GoldTickerConfig admin benchmark.
+    """
+    cached = cache.get(_CACHE_KEY_INR)
+    if cached and isinstance(cached.get("gold"), dict):
+        v = cached["gold"].get("22K")
+        if v is not None:
+            return Decimal(str(v)).quantize(Decimal("0.01")), "live_spot"
+
+    data = _build_spot_inr_from_feed()
+    if data is not None and data.get("gold", {}).get("22K") is not None:
+        d = Decimal(str(data["gold"]["22K"])).quantize(Decimal("0.01"))
+        cache.set(_CACHE_KEY_INR, data, timeout=_CACHE_TTL)
+        cache.set(_CACHE_KEY_LAST_GOOD, data, timeout=_CACHE_TTL_LAST_GOOD)
+        return d, "live_spot"
+
+    stale = cache.get(_CACHE_KEY_LAST_GOOD)
+    if stale and isinstance(stale.get("gold"), dict):
+        v = stale["gold"].get("22K")
+        if v is not None:
+            return Decimal(str(v)).quantize(Decimal("0.01")), "stale_spot_cache"
+
+    t = get_or_create_ticker()
+    return t.platform_base_inr_per_gram(), "admin_fallback"
+
+
 def _platform_ticker_fallback_inr() -> dict:
     t = get_or_create_ticker()
     base_22 = float(t.platform_base_inr_per_gram())

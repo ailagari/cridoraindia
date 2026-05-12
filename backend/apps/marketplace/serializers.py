@@ -5,23 +5,25 @@ from .models import (
     GoldTickerConfig,
     JewellerPricingProfile,
     MarketplaceProduct,
-    get_or_create_ticker,
     jeweller_profile_for,
 )
 from .pricing import (
     gold_metal_value_inr,
     gold_rate_inr_per_gram,
     jeweller_buyback_display_inr_per_gram,
+    jeweller_store_22k_inr,
     reference_metal_rate_inr_per_gram_for_jeweller,
     sellback_rate_inr_per_gram,
     stone_component_inr,
 )
+from .spot_prices import resolve_cridora_base_22k_inr
 
 User = get_user_model()
 
 
 class GoldTickerReadSerializer(serializers.ModelSerializer):
     platform_base_inr_per_gram_22k = serializers.SerializerMethodField()
+    cridora_base_source = serializers.SerializerMethodField()
 
     class Meta:
         model = GoldTickerConfig
@@ -29,12 +31,18 @@ class GoldTickerReadSerializer(serializers.ModelSerializer):
             "reference_price_inr_per_gram_22k",
             "admin_markup_percent",
             "platform_base_inr_per_gram_22k",
+            "cridora_base_source",
             "updated_at",
         )
         read_only_fields = fields
 
     def get_platform_base_inr_per_gram_22k(self, obj: GoldTickerConfig) -> str:
-        return str(obj.platform_base_inr_per_gram())
+        base, _ = resolve_cridora_base_22k_inr()
+        return str(base)
+
+    def get_cridora_base_source(self, obj: GoldTickerConfig) -> str:
+        _, src = resolve_cridora_base_22k_inr()
+        return src
 
 
 class GoldTickerAdminSerializer(serializers.ModelSerializer):
@@ -47,6 +55,10 @@ class JewellerPricingProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = JewellerPricingProfile
         fields = (
+            "gold_rate_source",
+            "manual_gold_rate_inr_per_gram",
+            "live_markup_percent",
+            "live_markup_inr_per_gram",
             "default_gold_markup_percent",
             "sellback_deduction_percent",
             "sellback_fixed_inr_per_gram",
@@ -74,11 +86,29 @@ class JewellerPricingProfileSerializer(serializers.ModelSerializer):
         )
         read_only_fields = ("updated_at",)
 
+    def validate(self, attrs):
+        source = attrs.get("gold_rate_source")
+        if source is None and self.instance is not None:
+            source = self.instance.gold_rate_source
+        manual = attrs.get("manual_gold_rate_inr_per_gram")
+        if manual is None and self.instance is not None:
+            manual = self.instance.manual_gold_rate_inr_per_gram
+        if source == JewellerPricingProfile.GOLD_RATE_MANUAL:
+            if manual is None or manual <= 0:
+                raise serializers.ValidationError(
+                    {
+                        "manual_gold_rate_inr_per_gram": (
+                            "Set a positive 22K ₹/g rate when using manual pricing."
+                        )
+                    }
+                )
+        return attrs
 
-def _annotate_product_public(product: MarketplaceProduct, ticker: GoldTickerConfig) -> dict:
+
+def _annotate_product_public(product: MarketplaceProduct) -> dict:
     profile = jeweller_profile_for(product.jeweller)
-    platform_base = ticker.platform_base_inr_per_gram()
-    metal_rate = gold_rate_inr_per_gram(product, profile, platform_base)
+    cridora_base, base_source = resolve_cridora_base_22k_inr()
+    metal_rate = gold_rate_inr_per_gram(product, profile, cridora_base)
     stone = stone_component_inr(product)
     metal_val = gold_metal_value_inr(product, metal_rate)
     gold_plus_stone = metal_val + stone
@@ -104,7 +134,8 @@ def _annotate_product_public(product: MarketplaceProduct, ticker: GoldTickerConf
         "jeweller_name": jeweller_name,
         "jeweller_city": product.jeweller.city or "",
         "pricing_mode": product.pricing_mode,
-        "platform_base_inr_per_gram_22k": str(platform_base),
+        "platform_base_inr_per_gram_22k": str(cridora_base),
+        "cridora_base_source": base_source,
         "metal_rate_inr_per_gram_used": str(metal_rate),
         "jeweller_markup_percent_applied": str(
             product.jeweller_markup_percent
@@ -134,15 +165,15 @@ def _annotate_product_public(product: MarketplaceProduct, ticker: GoldTickerConf
 
 class PublicMarketplaceProductSerializer(serializers.BaseSerializer):
     def to_representation(self, product: MarketplaceProduct):
-        ticker = get_or_create_ticker()
-        return _annotate_product_public(product, ticker)
+        return _annotate_product_public(product)
 
 
-def public_jeweller_storefront(user, ticker: GoldTickerConfig) -> dict:
+def public_jeweller_storefront(user) -> dict:
     profile = jeweller_profile_for(user)
-    platform_base = ticker.platform_base_inr_per_gram()
-    ref_metal = reference_metal_rate_inr_per_gram_for_jeweller(profile, platform_base)
-    buyback = jeweller_buyback_display_inr_per_gram(profile, platform_base)
+    cridora_base, base_source = resolve_cridora_base_22k_inr()
+    store_22 = jeweller_store_22k_inr(profile, cridora_base)
+    ref_metal = reference_metal_rate_inr_per_gram_for_jeweller(profile, cridora_base)
+    buyback = jeweller_buyback_display_inr_per_gram(profile, cridora_base)
     listing_count = MarketplaceProduct.objects.filter(
         jeweller=user,
         is_published=True,
@@ -156,7 +187,10 @@ def public_jeweller_storefront(user, ticker: GoldTickerConfig) -> dict:
         "shop_address": user.shop_address or "",
         "gstin": user.gstin or "",
         "kyc_status": user.kyc_status,
-        "platform_base_inr_per_gram_22k": str(platform_base),
+        "platform_base_inr_per_gram_22k": str(cridora_base),
+        "cridora_base_source": base_source,
+        "jeweller_store_22k_inr_per_gram": str(store_22),
+        "gold_rate_source": profile.gold_rate_source,
         "representative_making_charge_inr_per_gram": str(
             profile.representative_making_charge_inr_per_gram
         ),
@@ -282,8 +316,7 @@ class JewellerProductWriteSerializer(serializers.ModelSerializer):
 
 class JewellerProductReadSerializer(serializers.BaseSerializer):
     def to_representation(self, product: MarketplaceProduct):
-        ticker = get_or_create_ticker()
-        base = _annotate_product_public(product, ticker)
+        base = _annotate_product_public(product)
         base.update(
             {
                 "moderation_status": product.moderation_status,
@@ -309,8 +342,7 @@ class AdminProductModerationSerializer(serializers.Serializer):
 
 class AdminProductRowSerializer(serializers.BaseSerializer):
     def to_representation(self, product: MarketplaceProduct):
-        ticker = get_or_create_ticker()
-        row = _annotate_product_public(product, ticker)
+        row = _annotate_product_public(product)
         row.update(
             {
                 "moderation_status": product.moderation_status,

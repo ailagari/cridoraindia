@@ -4,6 +4,7 @@ export type GoldTickerPayload = {
   reference_price_inr_per_gram_22k: string
   admin_markup_percent: string
   platform_base_inr_per_gram_22k: string
+  cridora_base_source?: string
   updated_at: string
 }
 
@@ -35,6 +36,7 @@ export type MarketplaceProductDTO = {
   jeweller_city: string
   pricing_mode: string
   platform_base_inr_per_gram_22k: string
+  cridora_base_source?: string
   metal_rate_inr_per_gram_used: string
   jeweller_markup_percent_applied: string
   gold_metal_value_inr: string
@@ -60,6 +62,9 @@ export type JewellerStorefrontDTO = {
   gstin: string
   kyc_status: string
   platform_base_inr_per_gram_22k: string
+  cridora_base_source?: string
+  jeweller_store_22k_inr_per_gram?: string
+  gold_rate_source?: string
   representative_making_charge_inr_per_gram: string
   buyback_indicative_inr_per_gram: string
   buyback_uses_headline_override: boolean

@@ -6,8 +6,9 @@ from decimal import Decimal
 
 from django.contrib.auth import get_user_model
 
-from apps.marketplace.models import get_or_create_ticker, jeweller_profile_for
+from apps.marketplace.models import jeweller_profile_for
 from apps.marketplace.pricing import reference_metal_rate_inr_per_gram_for_jeweller
+from apps.marketplace.spot_prices import resolve_cridora_base_22k_inr
 
 User = get_user_model()
 
@@ -17,10 +18,9 @@ MIN_GRAMS = Decimal("0.001")
 
 
 def jeweller_metal_rate_inr_per_gram(jeweller: User) -> Decimal:
-    ticker = get_or_create_ticker()
-    base = ticker.platform_base_inr_per_gram()
+    cridora_base, _ = resolve_cridora_base_22k_inr()
     profile = jeweller_profile_for(jeweller)
-    return reference_metal_rate_inr_per_gram_for_jeweller(profile, base)
+    return reference_metal_rate_inr_per_gram_for_jeweller(profile, cridora_base)
 
 
 def breakdown_from_grams(grams: Decimal, rate: Decimal) -> dict[str, Decimal]:
