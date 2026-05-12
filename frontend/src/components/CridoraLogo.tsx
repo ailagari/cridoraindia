@@ -17,8 +17,8 @@ export function CridoraLogo({ size = 'sm', showWordmark = true, className = '' }
           height: s,
           borderRadius: '22%',
           border: '1px solid var(--border-soft)',
-          background: 'var(--bg-deep)',
-          boxShadow: '0 8px 28px rgba(0, 8, 20, 0.5), 0 0 0 1px rgba(200, 162, 77, 0.12)',
+          background: 'var(--bg-elevated)',
+          boxShadow: 'var(--logo-glow-shadow)',
           display: 'grid',
           placeItems: 'center',
         }}
