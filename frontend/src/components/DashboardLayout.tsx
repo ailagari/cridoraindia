@@ -259,10 +259,10 @@ export function DashboardLayout({
               className={'dash-bottom-item' + (inGroup ? ' dash-bottom-item--active' : '')}
               onClick={() => pickHub(g)}
             >
-              <span className="dash-bottom-ico" style={{ color: inGroup ? meta.accentVar : undefined }}>
+              <span className="mobile-tab-ico" style={{ color: inGroup ? meta.accentVar : undefined }}>
                 <NavHubIcon icon={g.icon} active={inGroup} />
               </span>
-              <span className="dash-bottom-label">{g.shortLabel}</span>
+              <span className="mobile-tab-label">{g.shortLabel}</span>
             </button>
           )
         })}

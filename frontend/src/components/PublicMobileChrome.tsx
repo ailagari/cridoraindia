@@ -1,5 +1,6 @@
 import { NavLink, useLocation } from 'react-router-dom'
 import { NotificationBell } from '@/components/NotificationBell'
+import { PublicTabIcon } from '@/components/PublicTabIcon'
 import { useAuth } from '@/context/AuthContext'
 import { userDashboardPath } from '@/lib/routes'
 
@@ -78,7 +79,14 @@ export function PublicMobileChrome() {
             `public-bottom-item${isActive ? ' public-bottom-item--active' : ''}`
           }
         >
-          Home
+          {({ isActive }) => (
+            <>
+              <span className="mobile-tab-ico">
+                <PublicTabIcon tab="home" active={isActive} />
+              </span>
+              <span className="mobile-tab-label">Home</span>
+            </>
+          )}
         </NavLink>
         <NavLink
           to="/why-cridora"
@@ -86,19 +94,53 @@ export function PublicMobileChrome() {
             `public-bottom-item${isActive ? ' public-bottom-item--active' : ''}`
           }
         >
-          Discover
+          {({ isActive }) => (
+            <>
+              <span className="mobile-tab-ico">
+                <PublicTabIcon tab="discover" active={isActive} />
+              </span>
+              <span className="mobile-tab-label">Discover</span>
+            </>
+          )}
         </NavLink>
         <NavLink
           to="/marketplace"
           className={() => `public-bottom-item${isShopPath ? ' public-bottom-item--active' : ''}`}
         >
-          Shop
+          {() => (
+            <>
+              <span className="mobile-tab-ico">
+                <PublicTabIcon tab="shop" active={isShopPath} />
+              </span>
+              <span className="mobile-tab-label">Shop</span>
+            </>
+          )}
         </NavLink>
-        <NavLink to="/signup" className={() => `public-bottom-item${isJoinPath ? ' public-bottom-item--active' : ''}`}>
-          Join
+        <NavLink
+          to="/signup"
+          className={() => `public-bottom-item${isJoinPath ? ' public-bottom-item--active' : ''}`}
+        >
+          {() => (
+            <>
+              <span className="mobile-tab-ico">
+                <PublicTabIcon tab="join" active={isJoinPath} />
+              </span>
+              <span className="mobile-tab-label">Join</span>
+            </>
+          )}
         </NavLink>
-        <NavLink to={dashboardHref} className={() => `public-bottom-item${accountActive ? ' public-bottom-item--active' : ''}`}>
-          {user ? 'App' : 'Account'}
+        <NavLink
+          to={dashboardHref}
+          className={() => `public-bottom-item${accountActive ? ' public-bottom-item--active' : ''}`}
+        >
+          {() => (
+            <>
+              <span className="mobile-tab-ico">
+                <PublicTabIcon tab="account" active={accountActive} />
+              </span>
+              <span className="mobile-tab-label">{user ? 'App' : 'Account'}</span>
+            </>
+          )}
         </NavLink>
       </nav>
     </>
