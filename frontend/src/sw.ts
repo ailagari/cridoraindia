@@ -6,6 +6,18 @@ declare const self: ServiceWorkerGlobalScope & { __WB_MANIFEST: unknown }
 cleanupOutdatedCaches()
 precacheAndRoute(self.__WB_MANIFEST)
 
+/** Required for vite-plugin-pwa / workbox-window “Refresh” (prompt mode). */
+self.addEventListener('message', (event: ExtendableMessageEvent) => {
+  const t = event.data && typeof event.data === 'object' ? (event.data as { type?: string }).type : null
+  if (t === 'SKIP_WAITING') {
+    void self.skipWaiting()
+  }
+})
+
+self.addEventListener('activate', (event: ExtendableEvent) => {
+  event.waitUntil(self.clients.claim())
+})
+
 type PushPayload = {
   title?: string
   body?: string
