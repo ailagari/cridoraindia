@@ -170,3 +170,10 @@ export function previewBuybackInrPerGram(boardInrPerGram: number, bb: MetalBuyba
   const a = boardInrPerGram * (1 - pct / 100)
   return Math.max(0, a - fix - ex)
 }
+
+/** Total ₹/g taken off your board rate for buyback (percent slice + fixed + extra). */
+export function totalBuybackDeductionPerGram(boardInrPerGram: number, bb: MetalBuybackDraft): number {
+  if (!(boardInrPerGram >= 0) || !Number.isFinite(boardInrPerGram)) return 0
+  const buy = previewBuybackInrPerGram(boardInrPerGram, bb)
+  return Math.max(0, boardInrPerGram - buy)
+}

@@ -106,7 +106,9 @@ export function JewellerPublicPage() {
           }}
         >
           <div className="card" style={{ padding: '1rem', borderRadius: 20 }}>
-            <p style={{ margin: 0, fontSize: '0.6rem', color: 'var(--text-faint)', fontWeight: 800 }}>Cridora 22K (live)</p>
+            <p style={{ margin: 0, fontSize: '0.6rem', color: 'var(--text-faint)', fontWeight: 800 }}>
+              Cridora reference 22K
+            </p>
             <p style={{ margin: '0.35rem 0 0', fontSize: '1.2rem', fontWeight: 800, color: 'var(--success)' }} className="tabular">
               ₹{liveBase?.platformBaseInrPerGram22k ? formatInr(parseNum(liveBase.platformBaseInrPerGram22k), 2) : '—'}/g
             </p>
