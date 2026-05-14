@@ -28,7 +28,12 @@ from .pricing import (
     sellback_rate_inr_per_gram,
     stone_component_inr,
 )
-from .spot_prices import public_spot_prices_payload, resolve_cridora_base_22k_inr
+from .metal_ticker_adjustments import METAL_ADMIN_ROWS, adjusted_inr_from_float
+from .spot_prices import (
+    get_raw_spot_payload_for_admin_preview,
+    public_spot_prices_payload,
+    resolve_cridora_base_22k_inr,
+)
 
 User = get_user_model()
 
@@ -36,13 +41,13 @@ User = get_user_model()
 class GoldTickerReadSerializer(serializers.ModelSerializer):
     platform_base_inr_per_gram_22k = serializers.SerializerMethodField()
     cridora_base_source = serializers.SerializerMethodField()
+    live_spot_raw_preview = serializers.SerializerMethodField()
 
     class Meta:
         model = GoldTickerConfig
         fields = (
-            "reference_price_inr_per_gram_22k",
-            "admin_markup_percent",
-            "admin_markup_inr_per_gram",
+            "live_metal_adjustments_json",
+            "live_spot_raw_preview",
             "rate_move_alert_threshold_inr",
             "rate_alert_baseline_inr_per_gram_22k",
             "manual_ticker_enabled",
@@ -65,14 +70,79 @@ class GoldTickerReadSerializer(serializers.ModelSerializer):
         _, src = resolve_cridora_base_22k_inr()
         return src
 
+    def get_live_spot_raw_preview(self, obj: GoldTickerConfig) -> dict:
+        raw = get_raw_spot_payload_for_admin_preview()
+        gold = raw.get("gold") if isinstance(raw.get("gold"), dict) else {}
+        silver = raw.get("silver") if isinstance(raw.get("silver"), dict) else {}
+        rows: list[dict] = []
+        for family, key, label in METAL_ADMIN_ROWS:
+            rv = gold.get(key) if family == "gold" else silver.get(key)
+            if rv is None:
+                rows.append(
+                    {
+                        "family": family,
+                        "key": key,
+                        "label": label,
+                        "raw_inr_per_gram": None,
+                        "final_inr_per_gram": None,
+                    }
+                )
+                continue
+            try:
+                rvf = float(rv)
+            except (TypeError, ValueError):
+                rows.append(
+                    {
+                        "family": family,
+                        "key": key,
+                        "label": label,
+                        "raw_inr_per_gram": None,
+                        "final_inr_per_gram": None,
+                    }
+                )
+                continue
+            adj = adjusted_inr_from_float(rvf, family=family, key=key, ticker=obj)
+            rows.append(
+                {
+                    "family": family,
+                    "key": key,
+                    "label": label,
+                    "raw_inr_per_gram": str(rvf),
+                    "final_inr_per_gram": str(adj),
+                }
+            )
+        return {"source": raw.get("source") or "", "rows": rows}
+
+
+class GoldTickerPublicSerializer(serializers.ModelSerializer):
+    """Public storefront: resolved reference only — no admin deduction table."""
+
+    platform_base_inr_per_gram_22k = serializers.SerializerMethodField()
+    cridora_base_source = serializers.SerializerMethodField()
+
+    class Meta:
+        model = GoldTickerConfig
+        fields = (
+            "platform_base_inr_per_gram_22k",
+            "cridora_base_source",
+            "updated_at",
+        )
+        read_only_fields = fields
+
+    def get_platform_base_inr_per_gram_22k(self, obj: GoldTickerConfig) -> str:
+        base, _ = resolve_cridora_base_22k_inr()
+        return str(base)
+
+    def get_cridora_base_source(self, obj: GoldTickerConfig) -> str:
+        _, src = resolve_cridora_base_22k_inr()
+        return src
+
 
 class GoldTickerAdminSerializer(serializers.ModelSerializer):
     class Meta:
         model = GoldTickerConfig
         fields = (
-            "reference_price_inr_per_gram_22k",
-            "admin_markup_percent",
-            "admin_markup_inr_per_gram",
+            "live_metal_adjustments_json",
             "rate_move_alert_threshold_inr",
             "manual_ticker_enabled",
             "ticker_manual_22k_inr_per_gram",
@@ -81,6 +151,13 @@ class GoldTickerAdminSerializer(serializers.ModelSerializer):
             "gold_loan_interest_apr_percent",
             "gold_loan_processing_fee_inr",
         )
+
+    def validate_live_metal_adjustments_json(self, value):
+        from .metal_ticker_adjustments import normalize_live_metal_adjustments_json
+
+        if value is None:
+            return {}
+        return normalize_live_metal_adjustments_json(value)
 
     def validate_rate_move_alert_threshold_inr(self, value):
         if value < 0:

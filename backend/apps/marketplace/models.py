@@ -6,32 +6,42 @@ from django.db import models
 
 class GoldTickerConfig(models.Model):
     """
-    Platform Cridora reference for BIS 916 / 22K (₹ per gram).
+    Platform Cridora reference for metals (₹ per gram).
 
-    Manual mode: admin 22K (optional 24K) is the reference for all jewellers.
+    Manual mode: admin 22K (optional 24K) is the reference for gold ticker rows.
 
-    Live mode: raw spot 22K gets admin_markup_percent then admin_markup_inr_per_gram;
-    that final value is the reference. If spot feed and caches are empty, reference_price_inr_per_gram_22k
-    is treated as raw 22K and the same adjustments apply (emergency fallback only).
+    Live mode: global spot feed supplies raw ₹/g per metal; admin applies per-metal deduction
+    (percent or fixed ₹/g, toggle per metal). Last successful raw snapshot is stored for emergency
+    when feed and caches are empty. Legacy reference_price_inr_per_gram_22k is used only if no snapshot exists.
     """
 
     reference_price_inr_per_gram_22k = models.DecimalField(
         max_digits=12,
         decimal_places=2,
         default=Decimal("7245.50"),
-        help_text="Emergency raw 22K ₹/g when spot feed and caches are empty; same % and ₹/g adjustments apply.",
+        help_text="Legacy fallback raw 22K ₹/g only when no live snapshot exists.",
     )
     admin_markup_percent = models.DecimalField(
         max_digits=8,
         decimal_places=3,
         default=Decimal("0"),
-        help_text="Percent markup on raw live spot 22K before fixed ₹/g add-on.",
+        help_text="Deprecated — use live_metal_adjustments_json.",
     )
     admin_markup_inr_per_gram = models.DecimalField(
         max_digits=12,
         decimal_places=2,
         default=Decimal("0"),
-        help_text="Added after percent on raw live spot 22K (final Cridora reference for jewellers).",
+        help_text="Deprecated — use live_metal_adjustments_json.",
+    )
+    live_metal_adjustments_json = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text='Per-metal deductions from live spot, e.g. {"gold":{"22K":{"mode":"percent","amount":"0.5"}}}.',
+    )
+    last_good_live_raw_snapshot_json = models.JSONField(
+        null=True,
+        blank=True,
+        help_text="Last raw spot gold/silver ₹/g from feed (unadjusted); used when feed and caches are empty.",
     )
     rate_move_alert_threshold_inr = models.DecimalField(
         max_digits=12,
@@ -90,17 +100,16 @@ class GoldTickerConfig(models.Model):
     def __str__(self):
         return "GoldTickerConfig"
 
-    def apply_admin_live_markup_to_raw_22k(self, raw_22k: Decimal) -> Decimal:
-        """Live-mode pipeline: raw spot (or emergency substitute) → % → plus ₹/g → quantized reference."""
-        if raw_22k <= 0:
-            return Decimal("0").quantize(Decimal("0.01"))
-        m = self.admin_markup_percent / Decimal("100")
-        out = raw_22k * (Decimal("1") + m) + self.admin_markup_inr_per_gram
-        return out.quantize(Decimal("0.01"))
-
     def platform_base_inr_per_gram(self) -> Decimal:
-        """Emergency reference when no spot data: adjust configured raw 22K the same as live mode."""
-        return self.apply_admin_live_markup_to_raw_22k(self.reference_price_inr_per_gram_22k)
+        """Best-effort Cridora 22K ₹/g when spot chain returns nothing: snapshot or legacy reference, then deductions."""
+        from .metal_ticker_adjustments import adjusted_inr_from_decimal
+
+        snap = self.last_good_live_raw_snapshot_json or {}
+        gold = snap.get("gold") if isinstance(snap.get("gold"), dict) else {}
+        raw22 = gold.get("22K") if gold else None
+        if raw22 is not None:
+            return adjusted_inr_from_decimal(Decimal(str(raw22)), family="gold", key="22K", ticker=self)
+        return adjusted_inr_from_decimal(self.reference_price_inr_per_gram_22k, family="gold", key="22K", ticker=self)
 
 
 class JewellerPricingProfile(models.Model):

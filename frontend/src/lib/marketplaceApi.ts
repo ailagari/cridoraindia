@@ -1,17 +1,8 @@
 import { apiFetch } from '@/lib/api'
 
 export type GoldTickerPayload = {
-  reference_price_inr_per_gram_22k: string
-  admin_markup_percent: string
-  admin_markup_inr_per_gram: string
-  manual_ticker_enabled?: boolean
-  ticker_manual_22k_inr_per_gram?: string | null
-  ticker_manual_24k_inr_per_gram?: string | null
   platform_base_inr_per_gram_22k: string
   cridora_base_source?: string
-  gold_deposit_yield_apr_percent?: string
-  gold_loan_interest_apr_percent?: string
-  gold_loan_processing_fee_inr?: string
   updated_at: string
 }
 

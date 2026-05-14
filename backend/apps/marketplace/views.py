@@ -14,6 +14,7 @@ from .serializers import (
     AdminProductModerationSerializer,
     AdminProductRowSerializer,
     GoldTickerAdminSerializer,
+    GoldTickerPublicSerializer,
     GoldTickerReadSerializer,
     JewellerPricingProfileSerializer,
     JewellerProductReadSerializer,
@@ -53,7 +54,7 @@ class MarketplaceGoldTickerPublicView(APIView):
         except Exception:
             logger.exception("Gold rate alert check failed")
         ticker = get_or_create_ticker()
-        return Response(GoldTickerReadSerializer(ticker).data)
+        return Response(GoldTickerPublicSerializer(ticker).data)
 
 
 class MarketplaceProductsPublicView(APIView):
