@@ -6,6 +6,14 @@ export type MetalPricingMode =
   | 'manual_board_inr'
   | 'external_api'
 
+/** When mode is markup_on_cridora: either percent uplift or fixed ₹/g on Cridora reference (not both). */
+export type MarkupApplyKind = 'percent' | 'fixed_inr'
+
+export type DeductionSourceKind = 'custom' | 'admin_reference'
+
+/** Admin ticker buyback rule copied from jeweller profile preview (mode + amount). */
+export type AdminBuybackDeductionPreview = { mode: string; amount: string }
+
 export type MetalCode =
   | 'gold_22k'
   | 'gold_24k'
@@ -29,6 +37,7 @@ export const JEWELLER_METAL_ROWS: {
 
 export type MetalPricingDraft = {
   mode: MetalPricingMode
+  markup_apply: MarkupApplyKind
   markup_percent: string
   markup_inr_per_gram: string
   manual_inr_per_gram: string
@@ -36,6 +45,7 @@ export type MetalPricingDraft = {
 }
 
 export type MetalBuybackDraft = {
+  deduction_source: DeductionSourceKind
   deduction_percent: string
   fixed_inr_per_gram: string
   jeweller_deduction_inr_per_gram: string
@@ -44,6 +54,7 @@ export type MetalBuybackDraft = {
 export function defaultPricingDraft(): MetalPricingDraft {
   return {
     mode: 'match_cridora',
+    markup_apply: 'percent',
     markup_percent: '0',
     markup_inr_per_gram: '0',
     manual_inr_per_gram: '0',
@@ -53,6 +64,7 @@ export function defaultPricingDraft(): MetalPricingDraft {
 
 export function defaultBuybackDraft(): MetalBuybackDraft {
   return {
+    deduction_source: 'custom',
     deduction_percent: '0',
     fixed_inr_per_gram: '0',
     jeweller_deduction_inr_per_gram: '0',
@@ -80,6 +92,10 @@ export function pricingDraftFromApi(raw: unknown): Record<MetalCode, MetalPricin
       d.markup_inr_per_gram = String(o.markup_inr_per_gram ?? '0')
       d.manual_inr_per_gram = String(o.manual_inr_per_gram ?? '0')
       d.external_api_url = String(o.external_api_url ?? '')
+      const ma = String(o.markup_apply ?? '').trim()
+      if (ma === 'fixed_inr' || ma === 'percent') {
+        d.markup_apply = ma
+      }
     }
     out[code] = d
   }
@@ -97,6 +113,10 @@ export function buybackDraftFromApi(raw: unknown): Record<MetalCode, MetalBuybac
       d.deduction_percent = String(o.deduction_percent ?? '0')
       d.fixed_inr_per_gram = String(o.fixed_inr_per_gram ?? '0')
       d.jeweller_deduction_inr_per_gram = String(o.jeweller_deduction_inr_per_gram ?? '0')
+      const ds = String(o.deduction_source ?? '').trim()
+      if (ds === 'admin_reference' || ds === 'custom') {
+        d.deduction_source = ds
+      }
     }
     out[code] = d
   }
@@ -154,26 +174,56 @@ export function computeJewellerBoardInrPerGram(cridoraRef: number, block: MetalP
       return m > 0 ? m : cridoraRef
     }
     case 'markup_on_cridora': {
+      if (block.markup_apply === 'fixed_inr') {
+        const f = parseN(block.markup_inr_per_gram)
+        return Math.max(0, cridoraRef + f)
+      }
       const p = parseN(block.markup_percent)
-      const f = parseN(block.markup_inr_per_gram)
-      return Math.max(0, cridoraRef * (1 + p / 100) + f)
+      return Math.max(0, cridoraRef * (1 + p / 100))
     }
     default:
       return cridoraRef
   }
 }
 
-export function previewBuybackInrPerGram(boardInrPerGram: number, bb: MetalBuybackDraft): number {
+/** Mirrors admin ticker deduction step on jeweller board ₹/g (percent capped at 100). */
+export function applyAdminBuybackDeductionToBoard(
+  boardInrPerGram: number,
+  admin: AdminBuybackDeductionPreview | null | undefined,
+): number {
+  if (!(boardInrPerGram >= 0) || !Number.isFinite(boardInrPerGram)) return 0
+  const mode = admin?.mode === 'fixed_inr' ? 'fixed_inr' : 'percent'
+  const amt = parseN(admin?.amount ?? '0')
+  if (mode === 'percent') {
+    const p = Math.min(Math.max(amt, 0), 100)
+    return Math.max(0, boardInrPerGram * (1 - p / 100))
+  }
+  return Math.max(0, boardInrPerGram - Math.max(0, amt))
+}
+
+export function previewBuybackInrPerGram(
+  boardInrPerGram: number,
+  bb: MetalBuybackDraft,
+  adminDeductionPreview?: AdminBuybackDeductionPreview | null,
+): number {
+  const ex = parseN(bb.jeweller_deduction_inr_per_gram)
+  if (bb.deduction_source === 'admin_reference') {
+    const afterAdmin = applyAdminBuybackDeductionToBoard(boardInrPerGram, adminDeductionPreview ?? null)
+    return Math.max(0, afterAdmin - ex)
+  }
   const pct = parseN(bb.deduction_percent)
   const fix = parseN(bb.fixed_inr_per_gram)
-  const ex = parseN(bb.jeweller_deduction_inr_per_gram)
   const a = boardInrPerGram * (1 - pct / 100)
   return Math.max(0, a - fix - ex)
 }
 
 /** Total ₹/g taken off your board rate for buyback (percent slice + fixed + extra). */
-export function totalBuybackDeductionPerGram(boardInrPerGram: number, bb: MetalBuybackDraft): number {
+export function totalBuybackDeductionPerGram(
+  boardInrPerGram: number,
+  bb: MetalBuybackDraft,
+  adminDeductionPreview?: AdminBuybackDeductionPreview | null,
+): number {
   if (!(boardInrPerGram >= 0) || !Number.isFinite(boardInrPerGram)) return 0
-  const buy = previewBuybackInrPerGram(boardInrPerGram, bb)
+  const buy = previewBuybackInrPerGram(boardInrPerGram, bb, adminDeductionPreview)
   return Math.max(0, boardInrPerGram - buy)
 }

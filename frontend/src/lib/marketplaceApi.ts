@@ -6,6 +6,17 @@ export type GoldTickerPayload = {
   updated_at: string
 }
 
+export type LiveRawSpotPayload = {
+  currency: string
+  unit: string
+  source: string
+  note?: string
+  gold: Record<string, number>
+  silver?: Record<string, number>
+  usd_to_inr?: number
+  usd_to_inr_source?: string
+}
+
 export type SpotPricesPayload = {
   currency: string
   unit: string
@@ -16,6 +27,11 @@ export type SpotPricesPayload = {
   gold: Record<string, number>
   silver?: Record<string, number>
   ticker_items?: Array<{ label: string; value?: number; text?: string }>
+  /** Unadjusted global-spot INR/g (same ladder keys as `gold`) when cache/snapshot exists. */
+  live_raw_spot?: LiveRawSpotPayload | null
+  /** Canonical 22K ₹/g; matches resolved Cridora reference. */
+  platform_base_inr_per_gram_22k?: string
+  cridora_base_source?: string
 }
 
 export type MarketplaceProductDTO = {

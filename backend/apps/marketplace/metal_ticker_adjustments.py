@@ -1,4 +1,4 @@
-"""Per-metal live spot deductions for Cridora ticker (admin-configurable)."""
+"""Per-metal admin ticker: markup from live raw, then deduction from that reference."""
 
 from __future__ import annotations
 
@@ -8,7 +8,6 @@ from typing import Any
 GOLD_KEYS = ("24K", "22K", "21K", "18K")
 SILVER_KEYS = ("999", "925")
 
-# Admin UI / API preview row order
 METAL_ADMIN_ROWS: tuple[tuple[str, str, str], ...] = (
     ("gold", "24K", "Gold 24K"),
     ("gold", "22K", "Gold 22K"),
@@ -18,11 +17,42 @@ METAL_ADMIN_ROWS: tuple[tuple[str, str, str], ...] = (
     ("silver", "925", "Silver 925"),
 )
 
+METAL_CODE_TO_TICKER: dict[str, tuple[str, str]] = {
+    "gold_22k": ("gold", "22K"),
+    "gold_24k": ("gold", "24K"),
+    "gold_21k": ("gold", "21K"),
+    "gold_18k": ("gold", "18K"),
+    "silver_999": ("silver", "999"),
+    "silver_925": ("silver", "925"),
+}
 
-def normalize_live_metal_adjustments_json(raw: Any) -> dict[str, dict[str, dict[str, str]]]:
+
+def _normalize_side(raw: Any, *, default_mode: str = "percent") -> dict[str, str]:
+    if not isinstance(raw, dict):
+        return {"mode": default_mode, "amount": "0"}
+    mode = raw.get("mode") or default_mode
+    if mode not in ("percent", "fixed_inr"):
+        mode = "percent"
+    try:
+        amt = Decimal(str(raw.get("amount", "0")))
+    except Exception:
+        amt = Decimal("0")
+    if amt < 0:
+        amt = Decimal("0")
+    return {"mode": mode, "amount": str(amt)}
+
+
+def _legacy_flat_entry(v: dict[str, Any]) -> bool:
+    return "markup" not in v and "deduction" not in v and (
+        "mode" in v or "deduction_mode" in v or "amount" in v
+    )
+
+
+def normalize_live_metal_adjustments_json(raw: Any) -> dict[str, dict[str, dict[str, dict[str, str]]]]:
+    """gold/silver → karat key → { markup: {mode, amount}, deduction: {mode, amount} }."""
     if not isinstance(raw, dict):
         return {"gold": {}, "silver": {}}
-    out: dict[str, dict[str, dict[str, str]]] = {"gold": {}, "silver": {}}
+    out: dict[str, dict[str, dict[str, dict[str, str]]]] = {"gold": {}, "silver": {}}
     for family in ("gold", "silver"):
         block = raw.get(family)
         if not isinstance(block, dict):
@@ -31,33 +61,84 @@ def normalize_live_metal_adjustments_json(raw: Any) -> dict[str, dict[str, dict[
             key = str(k)
             if not isinstance(v, dict):
                 continue
-            mode = v.get("mode") or v.get("deduction_mode") or "percent"
-            if mode not in ("percent", "fixed_inr"):
-                mode = "percent"
-            try:
-                amt = Decimal(str(v.get("amount", "0")))
-            except Exception:
-                amt = Decimal("0")
-            if amt < 0:
-                amt = Decimal("0")
-            out[family][key] = {"mode": mode, "amount": str(amt)}
+            if _legacy_flat_entry(v):
+                dm = v.get("mode") or v.get("deduction_mode") or "percent"
+                if dm not in ("percent", "fixed_inr"):
+                    dm = "percent"
+                try:
+                    da = Decimal(str(v.get("amount", "0")))
+                except Exception:
+                    da = Decimal("0")
+                if da < 0:
+                    da = Decimal("0")
+                entry = {
+                    "markup": {"mode": "percent", "amount": "0"},
+                    "deduction": {"mode": dm, "amount": str(da)},
+                }
+            else:
+                entry = {
+                    "markup": _normalize_side(v.get("markup")),
+                    "deduction": _normalize_side(v.get("deduction")),
+                }
+            out[family][key] = entry
     return out
 
 
-def adjustment_for(ticker: Any, *, family: str, key: str) -> tuple[str, Decimal]:
+def _entry_for(ticker: Any, *, family: str, key: str) -> dict[str, dict[str, str]]:
     cfg = normalize_live_metal_adjustments_json(getattr(ticker, "live_metal_adjustments_json", None))
     block = cfg.get(family) or {}
-    entry = block.get(key) or {}
-    mode = entry.get("mode") or "percent"
+    return block.get(key) or {
+        "markup": {"mode": "percent", "amount": "0"},
+        "deduction": {"mode": "percent", "amount": "0"},
+    }
+
+
+def markup_for(ticker: Any, *, family: str, key: str) -> tuple[str, Decimal]:
+    side = _entry_for(ticker, family=family, key=key)["markup"]
+    mode = side.get("mode") or "percent"
     if mode not in ("percent", "fixed_inr"):
         mode = "percent"
     try:
-        amount = Decimal(str(entry.get("amount", "0")))
+        amount = Decimal(str(side.get("amount", "0")))
     except Exception:
         amount = Decimal("0")
     if amount < 0:
         amount = Decimal("0")
     return mode, amount
+
+
+def deduction_for(ticker: Any, *, family: str, key: str) -> tuple[str, Decimal]:
+    side = _entry_for(ticker, family=family, key=key)["deduction"]
+    mode = side.get("mode") or "percent"
+    if mode not in ("percent", "fixed_inr"):
+        mode = "percent"
+    try:
+        amount = Decimal(str(side.get("amount", "0")))
+    except Exception:
+        amount = Decimal("0")
+    if amount < 0:
+        amount = Decimal("0")
+    return mode, amount
+
+
+def admin_deduction_for_jeweller_metal(ticker: Any, metal_code: str) -> tuple[str, Decimal]:
+    mapped = METAL_CODE_TO_TICKER.get(metal_code)
+    if not mapped:
+        return "percent", Decimal("0")
+    fam, k = mapped
+    return deduction_for(ticker, family=fam, key=k)
+
+
+def apply_markup(raw: Decimal, *, mode: str, amount: Decimal, quant: str) -> Decimal:
+    if raw <= 0:
+        return Decimal("0").quantize(Decimal(quant))
+    if mode == "percent":
+        p = min(amount, Decimal("1000"))
+        out = raw * (Decimal("1") + p / Decimal("100"))
+    else:
+        out = raw + amount
+    q = Decimal(quant)
+    return max(Decimal("0"), out).quantize(q)
 
 
 def apply_deduction(raw: Decimal, *, mode: str, amount: Decimal, quant: str) -> Decimal:
@@ -72,10 +153,17 @@ def apply_deduction(raw: Decimal, *, mode: str, amount: Decimal, quant: str) -> 
     return max(Decimal("0"), out).quantize(q)
 
 
-def adjusted_inr_from_decimal(raw: Decimal, *, family: str, key: str, ticker: Any) -> Decimal:
-    mode, amount = adjustment_for(ticker, family=family, key=key)
+def after_markup_inr_from_decimal(raw: Decimal, *, family: str, key: str, ticker: Any) -> Decimal:
     quant = "0.001" if family == "silver" else "0.01"
-    return apply_deduction(raw, mode=mode, amount=amount, quant=quant)
+    mm, ma = markup_for(ticker, family=family, key=key)
+    return apply_markup(raw, mode=mm, amount=ma, quant=quant)
+
+
+def adjusted_inr_from_decimal(raw: Decimal, *, family: str, key: str, ticker: Any) -> Decimal:
+    quant = "0.001" if family == "silver" else "0.01"
+    mid = after_markup_inr_from_decimal(raw, family=family, key=key, ticker=ticker)
+    dm, da = deduction_for(ticker, family=family, key=key)
+    return apply_deduction(mid, mode=dm, amount=da, quant=quant)
 
 
 def adjusted_inr_from_float(raw_v: float | None, *, family: str, key: str, ticker: Any) -> Decimal:
@@ -86,7 +174,7 @@ def adjusted_inr_from_float(raw_v: float | None, *, family: str, key: str, ticke
 
 
 def apply_live_adjustments_to_spot_payload(raw_payload: dict, ticker: Any) -> dict:
-    """Apply per-metal deductions to a raw spot-shaped payload (not manual ticker)."""
+    """Apply markup then deduction per metal to a raw spot-shaped payload (not manual ticker)."""
     src = str(raw_payload.get("source") or "")
     if src == "manual_ticker":
         return raw_payload
@@ -120,12 +208,11 @@ def apply_live_adjustments_to_spot_payload(raw_payload: dict, ticker: Any) -> di
             new_silver[k] = float(adj)
 
     base_note = str(raw_payload.get("note") or "").strip()
-    extra = "Cridora reference = live metal rates after admin deductions."
+    extra = "Cridora reference = live + admin markup, then deduction."
     note = f"{base_note} {extra}".strip()
-    out = {
+    return {
         **raw_payload,
         "gold": new_gold,
         "silver": new_silver,
         "note": note,
     }
-    return out

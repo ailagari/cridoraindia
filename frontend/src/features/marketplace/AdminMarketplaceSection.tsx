@@ -1,13 +1,20 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, type CSSProperties } from 'react'
 import { authFetch } from '@/lib/api'
 import { LIVE_ADMIN_TICKER_POLL_MS, LIVE_ADMIN_POLL_MS } from '@/lib/liveDeskIntervals'
 import { useLivePoll } from '@/lib/useLivePoll'
 
 type DeductionMode = 'percent' | 'fixed_inr'
 
+type AdjustmentSide = { mode: DeductionMode; amount: string }
+
+type MetalAdjustmentRow = {
+  markup: AdjustmentSide
+  deduction: AdjustmentSide
+}
+
 type AdjustmentsState = {
-  gold: Record<string, { mode: DeductionMode; amount: string }>
-  silver: Record<string, { mode: DeductionMode; amount: string }>
+  gold: Record<string, MetalAdjustmentRow>
+  silver: Record<string, MetalAdjustmentRow>
 }
 
 type LivePreviewRow = {
@@ -15,6 +22,7 @@ type LivePreviewRow = {
   key: string
   label: string
   raw_inr_per_gram: string | null
+  after_markup_inr_per_gram: string | null
   final_inr_per_gram: string | null
 }
 
@@ -44,59 +52,92 @@ const METAL_ROWS: Array<{ family: 'gold' | 'silver'; key: string; label: string 
 ]
 
 function emptyAdjustments(): AdjustmentsState {
+  const side = (): AdjustmentSide => ({ mode: 'percent', amount: '0' })
   const gold: AdjustmentsState['gold'] = {}
   const silver: AdjustmentsState['silver'] = {}
   for (const { family, key } of METAL_ROWS) {
-    if (family === 'gold') gold[key] = { mode: 'percent', amount: '0' }
-    else silver[key] = { mode: 'percent', amount: '0' }
+    const row: MetalAdjustmentRow = { markup: side(), deduction: side() }
+    if (family === 'gold') gold[key] = row
+    else silver[key] = row
   }
   return { gold, silver }
+}
+
+function normalizeAdjustmentSide(raw: unknown): AdjustmentSide {
+  if (raw && typeof raw === 'object') {
+    const s = raw as { mode?: string; amount?: unknown }
+    const mode = s.mode === 'fixed_inr' ? 'fixed_inr' : 'percent'
+    return { mode, amount: String(s.amount ?? '0') }
+  }
+  return { mode: 'percent', amount: '0' }
 }
 
 function parseAdjustments(raw: unknown): AdjustmentsState {
   const base = emptyAdjustments()
   if (!raw || typeof raw !== 'object') return base
   const o = raw as {
-    gold?: Record<string, { mode?: string; amount?: string }>
-    silver?: Record<string, { mode?: string; amount?: string }>
+    gold?: Record<string, Record<string, unknown>>
+    silver?: Record<string, Record<string, unknown>>
   }
-  for (const k of Object.keys(base.gold)) {
-    const e = o.gold?.[k]
-    if (e && (e.mode === 'percent' || e.mode === 'fixed_inr')) {
-      base.gold[k] = { mode: e.mode, amount: String(e.amount ?? '0') }
+  const ingest = (family: 'gold' | 'silver', keys: string[]) => {
+    for (const k of keys) {
+      const e = o[family]?.[k]
+      if (!e || typeof e !== 'object') continue
+      if ('markup' in e || 'deduction' in e) {
+        base[family][k] = {
+          markup: normalizeAdjustmentSide(e.markup),
+          deduction: normalizeAdjustmentSide(e.deduction),
+        }
+      } else if ('mode' in e || 'amount' in e || 'deduction_mode' in e) {
+        const dmRaw = (e as { deduction_mode?: string; mode?: string }).deduction_mode
+        const modeRaw = (e as { mode?: string }).mode
+        const dm = dmRaw === 'fixed_inr' || modeRaw === 'fixed_inr' ? 'fixed_inr' : 'percent'
+        base[family][k] = {
+          markup: { mode: 'percent', amount: '0' },
+          deduction: { mode: dm, amount: String((e as { amount?: unknown }).amount ?? '0') },
+        }
+      }
     }
   }
-  for (const k of Object.keys(base.silver)) {
-    const e = o.silver?.[k]
-    if (e && (e.mode === 'percent' || e.mode === 'fixed_inr')) {
-      base.silver[k] = { mode: e.mode, amount: String(e.amount ?? '0') }
-    }
-  }
+  ingest('gold', Object.keys(base.gold))
+  ingest('silver', Object.keys(base.silver))
   return base
 }
 
 function buildAdjustmentsPayload(a: AdjustmentsState): {
-  gold: Record<string, { mode: DeductionMode; amount: string }>
-  silver: Record<string, { mode: DeductionMode; amount: string }>
+  gold: Record<string, MetalAdjustmentRow>
+  silver: Record<string, MetalAdjustmentRow>
 } {
-  const gold: Record<string, { mode: DeductionMode; amount: string }> = {}
-  const silver: Record<string, { mode: DeductionMode; amount: string }> = {}
-  for (const k of Object.keys(a.gold)) {
-    gold[k] = { mode: a.gold[k].mode, amount: a.gold[k].amount.trim() || '0' }
+  const pack = (src: Record<string, MetalAdjustmentRow>) => {
+    const out: Record<string, MetalAdjustmentRow> = {}
+    for (const k of Object.keys(src)) {
+      const r = src[k]
+      out[k] = {
+        markup: { mode: r.markup.mode, amount: r.markup.amount.trim() || '0' },
+        deduction: { mode: r.deduction.mode, amount: r.deduction.amount.trim() || '0' },
+      }
+    }
+    return out
   }
-  for (const k of Object.keys(a.silver)) {
-    silver[k] = { mode: a.silver[k].mode, amount: a.silver[k].amount.trim() || '0' }
-  }
-  return { gold, silver }
+  return { gold: pack(a.gold), silver: pack(a.silver) }
 }
 
-function applyDeduction(raw: number, mode: DeductionMode, amount: number): number {
-  if (!Number.isFinite(raw) || raw <= 0) return 0
+function applyMarkup(raw: number, mode: DeductionMode, amount: number): number {
+  if (!Number.isFinite(raw) || raw <= 0) return NaN
+  if (mode === 'percent') {
+    const p = Math.min(Math.max(amount, 0), 1000)
+    return Math.max(0, raw * (1 + p / 100))
+  }
+  return Math.max(0, raw + Math.max(0, amount))
+}
+
+function applyDeductionFromMarkup(mid: number, mode: DeductionMode, amount: number): number {
+  if (!Number.isFinite(mid) || mid <= 0) return NaN
   if (mode === 'percent') {
     const p = Math.min(Math.max(amount, 0), 100)
-    return Math.max(0, raw * (1 - p / 100))
+    return Math.max(0, mid * (1 - p / 100))
   }
-  return Math.max(0, raw - amount)
+  return Math.max(0, mid - Math.max(0, amount))
 }
 
 function formatFinal(family: 'gold' | 'silver', n: number): string {
@@ -193,7 +234,7 @@ function AdminPublishedRatesSummary(props: {
       }}
     >
       <p style={{ margin: '0 0 0.65rem', fontWeight: 700, fontSize: '0.82rem', color: 'var(--text-muted)' }}>
-        Published Cridora reference (₹/g) — saved deductions on current live raw
+        Published Cridora reference (₹/g) — saved markup then deduction on current live raw
       </p>
       <div
         style={{
@@ -263,22 +304,20 @@ export function AdminGoldTickerPanel() {
 
   useLivePoll(refreshSnapshot, LIVE_ADMIN_TICKER_POLL_MS, true)
 
-  const setMetalMode = (family: 'gold' | 'silver', key: string, mode: DeductionMode) => {
+  const patchAdjSide = (
+    family: 'gold' | 'silver',
+    key: string,
+    which: 'markup' | 'deduction',
+    patch: Partial<AdjustmentSide>,
+  ) => {
     setAdjDraft((prev) => ({
       ...prev,
       [family]: {
         ...prev[family],
-        [key]: { ...prev[family][key], mode },
-      },
-    }))
-  }
-
-  const setMetalAmount = (family: 'gold' | 'silver', key: string, amount: string) => {
-    setAdjDraft((prev) => ({
-      ...prev,
-      [family]: {
-        ...prev[family],
-        [key]: { ...prev[family][key], amount },
+        [key]: {
+          ...prev[family][key],
+          [which]: { ...prev[family][key][which], ...patch },
+        },
       },
     }))
   }
@@ -317,13 +356,13 @@ export function AdminGoldTickerPanel() {
         Gold ticker (Cridora reference)
       </h2>
       <p className="dash-coming__text">
-        <strong>Live spot:</strong> global metal ₹/g feeds match row-by-row below. Set a <strong>deduction</strong> per metal
-        as either a percent off live or a fixed ₹/g off live — one mode per metal (toggle). Published ticker uses{' '}
-        <strong>live raw</strong> minus your deduction; jewellers price above or below that reference in Rates &amp;
-        schemes.
+        <strong>Live spot:</strong> global metal ₹/g feeds match row-by-row below. For each metal set{' '}
+        <strong>markup</strong> on live raw (% uplift or fixed ₹/g), then a <strong>deduction</strong> from that
+        intermediate reference (% off or ₹/g off). Published Cridora ticker is live → markup → deduction; jewellers see
+        that reference in Rates &amp; schemes.
       </p>
       <p className="dash-coming__text" style={{ marginTop: '0.5rem' }}>
-        <strong>Manual:</strong> your 22K (optional 24K) replaces live for gold ticker rows; row deductions do not apply.
+        <strong>Manual:</strong> your 22K (optional 24K) replaces live for gold ticker rows; per-metal markup and deductions do not apply.
         Last successful live snapshot is kept automatically for outage fallback (same raw as live when the feed was
         last healthy).
       </p>
@@ -432,15 +471,18 @@ export function AdminGoldTickerPanel() {
         <div className="dash-table-scroll card" style={{ marginBottom: '1rem', borderRadius: 12 }}>
           <p className="dash-footnote" style={{ padding: '0.65rem 0.75rem', margin: 0, borderBottom: '1px solid var(--border-soft)' }}>
             Live raw ₹/g refreshes from cache / feed / last snapshot (source:{' '}
-            <strong>{data?.live_spot_raw_preview?.source?.replace(/_/g, ' ') || '—'}</strong>). Final column shows Cridora
-            reference after your deduction (preview uses draft values until you save).
+            <strong>{data?.live_spot_raw_preview?.source?.replace(/_/g, ' ') || '—'}</strong>). Draft columns preview your
+            markup on raw, then deduction from that value, until you save (server columns match when saved).
           </p>
           <table className="admin-user-table" style={{ fontSize: '0.82rem' }}>
             <thead>
               <tr>
                 <th>Metal</th>
                 <th className="tabular">Live ₹/g</th>
-                <th>Deduction type</th>
+                <th>Markup on raw</th>
+                <th className="tabular">Markup value</th>
+                <th className="tabular">After markup</th>
+                <th>Deduction</th>
                 <th className="tabular">Deduction value</th>
                 <th className="tabular">Final ₹/g</th>
               </tr>
@@ -451,9 +493,25 @@ export function AdminGoldTickerPanel() {
                 const rawStr = pr?.raw_inr_per_gram
                 const rawNum = rawStr != null ? Number.parseFloat(rawStr) : NaN
                 const rowAdj = adjDraft[family][key]
-                const amt = Number.parseFloat(rowAdj.amount) || 0
+                const mAmt = Number.parseFloat(rowAdj.markup.amount) || 0
+                const dAmt = Number.parseFloat(rowAdj.deduction.amount) || 0
+                const midNum =
+                  Number.isFinite(rawNum) && rawNum > 0
+                    ? applyMarkup(rawNum, rowAdj.markup.mode, mAmt)
+                    : NaN
                 const finalNum =
-                  Number.isFinite(rawNum) && rawNum > 0 ? applyDeduction(rawNum, rowAdj.mode, amt) : NaN
+                  Number.isFinite(midNum) && midNum > 0
+                    ? applyDeductionFromMarkup(midNum, rowAdj.deduction.mode, dAmt)
+                    : NaN
+                const inpStyle: CSSProperties = {
+                  width: '100%',
+                  maxWidth: 112,
+                  padding: '0.35rem 0.5rem',
+                  borderRadius: 8,
+                  border: '1px solid var(--border-soft)',
+                  background: 'var(--input-bg, transparent)',
+                  color: 'var(--text)',
+                }
                 return (
                   <tr key={`${family}-${key}`}>
                     <td style={{ fontWeight: 600 }}>{label}</td>
@@ -464,46 +522,84 @@ export function AdminGoldTickerPanel() {
                       <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
                         <button
                           type="button"
-                          className={rowAdj.mode === 'percent' ? 'btn btn-primary kyb-btn-sm' : 'btn btn-ghost kyb-btn-sm'}
+                          className={
+                            rowAdj.markup.mode === 'percent'
+                              ? 'btn btn-primary kyb-btn-sm'
+                              : 'btn btn-ghost kyb-btn-sm'
+                          }
                           style={{ padding: '0.25rem 0.5rem', fontSize: '0.72rem' }}
-                          onClick={() => setMetalMode(family, key, 'percent')}
+                          onClick={() => patchAdjSide(family, key, 'markup', { mode: 'percent' })}
                         >
-                          % off live
+                          % on raw
                         </button>
                         <button
                           type="button"
-                          className={rowAdj.mode === 'fixed_inr' ? 'btn btn-primary kyb-btn-sm' : 'btn btn-ghost kyb-btn-sm'}
+                          className={
+                            rowAdj.markup.mode === 'fixed_inr'
+                              ? 'btn btn-primary kyb-btn-sm'
+                              : 'btn btn-ghost kyb-btn-sm'
+                          }
                           style={{ padding: '0.25rem 0.5rem', fontSize: '0.72rem' }}
-                          onClick={() => setMetalMode(family, key, 'fixed_inr')}
+                          onClick={() => patchAdjSide(family, key, 'markup', { mode: 'fixed_inr' })}
                         >
-                          ₹/g off live
+                          ₹/g on raw
                         </button>
                       </div>
                     </td>
                     <td>
                       <input
-                        value={rowAdj.amount}
-                        onChange={(e) => setMetalAmount(family, key, e.target.value)}
+                        value={rowAdj.markup.amount}
+                        onChange={(e) => patchAdjSide(family, key, 'markup', { amount: e.target.value })}
                         inputMode="decimal"
-                        style={{
-                          width: '100%',
-                          maxWidth: 120,
-                          padding: '0.35rem 0.5rem',
-                          borderRadius: 8,
-                          border: '1px solid var(--border-soft)',
-                          background: 'var(--input-bg, transparent)',
-                          color: 'var(--text)',
-                        }}
-                        aria-label={rowAdj.mode === 'percent' ? 'Percent deduction' : 'Rupees per gram deduction'}
+                        style={inpStyle}
+                        aria-label={
+                          rowAdj.markup.mode === 'percent' ? 'Markup percent on raw' : 'Markup rupees per gram on raw'
+                        }
                       />
-                      {Number.isFinite(finalNum) ? (
-                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
-                          → final{' '}
-                          <span className="tabular" style={{ color: 'var(--gold-light)', fontWeight: 600 }}>
-                            ₹{formatFinal(family, finalNum)}
-                          </span>
-                        </div>
-                      ) : null}
+                    </td>
+                    <td className="tabular" style={{ color: 'var(--text-muted)', fontWeight: 600 }}>
+                      {Number.isFinite(midNum) ? formatFinal(family, midNum) : '—'}
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
+                        <button
+                          type="button"
+                          className={
+                            rowAdj.deduction.mode === 'percent'
+                              ? 'btn btn-primary kyb-btn-sm'
+                              : 'btn btn-ghost kyb-btn-sm'
+                          }
+                          style={{ padding: '0.25rem 0.5rem', fontSize: '0.72rem' }}
+                          onClick={() => patchAdjSide(family, key, 'deduction', { mode: 'percent' })}
+                        >
+                          % off ref
+                        </button>
+                        <button
+                          type="button"
+                          className={
+                            rowAdj.deduction.mode === 'fixed_inr'
+                              ? 'btn btn-primary kyb-btn-sm'
+                              : 'btn btn-ghost kyb-btn-sm'
+                          }
+                          style={{ padding: '0.25rem 0.5rem', fontSize: '0.72rem' }}
+                          onClick={() => patchAdjSide(family, key, 'deduction', { mode: 'fixed_inr' })}
+                        >
+                          ₹/g off ref
+                        </button>
+                      </div>
+                    </td>
+                    <td>
+                      <input
+                        value={rowAdj.deduction.amount}
+                        onChange={(e) => patchAdjSide(family, key, 'deduction', { amount: e.target.value })}
+                        inputMode="decimal"
+                        style={inpStyle}
+                        aria-label={
+                          rowAdj.deduction.mode === 'percent'
+                            ? 'Deduction percent after markup'
+                            : 'Deduction rupees per gram after markup'
+                        }
+                      />
                     </td>
                     <td className="tabular" style={{ color: 'var(--gold-light)', fontWeight: 700 }}>
                       {Number.isFinite(finalNum) ? formatFinal(family, finalNum) : '—'}
@@ -516,7 +612,7 @@ export function AdminGoldTickerPanel() {
         </div>
       ) : (
         <p className="dash-footnote" style={{ marginBottom: '1rem' }}>
-          Manual mode: gold ticker uses your 22K/24K only. Switch to live spot to edit per-metal deductions.
+          Manual mode: gold ticker uses your 22K/24K only. Switch to live spot to edit per-metal markup and deductions.
         </p>
       )}
 

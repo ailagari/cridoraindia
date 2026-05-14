@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from decimal import Decimal
 from rest_framework import serializers
 
 from .models import (
@@ -28,7 +29,12 @@ from .pricing import (
     sellback_rate_inr_per_gram,
     stone_component_inr,
 )
-from .metal_ticker_adjustments import METAL_ADMIN_ROWS, adjusted_inr_from_float
+from .metal_ticker_adjustments import (
+    METAL_ADMIN_ROWS,
+    admin_deduction_for_jeweller_metal,
+    adjusted_inr_from_float,
+    after_markup_inr_from_decimal,
+)
 from .spot_prices import (
     get_raw_spot_payload_for_admin_preview,
     public_spot_prices_payload,
@@ -84,6 +90,7 @@ class GoldTickerReadSerializer(serializers.ModelSerializer):
                         "key": key,
                         "label": label,
                         "raw_inr_per_gram": None,
+                        "after_markup_inr_per_gram": None,
                         "final_inr_per_gram": None,
                     }
                 )
@@ -97,10 +104,13 @@ class GoldTickerReadSerializer(serializers.ModelSerializer):
                         "key": key,
                         "label": label,
                         "raw_inr_per_gram": None,
+                        "after_markup_inr_per_gram": None,
                         "final_inr_per_gram": None,
                     }
                 )
                 continue
+            d_raw = Decimal(str(rvf))
+            mid = after_markup_inr_from_decimal(d_raw, family=family, key=key, ticker=obj)
             adj = adjusted_inr_from_float(rvf, family=family, key=key, ticker=obj)
             rows.append(
                 {
@@ -108,6 +118,7 @@ class GoldTickerReadSerializer(serializers.ModelSerializer):
                     "key": key,
                     "label": label,
                     "raw_inr_per_gram": str(rvf),
+                    "after_markup_inr_per_gram": str(mid),
                     "final_inr_per_gram": str(adj),
                 }
             )
@@ -201,6 +212,7 @@ class JewellerPricingProfileSerializer(serializers.ModelSerializer):
     gold_loan_interest_apr_percent = serializers.SerializerMethodField()
     gold_loan_processing_fee_inr = serializers.SerializerMethodField()
     metal_rate_preview = serializers.SerializerMethodField()
+    admin_buyback_reference_preview = serializers.SerializerMethodField()
 
     class Meta:
         model = JewellerPricingProfile
@@ -246,6 +258,7 @@ class JewellerPricingProfileSerializer(serializers.ModelSerializer):
             "updated_at",
             "jeweller_metal_rate_effective_updated_at",
             "metal_rate_preview",
+            "admin_buyback_reference_preview",
         )
         read_only_fields = (
             "updated_at",
@@ -261,6 +274,7 @@ class JewellerPricingProfileSerializer(serializers.ModelSerializer):
             "gold_loan_interest_apr_percent",
             "gold_loan_processing_fee_inr",
             "metal_rate_preview",
+            "admin_buyback_reference_preview",
         )
 
     def get_jeweller_metal_rate_effective_updated_at(self, obj: JewellerPricingProfile) -> str:
@@ -299,14 +313,22 @@ class JewellerPricingProfileSerializer(serializers.ModelSerializer):
             }
         return out
 
+    def get_admin_buyback_reference_preview(
+        self, obj: JewellerPricingProfile
+    ) -> dict[str, dict[str, str]]:
+        t = get_or_create_ticker()
+        out: dict[str, dict[str, str]] = {}
+        for code in METAL_CODES:
+            dm, da = admin_deduction_for_jeweller_metal(t, code)
+            out[code] = {"mode": dm, "amount": str(da)}
+        return out
+
     def validate(self, attrs):
         pmap = attrs.get("metal_pricing_json")
         if pmap is not None:
             norm = normalize_metal_pricing_json(pmap)
             g22 = norm.get("gold_22k") or {}
             if g22.get("mode") == MODE_MANUAL_BOARD:
-                from decimal import Decimal
-
                 try:
                     m = Decimal(str(g22.get("manual_inr_per_gram") or "0"))
                 except Exception:

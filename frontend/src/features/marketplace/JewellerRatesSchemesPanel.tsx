@@ -15,11 +15,20 @@ import {
   previewBuybackInrPerGram,
   pricingDraftFromApi,
   totalBuybackDeductionPerGram,
+  type AdminBuybackDeductionPreview,
   type MetalBuybackDraft,
   type MetalCode,
   type MetalPricingDraft,
   type MetalPricingMode,
+  type MarkupApplyKind,
+  type DeductionSourceKind,
 } from '@/features/marketplace/jewellerMetalRates'
+
+function emptyAdminBuybackPreview(): Record<MetalCode, AdminBuybackDeductionPreview> {
+  const o = {} as Record<MetalCode, AdminBuybackDeductionPreview>
+  for (const { code } of JEWELLER_METAL_ROWS) o[code] = { mode: 'percent', amount: '0' }
+  return o
+}
 
 type ProfileApi = Record<string, unknown>
 
@@ -99,6 +108,9 @@ export function JewellerRatesSchemesPanel() {
     for (const { code } of JEWELLER_METAL_ROWS) o[code] = defaultBuybackDraft()
     return o
   })
+  const [adminBuybackPreview, setAdminBuybackPreview] = useState<
+    Record<MetalCode, AdminBuybackDeductionPreview>
+  >(() => emptyAdminBuybackPreview())
 
   const [ratesDraft, setRatesDraft] = useState({
     default_gold_markup_percent: '',
@@ -143,6 +155,19 @@ export function JewellerRatesSchemesPanel() {
     setJewellerRatePolicyAsOf(String(pJson.jeweller_metal_rate_effective_updated_at ?? ''))
     setPricingByMetal(pricingDraftFromApi(pJson.metal_pricing_json))
     setBuybackByMetal(buybackDraftFromApi(pJson.metal_buyback_json))
+    const admMap = emptyAdminBuybackPreview()
+    const admRaw = pJson.admin_buyback_reference_preview
+    if (admRaw && typeof admRaw === 'object') {
+      const src = admRaw as Record<string, unknown>
+      for (const { code } of JEWELLER_METAL_ROWS) {
+        const row = src[code]
+        if (row && typeof row === 'object') {
+          const r = row as Record<string, unknown>
+          admMap[code] = { mode: String(r.mode ?? 'percent'), amount: String(r.amount ?? '0') }
+        }
+      }
+    }
+    setAdminBuybackPreview(admMap)
     setRatesDraft({
       default_gold_markup_percent: String(pJson.default_gold_markup_percent ?? ''),
       gold_deposit_note: String(pJson.gold_deposit_note ?? ''),
@@ -208,14 +233,14 @@ export function JewellerRatesSchemesPanel() {
     if (ratesDraft.buyback_headline_inr_per_gram.trim() !== '') {
       return parseN(ratesDraft.buyback_headline_inr_per_gram)
     }
-    return previewBuybackInrPerGram(referenceMetalInr, buybackByMetal.gold_22k)
-  }, [referenceMetalInr, buybackByMetal, ratesDraft.buyback_headline_inr_per_gram])
+    return previewBuybackInrPerGram(referenceMetalInr, buybackByMetal.gold_22k, adminBuybackPreview.gold_22k)
+  }, [referenceMetalInr, buybackByMetal, ratesDraft.buyback_headline_inr_per_gram, adminBuybackPreview.gold_22k])
 
   const ornamentTotalDeductionPerGram = useMemo(() => {
     if (ratesDraft.buyback_headline_inr_per_gram.trim() !== '') return null
-    const buy = previewBuybackInrPerGram(referenceMetalInr, buybackByMetal.gold_22k)
+    const buy = previewBuybackInrPerGram(referenceMetalInr, buybackByMetal.gold_22k, adminBuybackPreview.gold_22k)
     return Math.max(0, referenceMetalInr - buy)
-  }, [referenceMetalInr, buybackByMetal.gold_22k, ratesDraft.buyback_headline_inr_per_gram])
+  }, [referenceMetalInr, buybackByMetal.gold_22k, ratesDraft.buyback_headline_inr_per_gram, adminBuybackPreview.gold_22k])
 
   const saveRatesAndSchemes = async () => {
     setBusy(true)
@@ -231,6 +256,7 @@ export function JewellerRatesSchemesPanel() {
       const p = pricingByMetal[code]
       metal_pricing_json[code] = {
         mode: p.mode,
+        markup_apply: p.mode === 'markup_on_cridora' ? p.markup_apply : 'percent',
         markup_percent: numOrZero(p.markup_percent),
         markup_inr_per_gram: numOrZero(p.markup_inr_per_gram),
         manual_inr_per_gram:
@@ -243,6 +269,7 @@ export function JewellerRatesSchemesPanel() {
     for (const { code } of JEWELLER_METAL_ROWS) {
       const b = buybackByMetal[code]
       metal_buyback_json[code] = {
+        deduction_source: b.deduction_source,
         deduction_percent: numOrZero(b.deduction_percent),
         fixed_inr_per_gram: numOrZero(b.fixed_inr_per_gram),
         jeweller_deduction_inr_per_gram: numOrZero(b.jeweller_deduction_inr_per_gram),
@@ -448,8 +475,8 @@ export function JewellerRatesSchemesPanel() {
                           {JEWELLER_METAL_ROWS.map(({ code, label, sub }) => {
                             const cridoraRef = cridoraRefInrForMetal(code, platformBaseInr, spot)
                             const board = computeJewellerBoardInrPerGram(cridoraRef, pricingByMetal[code])
-                            const buy = previewBuybackInrPerGram(board, buybackByMetal[code])
-                            const totalDed = totalBuybackDeductionPerGram(board, buybackByMetal[code])
+                            const buy = previewBuybackInrPerGram(board, buybackByMetal[code], adminBuybackPreview[code])
+                            const totalDed = totalBuybackDeductionPerGram(board, buybackByMetal[code], adminBuybackPreview[code])
                             const pr = pricingByMetal[code]
                             const bb = buybackByMetal[code]
                             const picked = openMetal === code
@@ -520,27 +547,45 @@ export function JewellerRatesSchemesPanel() {
                                               }}
                                             >
                                               <label className="field" style={{ margin: 0 }}>
-                                                <span>Markup % on reference</span>
-                                                <input
-                                                  style={inp}
-                                                  inputMode="decimal"
-                                                  value={pr.markup_percent}
+                                                <span>Markup type</span>
+                                                <select
+                                                  style={{ ...inp, maxWidth: '100%' }}
+                                                  value={pr.markup_apply}
                                                   onChange={(e) =>
-                                                    setPricing(code, { markup_percent: e.target.value })
+                                                    setPricing(code, {
+                                                      markup_apply: e.target.value as MarkupApplyKind,
+                                                    })
                                                   }
-                                                />
+                                                >
+                                                  <option value="percent">Percent on reference</option>
+                                                  <option value="fixed_inr">Fixed ₹/g on reference</option>
+                                                </select>
                                               </label>
-                                              <label className="field" style={{ margin: 0 }}>
-                                                <span>Plus ₹/g after %</span>
-                                                <input
-                                                  style={inp}
-                                                  inputMode="decimal"
-                                                  value={pr.markup_inr_per_gram}
-                                                  onChange={(e) =>
-                                                    setPricing(code, { markup_inr_per_gram: e.target.value })
-                                                  }
-                                                />
-                                              </label>
+                                              {pr.markup_apply === 'percent' ? (
+                                                <label className="field" style={{ margin: 0 }}>
+                                                  <span>Markup %</span>
+                                                  <input
+                                                    style={inp}
+                                                    inputMode="decimal"
+                                                    value={pr.markup_percent}
+                                                    onChange={(e) =>
+                                                      setPricing(code, { markup_percent: e.target.value })
+                                                    }
+                                                  />
+                                                </label>
+                                              ) : (
+                                                <label className="field" style={{ margin: 0 }}>
+                                                  <span>Add ₹/g</span>
+                                                  <input
+                                                    style={inp}
+                                                    inputMode="decimal"
+                                                    value={pr.markup_inr_per_gram}
+                                                    onChange={(e) =>
+                                                      setPricing(code, { markup_inr_per_gram: e.target.value })
+                                                    }
+                                                  />
+                                                </label>
+                                              )}
                                             </div>
                                           ) : null}
 
@@ -597,28 +642,68 @@ export function JewellerRatesSchemesPanel() {
                                                 gap: '0.65rem',
                                               }}
                                             >
-                                              <label className="field" style={{ margin: 0 }}>
-                                                <span>Deduct %</span>
-                                                <input
-                                                  style={inp}
-                                                  inputMode="decimal"
-                                                  value={bb.deduction_percent}
+                                              <label className="field" style={{ margin: 0, gridColumn: '1 / -1' }}>
+                                                <span>Deduction basis</span>
+                                                <select
+                                                  style={{ ...inp, maxWidth: '100%' }}
+                                                  value={bb.deduction_source}
                                                   onChange={(e) =>
-                                                    setBuyback(code, { deduction_percent: e.target.value })
+                                                    setBuyback(code, {
+                                                      deduction_source: e.target.value as DeductionSourceKind,
+                                                    })
                                                   }
-                                                />
+                                                >
+                                                  <option value="custom">Custom off your board ₹/g</option>
+                                                  <option value="admin_reference">Cridora admin buyback rule</option>
+                                                </select>
                                               </label>
-                                              <label className="field" style={{ margin: 0 }}>
-                                                <span>Less ₹/g (fixed)</span>
-                                                <input
-                                                  style={inp}
-                                                  inputMode="decimal"
-                                                  value={bb.fixed_inr_per_gram}
-                                                  onChange={(e) =>
-                                                    setBuyback(code, { fixed_inr_per_gram: e.target.value })
-                                                  }
-                                                />
-                                              </label>
+                                              {bb.deduction_source === 'admin_reference' ? (
+                                                <p
+                                                  style={{
+                                                    gridColumn: '1 / -1',
+                                                    margin: 0,
+                                                    fontSize: '0.78rem',
+                                                    color: 'var(--text-muted)',
+                                                    lineHeight: 1.45,
+                                                  }}
+                                                >
+                                                  Applies the same % or ₹/g deduction admins set on the live ticker for{' '}
+                                                  {label}. Then your extra ₹/g (below) subtracts from that result.
+                                                  Current rule:{' '}
+                                                  <strong style={{ color: 'var(--gold-light)' }}>
+                                                    {adminBuybackPreview[code].mode === 'fixed_inr'
+                                                      ? `₹${formatInr(parseN(adminBuybackPreview[code].amount), code.startsWith('silver') ? 3 : 2)}/g off board`
+                                                      : `${formatInr(parseN(adminBuybackPreview[code].amount), 2)}% off board`}
+                                                  </strong>
+                                                  .
+                                                </p>
+                                              ) : null}
+                                              {bb.deduction_source === 'custom' ? (
+                                                <>
+                                                  <label className="field" style={{ margin: 0 }}>
+                                                    <span>Deduct %</span>
+                                                    <input
+                                                      style={inp}
+                                                      inputMode="decimal"
+                                                      value={bb.deduction_percent}
+                                                      onChange={(e) =>
+                                                        setBuyback(code, { deduction_percent: e.target.value })
+                                                      }
+                                                    />
+                                                  </label>
+                                                  <label className="field" style={{ margin: 0 }}>
+                                                    <span>Less ₹/g (fixed)</span>
+                                                    <input
+                                                      style={inp}
+                                                      inputMode="decimal"
+                                                      value={bb.fixed_inr_per_gram}
+                                                      onChange={(e) =>
+                                                        setBuyback(code, { fixed_inr_per_gram: e.target.value })
+                                                      }
+                                                    />
+                                                  </label>
+                                                </>
+                                              ) : null}
                                               <label className="field" style={{ margin: 0 }}>
                                                 <span>Less ₹/g (extra)</span>
                                                 <input

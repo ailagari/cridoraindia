@@ -45,6 +45,7 @@ _SILVER_SPOT_KEYS = {
 def default_pricing_block() -> dict[str, str]:
     return {
         "mode": MODE_MATCH_CRIDORA,
+        "markup_apply": "percent",
         "markup_percent": "0",
         "markup_inr_per_gram": "0",
         "manual_inr_per_gram": "0",
@@ -54,6 +55,7 @@ def default_pricing_block() -> dict[str, str]:
 
 def default_buyback_block() -> dict[str, str]:
     return {
+        "deduction_source": "custom",
         "deduction_percent": "0",
         "fixed_inr_per_gram": "0",
         "jeweller_deduction_inr_per_gram": "0",
@@ -71,6 +73,10 @@ def normalize_metal_pricing_json(raw: Any) -> dict[str, dict[str, str]]:
             if mode not in METAL_MODES:
                 mode = MODE_MATCH_CRIDORA
             b["mode"] = mode
+            ma = str(block.get("markup_apply") or "percent").strip()
+            if ma not in ("percent", "fixed_inr"):
+                ma = "percent"
+            b["markup_apply"] = ma
             for key in ("markup_percent", "markup_inr_per_gram", "manual_inr_per_gram"):
                 b[key] = _dec_str(block.get(key), "0")
             url = block.get("external_api_url")
@@ -86,6 +92,10 @@ def normalize_metal_buyback_json(raw: Any) -> dict[str, dict[str, str]]:
         block = src.get(code)
         b = default_buyback_block()
         if isinstance(block, dict):
+            ds = str(block.get("deduction_source") or "custom").strip()
+            if ds not in ("custom", "admin_reference"):
+                ds = "custom"
+            b["deduction_source"] = ds
             for key in (
                 "deduction_percent",
                 "fixed_inr_per_gram",
@@ -182,10 +192,14 @@ def jeweller_effective_rate_inr(
             return m.quantize(Decimal("0.01"))
         return ref.quantize(Decimal("0.01"))
 
-    # markup_on_cridora
-    pct = Decimal(block.get("markup_percent") or "0") / Decimal("100")
-    fixed = Decimal(block.get("markup_inr_per_gram") or "0")
-    out = ref * (Decimal("1") + pct) + fixed
+    # markup_on_cridora — either percent or fixed ₹/g on Cridora reference (not both)
+    apply_kind = block.get("markup_apply") or "percent"
+    if apply_kind == "fixed_inr":
+        fixed = Decimal(block.get("markup_inr_per_gram") or "0")
+        out = ref + fixed
+    else:
+        pct = Decimal(block.get("markup_percent") or "0") / Decimal("100")
+        out = ref * (Decimal("1") + pct)
     return max(Decimal("0"), out).quantize(Decimal("0.01"))
 
 
@@ -230,18 +244,21 @@ def sellback_components_for_metal(
 
     bmap = normalize_metal_buyback_json(profile.metal_buyback_json)
     block = bmap.get(metal_code) or default_buyback_block()
+    extra = Decimal(block.get("jeweller_deduction_inr_per_gram") or "0")
+    if block.get("deduction_source") == "admin_reference":
+        return Decimal("0"), Decimal("0"), extra
+
     pct = Decimal(block.get("deduction_percent") or "0")
     fixed = Decimal(block.get("fixed_inr_per_gram") or "0")
-    extra = Decimal(block.get("jeweller_deduction_inr_per_gram") or "0")
     return pct, fixed, extra
 
 
 def sellback_rate_inr_per_gram(metal_rate: Decimal, profile: JewellerPricingProfile) -> Decimal:
-    pct, fixed, extra = sellback_components_for_metal(profile, "gold_22k")
-    p = pct / Decimal("100")
-    after_pct = metal_rate * (Decimal("1") - p)
-    out = after_pct - fixed - extra
-    return max(Decimal("0"), out.quantize(Decimal("0.01")))
+    return indicative_buyback_inr_per_metal(
+        profile,
+        "gold_22k",
+        jeweller_effective_inr_per_gram=metal_rate,
+    )
 
 
 def indicative_buyback_inr_per_metal(
@@ -250,7 +267,40 @@ def indicative_buyback_inr_per_metal(
     *,
     jeweller_effective_inr_per_gram: Decimal,
 ) -> Decimal:
-    pct, fixed, extra = sellback_components_for_metal(profile, metal_code)
+    from .metal_ticker_adjustments import admin_deduction_for_jeweller_metal, apply_deduction
+    from .models import get_or_create_ticker
+
+    bmap = normalize_metal_buyback_json(profile.metal_buyback_json)
+    raw_buy = profile.metal_buyback_json if isinstance(profile.metal_buyback_json, dict) else {}
+    if metal_code == "gold_22k" and not raw_buy.get("gold_22k"):
+        pct, fixed, extra = (
+            profile.sellback_deduction_percent,
+            profile.sellback_fixed_inr_per_gram,
+            Decimal("0"),
+        )
+        p = pct / Decimal("100")
+        after_pct = jeweller_effective_inr_per_gram * (Decimal("1") - p)
+        out = after_pct - fixed - extra
+        return max(Decimal("0"), out.quantize(Decimal("0.01")))
+
+    block = bmap.get(metal_code) or default_buyback_block()
+    extra = Decimal(block.get("jeweller_deduction_inr_per_gram") or "0")
+    quant = "0.001" if metal_code.startswith("silver") else "0.01"
+
+    if block.get("deduction_source") == "admin_reference":
+        t = get_or_create_ticker()
+        dm, da = admin_deduction_for_jeweller_metal(t, metal_code)
+        cut = apply_deduction(
+            jeweller_effective_inr_per_gram,
+            mode=dm,
+            amount=da,
+            quant=quant,
+        )
+        out = cut - extra
+        return max(Decimal("0"), out.quantize(Decimal("0.01")))
+
+    pct = Decimal(block.get("deduction_percent") or "0")
+    fixed = Decimal(block.get("fixed_inr_per_gram") or "0")
     p = pct / Decimal("100")
     after_pct = jeweller_effective_inr_per_gram * (Decimal("1") - p)
     out = after_pct - fixed - extra
@@ -295,7 +345,7 @@ def sync_gold_22k_legacy_fields_from_json(profile: JewellerPricingProfile) -> No
         profile.gold_rate_external_api_url = str(b22.get("external_api_url"))[:512]
 
     bb = normalize_metal_buyback_json(profile.metal_buyback_json).get("gold_22k")
-    if bb:
+    if bb and bb.get("deduction_source") != "admin_reference":
         try:
             profile.sellback_deduction_percent = Decimal(bb.get("deduction_percent") or "0")
         except Exception:
@@ -316,6 +366,7 @@ def populate_metal_json_from_legacy(profile: JewellerPricingProfile) -> dict[str
     if profile.gold_rate_source == JewellerPricingProfile.GOLD_RATE_MANUAL:
         pmap["gold_22k"] = {
             "mode": MODE_MANUAL_BOARD,
+            "markup_apply": "percent",
             "markup_percent": "0",
             "markup_inr_per_gram": "0",
             "manual_inr_per_gram": _dec_str(profile.manual_gold_rate_inr_per_gram, "0"),
@@ -325,8 +376,12 @@ def populate_metal_json_from_legacy(profile: JewellerPricingProfile) -> dict[str
         has_markup = (
             profile.live_markup_percent != 0 or profile.live_markup_inr_per_gram != 0
         )
+        apply_kind = "percent"
+        if profile.live_markup_inr_per_gram != 0 and profile.live_markup_percent == 0:
+            apply_kind = "fixed_inr"
         pmap["gold_22k"] = {
             "mode": MODE_MARKUP_ON_CRIDORA if has_markup else MODE_MATCH_CRIDORA,
+            "markup_apply": apply_kind,
             "markup_percent": _dec_str(profile.live_markup_percent, "0"),
             "markup_inr_per_gram": _dec_str(profile.live_markup_inr_per_gram, "0"),
             "manual_inr_per_gram": "0",
@@ -334,6 +389,7 @@ def populate_metal_json_from_legacy(profile: JewellerPricingProfile) -> dict[str
         }
 
     bmap["gold_22k"] = {
+        "deduction_source": "custom",
         "deduction_percent": _dec_str(profile.sellback_deduction_percent, "0"),
         "fixed_inr_per_gram": _dec_str(profile.sellback_fixed_inr_per_gram, "0"),
         "jeweller_deduction_inr_per_gram": "0",

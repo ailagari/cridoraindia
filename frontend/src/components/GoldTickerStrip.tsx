@@ -11,14 +11,27 @@ type Props = {
   variant?: 'public' | 'dash'
 }
 
-function spot22k(data: SpotPricesPayload): number | null {
-  const v = data.gold?.['22K']
+function numFromGold(block: Record<string, number> | undefined, key: string): number | null {
+  if (!block) return null
+  const v = block[key]
   return typeof v === 'number' && Number.isFinite(v) ? v : null
 }
 
-function spot24k(data: SpotPricesPayload): number | null {
-  const v = data.gold?.['24K']
-  return typeof v === 'number' && Number.isFinite(v) ? v : null
+function cridoraBasisNote(src: string | undefined): string {
+  switch (src) {
+    case 'manual_ticker':
+      return 'Cridora manual board'
+    case 'live_spot':
+      return 'Live international spot + Cridora markup/deduction'
+    case 'stale_spot_cache':
+      return 'Stale international snapshot + Cridora markup/deduction'
+    case 'db_snapshot':
+      return 'Saved international snapshot + Cridora markup/deduction'
+    case 'admin_fallback':
+      return 'Platform fallback reference'
+    default:
+      return src ? src.replace(/_/g, ' ') : 'Cridora reference'
+  }
 }
 
 export function GoldTickerStrip({ variant = 'public' }: Props) {
@@ -32,8 +45,7 @@ export function GoldTickerStrip({ variant = 'public' }: Props) {
     void (async () => {
       const sp = await fetchSpotPrices()
       setSpot(sp)
-      const needAdmin = !sp || !sp.gold || spot22k(sp) == null
-      if (needAdmin) {
+      if (!sp) {
         const tick = await fetchGoldTicker()
         setAdminFallback(tick)
       } else {
@@ -48,26 +60,29 @@ export function GoldTickerStrip({ variant = 'public' }: Props) {
 
   useLivePoll(load, pollMs, true)
 
-  const s22 = spot ? spot22k(spot) : null
-  const s24 = spot ? spot24k(spot) : null
-  const admin22 =
-    adminFallback != null ? Number.parseFloat(adminFallback.platform_base_inr_per_gram_22k) : NaN
+  const liveGold = spot?.live_raw_spot?.gold
+  const intl22 = numFromGold(liveGold, '22K')
+  const intl24 = numFromGold(liveGold, '24K')
 
-  const per916 =
-    s22 != null
-      ? s22
-      : Number.isFinite(admin22)
-        ? admin22
-        : NaN
-  const per24 =
-    s24 != null
-      ? s24
-      : Number.isFinite(per916)
-        ? per916 / 0.916
-        : NaN
+  const cridoraGold = spot?.gold
+  let cridora22 = numFromGold(cridoraGold, '22K')
+  let cridora24 = numFromGold(cridoraGold, '24K')
 
-  const headline = 'Cridora reference (INR)'
-  const subNote = '22K / 24K per gram · set by Cridora admins · indicative'
+  if (spot == null && adminFallback != null) {
+    const p = Number.parseFloat(adminFallback.platform_base_inr_per_gram_22k)
+    if (Number.isFinite(p)) {
+      cridora22 = p
+      cridora24 = p / 0.916
+    }
+  }
+
+  const basisSrc = spot?.cridora_base_source ?? adminFallback?.cridora_base_source
+  const basisExplain = cridoraBasisNote(basisSrc)
+
+  const intlHint =
+    spot?.live_raw_spot?.source != null && spot.live_raw_spot.source !== ''
+      ? spot.live_raw_spot.source.replace(/_/g, ' ')
+      : 'international'
 
   if (variant === 'dash') {
     return (
@@ -80,26 +95,27 @@ export function GoldTickerStrip({ variant = 'public' }: Props) {
           flexWrap: 'wrap',
           fontSize: '0.68rem',
           color: 'var(--text-muted)',
-          maxWidth: 'min(420px, 100%)',
+          maxWidth: 'min(560px, 100%)',
         }}
       >
-        <span
-          style={{
-            fontWeight: 800,
-            letterSpacing: '0.08em',
-            textTransform: 'uppercase',
-            color: 'var(--gold-light)',
-          }}
-        >
-          22K 916
+        <span style={{ fontWeight: 800, color: 'var(--text-faint)', letterSpacing: '0.06em' }}>Intl</span>
+        <span style={{ fontWeight: 700, color: 'var(--text-muted)' }}>22K</span>
+        <span className="tabular" style={{ color: 'var(--text)', fontWeight: 600 }}>
+          {intl22 != null ? `₹${formatInr(intl22, 2)}/g` : '—'}
         </span>
-        <span className="tabular" style={{ color: 'var(--text)', fontWeight: 700 }}>
-          {Number.isFinite(per916) ? `₹${formatInr(per916, 2)}/g` : '—'}
+        <span style={{ fontWeight: 700, color: 'var(--text-muted)' }}>24K</span>
+        <span className="tabular" style={{ color: 'var(--text)', fontWeight: 600 }}>
+          {intl24 != null ? `₹${formatInr(intl24, 2)}/g` : '—'}
         </span>
         <span style={{ color: 'var(--text-faint)' }}>|</span>
-        <span style={{ fontWeight: 700, color: 'var(--gold-light)' }}>24K</span>
+        <span style={{ fontWeight: 800, color: 'var(--gold-light)', letterSpacing: '0.06em' }}>Cridora</span>
+        <span style={{ fontWeight: 700, color: 'var(--text-muted)' }}>22K</span>
+        <span className="tabular" style={{ color: 'var(--gold-light)', fontWeight: 700 }}>
+          {cridora22 != null ? `₹${formatInr(cridora22, 2)}/g` : '—'}
+        </span>
+        <span style={{ fontWeight: 700, color: 'var(--text-muted)' }}>24K</span>
         <span className="tabular" style={{ color: 'var(--text)', fontWeight: 700 }}>
-          {Number.isFinite(per24) ? `₹${formatInr(per24, 2)}/g` : '—'}
+          {cridora24 != null ? `₹${formatInr(cridora24, 2)}/g` : '—'}
         </span>
       </div>
     )
@@ -119,37 +135,82 @@ export function GoldTickerStrip({ variant = 'public' }: Props) {
           display: 'flex',
           flexWrap: 'wrap',
           alignItems: 'center',
-          gap: '0.85rem 1.25rem',
-          padding: '0.45rem 0',
+          gap: '0.85rem 1.35rem',
+          padding: '0.5rem 0',
           fontSize: '0.78rem',
         }}
       >
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', gap: '0.5rem 1rem' }}>
+          <span
+            style={{
+              fontWeight: 800,
+              letterSpacing: '0.12em',
+              textTransform: 'uppercase',
+              color: 'var(--text-faint)',
+              fontSize: '0.62rem',
+            }}
+          >
+            International (live)
+          </span>
+          <span style={{ color: 'var(--text-muted)' }}>
+            <span style={{ fontWeight: 600 }}>22K 916</span>{' '}
+            <strong className="tabular" style={{ color: 'var(--text)', fontSize: '0.95rem' }}>
+              {intl22 != null ? `₹${formatInr(intl22, 2)}` : '—'}
+            </strong>
+            /g
+          </span>
+          <span style={{ color: 'var(--text-muted)' }}>
+            <span style={{ fontWeight: 600 }}>24K</span>{' '}
+            <strong className="tabular" style={{ color: 'var(--text)', fontSize: '0.95rem' }}>
+              {intl24 != null ? `₹${formatInr(intl24, 2)}` : '—'}
+            </strong>
+            /g
+          </span>
+        </div>
+
+        <span style={{ color: 'var(--border-soft)', fontWeight: 300 }} aria-hidden>
+          |
+        </span>
+
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', gap: '0.5rem 1rem' }}>
+          <span
+            style={{
+              fontWeight: 800,
+              letterSpacing: '0.12em',
+              textTransform: 'uppercase',
+              color: 'var(--gold-light)',
+              fontSize: '0.62rem',
+            }}
+          >
+            Cridora reference
+          </span>
+          <span style={{ color: 'var(--text-muted)' }}>
+            <span style={{ fontWeight: 600 }}>22K 916</span>{' '}
+            <strong className="tabular" style={{ color: 'var(--success)', fontSize: '0.95rem' }}>
+              {cridora22 != null ? `₹${formatInr(cridora22, 2)}` : '—'}
+            </strong>
+            /g
+          </span>
+          <span style={{ color: 'var(--text-muted)' }}>
+            <span style={{ fontWeight: 600 }}>24K</span>{' '}
+            <strong className="tabular" style={{ color: 'var(--text)', fontSize: '0.95rem' }}>
+              {cridora24 != null ? `₹${formatInr(cridora24, 2)}` : '—'}
+            </strong>
+            /g
+          </span>
+        </div>
+
         <span
           style={{
-            fontWeight: 800,
-            letterSpacing: '0.14em',
-            textTransform: 'uppercase',
-            color: 'var(--gold-light)',
+            marginLeft: 'auto',
+            fontSize: '0.62rem',
+            color: 'var(--text-faint)',
+            lineHeight: 1.35,
+            textAlign: 'right',
+            maxWidth: 420,
           }}
         >
-          {headline}
-        </span>
-        <span style={{ color: 'var(--text-muted)' }}>
-          <span style={{ fontWeight: 600 }}>22K 916</span>{' '}
-          <strong className="tabular" style={{ color: 'var(--success)', fontSize: '0.95rem' }}>
-            ₹{Number.isFinite(per916) ? formatInr(per916, 2) : '—'}
-          </strong>
-          /g
-        </span>
-        <span style={{ color: 'var(--text-muted)' }}>
-          <span style={{ fontWeight: 600 }}>24K</span>{' '}
-          <strong className="tabular" style={{ color: 'var(--text)', fontSize: '0.95rem' }}>
-            ₹{Number.isFinite(per24) ? formatInr(per24, 2) : '—'}
-          </strong>
-          /g
-        </span>
-        <span style={{ marginLeft: 'auto', fontSize: '0.65rem', color: 'var(--text-faint)' }}>
-          {subNote} · auto · ~{pollLabel}
+          Global spot → INR/g ({intlHint}), indicative · {basisExplain} · ~{pollLabel}
         </span>
       </div>
     </div>
