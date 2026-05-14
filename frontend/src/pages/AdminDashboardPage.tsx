@@ -632,7 +632,7 @@ export function AdminDashboardPage() {
                       ) : null}
                     </h3>
                     {modalDetail.documents.length === 0 ? (
-                      <p className="admin-inspect-empty">No uploads yet.</p>
+                      <p className="admin-inspect-empty">No documents uploaded yet.</p>
                     ) : (
                       <ul className="admin-inspect-doc-list">
                         {modalDetail.documents.map((d) => {
@@ -644,9 +644,17 @@ export function AdminDashboardPage() {
                                 <span className={`kyb-pill kyb-pill--${docStatusTone(d.status)}`}>{d.status}</span>
                               </div>
                               {timeline ? <p className="admin-inspect-doc__meta">{timeline}</p> : null}
-                              {d.original_filename ? (
-                                <p className="admin-inspect-doc__file">File: {d.original_filename}</p>
-                              ) : null}
+                              <p
+                                className={
+                                  d.file_url
+                                    ? 'admin-inspect-doc__file'
+                                    : 'admin-inspect-doc__file admin-inspect-doc__nofile'
+                                }
+                              >
+                                {d.file_url
+                                  ? `File: ${d.original_filename?.trim() ? d.original_filename : 'uploaded'}`
+                                  : 'No file uploaded'}
+                              </p>
                               {d.rejection_reason ? (
                                 <p className="admin-inspect-doc__note">{d.rejection_reason}</p>
                               ) : null}
@@ -660,9 +668,7 @@ export function AdminDashboardPage() {
                                   >
                                     Open file
                                   </a>
-                                ) : (
-                                  <span className="admin-inspect-doc__nofile">No download URL</span>
-                                )}
+                                ) : null}
                                 {(modalDetail.profile as InspectProfile).user_type !== 'admin' ? (
                                   <button
                                     type="button"

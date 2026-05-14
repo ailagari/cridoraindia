@@ -11,6 +11,7 @@ from .pricing import (
     gold_metal_value_inr,
     gold_rate_inr_per_gram,
     jeweller_buyback_display_inr_per_gram,
+    jeweller_rate_effective_updated_at,
     jeweller_store_22k_inr,
     reference_metal_rate_inr_per_gram_for_jeweller,
     sellback_rate_inr_per_gram,
@@ -99,10 +100,13 @@ class GoldTickerAdminSerializer(serializers.ModelSerializer):
 
 
 class JewellerPricingProfileSerializer(serializers.ModelSerializer):
+    jeweller_metal_rate_effective_updated_at = serializers.SerializerMethodField()
+
     class Meta:
         model = JewellerPricingProfile
         fields = (
             "gold_rate_source",
+            "gold_rate_external_api_url",
             "manual_gold_rate_inr_per_gram",
             "live_markup_percent",
             "live_markup_inr_per_gram",
@@ -130,8 +134,12 @@ class JewellerPricingProfileSerializer(serializers.ModelSerializer):
             "feat_emergency_funds",
             "feat_cross_redemption",
             "updated_at",
+            "jeweller_metal_rate_effective_updated_at",
         )
-        read_only_fields = ("updated_at",)
+        read_only_fields = ("updated_at", "jeweller_metal_rate_effective_updated_at")
+
+    def get_jeweller_metal_rate_effective_updated_at(self, obj: JewellerPricingProfile) -> str:
+        return jeweller_rate_effective_updated_at(obj).isoformat()
 
     def validate(self, attrs):
         source = attrs.get("gold_rate_source")
@@ -152,7 +160,9 @@ class JewellerPricingProfileSerializer(serializers.ModelSerializer):
         return attrs
 
 
-def _annotate_product_public(product: MarketplaceProduct) -> dict:
+def _annotate_product_public(
+    product: MarketplaceProduct, *, expose_platform_base: bool = False
+) -> dict:
     profile = jeweller_profile_for(product.jeweller)
     cridora_base, base_source = resolve_cridora_base_22k_inr()
     metal_rate = gold_rate_inr_per_gram(product, profile, cridora_base)
@@ -160,9 +170,10 @@ def _annotate_product_public(product: MarketplaceProduct) -> dict:
     metal_val = gold_metal_value_inr(product, metal_rate)
     gold_plus_stone = metal_val + stone
     sellback = sellback_rate_inr_per_gram(metal_rate, profile)
+    rate_as_of = jeweller_rate_effective_updated_at(profile)
 
     jeweller_name = product.jeweller.business_name or product.jeweller.email
-    return {
+    row = {
         "id": product.id,
         "jeweller_id": product.jeweller_id,
         "name": product.name,
@@ -181,8 +192,7 @@ def _annotate_product_public(product: MarketplaceProduct) -> dict:
         "jeweller_name": jeweller_name,
         "jeweller_city": product.jeweller.city or "",
         "pricing_mode": product.pricing_mode,
-        "platform_base_inr_per_gram_22k": str(cridora_base),
-        "cridora_base_source": base_source,
+        "jeweller_metal_rate_last_updated_at": rate_as_of.isoformat(),
         "metal_rate_inr_per_gram_used": str(metal_rate),
         "jeweller_markup_percent_applied": str(
             product.jeweller_markup_percent
@@ -208,16 +218,20 @@ def _annotate_product_public(product: MarketplaceProduct) -> dict:
         ),
         "same_store_benefit_note": product.same_store_benefit_note or "",
     }
+    if expose_platform_base:
+        row["platform_base_inr_per_gram_22k"] = str(cridora_base)
+        row["cridora_base_source"] = base_source
+    return row
 
 
 class PublicMarketplaceProductSerializer(serializers.BaseSerializer):
     def to_representation(self, product: MarketplaceProduct):
-        return _annotate_product_public(product)
+        return _annotate_product_public(product, expose_platform_base=False)
 
 
 def public_jeweller_storefront(user) -> dict:
     profile = jeweller_profile_for(user)
-    cridora_base, base_source = resolve_cridora_base_22k_inr()
+    cridora_base, _ = resolve_cridora_base_22k_inr()
     store_22 = jeweller_store_22k_inr(profile, cridora_base)
     ref_metal = reference_metal_rate_inr_per_gram_for_jeweller(profile, cridora_base)
     buyback = jeweller_buyback_display_inr_per_gram(profile, cridora_base)
@@ -234,8 +248,9 @@ def public_jeweller_storefront(user) -> dict:
         "shop_address": user.shop_address or "",
         "gstin": user.gstin or "",
         "kyc_status": user.kyc_status,
-        "platform_base_inr_per_gram_22k": str(cridora_base),
-        "cridora_base_source": base_source,
+        "jeweller_metal_rate_last_updated_at": jeweller_rate_effective_updated_at(
+            profile
+        ).isoformat(),
         "jeweller_store_22k_inr_per_gram": str(store_22),
         "gold_rate_source": profile.gold_rate_source,
         "representative_making_charge_inr_per_gram": str(
@@ -363,7 +378,7 @@ class JewellerProductWriteSerializer(serializers.ModelSerializer):
 
 class JewellerProductReadSerializer(serializers.BaseSerializer):
     def to_representation(self, product: MarketplaceProduct):
-        base = _annotate_product_public(product)
+        base = _annotate_product_public(product, expose_platform_base=True)
         base.update(
             {
                 "moderation_status": product.moderation_status,
@@ -389,7 +404,7 @@ class AdminProductModerationSerializer(serializers.Serializer):
 
 class AdminProductRowSerializer(serializers.BaseSerializer):
     def to_representation(self, product: MarketplaceProduct):
-        row = _annotate_product_public(product)
+        row = _annotate_product_public(product, expose_platform_base=True)
         row.update(
             {
                 "moderation_status": product.moderation_status,

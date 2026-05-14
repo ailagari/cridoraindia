@@ -1,6 +1,25 @@
 from decimal import Decimal
 
+from django.utils import timezone
+
 from .models import JewellerPricingProfile, MarketplaceProduct
+
+
+def jeweller_rate_effective_updated_at(profile: JewellerPricingProfile) -> timezone.datetime:
+    """
+    Timestamp shown to customers as “rate last updated”.
+    Manual mode: last jeweller pricing profile save.
+    Live-on-Cridora-base mode: later of profile save vs platform ticker resolution update.
+    """
+
+    from .models import get_or_create_ticker
+
+    ticker = get_or_create_ticker()
+    pu = profile.updated_at
+    tu = ticker.updated_at
+    if profile.gold_rate_source == JewellerPricingProfile.GOLD_RATE_MANUAL:
+        return pu
+    return max(pu, tu)
 
 
 def jeweller_store_22k_inr(

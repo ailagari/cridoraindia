@@ -319,6 +319,15 @@ class VaultRowSerializer(serializers.Serializer):
     custodian_id = serializers.IntegerField()
     custodian_label = serializers.CharField(allow_blank=True)
     fractional_grams = serializers.CharField()
+    jeweller_metal_rate_inr_per_gram = serializers.CharField(
+        required=False, allow_blank=True, default=""
+    )
+    estimated_fractional_value_inr = serializers.CharField(
+        required=False, allow_blank=True, default=""
+    )
+    jeweller_metal_rate_last_updated_at = serializers.CharField(
+        required=False, allow_blank=True, default=""
+    )
 
 
 class GoldWalletSerializer(serializers.Serializer):

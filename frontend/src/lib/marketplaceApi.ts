@@ -38,7 +38,10 @@ export type MarketplaceProductDTO = {
   jeweller_name: string
   jeweller_city: string
   pricing_mode: string
-  platform_base_inr_per_gram_22k: string
+  /** ISO timestamp — when this jeweller&apos;s quoted metal rate was last considered current. */
+  jeweller_metal_rate_last_updated_at?: string
+  /** Present only on jeweller/admin product payloads (internal comparison). */
+  platform_base_inr_per_gram_22k?: string
   cridora_base_source?: string
   metal_rate_inr_per_gram_used: string
   jeweller_markup_percent_applied: string
@@ -64,8 +67,7 @@ export type JewellerStorefrontDTO = {
   shop_address: string
   gstin: string
   kyc_status: string
-  platform_base_inr_per_gram_22k: string
-  cridora_base_source?: string
+  jeweller_metal_rate_last_updated_at?: string
   jeweller_store_22k_inr_per_gram?: string
   gold_rate_source?: string
   representative_making_charge_inr_per_gram: string

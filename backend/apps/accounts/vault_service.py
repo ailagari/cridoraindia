@@ -145,7 +145,15 @@ def migrate_customer_legacy_balance_if_needed(customer: User, custodian: User) -
 
 
 def wallet_vault_payload(customer: User) -> list[dict]:
+    from apps.marketplace.models import jeweller_profile_for
+    from apps.marketplace.pricing import (
+        jeweller_rate_effective_updated_at,
+        reference_metal_rate_inr_per_gram_for_jeweller,
+    )
+    from apps.marketplace.spot_prices import resolve_cridora_base_22k_inr
+
     rows = []
+    cridora_base, _ = resolve_cridora_base_22k_inr()
     qs = (
         GoldVault.objects.filter(owner=customer)
         .select_related("custodian")
@@ -157,12 +165,19 @@ def wallet_vault_payload(customer: User) -> list[dict]:
         ).first()
         g = h.balance_grams if h else Decimal("0")
         j = v.custodian
+        profile = jeweller_profile_for(j)
+        metal_rate = reference_metal_rate_inr_per_gram_for_jeweller(profile, cridora_base)
+        est_inr = (g * metal_rate).quantize(Decimal("0.01"))
+        rate_as_of = jeweller_rate_effective_updated_at(profile)
         rows.append(
             {
                 "vault_public_id": v.vault_public_id or "",
                 "custodian_id": j.id,
                 "custodian_label": j.business_name or j.email or "",
                 "fractional_grams": str(g),
+                "jeweller_metal_rate_inr_per_gram": str(metal_rate),
+                "estimated_fractional_value_inr": str(est_inr),
+                "jeweller_metal_rate_last_updated_at": rate_as_of.isoformat(),
             }
         )
     return rows

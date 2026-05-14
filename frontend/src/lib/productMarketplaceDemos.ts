@@ -1,7 +1,5 @@
 import type { MarketplaceProductDTO } from '@/lib/marketplaceApi'
 
-const DEMO_PLATFORM_BASE = '7320.00'
-
 /** Matches storefront dummy jewellers in `jewellerMarketplaceDemos.ts`. */
 const J = {
   hyderabad: {
@@ -100,7 +98,7 @@ function demoRow(
     jeweller_name: shop.jeweller_name,
     jeweller_city: shop.jeweller_city,
     pricing_mode: 'spot_markup',
-    platform_base_inr_per_gram_22k: DEMO_PLATFORM_BASE,
+    jeweller_metal_rate_last_updated_at: '2026-05-01T10:30:00+05:30',
     metal_rate_inr_per_gram_used: shop.metal,
     jeweller_markup_percent_applied: shop.markup,
     gold_metal_value_inr: piece.gold_metal_value_inr,

@@ -10,8 +10,8 @@ import {
 } from '@/lib/fractionalPurchaseApi'
 import { fetchGoldWallet } from '@/lib/goldTransferApi'
 import { LIVE_BALANCE_POLL_MS } from '@/lib/liveDeskIntervals'
-import { useLiveCridoraBase } from '@/hooks/useLiveCridoraBase'
 import { useLivePoll } from '@/lib/useLivePoll'
+import { formatJewellerMetalRateAsOf } from '@/features/marketplace/productPricing'
 
 function formatInr(s: string): string {
   const n = Number.parseFloat(s)
@@ -34,7 +34,6 @@ export function FractionalPurchasePanel() {
   const [orderMsg, setOrderMsg] = useState('')
   const [lastOrder, setLastOrder] = useState<FractionalPurchaseDTO | null>(null)
   const [balanceHint, setBalanceHint] = useState('')
-  const { data: liveBase } = useLiveCridoraBase()
 
   const refreshOrders = useCallback(async () => {
     setOrders(await fractionalListOrders())
@@ -156,24 +155,15 @@ export function FractionalPurchasePanel() {
   return (
     <div className="dash-panel-max fractional-buy-panel">
       <p className="dash-panel-lead">
-        Buy fractional gold at your jeweller&apos;s live metal rate (Cridora 22K reference + their markup). GST on gold value is
-        included in the quote. Pay with UPI (confirm here once paid) or at the showroom — your jeweller verifies counter
-        payments before grams appear in your wallet.
+        Buy fractional gold at the selected jeweller&apos;s metal rate (their manual ₹/g or the platform benchmark with their
+        percentage and fixed ₹/g markups). GST on gold value is included in the quote. Pay with UPI (confirm here once paid)
+        or at the showroom — your jeweller verifies counter payments before grams appear in your wallet.
       </p>
 
-      <div className="fractional-buy-live-rate" aria-live="polite">
-        Cridora 22K (live):{' '}
-        <strong className="tabular">
-          ₹
-          {liveBase?.platformBaseInrPerGram22k
-            ? Number.parseFloat(liveBase.platformBaseInrPerGram22k).toLocaleString('en-IN', {
-                maximumFractionDigits: 2,
-              })
-            : '—'}
-          /g
-        </strong>
-        {liveBase?.source ? <span> · {liveBase.source.replace(/_/g, ' ')}</span> : null}
-      </div>
+      <p className="fractional-buy-live-rate" aria-live="polite" style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>
+        Quotes always use <strong>your jeweller&apos;s rate</strong>, not a generic platform headline. Use <strong>Show live
+        quote</strong> to refresh ₹/g and see when that rate was last updated.
+      </p>
 
       <div className="card" style={{ marginBottom: '1.25rem', maxWidth: 560 }}>
         <div className="dash-form-stack">
@@ -271,8 +261,12 @@ export function FractionalPurchasePanel() {
               </p>
               <div className="fractional-buy-quote-stack">
                 <p className="fractional-buy-quote-row" style={{ color: 'var(--text-muted)' }}>
-                  Rate (22K metal this jeweller):{' '}
+                  Jeweller metal rate (22K reference incl. their default markup):{' '}
                   <strong className="tabular">₹{formatInr(quote.metal_rate_inr_per_gram)}/g</strong>
+                </p>
+                <p className="fractional-buy-quote-row" style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>
+                  Rate last updated:{' '}
+                  <strong>{formatJewellerMetalRateAsOf(quote.jeweller_metal_rate_last_updated_at) ?? '—'}</strong>
                 </p>
                 <p className="fractional-buy-quote-row" style={{ color: 'var(--text-muted)' }}>
                   Gold weight: <strong className="tabular">{quote.grams} g</strong>

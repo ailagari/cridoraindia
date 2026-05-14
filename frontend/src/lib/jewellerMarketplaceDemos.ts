@@ -11,8 +11,7 @@ function demoBase(overrides: Partial<JewellerStorefrontDTO>): JewellerStorefront
     shop_address: '',
     gstin: '',
     kyc_status: 'verified',
-    platform_base_inr_per_gram_22k: DEMO_PLATFORM_BASE,
-    cridora_base_source: 'live_spot',
+    jeweller_metal_rate_last_updated_at: '2026-05-01T10:30:00+05:30',
     jeweller_store_22k_inr_per_gram: DEMO_PLATFORM_BASE,
     gold_rate_source: 'live_cridora',
     representative_making_charge_inr_per_gram: '0',
@@ -190,7 +189,6 @@ function normName(s: string): string {
 export function mergeJewellerListWithDemos(apiRows: JewellerStorefrontDTO[]): JewellerStorefrontDTO[] {
   const normalizedApi = apiRows.map((r) => ({
     ...r,
-    platform_base_inr_per_gram_22k: r.platform_base_inr_per_gram_22k || DEMO_PLATFORM_BASE,
     logo_url: r.logo_url ?? '',
     credibility_score: r.credibility_score ?? '',
     lock_in_summary: r.lock_in_summary ?? '',

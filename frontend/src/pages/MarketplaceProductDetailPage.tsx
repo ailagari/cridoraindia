@@ -8,6 +8,7 @@ import {
 import {
   MarketplaceProductPricingBreakdown,
   formatInr,
+  formatJewellerMetalRateAsOf,
   hasStoneOrOtherMetal,
 } from '@/features/marketplace/productPricing'
 import { makingChargesShortLabel } from '@/lib/marketplacePricing'
@@ -77,6 +78,7 @@ export function MarketplaceProductDetailPage() {
 
   const stoneCompVal = Number.parseFloat(product.stone_component_inr)
   const showStone = hasStoneOrOtherMetal(product)
+  const jewellerRateAsOf = formatJewellerMetalRateAsOf(product.jeweller_metal_rate_last_updated_at)
 
   return (
     <div style={{ paddingBottom: '4rem' }}>
@@ -145,9 +147,13 @@ export function MarketplaceProductDetailPage() {
 
             <h2 style={{ margin: '0 0 0.65rem', fontSize: '1.05rem' }}>Rates, taxes &amp; vault estimate</h2>
             <p style={{ margin: '0 0 0.85rem', fontSize: '0.82rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
-              Metal rate reflects the jeweller&apos;s live reference. Cridora 22K base (feed){' '}
-              <strong className="tabular">₹{formatInr(Number.parseFloat(product.platform_base_inr_per_gram_22k), 2)}/g</strong>
-              {product.cridora_base_source ? ` · ${product.cridora_base_source.replace(/_/g, ' ')}` : ''}.
+              Metal ₹/g is this jeweller&apos;s live listing rate (their manual rate or Cridora benchmark plus their markups — customers only see this showroom rate).
+              {jewellerRateAsOf ? (
+                <>
+                  {' '}
+                  Rate last updated <strong>{jewellerRateAsOf}</strong>.
+                </>
+              ) : null}
             </p>
 
             <MarketplaceProductPricingBreakdown p={product} />

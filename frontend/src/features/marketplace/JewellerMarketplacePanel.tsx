@@ -56,8 +56,11 @@ export function JewellerMarketplacePanel() {
   const [formError, setFormError] = useState('')
   const [busy, setBusy] = useState(false)
 
+  const [jewellerRatePolicyAsOf, setJewellerRatePolicyAsOf] = useState('')
+
   const [pfDraft, setPfDraft] = useState({
     gold_rate_source: 'live_cridora' as 'live_cridora' | 'manual',
+    gold_rate_external_api_url: '',
     manual_gold_rate_inr_per_gram: '',
     live_markup_percent: '',
     live_markup_inr_per_gram: '',
@@ -130,11 +133,13 @@ export function JewellerMarketplacePanel() {
     }
     const pJson = (await pr.json()) as ProfileApi
     const lJson = (await ls.json()) as { results: ProductRow[] }
+    setJewellerRatePolicyAsOf(String(pJson.jeweller_metal_rate_effective_updated_at ?? ''))
     setPfDraft({
       gold_rate_source:
         pJson.gold_rate_source === 'manual'
           ? 'manual'
           : 'live_cridora',
+      gold_rate_external_api_url: String(pJson.gold_rate_external_api_url ?? ''),
       manual_gold_rate_inr_per_gram: String(pJson.manual_gold_rate_inr_per_gram ?? ''),
       live_markup_percent: String(pJson.live_markup_percent ?? '0'),
       live_markup_inr_per_gram: String(pJson.live_markup_inr_per_gram ?? '0'),
@@ -209,6 +214,7 @@ export function JewellerMarketplacePanel() {
       method: 'PATCH',
       jsonBody: {
         gold_rate_source: pfDraft.gold_rate_source,
+        gold_rate_external_api_url: pfDraft.gold_rate_external_api_url.trim(),
         manual_gold_rate_inr_per_gram:
           pfDraft.gold_rate_source === 'manual' && pfDraft.manual_gold_rate_inr_per_gram.trim() !== ''
             ? numOrZero(pfDraft.manual_gold_rate_inr_per_gram)
@@ -566,12 +572,23 @@ export function JewellerMarketplacePanel() {
           Storefront pricing &amp; sellback
         </h2>
         <p className="dash-coming__text" style={{ marginBottom: '1rem' }}>
-          Cridora&apos;s resolved 22K base (global spot with INR FX, then admin fallback) is your starting point. Choose
-          <strong> live Cridora</strong> and add your markup % and/or fixed ₹/g on that base, or choose <strong>manual</strong>{' '}
-          and set your own 22K ₹/g for all spot-linked SKUs. Default gold markup then applies on top of your store 22K
-          reference for listings without a per-SKU override. Product-level manual rates still override everything for that
-          SKU. Fractional gold buys and buyback previews follow the same reference metal.
+          Choose <strong>Cridora benchmark + your markups</strong> (percentage and/or fixed ₹/g on that base) or{' '}
+          <strong>manual 22K ₹/g</strong> that you edit anytime. Your resulting store reference drives marketplace SKUs,
+          fractional buys, sellback previews, and customer vault INR estimates. Optional: save an external rate API URL for
+          your records — Cridora does not call it automatically yet; paste refreshed values via manual mode when needed.
         </p>
+        {jewellerRatePolicyAsOf.trim() !== '' ? (
+          <p style={{ margin: '0 0 1rem', fontSize: '0.82rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
+            Customer-facing quotes use timestamps from this policy: last effective{' '}
+            <strong>
+              {new Date(jewellerRatePolicyAsOf).toLocaleString('en-IN', {
+                dateStyle: 'medium',
+                timeStyle: 'short',
+              })}
+            </strong>
+            .
+          </p>
+        ) : null}
 
         <div
           className="card"
@@ -721,6 +738,24 @@ export function JewellerMarketplacePanel() {
                   </td>
                 </tr>
               )}
+              <tr>
+                <td>Optional external rate API (URL)</td>
+                <td colSpan={2}>
+                  <input
+                    type="url"
+                    style={{ ...tableInput, maxWidth: 'min(100%, 420px)', width: '100%' }}
+                    value={pfDraft.gold_rate_external_api_url}
+                    onChange={(e) =>
+                      setPfDraft((p) => ({ ...p, gold_rate_external_api_url: e.target.value }))
+                    }
+                    placeholder="https://example.com/your-internal-gold-quote"
+                  />
+                  <p style={{ margin: '0.35rem 0 0', fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: 1.45 }}>
+                    Saved for your records only — Cridora does not poll this URL yet. After you pull a quote from your systems,
+                    enter or refresh manual ₹/g above if you use manual mode.
+                  </p>
+                </td>
+              </tr>
               <tr>
                 <td>Default gold markup</td>
                 <td>

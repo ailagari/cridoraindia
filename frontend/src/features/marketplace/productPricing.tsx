@@ -10,6 +10,13 @@ export function formatInr(n: number, fractionDigits = 0): string {
   return n.toLocaleString('en-IN', { maximumFractionDigits: fractionDigits })
 }
 
+export function formatJewellerMetalRateAsOf(iso: string | undefined): string | null {
+  if (!iso?.trim()) return null
+  const t = Date.parse(iso)
+  if (Number.isNaN(t)) return iso.trim()
+  return new Date(t).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })
+}
+
 function CardPriceRow({ label, value }: { label: string; value: string }) {
   return (
     <div
@@ -75,6 +82,7 @@ export function MarketplaceProductPricingBreakdown({ p }: { p: MarketplaceProduc
   const goldMetal = Number.parseFloat(p.gold_metal_value_inr)
   const stoneComp = Number.parseFloat(p.stone_component_inr)
   const showMetalSplit = hasStoneOrOtherMetal(p)
+  const rateAsOf = formatJewellerMetalRateAsOf(p.jeweller_metal_rate_last_updated_at)
 
   return (
     <div
@@ -100,7 +108,8 @@ export function MarketplaceProductPricingBreakdown({ p }: { p: MarketplaceProduc
       >
         Price breakdown (estimate)
       </p>
-      <CardPriceRow label="Metal rate / gram" value={`₹${formatInr(metalRate, 2)}/g`} />
+      <CardPriceRow label="Metal rate / gram (this jeweller)" value={`₹${formatInr(metalRate, 2)}/g`} />
+      {rateAsOf ? <CardPriceRow label="Jeweller rate updated" value={rateAsOf} /> : null}
       <CardPriceRow label="Gold weight" value={`${formatInr(weightG, 3)} g`} />
       <CardPriceRow label="Metal line (rate × g)" value={`₹${formatInr(Math.round(rateTimesG))}`} />
       {showMetalSplit && goldMetal > 0 ? (

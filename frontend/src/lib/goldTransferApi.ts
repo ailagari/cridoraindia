@@ -5,6 +5,9 @@ export type VaultRowDTO = {
   custodian_id: number
   custodian_label: string
   fractional_grams: string
+  jeweller_metal_rate_inr_per_gram?: string
+  estimated_fractional_value_inr?: string
+  jeweller_metal_rate_last_updated_at?: string
 }
 
 export type GoldWalletDTO = {

@@ -190,6 +190,11 @@ class JewellerPricingProfile(models.Model):
     feat_goldnest_available = models.BooleanField(default=False)
     feat_emergency_funds = models.BooleanField(default=False)
     feat_cross_redemption = models.BooleanField(default=True)
+    gold_rate_external_api_url = models.URLField(
+        max_length=512,
+        blank=True,
+        help_text="Optional URL of your gold-rate feed for reference; not fetched automatically by Cridora yet.",
+    )
 
     def __str__(self):
         return f"PricingProfile({self.jeweller_id})"

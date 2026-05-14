@@ -17,7 +17,8 @@ from .fractional_service import (
 )
 from .models import FractionalGoldPurchase
 from .vault_service import credit_customer_fractional
-from apps.marketplace.spot_prices import resolve_cridora_base_22k_inr
+from apps.marketplace.models import jeweller_profile_for
+from apps.marketplace.pricing import jeweller_rate_effective_updated_at
 
 User = get_user_model()
 
@@ -101,12 +102,13 @@ class FractionalQuoteView(APIView):
         err = validate_minimums(b)
         if err:
             return Response({"detail": err}, status=status.HTTP_400_BAD_REQUEST)
-        cridora_base, _ = resolve_cridora_base_22k_inr()
+        profile = jeweller_profile_for(jeweller)
+        rate_as_of = jeweller_rate_effective_updated_at(profile).isoformat()
         return Response(
             {
                 "jeweller": _ser_jeweller_brief(jeweller),
                 "metal_rate_inr_per_gram": str(rate),
-                "platform_base_inr_per_gram_22k": str(cridora_base),
+                "jeweller_metal_rate_last_updated_at": rate_as_of,
                 "grams": str(b["grams"]),
                 "gold_value_inr_pre_gst": str(b["gold_value_inr_pre_gst"]),
                 "gst_percent": str(b["gst_percent"]),

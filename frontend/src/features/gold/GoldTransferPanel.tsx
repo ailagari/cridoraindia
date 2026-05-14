@@ -136,6 +136,19 @@ export function GoldTransferPanel({ roleLabel }: Props) {
                   {wallet.vaults.slice(0, 6).map((v) => (
                     <li key={`${v.vault_public_id}-${v.custodian_id}`} style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
                       <span style={{ color: 'var(--text)' }}>{v.fractional_grams} g</span>
+                      {v.jeweller_metal_rate_inr_per_gram ? (
+                        <>
+                          {' '}
+                          · ~₹
+                          {Number.parseFloat(v.estimated_fractional_value_inr ?? '0').toLocaleString('en-IN', {
+                            maximumFractionDigits: 0,
+                          })}{' '}
+                          @ ₹{Number.parseFloat(v.jeweller_metal_rate_inr_per_gram).toLocaleString('en-IN', {
+                            maximumFractionDigits: 2,
+                          })}
+                          /g
+                        </>
+                      ) : null}
                       {v.vault_public_id ? (
                         <>
                           {' · '}
@@ -143,6 +156,15 @@ export function GoldTransferPanel({ roleLabel }: Props) {
                         </>
                       ) : null}
                       {v.custodian_label ? ` · ${v.custodian_label}` : null}
+                      {v.jeweller_metal_rate_last_updated_at ? (
+                        <span style={{ display: 'block', fontSize: '0.68rem', opacity: 0.92, marginTop: 2 }}>
+                          Jeweller rate ref.{' '}
+                          {new Date(v.jeweller_metal_rate_last_updated_at).toLocaleString('en-IN', {
+                            dateStyle: 'short',
+                            timeStyle: 'short',
+                          })}
+                        </span>
+                      ) : null}
                     </li>
                   ))}
                 </ul>

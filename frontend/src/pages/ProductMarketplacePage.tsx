@@ -26,7 +26,6 @@ import { mergeJewellerListWithDemos } from '@/lib/jewellerMarketplaceDemos'
 import { LIVE_CATALOG_POLL_MS, LIVE_DIRECTORY_POLL_MS } from '@/lib/liveDeskIntervals'
 import { mergeProductCatalogWithDemos } from '@/lib/productMarketplaceDemos'
 import { MarketplaceProductListSummary, formatInr } from '@/features/marketplace/productPricing'
-import { useLiveCridoraBase } from '@/hooks/useLiveCridoraBase'
 
 function checkoutRedemptionCopy(p: MarketplaceProductDTO, cridoraFee: number): string {
   if (p.is_x_redeem && cridoraFee > 0) {
@@ -460,8 +459,6 @@ export function ProductMarketplacePage() {
   const [loadError, setLoadError] = useState('')
   const [cartQtyById, setCartQtyById] = useState<Record<number, number>>({})
 
-  const { data: liveBase, refresh: refreshLiveBase } = useLiveCridoraBase()
-
   const cartItemCount = useMemo(
     () => Object.values(cartQtyById).reduce((sum, n) => sum + n, 0),
     [cartQtyById],
@@ -697,7 +694,7 @@ export function ProductMarketplacePage() {
               style={{ borderRadius: 16, minHeight: 48 }}
               onClick={() => {
                 void refreshCatalog()
-                void refreshLiveBase()
+                void refreshJewellerOptions()
               }}
             >
               Refresh
@@ -838,7 +835,7 @@ export function ProductMarketplacePage() {
                 margin: 0,
                 padding: '0.65rem 0.85rem',
                 borderRadius: 14,
-                minWidth: 160,
+                minWidth: 200,
               }}
             >
               <p
@@ -850,20 +847,12 @@ export function ProductMarketplacePage() {
                   textTransform: 'uppercase',
                 }}
               >
-                Cridora 22K (live)
+                Metal pricing
               </p>
-              <p style={{ margin: '0.2rem 0 0', fontWeight: 800, color: 'var(--success)' }} className="tabular">
-                ₹
-                {liveBase?.platformBaseInrPerGram22k
-                  ? formatInr(Number.parseFloat(liveBase.platformBaseInrPerGram22k), 2)
-                  : '—'}
-                /g
+              <p style={{ margin: '0.25rem 0 0', fontWeight: 600, fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: 1.45 }}>
+                ₹/g on each piece is the <strong style={{ color: 'var(--text)' }}>jeweller&apos;s rate</strong>. Open a listing for
+                the live amount and last update time.
               </p>
-              {liveBase?.source ? (
-                <p style={{ margin: '0.15rem 0 0', fontSize: '0.62rem', color: 'var(--text-faint)' }}>
-                  {liveBase.source.replace(/_/g, ' ')}
-                </p>
-              ) : null}
             </div>
           </div>
         </div>
