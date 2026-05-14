@@ -3,6 +3,7 @@ import { apiFetch } from '@/lib/api'
 export type GoldTickerPayload = {
   reference_price_inr_per_gram_22k: string
   admin_markup_percent: string
+  admin_markup_inr_per_gram: string
   manual_ticker_enabled?: boolean
   ticker_manual_22k_inr_per_gram?: string | null
   ticker_manual_24k_inr_per_gram?: string | null

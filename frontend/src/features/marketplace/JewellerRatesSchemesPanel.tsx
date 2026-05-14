@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react'
 import { Link } from 'react-router-dom'
 import { authFetch } from '@/lib/api'
 import { fetchGoldTicker, fetchSpotPrices, type GoldTickerPayload, type SpotPricesPayload } from '@/lib/marketplaceApi'
@@ -23,6 +23,8 @@ import {
 
 type ProfileApi = Record<string, unknown>
 
+type SectionKey = 'metals' | 'ornaments' | 'deposit' | 'golden'
+
 const modeOptions: { value: MetalPricingMode; label: string }[] = [
   { value: 'match_cridora', label: 'Match Cridora reference' },
   { value: 'markup_on_cridora', label: 'Cridora + markup (% / ₹g)' },
@@ -30,20 +32,46 @@ const modeOptions: { value: MetalPricingMode; label: string }[] = [
   { value: 'external_api', label: 'External rate feed (URL)' },
 ]
 
-const accSection: CSSProperties = {
-  marginBottom: '1.25rem',
-  borderRadius: 18,
-  border: '1px solid var(--border-soft)',
-  background: 'var(--veil-35)',
-  padding: '0 1.15rem 1.15rem',
+const thHead: CSSProperties = {
+  textAlign: 'left',
+  padding: '0.55rem 0.75rem',
+  fontSize: '0.62rem',
+  fontWeight: 800,
+  letterSpacing: '0.08em',
+  textTransform: 'uppercase',
+  color: 'var(--text-faint)',
+  borderBottom: '1px solid var(--border-soft)',
+  background: 'var(--veil)',
 }
 
-const accSummary: CSSProperties = {
-  cursor: 'pointer',
-  fontWeight: 800,
-  fontSize: '1.05rem',
-  padding: '1rem 0 0.5rem',
-  listStyle: 'none',
+const tdCell: CSSProperties = {
+  padding: '0.65rem 0.75rem',
+  verticalAlign: 'middle',
+  borderBottom: '1px solid var(--border-soft)',
+}
+
+function Chevron({ open }: { open: boolean }) {
+  return (
+    <span
+      aria-hidden
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: 28,
+        height: 28,
+        borderRadius: 8,
+        background: 'var(--veil)',
+        border: '1px solid var(--border-soft)',
+        fontSize: '0.65rem',
+        color: 'var(--gold-light)',
+        transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
+        transition: 'transform 0.2s ease',
+      }}
+    >
+      ▼
+    </span>
+  )
 }
 
 export function JewellerRatesSchemesPanel() {
@@ -53,6 +81,9 @@ export function JewellerRatesSchemesPanel() {
   const [jewellerRatePolicyAsOf, setJewellerRatePolicyAsOf] = useState('')
   const [ticker, setTicker] = useState<GoldTickerPayload | null>(null)
   const [spot, setSpot] = useState<SpotPricesPayload | null>(null)
+
+  const [openSection, setOpenSection] = useState<SectionKey | null>('metals')
+  const [openMetal, setOpenMetal] = useState<MetalCode | null>(null)
 
   const [pricingByMetal, setPricingByMetal] = useState<
     Record<MetalCode, MetalPricingDraft>
@@ -88,6 +119,11 @@ export function JewellerRatesSchemesPanel() {
     gold_loan_interest_apr_percent: '0',
     gold_loan_processing_fee_inr: '0',
   })
+
+  const toggleSection = useCallback((key: SectionKey) => {
+    setOpenSection((prev) => (prev === key ? null : key))
+    setOpenMetal(null)
+  }, [])
 
   const refresh = useCallback(async () => {
     setLoadError('')
@@ -267,469 +303,607 @@ export function JewellerRatesSchemesPanel() {
     setBuybackByMetal((prev) => ({ ...prev, [code]: { ...prev[code], ...patch } }))
   }
 
+  const metalsSummary =
+    ticker != null
+      ? `Cridora 22K ₹${formatInr(platformBaseInr, 2)}/g · ${JEWELLER_METAL_ROWS.length} purities`
+      : 'Loading reference…'
+
+  const ornamentsSummary = `Ref metal ₹${formatInr(referenceMetalInr, 2)}/g · Buy ₹${formatInr(indicativeBuybackGoldDisplay, 2)}/g`
+
+  const depositSummary = `Deposit ${formatInr(parseN(platformDisclosures.gold_deposit_yield_apr_percent), 2)}% APR · Loan ${formatInr(parseN(platformDisclosures.gold_loan_interest_apr_percent), 2)}%`
+
+  const goldenSummary = ratesDraft.golden_scheme_enabled ? 'Offer enabled — edit terms' : 'Disabled'
+
+  const toggleMetal = (code: MetalCode) => {
+    setOpenMetal((prev) => (prev === code ? null : code))
+  }
+
   return (
     <div className="dash-panel-max jeweller-rates-schemes">
       <style>{`
-        .jeweller-rates-acc > summary { list-style: none; }
-        .jeweller-rates-acc > summary::-webkit-details-marker { display: none; }
-        .jeweller-rates-acc--metal > summary { font-size: 0.92rem; }
+        .jeweller-rates-unified tbody tr.jeweller-rates-acc-head:hover { background: var(--veil-35); }
+        .jeweller-rates-unified tbody tr.jeweller-rates-acc-head.is-active { background: rgba(212, 175, 55, 0.08); }
+        .jeweller-rates-unified tbody tr.jeweller-metal-row:hover { background: var(--veil-35); }
+        .jeweller-rates-unified tbody tr.jeweller-metal-row.is-picked { background: rgba(212, 175, 55, 0.06); }
       `}</style>
       <p className="dash-panel-lead">
-        Every metal row tracks the <strong>single Cridora reference</strong> configured by admins (one published 22K ₹/g
-        and derived purities). You choose markups, fixed boards, or an external feed URL; buyback shows{' '}
-        <strong>total deductions ₹/g</strong> off your board rate. Ornament SKUs use{' '}
+        Every metal tracks the <strong>Cridora reference</strong> admins publish. Use the table below —{' '}
+        <strong>one section open at a time</strong>; inside Metals, <strong>one purity row open at a time</strong>. Ornament
+        SKUs:{' '}
         <Link to="/dashboard/jeweller?section=mkt_products">Marketplace · Listings</Link>.
       </p>
 
       {loadError ? <p className="form-error">{loadError}</p> : null}
       {formError ? <p className="form-error">{formError}</p> : null}
 
-      <details open className="jeweller-rates-acc" style={accSection}>
-        <summary style={accSummary}>Metal rates &amp; buyback</summary>
-        <p className="dash-coming__text" style={{ margin: '0 0 1rem', fontSize: '0.84rem' }}>
-          There is only one platform reference: whatever Cridora admins publish as effective 22K (manual board or feed —
-          you see the same number customers use). Other purities scale from that curve.
-        </p>
-        {jewellerRatePolicyAsOf.trim() !== '' ? (
-          <p style={{ margin: '0 0 1rem', fontSize: '0.82rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
-            Policy last effective{' '}
-            <strong>
-              {new Date(jewellerRatePolicyAsOf).toLocaleString('en-IN', {
-                dateStyle: 'medium',
-                timeStyle: 'short',
-              })}
-            </strong>
-            .
-          </p>
-        ) : null}
-
-        <div
-          className="card"
-          style={{
-            marginBottom: '1rem',
-            padding: '0.85rem 1rem',
-            borderRadius: 14,
-            background: 'var(--veil)',
-            border: '1px solid var(--border-soft)',
-          }}
-        >
-          <p
-            style={{
-              margin: '0 0 0.5rem',
-              fontSize: '0.62rem',
-              fontWeight: 800,
-              letterSpacing: '0.12em',
-              textTransform: 'uppercase',
-              color: 'var(--text-faint)',
-            }}
-          >
-            Cridora reference 22K (admin-published)
-          </p>
-          {ticker ? (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'baseline', fontSize: '0.95rem' }}>
-              <strong className="tabular" style={{ color: 'var(--gold-light)', fontSize: '1.15rem' }}>
-                ₹{formatInr(platformBaseInr, 2)}/g
-              </strong>
-              <span style={{ color: 'var(--text-faint)', fontSize: '0.75rem' }}>
-                Updated {new Date(ticker.updated_at).toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' })}
-              </span>
-            </div>
-          ) : (
-            <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-              Reference unavailable — retry after opening this page.
-            </p>
-          )}
-        </div>
-
-        <div style={{ display: 'grid', gap: '0.65rem' }}>
-          {JEWELLER_METAL_ROWS.map(({ code, label, sub }) => {
-            const cridoraRef = cridoraRefInrForMetal(code, platformBaseInr, spot)
-            const board = computeJewellerBoardInrPerGram(cridoraRef, pricingByMetal[code])
-            const buy = previewBuybackInrPerGram(board, buybackByMetal[code])
-            const totalDed = totalBuybackDeductionPerGram(board, buybackByMetal[code])
-            const pr = pricingByMetal[code]
-            const bb = buybackByMetal[code]
-            return (
-              <details
-                key={code}
-                className="jeweller-rates-acc jeweller-rates-acc--metal card"
-                style={{
-                  padding: '0 0.85rem 0.85rem',
-                  borderRadius: 14,
-                  border: '1px solid var(--border-soft)',
-                  background: 'var(--veil)',
-                }}
-              >
-                <summary
-                  style={{
-                    ...accSummary,
-                    padding: '0.85rem 0 0.35rem',
-                    fontSize: '0.88rem',
-                  }}
-                >
-                  <span style={{ fontWeight: 800 }}>{label}</span>
-                  <span style={{ color: 'var(--text-muted)', fontWeight: 600, marginLeft: 8 }}>
-                    Ref ₹{formatInr(cridoraRef, 2)}
-                  </span>
-                  <span style={{ color: 'var(--gold-light)', fontWeight: 700, marginLeft: 8 }}>
-                    Board ₹{formatInr(board, 2)}
-                  </span>
-                  <span style={{ color: 'var(--text)', fontWeight: 700, marginLeft: 8 }}>
-                    Buy ₹{formatInr(buy, 2)}
-                  </span>
-                  <span style={{ color: 'var(--text-muted)', fontWeight: 700, marginLeft: 8 }}>
-                    Ded ₹{formatInr(totalDed, 2)}/g
-                  </span>
-                </summary>
-                <p style={{ margin: '0 0 0.65rem', fontSize: '0.74rem', color: 'var(--text-muted)' }}>{sub}</p>
-
-                <div style={{ display: 'grid', gap: '0.65rem' }}>
-                  <label className="field" style={{ margin: 0 }}>
-                    <span style={{ fontSize: '0.78rem' }}>Pricing vs Cridora reference</span>
-                    <select
-                      style={{ ...inp, maxWidth: '100%' }}
-                      value={pr.mode}
-                      onChange={(e) =>
-                        setPricing(code, { mode: e.target.value as MetalPricingMode })
-                      }
-                    >
-                      {modeOptions.map((o) => (
-                        <option key={o.value} value={o.value}>
-                          {o.label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-
-                  {pr.mode === 'markup_on_cridora' ? (
-                    <div
-                      style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
-                        gap: '0.65rem',
-                      }}
-                    >
-                      <label className="field" style={{ margin: 0 }}>
-                        <span>Markup % on reference</span>
-                        <input
-                          style={inp}
-                          inputMode="decimal"
-                          value={pr.markup_percent}
-                          onChange={(e) => setPricing(code, { markup_percent: e.target.value })}
-                        />
-                      </label>
-                      <label className="field" style={{ margin: 0 }}>
-                        <span>Plus ₹/g after %</span>
-                        <input
-                          style={inp}
-                          inputMode="decimal"
-                          value={pr.markup_inr_per_gram}
-                          onChange={(e) => setPricing(code, { markup_inr_per_gram: e.target.value })}
-                        />
-                      </label>
-                    </div>
-                  ) : null}
-
-                  {pr.mode === 'manual_board_inr' ? (
-                    <label className="field" style={{ margin: 0 }}>
-                      <span>Your fixed board ₹/g</span>
-                      <input
-                        style={inp}
-                        inputMode="decimal"
-                        value={pr.manual_inr_per_gram}
-                        onChange={(e) => setPricing(code, { manual_inr_per_gram: e.target.value })}
-                      />
-                    </label>
-                  ) : null}
-
-                  {pr.mode === 'external_api' ? (
-                    <label className="field" style={{ margin: 0 }}>
-                      <span>HTTPS endpoint for your internal quote (not polled yet)</span>
-                      <input
-                        type="url"
-                        style={{ ...inp, maxWidth: '100%' }}
-                        value={pr.external_api_url}
-                        onChange={(e) => setPricing(code, { external_api_url: e.target.value })}
-                        placeholder="https://api.your-system.example/gold-rate"
-                      />
-                      <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 4 }}>
-                        Preview follows the Cridora reference until this feed is integrated.
-                      </span>
-                    </label>
-                  ) : null}
-
+      <div
+        className="card jeweller-rates-unified"
+        style={{
+          marginBottom: '1.25rem',
+          borderRadius: 18,
+          overflow: 'hidden',
+          border: '1px solid var(--border-soft)',
+        }}
+      >
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.88rem' }}>
+          <thead>
+            <tr>
+              <th style={{ ...thHead, width: '34%' }}>Section</th>
+              <th style={{ ...thHead }}>Summary</th>
+              <th style={{ ...thHead, width: 52, textAlign: 'center' }} aria-hidden>
+                {' '}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {/* Metals */}
+            <tr
+              className={`jeweller-rates-acc-head${openSection === 'metals' ? ' is-active' : ''}`}
+              style={{ cursor: 'pointer' }}
+              onClick={() => toggleSection('metals')}
+            >
+              <td style={{ ...tdCell, fontWeight: 800 }}>Metal rates &amp; buyback</td>
+              <td style={{ ...tdCell, color: 'var(--text-muted)', fontSize: '0.82rem' }}>{metalsSummary}</td>
+              <td style={{ ...tdCell, textAlign: 'center' }}>
+                <Chevron open={openSection === 'metals'} />
+              </td>
+            </tr>
+            {openSection === 'metals' ? (
+              <tr>
+                <td colSpan={3} style={{ padding: 0, borderBottom: '1px solid var(--border-soft)' }}>
                   <div
-                    style={{
-                      borderTop: '1px solid var(--border-soft)',
-                      paddingTop: '0.65rem',
-                      marginTop: '0.25rem',
-                    }}
+                    style={{ padding: '1rem 1.15rem 1.15rem', background: 'var(--veil)' }}
+                    onClick={(e) => e.stopPropagation()}
+                    role="presentation"
                   >
-                    <p
-                      style={{
-                        margin: '0 0 0.5rem',
-                        fontSize: '0.62rem',
-                        fontWeight: 800,
-                        letterSpacing: '0.1em',
-                        color: 'var(--text-faint)',
-                      }}
-                    >
-                      Buyback vs your board ₹/g
+                    <p style={{ margin: '0 0 0.75rem', fontSize: '0.82rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
+                      One platform reference (effective 22K ₹/g). Other purities scale from it.
+                      {jewellerRatePolicyAsOf.trim() !== '' ? (
+                        <>
+                          {' '}
+                          Policy effective{' '}
+                          <strong>
+                            {new Date(jewellerRatePolicyAsOf).toLocaleString('en-IN', {
+                              dateStyle: 'medium',
+                              timeStyle: 'short',
+                            })}
+                          </strong>
+                          .
+                        </>
+                      ) : null}
                     </p>
                     <div
                       style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
-                        gap: '0.65rem',
+                        marginBottom: '1rem',
+                        padding: '0.75rem 1rem',
+                        borderRadius: 12,
+                        border: '1px solid var(--border-soft)',
+                        background: 'var(--veil-35)',
                       }}
                     >
-                      <label className="field" style={{ margin: 0 }}>
-                        <span>Deduct %</span>
+                      <p
+                        style={{
+                          margin: '0 0 0.35rem',
+                          fontSize: '0.62rem',
+                          fontWeight: 800,
+                          letterSpacing: '0.1em',
+                          color: 'var(--text-faint)',
+                        }}
+                      >
+                        Cridora reference 22K (admin-published)
+                      </p>
+                      {ticker ? (
+                        <strong className="tabular" style={{ color: 'var(--gold-light)', fontSize: '1.1rem' }}>
+                          ₹{formatInr(platformBaseInr, 2)}/g
+                        </strong>
+                      ) : (
+                        <span style={{ color: 'var(--text-muted)' }}>Unavailable</span>
+                      )}
+                      {ticker ? (
+                        <span style={{ marginLeft: 12, fontSize: '0.75rem', color: 'var(--text-faint)' }}>
+                          Updated{' '}
+                          {new Date(ticker.updated_at).toLocaleString('en-IN', {
+                            dateStyle: 'short',
+                            timeStyle: 'short',
+                          })}
+                        </span>
+                      ) : null}
+                    </div>
+
+                    <div style={{ overflowX: 'auto' }}>
+                      <table style={{ width: '100%', minWidth: 520, borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+                        <thead>
+                          <tr>
+                            <th style={{ ...thHead, borderRadius: '8px 0 0 0' }}>Metal</th>
+                            <th style={{ ...thHead, textAlign: 'right' }}>Ref ₹/g</th>
+                            <th style={{ ...thHead, textAlign: 'right' }}>Board ₹/g</th>
+                            <th style={{ ...thHead, textAlign: 'right' }}>Buy ₹/g</th>
+                            <th style={{ ...thHead, textAlign: 'right' }}>Ded ₹/g</th>
+                            <th style={{ ...thHead, width: 48, textAlign: 'center', borderRadius: '0 8px 0 0' }}>
+                              {' '}
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {JEWELLER_METAL_ROWS.map(({ code, label, sub }) => {
+                            const cridoraRef = cridoraRefInrForMetal(code, platformBaseInr, spot)
+                            const board = computeJewellerBoardInrPerGram(cridoraRef, pricingByMetal[code])
+                            const buy = previewBuybackInrPerGram(board, buybackByMetal[code])
+                            const totalDed = totalBuybackDeductionPerGram(board, buybackByMetal[code])
+                            const pr = pricingByMetal[code]
+                            const bb = buybackByMetal[code]
+                            const picked = openMetal === code
+                            return (
+                              <Fragment key={code}>
+                                <tr
+                                  className={`jeweller-metal-row${picked ? ' is-picked' : ''}`}
+                                  style={{ cursor: 'pointer' }}
+                                  onClick={() => toggleMetal(code)}
+                                >
+                                  <td style={{ ...tdCell, fontWeight: 700 }}>{label}</td>
+                                  <td style={{ ...tdCell, textAlign: 'right' }} className="tabular">
+                                    ₹{formatInr(cridoraRef, 2)}
+                                  </td>
+                                  <td style={{ ...tdCell, textAlign: 'right', color: 'var(--gold-light)', fontWeight: 700 }} className="tabular">
+                                    ₹{formatInr(board, 2)}
+                                  </td>
+                                  <td style={{ ...tdCell, textAlign: 'right', fontWeight: 600 }} className="tabular">
+                                    ₹{formatInr(buy, 2)}
+                                  </td>
+                                  <td style={{ ...tdCell, textAlign: 'right', fontWeight: 600 }} className="tabular">
+                                    ₹{formatInr(totalDed, 2)}
+                                  </td>
+                                  <td style={{ ...tdCell, textAlign: 'center' }}>
+                                    <Chevron open={picked} />
+                                  </td>
+                                </tr>
+                                {picked ? (
+                                  <tr>
+                                    <td colSpan={6} style={{ padding: '0 0 1rem', borderBottom: '1px solid var(--border-soft)' }}>
+                                      <div
+                                        style={{
+                                          padding: '1rem',
+                                          margin: '0 0.25rem',
+                                          borderRadius: 12,
+                                          border: '1px solid var(--border-soft)',
+                                          background: 'var(--veil-35)',
+                                        }}
+                                        onClick={(e) => e.stopPropagation()}
+                                      >
+                                        <p style={{ margin: '0 0 1rem', fontSize: '0.76rem', color: 'var(--text-muted)' }}>
+                                          {sub}
+                                        </p>
+                                        <div style={{ display: 'grid', gap: '0.65rem' }}>
+                                          <label className="field" style={{ margin: 0 }}>
+                                            <span style={{ fontSize: '0.78rem' }}>Pricing vs Cridora reference</span>
+                                            <select
+                                              style={{ ...inp, maxWidth: '100%' }}
+                                              value={pr.mode}
+                                              onChange={(e) =>
+                                                setPricing(code, { mode: e.target.value as MetalPricingMode })
+                                              }
+                                            >
+                                              {modeOptions.map((o) => (
+                                                <option key={o.value} value={o.value}>
+                                                  {o.label}
+                                                </option>
+                                              ))}
+                                            </select>
+                                          </label>
+
+                                          {pr.mode === 'markup_on_cridora' ? (
+                                            <div
+                                              style={{
+                                                display: 'grid',
+                                                gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+                                                gap: '0.65rem',
+                                              }}
+                                            >
+                                              <label className="field" style={{ margin: 0 }}>
+                                                <span>Markup % on reference</span>
+                                                <input
+                                                  style={inp}
+                                                  inputMode="decimal"
+                                                  value={pr.markup_percent}
+                                                  onChange={(e) =>
+                                                    setPricing(code, { markup_percent: e.target.value })
+                                                  }
+                                                />
+                                              </label>
+                                              <label className="field" style={{ margin: 0 }}>
+                                                <span>Plus ₹/g after %</span>
+                                                <input
+                                                  style={inp}
+                                                  inputMode="decimal"
+                                                  value={pr.markup_inr_per_gram}
+                                                  onChange={(e) =>
+                                                    setPricing(code, { markup_inr_per_gram: e.target.value })
+                                                  }
+                                                />
+                                              </label>
+                                            </div>
+                                          ) : null}
+
+                                          {pr.mode === 'manual_board_inr' ? (
+                                            <label className="field" style={{ margin: 0 }}>
+                                              <span>Your fixed board ₹/g</span>
+                                              <input
+                                                style={inp}
+                                                inputMode="decimal"
+                                                value={pr.manual_inr_per_gram}
+                                                onChange={(e) =>
+                                                  setPricing(code, { manual_inr_per_gram: e.target.value })
+                                                }
+                                              />
+                                            </label>
+                                          ) : null}
+
+                                          {pr.mode === 'external_api' ? (
+                                            <label className="field" style={{ margin: 0 }}>
+                                              <span>HTTPS endpoint (not polled yet)</span>
+                                              <input
+                                                type="url"
+                                                style={{ ...inp, maxWidth: '100%' }}
+                                                value={pr.external_api_url}
+                                                onChange={(e) =>
+                                                  setPricing(code, { external_api_url: e.target.value })
+                                                }
+                                                placeholder="https://…"
+                                              />
+                                            </label>
+                                          ) : null}
+
+                                          <div
+                                            style={{
+                                              borderTop: '1px solid var(--border-soft)',
+                                              paddingTop: '0.65rem',
+                                            }}
+                                          >
+                                            <p
+                                              style={{
+                                                margin: '0 0 0.5rem',
+                                                fontSize: '0.62rem',
+                                                fontWeight: 800,
+                                                letterSpacing: '0.08em',
+                                                color: 'var(--text-faint)',
+                                              }}
+                                            >
+                                              Buyback vs board ₹/g
+                                            </p>
+                                            <div
+                                              style={{
+                                                display: 'grid',
+                                                gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+                                                gap: '0.65rem',
+                                              }}
+                                            >
+                                              <label className="field" style={{ margin: 0 }}>
+                                                <span>Deduct %</span>
+                                                <input
+                                                  style={inp}
+                                                  inputMode="decimal"
+                                                  value={bb.deduction_percent}
+                                                  onChange={(e) =>
+                                                    setBuyback(code, { deduction_percent: e.target.value })
+                                                  }
+                                                />
+                                              </label>
+                                              <label className="field" style={{ margin: 0 }}>
+                                                <span>Less ₹/g (fixed)</span>
+                                                <input
+                                                  style={inp}
+                                                  inputMode="decimal"
+                                                  value={bb.fixed_inr_per_gram}
+                                                  onChange={(e) =>
+                                                    setBuyback(code, { fixed_inr_per_gram: e.target.value })
+                                                  }
+                                                />
+                                              </label>
+                                              <label className="field" style={{ margin: 0 }}>
+                                                <span>Less ₹/g (extra)</span>
+                                                <input
+                                                  style={inp}
+                                                  inputMode="decimal"
+                                                  value={bb.jeweller_deduction_inr_per_gram}
+                                                  onChange={(e) =>
+                                                    setBuyback(code, {
+                                                      jeweller_deduction_inr_per_gram: e.target.value,
+                                                    })
+                                                  }
+                                                />
+                                              </label>
+                                            </div>
+                                            <p
+                                              style={{
+                                                margin: '0.65rem 0 0',
+                                                fontSize: '0.85rem',
+                                                fontWeight: 800,
+                                              }}
+                                            >
+                                              Total deductions vs board:{' '}
+                                              <span className="tabular" style={{ color: 'var(--gold-light)' }}>
+                                                ₹{formatInr(totalDed, 2)}/g
+                                              </span>
+                                            </p>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                ) : null}
+                              </Fragment>
+                            )
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            ) : null}
+
+            {/* Ornaments */}
+            <tr
+              className={`jeweller-rates-acc-head${openSection === 'ornaments' ? ' is-active' : ''}`}
+              style={{ cursor: 'pointer' }}
+              onClick={() => toggleSection('ornaments')}
+            >
+              <td style={{ ...tdCell, fontWeight: 800 }}>Gold 22K ornaments &amp; card buyback</td>
+              <td style={{ ...tdCell, color: 'var(--text-muted)', fontSize: '0.82rem' }}>{ornamentsSummary}</td>
+              <td style={{ ...tdCell, textAlign: 'center' }}>
+                <Chevron open={openSection === 'ornaments'} />
+              </td>
+            </tr>
+            {openSection === 'ornaments' ? (
+              <tr>
+                <td colSpan={3} style={{ padding: 0, borderBottom: '1px solid var(--border-soft)' }}>
+                  <div style={{ padding: '1rem 1.15rem', background: 'var(--veil)' }} onClick={(e) => e.stopPropagation()}>
+                    <p style={{ margin: '0 0 1rem', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                      Default SKU markup on your 22K board unless a listing overrides it.
+                    </p>
+                    <div style={{ display: 'grid', gap: '0.85rem', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
+                      <label className="field">
+                        <span>Default ornament markup (%)</span>
                         <input
-                          style={inp}
                           inputMode="decimal"
-                          value={bb.deduction_percent}
-                          onChange={(e) => setBuyback(code, { deduction_percent: e.target.value })}
-                        />
-                      </label>
-                      <label className="field" style={{ margin: 0 }}>
-                        <span>Less ₹/g (fixed)</span>
-                        <input
-                          style={inp}
-                          inputMode="decimal"
-                          value={bb.fixed_inr_per_gram}
-                          onChange={(e) => setBuyback(code, { fixed_inr_per_gram: e.target.value })}
-                        />
-                      </label>
-                      <label className="field" style={{ margin: 0 }}>
-                        <span>Less ₹/g (your extra)</span>
-                        <input
-                          style={inp}
-                          inputMode="decimal"
-                          value={bb.jeweller_deduction_inr_per_gram}
+                          value={ratesDraft.default_gold_markup_percent}
                           onChange={(e) =>
-                            setBuyback(code, { jeweller_deduction_inr_per_gram: e.target.value })
+                            setRatesDraft((p) => ({ ...p, default_gold_markup_percent: e.target.value }))
                           }
                         />
                       </label>
+                      <div className="card" style={{ padding: '0.75rem', borderRadius: 12, margin: 0 }}>
+                        <p style={{ margin: 0, fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-faint)' }}>
+                          REFERENCE METAL
+                        </p>
+                        <p style={{ margin: '0.35rem 0 0', fontWeight: 800 }} className="tabular">
+                          ₹{formatInr(referenceMetalInr, 2)}/g
+                        </p>
+                      </div>
+                      <div className="card" style={{ padding: '0.75rem', borderRadius: 12, margin: 0 }}>
+                        <p style={{ margin: 0, fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-faint)' }}>
+                          INDICATIVE BUYBACK
+                        </p>
+                        <p style={{ margin: '0.35rem 0 0', fontWeight: 800, color: 'var(--gold-light)' }} className="tabular">
+                          ₹{formatInr(indicativeBuybackGoldDisplay, 2)}/g
+                        </p>
+                        {ornamentTotalDeductionPerGram != null ? (
+                          <p style={{ margin: '0.45rem 0 0', fontSize: '0.78rem', fontWeight: 700 }} className="tabular">
+                            Total deductions vs ref metal: ₹{formatInr(ornamentTotalDeductionPerGram, 2)}/g
+                          </p>
+                        ) : (
+                          <p style={{ margin: '0.45rem 0 0', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                            Headline override — totals N/A
+                          </p>
+                        )}
+                      </div>
                     </div>
-                    <p
-                      style={{
-                        margin: '0.65rem 0 0',
-                        fontSize: '0.88rem',
-                        fontWeight: 800,
-                        color: 'var(--text)',
-                      }}
-                    >
-                      Total deductions vs board:{' '}
-                      <span className="tabular" style={{ color: 'var(--gold-light)' }}>
-                        ₹{formatInr(totalDed, 2)}/g
-                      </span>{' '}
-                      <span style={{ fontWeight: 500, fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                        (percent + fixed + extra)
-                      </span>
-                    </p>
+                    <label className="field" style={{ marginTop: '1rem' }}>
+                      <span>Optional buyback headline ₹/g</span>
+                      <input
+                        inputMode="decimal"
+                        value={ratesDraft.buyback_headline_inr_per_gram}
+                        onChange={(e) =>
+                          setRatesDraft((p) => ({ ...p, buyback_headline_inr_per_gram: e.target.value }))
+                        }
+                      />
+                    </label>
+                    <label className="field" style={{ marginTop: '0.85rem' }}>
+                      <span>Typical making charge ₹/g</span>
+                      <input
+                        inputMode="decimal"
+                        value={ratesDraft.representative_making_charge_inr_per_gram}
+                        onChange={(e) =>
+                          setRatesDraft((p) => ({
+                            ...p,
+                            representative_making_charge_inr_per_gram: e.target.value,
+                          }))
+                        }
+                      />
+                    </label>
                   </div>
-                </div>
-              </details>
-            )
-          })}
-        </div>
-      </details>
+                </td>
+              </tr>
+            ) : null}
 
-      <details className="jeweller-rates-acc" style={accSection}>
-        <summary style={accSummary}>Gold 22K ornaments — default markup &amp; card buyback</summary>
-        <p className="dash-coming__text" style={{ marginBottom: '1rem' }}>
-          Listings inherit <strong>default gold markup %</strong> on top of your gold 22K board unless a SKU overrides
-          it. Card buyback uses this ladder unless you set a headline override.
-        </p>
-        <div style={{ display: 'grid', gap: '0.85rem', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
-          <label className="field">
-            <span>Default ornament markup (% on your 22K board)</span>
-            <input
-              inputMode="decimal"
-              value={ratesDraft.default_gold_markup_percent}
-              onChange={(e) =>
-                setRatesDraft((p) => ({ ...p, default_gold_markup_percent: e.target.value }))
-              }
-            />
-          </label>
-          <div className="card" style={{ padding: '0.75rem', borderRadius: 12, margin: 0 }}>
-            <p style={{ margin: 0, fontSize: '0.72rem', color: 'var(--text-faint)', fontWeight: 800 }}>
-              REFERENCE METAL
-            </p>
-            <p style={{ margin: '0.35rem 0 0', fontWeight: 800 }} className="tabular">
-              ₹{formatInr(referenceMetalInr, 2)}/g
-            </p>
-          </div>
-          <div className="card" style={{ padding: '0.75rem', borderRadius: 12, margin: 0 }}>
-            <p style={{ margin: 0, fontSize: '0.72rem', color: 'var(--text-faint)', fontWeight: 800 }}>
-              INDICATIVE BUYBACK
-            </p>
-            <p style={{ margin: '0.35rem 0 0', fontWeight: 800, color: 'var(--gold-light)' }} className="tabular">
-              ₹{formatInr(indicativeBuybackGoldDisplay, 2)}/g
-            </p>
-            {ornamentTotalDeductionPerGram != null ? (
-              <p style={{ margin: '0.45rem 0 0', fontSize: '0.8rem', fontWeight: 700 }} className="tabular">
-                Total deductions vs reference metal: ₹{formatInr(ornamentTotalDeductionPerGram, 2)}/g
-              </p>
-            ) : (
-              <p style={{ margin: '0.45rem 0 0', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                Headline override on — total deductions hidden (manual quote).
-              </p>
-            )}
-          </div>
-        </div>
-        <label className="field" style={{ marginTop: '1rem' }}>
-          <span>Optional buyback headline ₹/g (overrides derived rate on cards)</span>
-          <input
-            inputMode="decimal"
-            value={ratesDraft.buyback_headline_inr_per_gram}
-            onChange={(e) =>
-              setRatesDraft((p) => ({ ...p, buyback_headline_inr_per_gram: e.target.value }))
-            }
-            placeholder="Leave blank to derive from reference metal + gold 22K buyback row"
-          />
-        </label>
-        <label className="field" style={{ marginTop: '0.85rem' }}>
-          <span>Typical making charge ₹/g (comparison cards)</span>
-          <input
-            inputMode="decimal"
-            value={ratesDraft.representative_making_charge_inr_per_gram}
-            onChange={(e) =>
-              setRatesDraft((p) => ({
-                ...p,
-                representative_making_charge_inr_per_gram: e.target.value,
-              }))
-            }
-          />
-        </label>
-      </details>
+            {/* Deposit */}
+            <tr
+              className={`jeweller-rates-acc-head${openSection === 'deposit' ? ' is-active' : ''}`}
+              style={{ cursor: 'pointer' }}
+              onClick={() => toggleSection('deposit')}
+            >
+              <td style={{ ...tdCell, fontWeight: 800 }}>Deposit &amp; loan disclosures</td>
+              <td style={{ ...tdCell, color: 'var(--text-muted)', fontSize: '0.82rem' }}>{depositSummary}</td>
+              <td style={{ ...tdCell, textAlign: 'center' }}>
+                <Chevron open={openSection === 'deposit'} />
+              </td>
+            </tr>
+            {openSection === 'deposit' ? (
+              <tr>
+                <td colSpan={3} style={{ padding: 0, borderBottom: '1px solid var(--border-soft)' }}>
+                  <div style={{ padding: '1rem 1.15rem', background: 'var(--veil)' }} onClick={(e) => e.stopPropagation()}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.85rem', marginBottom: '1rem' }}>
+                      <div className="card" style={{ padding: '0.85rem', borderRadius: 12, margin: 0 }}>
+                        <p style={{ margin: 0, fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-faint)' }}>
+                          DEPOSIT YIELD (% APR)
+                        </p>
+                        <p style={{ margin: '0.35rem 0 0', fontWeight: 800 }} className="tabular">
+                          {formatInr(parseN(platformDisclosures.gold_deposit_yield_apr_percent), 3)}%
+                        </p>
+                      </div>
+                      <div className="card" style={{ padding: '0.85rem', borderRadius: 12, margin: 0 }}>
+                        <p style={{ margin: 0, fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-faint)' }}>
+                          LOAN APR (%)
+                        </p>
+                        <p style={{ margin: '0.35rem 0 0', fontWeight: 800 }} className="tabular">
+                          {formatInr(parseN(platformDisclosures.gold_loan_interest_apr_percent), 3)}%
+                        </p>
+                      </div>
+                      <div className="card" style={{ padding: '0.85rem', borderRadius: 12, margin: 0 }}>
+                        <p style={{ margin: 0, fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-faint)' }}>
+                          PROCESSING (₹)
+                        </p>
+                        <p style={{ margin: '0.35rem 0 0', fontWeight: 800 }} className="tabular">
+                          ₹{formatInr(parseN(platformDisclosures.gold_loan_processing_fee_inr), 0)}
+                        </p>
+                      </div>
+                    </div>
+                    <label className="field">
+                      <span>Your loan disclosure: extra ₹/g (optional)</span>
+                      <input
+                        inputMode="decimal"
+                        value={ratesDraft.gold_loan_jeweller_deduction_inr_per_gram}
+                        onChange={(e) =>
+                          setRatesDraft((p) => ({
+                            ...p,
+                            gold_loan_jeweller_deduction_inr_per_gram: e.target.value,
+                          }))
+                        }
+                      />
+                    </label>
+                    <label className="field" style={{ marginTop: '0.85rem' }}>
+                      <span>Gold deposit / vault note</span>
+                      <textarea
+                        className="dash-textarea"
+                        rows={3}
+                        value={ratesDraft.gold_deposit_note}
+                        onChange={(e) => setRatesDraft((p) => ({ ...p, gold_deposit_note: e.target.value }))}
+                        style={{ width: '100%', marginTop: '0.35rem' }}
+                      />
+                    </label>
+                  </div>
+                </td>
+              </tr>
+            ) : null}
 
-      <details className="jeweller-rates-acc" style={accSection}>
-        <summary style={accSummary}>Deposit &amp; loan disclosures</summary>
-        <p className="dash-coming__text" style={{ marginBottom: '1rem' }}>
-          Gold deposit yield and loan APR / processing fee are set by <strong>Cridora admins</strong>. You may add an
-          extra loan ₹/g line customers see beside quotes.
-        </p>
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-            gap: '0.85rem',
-            marginBottom: '1rem',
-          }}
-        >
-          <div className="card" style={{ padding: '0.85rem', borderRadius: 12, margin: 0 }}>
-            <p style={{ margin: 0, fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-faint)' }}>
-              DEPOSIT YIELD (% APR)
-            </p>
-            <p style={{ margin: '0.35rem 0 0', fontWeight: 800 }} className="tabular">
-              {formatInr(parseN(platformDisclosures.gold_deposit_yield_apr_percent), 3)}%
-            </p>
-          </div>
-          <div className="card" style={{ padding: '0.85rem', borderRadius: 12, margin: 0 }}>
-            <p style={{ margin: 0, fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-faint)' }}>
-              LOAN APR (% · PLATFORM)
-            </p>
-            <p style={{ margin: '0.35rem 0 0', fontWeight: 800 }} className="tabular">
-              {formatInr(parseN(platformDisclosures.gold_loan_interest_apr_percent), 3)}%
-            </p>
-          </div>
-          <div className="card" style={{ padding: '0.85rem', borderRadius: 12, margin: 0 }}>
-            <p style={{ margin: 0, fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-faint)' }}>
-              PROCESSING FEE (₹ · PLATFORM)
-            </p>
-            <p style={{ margin: '0.35rem 0 0', fontWeight: 800 }} className="tabular">
-              ₹{formatInr(parseN(platformDisclosures.gold_loan_processing_fee_inr), 0)}
-            </p>
-          </div>
-        </div>
-        <label className="field">
-          <span>Your loan disclosure: extra ₹/g (optional)</span>
-          <input
-            inputMode="decimal"
-            value={ratesDraft.gold_loan_jeweller_deduction_inr_per_gram}
-            onChange={(e) =>
-              setRatesDraft((p) => ({
-                ...p,
-                gold_loan_jeweller_deduction_inr_per_gram: e.target.value,
-              }))
-            }
-          />
-        </label>
-        <label className="field" style={{ marginTop: '0.85rem' }}>
-          <span>Gold deposit / vault note</span>
-          <textarea
-            className="dash-textarea"
-            rows={3}
-            value={ratesDraft.gold_deposit_note}
-            onChange={(e) => setRatesDraft((p) => ({ ...p, gold_deposit_note: e.target.value }))}
-            style={{ width: '100%', maxWidth: '100%', marginTop: '0.35rem' }}
-          />
-        </label>
-      </details>
-
-      <details className="jeweller-rates-acc" style={accSection}>
-        <summary style={accSummary}>Golden Scheme (jewellery savings)</summary>
-        <p className="dash-coming__text" style={{ marginBottom: '1rem' }}>
-          MVP disclosure — shown on your public jeweller card when enabled.
-        </p>
-        <label className="field" style={{ flexDirection: 'row', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-          <input
-            type="checkbox"
-            checked={ratesDraft.golden_scheme_enabled}
-            onChange={(e) => setRatesDraft((p) => ({ ...p, golden_scheme_enabled: e.target.checked }))}
-          />
-          <span>Offer Golden Scheme on storefront</span>
-        </label>
-        <div style={{ display: 'grid', gap: '0.85rem', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' }}>
-          <label className="field">
-            <span>Typical duration (months)</span>
-            <input
-              inputMode="numeric"
-              value={ratesDraft.golden_scheme_duration_months}
-              onChange={(e) => setRatesDraft((p) => ({ ...p, golden_scheme_duration_months: e.target.value }))}
-              placeholder="e.g. 11"
-            />
-          </label>
-          <label className="field">
-            <span>Minimum monthly contribution (₹)</span>
-            <input
-              inputMode="decimal"
-              value={ratesDraft.golden_scheme_min_monthly_inr}
-              onChange={(e) => setRatesDraft((p) => ({ ...p, golden_scheme_min_monthly_inr: e.target.value }))}
-              placeholder="e.g. 1000"
-            />
-          </label>
-          <label className="field" style={{ gridColumn: '1 / -1' }}>
-            <span>Lock-in / tenure note</span>
-            <input
-              value={ratesDraft.golden_scheme_lock_in_note}
-              onChange={(e) => setRatesDraft((p) => ({ ...p, golden_scheme_lock_in_note: e.target.value }))}
-            />
-          </label>
-          <label className="field" style={{ gridColumn: '1 / -1' }}>
-            <span>How gold rate applies</span>
-            <input
-              value={ratesDraft.golden_scheme_rate_application_note}
-              onChange={(e) =>
-                setRatesDraft((p) => ({ ...p, golden_scheme_rate_application_note: e.target.value }))
-              }
-            />
-          </label>
-          <label className="field" style={{ gridColumn: '1 / -1' }}>
-            <span>Benefits</span>
-            <textarea
-              className="dash-textarea"
-              rows={4}
-              value={ratesDraft.golden_scheme_benefits}
-              onChange={(e) => setRatesDraft((p) => ({ ...p, golden_scheme_benefits: e.target.value }))}
-              style={{ width: '100%', marginTop: '0.35rem' }}
-            />
-          </label>
-        </div>
-      </details>
+            {/* Golden */}
+            <tr
+              className={`jeweller-rates-acc-head${openSection === 'golden' ? ' is-active' : ''}`}
+              style={{ cursor: 'pointer' }}
+              onClick={() => toggleSection('golden')}
+            >
+              <td style={{ ...tdCell, fontWeight: 800 }}>Golden Scheme</td>
+              <td style={{ ...tdCell, color: 'var(--text-muted)', fontSize: '0.82rem' }}>{goldenSummary}</td>
+              <td style={{ ...tdCell, textAlign: 'center' }}>
+                <Chevron open={openSection === 'golden'} />
+              </td>
+            </tr>
+            {openSection === 'golden' ? (
+              <tr>
+                <td colSpan={3} style={{ padding: 0 }}>
+                  <div style={{ padding: '1rem 1.15rem', background: 'var(--veil)' }} onClick={(e) => e.stopPropagation()}>
+                    <label className="field" style={{ flexDirection: 'row', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+                      <input
+                        type="checkbox"
+                        checked={ratesDraft.golden_scheme_enabled}
+                        onChange={(e) =>
+                          setRatesDraft((p) => ({ ...p, golden_scheme_enabled: e.target.checked }))
+                        }
+                      />
+                      <span>Offer on storefront</span>
+                    </label>
+                    <div style={{ display: 'grid', gap: '0.85rem', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' }}>
+                      <label className="field">
+                        <span>Duration (months)</span>
+                        <input
+                          inputMode="numeric"
+                          value={ratesDraft.golden_scheme_duration_months}
+                          onChange={(e) =>
+                            setRatesDraft((p) => ({ ...p, golden_scheme_duration_months: e.target.value }))
+                          }
+                        />
+                      </label>
+                      <label className="field">
+                        <span>Min monthly (₹)</span>
+                        <input
+                          inputMode="decimal"
+                          value={ratesDraft.golden_scheme_min_monthly_inr}
+                          onChange={(e) =>
+                            setRatesDraft((p) => ({ ...p, golden_scheme_min_monthly_inr: e.target.value }))
+                          }
+                        />
+                      </label>
+                      <label className="field" style={{ gridColumn: '1 / -1' }}>
+                        <span>Lock-in note</span>
+                        <input
+                          value={ratesDraft.golden_scheme_lock_in_note}
+                          onChange={(e) =>
+                            setRatesDraft((p) => ({ ...p, golden_scheme_lock_in_note: e.target.value }))
+                          }
+                        />
+                      </label>
+                      <label className="field" style={{ gridColumn: '1 / -1' }}>
+                        <span>How gold rate applies</span>
+                        <input
+                          value={ratesDraft.golden_scheme_rate_application_note}
+                          onChange={(e) =>
+                            setRatesDraft((p) => ({
+                              ...p,
+                              golden_scheme_rate_application_note: e.target.value,
+                            }))
+                          }
+                        />
+                      </label>
+                      <label className="field" style={{ gridColumn: '1 / -1' }}>
+                        <span>Benefits</span>
+                        <textarea
+                          className="dash-textarea"
+                          rows={4}
+                          value={ratesDraft.golden_scheme_benefits}
+                          onChange={(e) =>
+                            setRatesDraft((p) => ({ ...p, golden_scheme_benefits: e.target.value }))
+                          }
+                          style={{ width: '100%', marginTop: '0.35rem' }}
+                        />
+                      </label>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            ) : null}
+          </tbody>
+        </table>
+      </div>
 
       <button
         type="button"

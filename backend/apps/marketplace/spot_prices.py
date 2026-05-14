@@ -128,10 +128,40 @@ def _build_spot_inr_from_feed() -> dict | None:
     }
 
 
+def _apply_cridora_live_markup_to_spot_payload(raw_payload: dict, ticker) -> dict:
+    """
+    Raw spot payloads carry unadjusted 22K; Cridora reference = raw 22K after admin % and ₹/g.
+    Does not apply to manual ticker or platform_floor payloads (already final).
+    """
+    gold = raw_payload.get("gold")
+    if not isinstance(gold, dict) or gold.get("22K") is None:
+        return raw_payload
+    src = str(raw_payload.get("source") or "")
+    if src in ("manual_ticker", "platform_floor"):
+        return raw_payload
+    raw22 = Decimal(str(gold["22K"]))
+    adj22_dec = ticker.apply_admin_live_markup_to_raw_22k(raw22)
+    adj22 = float(adj22_dec)
+    if adj22 <= 0:
+        return raw_payload
+    fine = adj22 / 0.916
+    new_gold = {
+        "24K": round(fine, 2),
+        "22K": round(adj22, 2),
+        "21K": round(fine * GOLD_KARAT_PURITY["21K"], 2),
+        "18K": round(fine * GOLD_KARAT_PURITY["18K"], 2),
+    }
+    base_note = str(raw_payload.get("note") or "").strip()
+    extra = "Cridora reference = live spot 22K after admin % and ₹/g adjustment."
+    note = f"{base_note} {extra}".strip()
+    return {**raw_payload, "gold": new_gold, "note": note}
+
+
 def resolve_cridora_base_22k_inr() -> tuple[Decimal, str]:
     """
-    Single source of truth for platform 22K ₹/g: admin manual ticker (if enabled), then live spot
-    cache/feed, then last-good spot, then GoldTickerConfig admin benchmark.
+    Single source of truth for platform 22K ₹/g (Cridora reference for jewellers):
+    manual ticker value if enabled; else raw spot (cache / feed / stale) with admin % and ₹/g;
+    else emergency raw from config with the same adjustments.
     """
     ticker = get_or_create_ticker()
     if ticker.manual_ticker_enabled and ticker.ticker_manual_22k_inr_per_gram is not None:
@@ -143,20 +173,22 @@ def resolve_cridora_base_22k_inr() -> tuple[Decimal, str]:
     if cached and isinstance(cached.get("gold"), dict):
         v = cached["gold"].get("22K")
         if v is not None:
-            return Decimal(str(v)).quantize(Decimal("0.01")), "live_spot"
+            raw = Decimal(str(v))
+            return ticker.apply_admin_live_markup_to_raw_22k(raw), "live_spot"
 
     data = _build_spot_inr_from_feed()
     if data is not None and data.get("gold", {}).get("22K") is not None:
-        d = Decimal(str(data["gold"]["22K"])).quantize(Decimal("0.01"))
+        d_raw = Decimal(str(data["gold"]["22K"]))
         cache.set(_CACHE_KEY_INR, data, timeout=_CACHE_TTL)
         cache.set(_CACHE_KEY_LAST_GOOD, data, timeout=_CACHE_TTL_LAST_GOOD)
-        return d, "live_spot"
+        return ticker.apply_admin_live_markup_to_raw_22k(d_raw), "live_spot"
 
     stale = cache.get(_CACHE_KEY_LAST_GOOD)
     if stale and isinstance(stale.get("gold"), dict):
         v = stale["gold"].get("22K")
         if v is not None:
-            return Decimal(str(v)).quantize(Decimal("0.01")), "stale_spot_cache"
+            raw = Decimal(str(v))
+            return ticker.apply_admin_live_markup_to_raw_22k(raw), "stale_spot_cache"
 
     return ticker.platform_base_inr_per_gram(), "admin_fallback"
 
@@ -195,7 +227,7 @@ def _platform_ticker_fallback_inr() -> dict:
         "currency": "INR",
         "unit": "per_gram",
         "source": "platform_floor",
-        "note": "Platform admin benchmark — live spot feed unavailable.",
+        "note": "Emergency Cridora reference — global spot feed unavailable; raw substitute plus admin adjustments.",
         "gold": {
             "24K": round(fine, 2),
             "22K": round(base_22, 2),
@@ -218,28 +250,30 @@ def public_spot_prices_payload() -> dict:
 
     cached = cache.get(_CACHE_KEY_INR)
     if cached is not None:
-        return cached
+        return _apply_cridora_live_markup_to_spot_payload(cached, ticker)
 
     data = _build_spot_inr_from_feed()
     if data is None:
         stale = cache.get(_CACHE_KEY_LAST_GOOD)
         if stale is not None:
-            return {
+            merged = {
                 **stale,
                 "source": "stale_cache",
                 "note": "Last successful spot conversion — feed temporarily unavailable.",
             }
+            return _apply_cridora_live_markup_to_spot_payload(merged, ticker)
         return _platform_ticker_fallback_inr()
 
     cache.set(_CACHE_KEY_INR, data, timeout=_CACHE_TTL)
     cache.set(_CACHE_KEY_LAST_GOOD, data, timeout=_CACHE_TTL_LAST_GOOD)
+    payload_out = _apply_cridora_live_markup_to_spot_payload(data, ticker)
     try:
         from .gold_rate_alerts import maybe_notify_gold_rate_move
 
         maybe_notify_gold_rate_move()
     except Exception:
         logger.exception("Gold rate alert check failed after spot refresh")
-    return data
+    return payload_out
 
 
 class MarketplaceSpotPricesView(APIView):

@@ -42,6 +42,7 @@ class GoldTickerReadSerializer(serializers.ModelSerializer):
         fields = (
             "reference_price_inr_per_gram_22k",
             "admin_markup_percent",
+            "admin_markup_inr_per_gram",
             "rate_move_alert_threshold_inr",
             "rate_alert_baseline_inr_per_gram_22k",
             "manual_ticker_enabled",
@@ -71,6 +72,7 @@ class GoldTickerAdminSerializer(serializers.ModelSerializer):
         fields = (
             "reference_price_inr_per_gram_22k",
             "admin_markup_percent",
+            "admin_markup_inr_per_gram",
             "rate_move_alert_threshold_inr",
             "manual_ticker_enabled",
             "ticker_manual_22k_inr_per_gram",

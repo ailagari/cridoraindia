@@ -6,28 +6,45 @@ from django.db import models
 
 class GoldTickerConfig(models.Model):
     """
-    Platform gold benchmark for BIS 916 / 22K pricing (₹ per gram).
-    Admin adjusts reference and markup%, optional manual ticker override, and rate-alert threshold.
+    Platform Cridora reference for BIS 916 / 22K (₹ per gram).
+
+    Manual mode: admin 22K (optional 24K) is the reference for all jewellers.
+
+    Live mode: raw spot 22K gets admin_markup_percent then admin_markup_inr_per_gram;
+    that final value is the reference. If spot feed and caches are empty, reference_price_inr_per_gram_22k
+    is treated as raw 22K and the same adjustments apply (emergency fallback only).
     """
 
     reference_price_inr_per_gram_22k = models.DecimalField(
-        max_digits=12, decimal_places=2, default=Decimal("7245.50")
+        max_digits=12,
+        decimal_places=2,
+        default=Decimal("7245.50"),
+        help_text="Emergency raw 22K ₹/g when spot feed and caches are empty; same % and ₹/g adjustments apply.",
     )
     admin_markup_percent = models.DecimalField(
-        max_digits=8, decimal_places=3, default=Decimal("0")
+        max_digits=8,
+        decimal_places=3,
+        default=Decimal("0"),
+        help_text="Percent markup on raw live spot 22K before fixed ₹/g add-on.",
+    )
+    admin_markup_inr_per_gram = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=Decimal("0"),
+        help_text="Added after percent on raw live spot 22K (final Cridora reference for jewellers).",
     )
     rate_move_alert_threshold_inr = models.DecimalField(
         max_digits=12,
         decimal_places=2,
         default=Decimal("10.00"),
-        help_text="Push to subscribers when resolved 22K ₹/g moves by ≥ this vs last alert. Use 0 to disable.",
+        help_text="Notify subscribers when Cridora reference 22K ₹/g moves by ≥ this vs previous reference. 0 disables.",
     )
     rate_alert_baseline_inr_per_gram_22k = models.DecimalField(
         max_digits=12,
         decimal_places=2,
         null=True,
         blank=True,
-        help_text="Last resolved 22K rate at which alerts were checked (internal).",
+        help_text="Previous Cridora reference 22K ₹/g used for alert comparisons (internal).",
     )
     gold_deposit_yield_apr_percent = models.DecimalField(
         max_digits=8,
@@ -73,10 +90,17 @@ class GoldTickerConfig(models.Model):
     def __str__(self):
         return "GoldTickerConfig"
 
-    def platform_base_inr_per_gram(self) -> Decimal:
-        ref = self.reference_price_inr_per_gram_22k
+    def apply_admin_live_markup_to_raw_22k(self, raw_22k: Decimal) -> Decimal:
+        """Live-mode pipeline: raw spot (or emergency substitute) → % → plus ₹/g → quantized reference."""
+        if raw_22k <= 0:
+            return Decimal("0").quantize(Decimal("0.01"))
         m = self.admin_markup_percent / Decimal("100")
-        return (ref * (Decimal("1") + m)).quantize(Decimal("0.01"))
+        out = raw_22k * (Decimal("1") + m) + self.admin_markup_inr_per_gram
+        return out.quantize(Decimal("0.01"))
+
+    def platform_base_inr_per_gram(self) -> Decimal:
+        """Emergency reference when no spot data: adjust configured raw 22K the same as live mode."""
+        return self.apply_admin_live_markup_to_raw_22k(self.reference_price_inr_per_gram_22k)
 
 
 class JewellerPricingProfile(models.Model):

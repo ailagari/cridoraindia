@@ -6,6 +6,7 @@ import { useLivePoll } from '@/lib/useLivePoll'
 type Ticker = {
   reference_price_inr_per_gram_22k: string
   admin_markup_percent: string
+  admin_markup_inr_per_gram: string
   rate_move_alert_threshold_inr: string
   rate_alert_baseline_inr_per_gram_22k: string | null
   manual_ticker_enabled?: boolean
@@ -23,6 +24,7 @@ export function AdminGoldTickerPanel() {
   const [data, setData] = useState<Ticker | null>(null)
   const [refDraft, setRefDraft] = useState('')
   const [mkDraft, setMkDraft] = useState('')
+  const [mkInrDraft, setMkInrDraft] = useState('')
   const [alertDraft, setAlertDraft] = useState('')
   const [manualOn, setManualOn] = useState(false)
   const [manual22Draft, setManual22Draft] = useState('')
@@ -45,6 +47,7 @@ export function AdminGoldTickerPanel() {
     setData(j)
     setRefDraft(j.reference_price_inr_per_gram_22k)
     setMkDraft(j.admin_markup_percent)
+    setMkInrDraft(j.admin_markup_inr_per_gram ?? '0')
     setAlertDraft(j.rate_move_alert_threshold_inr ?? '10')
     setManualOn(Boolean(j.manual_ticker_enabled))
     setManual22Draft(j.ticker_manual_22k_inr_per_gram ?? '')
@@ -76,6 +79,7 @@ export function AdminGoldTickerPanel() {
       jsonBody: {
         reference_price_inr_per_gram_22k: refDraft.trim(),
         admin_markup_percent: mkDraft.trim(),
+        admin_markup_inr_per_gram: mkInrDraft.trim(),
         rate_move_alert_threshold_inr: alertDraft.trim(),
         manual_ticker_enabled: manualOn,
         ticker_manual_22k_inr_per_gram: manual22Draft.trim() || null,
@@ -100,26 +104,26 @@ export function AdminGoldTickerPanel() {
         Gold ticker (22K benchmark)
       </h2>
       <p className="dash-coming__text">
-        Choose whether the public ticker and platform 22K base follow <strong>live spot</strong> (when the feed is
-        available) or fixed <strong>manual board rates</strong>. Reference price and markup still apply as fallback when
-        live spot cannot be resolved.
+        There are two published references: <strong>live spot</strong> (global feed plus your adjustments below) or{' '}
+        <strong>manual</strong> 22K ₹/g. That single Cridora reference is what jewellers compare against; each jeweller
+        sets board/buyback on top in Rates &amp; schemes.
       </p>
       <p className="dash-coming__text" style={{ marginTop: '0.5rem' }}>
-        <strong>Rate alerts:</strong> subscribers who enabled device notifications get a push when resolved 22K ₹/g moves
-        by at least the threshold below (vs the rate at the last alert). Set to <strong>0</strong> to turn alerts off.
-        Requires VAPID keys on the server.
+        <strong>Notifications:</strong> when the Cridora reference moves by at least the threshold below versus the{' '}
+        <em>previous</em> reference, subscribers with push enabled get an alert (up or down). Set to{' '}
+        <strong>0</strong> to disable. Requires VAPID keys on the server.
       </p>
       {error ? <p className="form-error">{error}</p> : null}
       {data ? (
         <p className="dash-footnote" style={{ marginBottom: '1rem' }}>
-          Resolved Cridora 22K: <strong>{data.platform_base_inr_per_gram_22k}</strong> ₹/g
+          Current Cridora reference 22K: <strong>{data.platform_base_inr_per_gram_22k}</strong> ₹/g
           {data.cridora_base_source ? (
             <>
               {' '}
               ({data.cridora_base_source.replace(/_/g, ' ')})
             </>
           ) : null}{' '}
-          · Alert baseline (internal):{' '}
+          · Previous reference (alerts):{' '}
           <strong>{data.rate_alert_baseline_inr_per_gram_22k ?? '—'}</strong> ₹/g · Ticker admin fields updated{' '}
           {data.updated_at}
         </p>
@@ -178,13 +182,15 @@ export function AdminGoldTickerPanel() {
         >
           {!manualOn ? (
             <p style={{ margin: 0, fontSize: '0.88rem', lineHeight: 1.5, color: 'var(--text-muted)' }}>
-              <strong style={{ color: 'var(--text)' }}>Live mode.</strong> Strip and Cridora base prefer the global spot
-              feed. Manual ₹/g fields are hidden and not applied until you switch to manual board rates.
+              <strong style={{ color: 'var(--text)' }}>Live mode.</strong> Raw spot 22K gets your markup % and fixed ₹/g;
+              the result is the Cridora reference for the ticker and jeweller pricing. Manual ₹/g fields apply only after
+              you switch to manual board rates.
             </p>
           ) : (
             <p style={{ margin: 0, fontSize: '0.88rem', lineHeight: 1.5, color: 'var(--text-muted)' }}>
-              <strong style={{ color: 'var(--text)' }}>Manual mode.</strong> Your 22K (and optional 24K) ₹/g values
-              override live spot for the ticker strip and platform base. Save to publish.
+              <strong style={{ color: 'var(--text)' }}>Manual mode.</strong> Your 22K (and optional 24K) ₹/g{' '}
+              <em>is</em> the Cridora reference for the ticker and jewellers. Live markup % / ₹/g below are stored but not
+              applied until you switch back to live spot.
             </p>
           )}
         </div>
@@ -219,15 +225,15 @@ export function AdminGoldTickerPanel() {
       </div>
       <div style={{ display: 'grid', gap: '0.85rem', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
         <label className="field">
-          <span>Reference price (₹/g)</span>
-          <input value={refDraft} onChange={(e) => setRefDraft(e.target.value)} />
+          <span>Live spot — markup (% on raw 22K)</span>
+          <input value={mkDraft} onChange={(e) => setMkDraft(e.target.value)} inputMode="decimal" placeholder="0" />
         </label>
         <label className="field">
-          <span>Admin markup (%)</span>
-          <input value={mkDraft} onChange={(e) => setMkDraft(e.target.value)} />
+          <span>Live spot — plus ₹/g (after %)</span>
+          <input value={mkInrDraft} onChange={(e) => setMkInrDraft(e.target.value)} inputMode="decimal" placeholder="0" />
         </label>
         <label className="field">
-          <span>Alert swing threshold (₹/g)</span>
+          <span>Alert — reference moved ≥ ₹/g vs previous</span>
           <input
             type="text"
             inputMode="decimal"
@@ -235,6 +241,24 @@ export function AdminGoldTickerPanel() {
             onChange={(e) => setAlertDraft(e.target.value)}
             placeholder="10"
           />
+        </label>
+      </div>
+      <div
+        style={{
+          marginTop: '0.85rem',
+          padding: '0.85rem',
+          borderRadius: 12,
+          border: '1px dashed var(--border-soft)',
+          background: 'var(--veil-35)',
+        }}
+      >
+        <p style={{ margin: '0 0 0.65rem', fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
+          <strong style={{ color: 'var(--text)' }}>Emergency only</strong> — if the global spot feed and caches are empty,
+          this raw 22K ₹/g stands in for spot; the same markup % and plus ₹/g above still apply.
+        </p>
+        <label className="field" style={{ marginBottom: 0 }}>
+          <span>Emergency raw 22K ₹/g (spot unavailable)</span>
+          <input value={refDraft} onChange={(e) => setRefDraft(e.target.value)} inputMode="decimal" />
         </label>
       </div>
       <div
