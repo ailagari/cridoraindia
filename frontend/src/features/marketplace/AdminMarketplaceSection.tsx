@@ -176,8 +176,9 @@ function AdminPublishedRatesSummary(props: {
   previewRows: LivePreviewRow[] | undefined
   manual22Draft: string
   manual24Draft: string
+  rawPreviewSource?: string
 }) {
-  const { manualOn, previewRows, manual22Draft, manual24Draft } = props
+  const { manualOn, previewRows, manual22Draft, manual24Draft, rawPreviewSource } = props
 
   if (manualOn) {
     const ladder = manualTickerGoldLadder(manual22Draft, manual24Draft)
@@ -185,36 +186,43 @@ function AdminPublishedRatesSummary(props: {
       <div
         className="card"
         style={{
-          padding: '0.85rem 1rem',
+          padding: '0.65rem 0.75rem',
           borderRadius: 12,
           border: '1px solid var(--border-soft)',
           marginBottom: '1rem',
           background: 'var(--veil-35)',
         }}
       >
-        <p style={{ margin: '0 0 0.65rem', fontWeight: 700, fontSize: '0.82rem', color: 'var(--text-muted)' }}>
-          Published manual gold reference (₹/g) — from inputs below
+        <p style={{ margin: '0 0 0.45rem', fontWeight: 700, fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+          Manual gold ₹/g
         </p>
         {!ladder ? (
-          <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>Enter a valid 22K ₹/g to preview.</p>
+          <p style={{ margin: 0, fontSize: '0.76rem', color: 'var(--text-muted)' }}>Enter 22K to preview.</p>
         ) : (
-          <div
-            style={{
-              display: 'grid',
-              gap: '0.35rem 1rem',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
-              fontSize: '0.82rem',
-            }}
-          >
-            {(['24K', '22K', '21K', '18K'] as const).map((k) => (
-              <div key={k} className="tabular">
-                <span style={{ color: 'var(--text-muted)' }}>Gold {k}: </span>
-                <strong style={{ color: 'var(--gold-light)' }}>₹{formatFinal('gold', ladder[k])}</strong>
-              </div>
-            ))}
-            <div className="tabular" style={{ color: 'var(--text-muted)', gridColumn: '1 / -1', fontSize: '0.76rem' }}>
-              Silver not set in manual ticker mode.
-            </div>
+          <div className="dash-table-scroll">
+            <table className="admin-user-table" style={{ fontSize: '0.78rem', margin: 0 }}>
+              <thead>
+                <tr>
+                  <th>Metal</th>
+                  <th className="tabular">Board ₹/g</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(['24K', '22K', '21K', '18K'] as const).map((k) => (
+                  <tr key={k}>
+                    <td style={{ fontWeight: 600 }}>Gold {k}</td>
+                    <td className="tabular" style={{ color: 'var(--gold-light)', fontWeight: 700 }}>
+                      ₹{formatFinal('gold', ladder[k])}
+                    </td>
+                  </tr>
+                ))}
+                <tr>
+                  <td colSpan={2} style={{ fontSize: '0.72rem', color: 'var(--text-muted)', paddingTop: 6 }}>
+                    Silver N/A in manual mode.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         )}
       </div>
@@ -226,33 +234,55 @@ function AdminPublishedRatesSummary(props: {
     <div
       className="card"
       style={{
-        padding: '0.85rem 1rem',
+        padding: '0.65rem 0.75rem',
         borderRadius: 12,
         border: '1px solid var(--border-soft)',
         marginBottom: '1rem',
         background: 'var(--veil-35)',
       }}
     >
-      <p style={{ margin: '0 0 0.65rem', fontWeight: 700, fontSize: '0.82rem', color: 'var(--text-muted)' }}>
-        Published Cridora reference (₹/g) — saved markup then deduction on current live raw
+      <p style={{ margin: '0 0 0.35rem', fontWeight: 700, fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+        Published ₹/g <span style={{ fontWeight: 500, color: 'var(--text-faint)' }}>(saved rules · current raw)</span>
       </p>
-      <div
-        style={{
-          display: 'grid',
-          gap: '0.35rem 1rem',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(148px, 1fr))',
-          fontSize: '0.82rem',
-        }}
-      >
-        {rows.map((r) => (
-          <div key={`${r.family}-${r.key}`} className="tabular">
-            <span style={{ color: 'var(--text-muted)' }}>{r.label}: </span>
-            <strong style={{ color: 'var(--gold-light)' }}>
-              {r.final_inr_per_gram != null ? `₹${formatMaybeStrInr(r.final_inr_per_gram, r.family === 'silver' ? 3 : 2)}` : '—'}
-            </strong>
-          </div>
-        ))}
+      <div className="dash-table-scroll">
+        <table className="admin-user-table" style={{ fontSize: '0.78rem', margin: 0 }}>
+          <thead>
+            <tr>
+              <th>Metal</th>
+              <th className="tabular">Intl live</th>
+              <th className="tabular">+Markup</th>
+              <th className="tabular">Published</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={`${r.family}-${r.key}`}>
+                <td style={{ fontWeight: 600 }}>{r.label}</td>
+                <td className="tabular" style={{ color: 'var(--text-muted)' }}>
+                  {r.raw_inr_per_gram != null
+                    ? `₹${formatMaybeStrInr(r.raw_inr_per_gram, r.family === 'silver' ? 3 : 2)}`
+                    : '—'}
+                </td>
+                <td className="tabular" style={{ color: 'var(--text-muted)', fontWeight: 600 }}>
+                  {r.after_markup_inr_per_gram != null
+                    ? `₹${formatMaybeStrInr(r.after_markup_inr_per_gram, r.family === 'silver' ? 3 : 2)}`
+                    : '—'}
+                </td>
+                <td className="tabular" style={{ color: 'var(--gold-light)', fontWeight: 700 }}>
+                  {r.final_inr_per_gram != null
+                    ? `₹${formatMaybeStrInr(r.final_inr_per_gram, r.family === 'silver' ? 3 : 2)}`
+                    : '—'}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
+      {rawPreviewSource ? (
+        <p style={{ margin: '0.4rem 0 0', fontSize: '0.68rem', color: 'var(--text-faint)' }}>
+          Raw snapshot: {rawPreviewSource.replace(/_/g, ' ')}
+        </p>
+      ) : null}
     </div>
   )
 }
@@ -353,35 +383,19 @@ export function AdminGoldTickerPanel() {
   return (
     <section className="card" style={{ padding: '1.25rem', borderRadius: 18 }}>
       <h2 className="dash-coming__title" style={{ marginTop: 0 }}>
-        Gold ticker (Cridora reference)
+        Gold ticker
       </h2>
-      <p className="dash-coming__text">
-        <strong>Live spot:</strong> global metal ₹/g feeds match row-by-row below. For each metal set{' '}
-        <strong>markup</strong> on live raw (% uplift or fixed ₹/g), then a <strong>deduction</strong> from that
-        intermediate reference (% off or ₹/g off). Published Cridora ticker is live → markup → deduction; jewellers see
-        that reference in Rates &amp; schemes.
-      </p>
-      <p className="dash-coming__text" style={{ marginTop: '0.5rem' }}>
-        <strong>Manual:</strong> your 22K (optional 24K) replaces live for gold ticker rows; per-metal markup and deductions do not apply.
-        Last successful live snapshot is kept automatically for outage fallback (same raw as live when the feed was
-        last healthy).
-      </p>
-      <p className="dash-coming__text" style={{ marginTop: '0.5rem' }}>
-        <strong>Notifications:</strong> push when Cridora <strong>22K reference</strong> moves by ≥ threshold versus the
-        previous reference. Set to <strong>0</strong> to disable.
+      <p className="dash-coming__text" style={{ marginBottom: '0.65rem', fontSize: '0.82rem' }}>
+        <strong>Live:</strong> markup on raw, then deduction — jewellers see the published column.{' '}
+        <strong>Manual:</strong> fixed 22K/24K gold only (no row rules).{' '}
+        <strong>Alerts:</strong> 22K vs baseline; <strong>0</strong> disables.
       </p>
       {error ? <p className="form-error">{error}</p> : null}
       {data ? (
-        <p className="dash-footnote" style={{ marginBottom: '1rem' }}>
-          Current Cridora reference 22K: <strong>{data.platform_base_inr_per_gram_22k}</strong> ₹/g
-          {data.cridora_base_source ? (
-            <>
-              {' '}
-              ({data.cridora_base_source.replace(/_/g, ' ')})
-            </>
-          ) : null}{' '}
-          · Previous reference (alerts):{' '}
-          <strong>{data.rate_alert_baseline_inr_per_gram_22k ?? '—'}</strong> ₹/g · Saved{' '}
+        <p className="dash-footnote" style={{ marginBottom: '0.65rem', fontSize: '0.76rem' }}>
+          22K <strong className="tabular">{data.platform_base_inr_per_gram_22k}</strong>
+          {data.cridora_base_source ? <> · {data.cridora_base_source.replace(/_/g, ' ')}</> : null} · baseline{' '}
+          <strong className="tabular">{data.rate_alert_baseline_inr_per_gram_22k ?? '—'}</strong> · saved{' '}
           {data.updated_at}
         </p>
       ) : null}
@@ -394,10 +408,8 @@ export function AdminGoldTickerPanel() {
           marginBottom: '1rem',
         }}
       >
-        <div className="field" style={{ marginBottom: '0.65rem' }}>
-          <span style={{ fontWeight: 600, letterSpacing: '0.02em', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-            Price source
-          </span>
+        <div className="field" style={{ marginBottom: '0.45rem' }}>
+          <span style={{ fontWeight: 600, fontSize: '0.76rem', color: 'var(--text-muted)' }}>Source</span>
         </div>
         <div
           role="group"
@@ -464,27 +476,26 @@ export function AdminGoldTickerPanel() {
           previewRows={data.live_spot_raw_preview?.rows}
           manual22Draft={manual22Draft}
           manual24Draft={manual24Draft}
+          rawPreviewSource={data.live_spot_raw_preview?.source}
         />
       ) : null}
 
       {!manualOn ? (
         <div className="dash-table-scroll card" style={{ marginBottom: '1rem', borderRadius: 12 }}>
-          <p className="dash-footnote" style={{ padding: '0.65rem 0.75rem', margin: 0, borderBottom: '1px solid var(--border-soft)' }}>
-            Live raw ₹/g refreshes from cache / feed / last snapshot (source:{' '}
-            <strong>{data?.live_spot_raw_preview?.source?.replace(/_/g, ' ') || '—'}</strong>). Draft columns preview your
-            markup on raw, then deduction from that value, until you save (server columns match when saved).
+          <p style={{ padding: '0.45rem 0.65rem', margin: 0, borderBottom: '1px solid var(--border-soft)', fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+            Raw: <strong>{data?.live_spot_raw_preview?.source?.replace(/_/g, ' ') || '—'}</strong> · table = draft until Save
           </p>
           <table className="admin-user-table" style={{ fontSize: '0.82rem' }}>
             <thead>
               <tr>
                 <th>Metal</th>
-                <th className="tabular">Live ₹/g</th>
-                <th>Markup on raw</th>
-                <th className="tabular">Markup value</th>
-                <th className="tabular">After markup</th>
-                <th>Deduction</th>
-                <th className="tabular">Deduction value</th>
-                <th className="tabular">Final ₹/g</th>
+                <th className="tabular">Raw</th>
+                <th>Mk</th>
+                <th className="tabular">Mk val</th>
+                <th className="tabular">+Mk</th>
+                <th>De</th>
+                <th className="tabular">De val</th>
+                <th className="tabular">Final</th>
               </tr>
             </thead>
             <tbody>
@@ -611,13 +622,13 @@ export function AdminGoldTickerPanel() {
           </table>
         </div>
       ) : (
-        <p className="dash-footnote" style={{ marginBottom: '1rem' }}>
-          Manual mode: gold ticker uses your 22K/24K only. Switch to live spot to edit per-metal markup and deductions.
+        <p className="dash-footnote" style={{ marginBottom: '0.65rem' }}>
+          Manual: 22K/24K only — switch to Live for row rules.
         </p>
       )}
 
-      <label className="field" style={{ maxWidth: 420 }}>
-        <span>Alert — 22K reference moved ≥ ₹/g vs previous</span>
+      <label className="field" style={{ maxWidth: 380 }}>
+        <span>22K alert (₹ move vs baseline, 0 = off)</span>
         <input
           type="text"
           inputMode="decimal"
@@ -626,10 +637,9 @@ export function AdminGoldTickerPanel() {
           placeholder="10"
         />
         {data ? (
-          <span className="dash-footnote" style={{ display: 'block', marginTop: '0.35rem' }}>
-            Compared against baseline{' '}
-            <strong className="tabular">{data.rate_alert_baseline_inr_per_gram_22k ?? '—'}</strong> ₹/g · Live published
-            22K now <strong className="tabular">{data.platform_base_inr_per_gram_22k}</strong> ₹/g
+          <span className="dash-footnote" style={{ display: 'block', marginTop: '0.3rem', fontSize: '0.72rem' }}>
+            Baseline <strong className="tabular">{data.rate_alert_baseline_inr_per_gram_22k ?? '—'}</strong> · now{' '}
+            <strong className="tabular">{data.platform_base_inr_per_gram_22k}</strong>
           </span>
         ) : null}
       </label>
@@ -637,18 +647,14 @@ export function AdminGoldTickerPanel() {
       <div
         style={{
           marginTop: '1rem',
-          padding: '1rem',
+          padding: '0.75rem 0.85rem',
           borderRadius: 12,
           border: '1px solid var(--border-soft)',
           background: 'var(--veil-35)',
         }}
       >
-        <p style={{ margin: '0 0 0.75rem', fontWeight: 700, fontSize: '0.88rem' }}>
-          Jeweller storefront disclosures (platform-wide)
-        </p>
-        <p style={{ margin: '0 0 0.85rem', fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
-          Deposit yield, headline loan APR, and processing fee appear on verified jeweller directory cards. Jewellers can
-          still disclose their own ₹/g loan adjustment in Rates &amp; schemes.
+        <p style={{ margin: '0 0 0.55rem', fontWeight: 700, fontSize: '0.82rem' }}>
+          Storefront headlines (deposit / loan / fee)
         </p>
         <div style={{ display: 'grid', gap: '0.85rem', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
           <label className="field">
@@ -658,23 +664,22 @@ export function AdminGoldTickerPanel() {
               onChange={(e) => setDepositYieldDraft(e.target.value)}
               inputMode="decimal"
             />
-            <span className="dash-footnote" style={{ display: 'block', marginTop: '0.35rem' }}>
-              Published headline:{' '}
-              <strong className="tabular">{formatMaybeStrInr(depositYieldDraft, 3)}%</strong> APR
+            <span className="dash-footnote" style={{ display: 'block', marginTop: '0.25rem', fontSize: '0.68rem' }}>
+              Headline: <strong className="tabular">{formatMaybeStrInr(depositYieldDraft, 3)}%</strong> APR
             </span>
           </label>
           <label className="field">
             <span>Gold loan APR (%)</span>
             <input value={loanAprDraft} onChange={(e) => setLoanAprDraft(e.target.value)} inputMode="decimal" />
-            <span className="dash-footnote" style={{ display: 'block', marginTop: '0.35rem' }}>
-              Published headline: <strong className="tabular">{formatMaybeStrInr(loanAprDraft, 3)}%</strong> APR
+            <span className="dash-footnote" style={{ display: 'block', marginTop: '0.25rem', fontSize: '0.68rem' }}>
+              Headline: <strong className="tabular">{formatMaybeStrInr(loanAprDraft, 3)}%</strong> APR
             </span>
           </label>
           <label className="field">
             <span>Gold loan processing fee (₹)</span>
             <input value={loanFeeDraft} onChange={(e) => setLoanFeeDraft(e.target.value)} inputMode="decimal" />
-            <span className="dash-footnote" style={{ display: 'block', marginTop: '0.35rem' }}>
-              Published fee: <strong className="tabular">₹{formatMaybeStrInr(loanFeeDraft, 2)}</strong>
+            <span className="dash-footnote" style={{ display: 'block', marginTop: '0.25rem', fontSize: '0.68rem' }}>
+              Fee: <strong className="tabular">₹{formatMaybeStrInr(loanFeeDraft, 2)}</strong>
             </span>
           </label>
         </div>
