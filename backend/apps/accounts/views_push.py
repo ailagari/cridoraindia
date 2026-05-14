@@ -6,13 +6,14 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import WebPushSubscription
+from .services.admin_access import user_is_platform_admin
 from .webpush_service import send_push_to_user, webpush_configured
 
 User = get_user_model()
 
 
 def _require_admin(request):
-    if not request.user.is_authenticated or request.user.user_type != User.ADMIN:
+    if not user_is_platform_admin(request.user):
         return Response({"detail": "Forbidden."}, status=status.HTTP_403_FORBIDDEN)
     return None
 

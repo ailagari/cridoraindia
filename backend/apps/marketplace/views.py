@@ -7,6 +7,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import MarketplaceProduct, get_or_create_ticker, jeweller_profile_for
+from apps.accounts.services.admin_access import user_is_platform_admin
+
 from .spot_prices import invalidate_spot_price_cache
 from .serializers import (
     AdminProductModerationSerializer,
@@ -35,7 +37,7 @@ def _forbid_non_jeweller(request):
 def _forbid_non_admin(request):
     if not request.user.is_authenticated:
         return Response({"detail": "Authentication required."}, status=status.HTTP_401_UNAUTHORIZED)
-    if request.user.user_type != User.ADMIN:
+    if not user_is_platform_admin(request.user):
         return Response({"detail": "Admin access only."}, status=status.HTTP_403_FORBIDDEN)
     return None
 

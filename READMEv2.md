@@ -20,7 +20,10 @@ python manage.py runserver
 - KYC uploads (JWT): `POST /api/v1/kyc/documents/upload/` (multipart `doc_type`, `file`), `POST /api/v1/kyc/bank/` (JSON)
 - Media files are served under `/media/` in DEBUG.
 
-Create an admin user: `python manage.py createsuperuser` then set **User type** to **Admin** in Django admin if you log into `/admin/`.
+**Unified admin (Django `/admin/` + Cridora SPA `/dashboard/admin`):**  
+`python manage.py create_cridora_superadmin --email you@example.com`  
+(password prompted, or set `CRIDORA_ADMIN_PASSWORD` / pass `--password`).  
+This sets `user_type=admin`, `is_staff`, and `is_superuser` on one account.
 
 **Frontend (Vite on port 5173)**
 

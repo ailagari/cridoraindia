@@ -71,6 +71,10 @@ export function LoginPage() {
           <Link to="/signup">Create a customer account</Link> or{' '}
           <Link to="/jeweller/apply">apply as a jeweller</Link>.
         </p>
+        <p className="form-footnote" style={{ marginTop: '0.65rem', fontSize: '0.85rem' }}>
+          Site admins: sign in here with your <strong>email</strong> to open the app admin dashboard. Django staff UI is at{' '}
+          <a href="/admin/">/admin/</a> (same host).
+        </p>
       </div>
     </div>
   )

@@ -8,13 +8,14 @@ from django.contrib.auth import get_user_model
 
 from .models import BankAccount, KYDocument
 from .serializers import BankAccountSerializer, KYDocumentReadSerializer, UserMeSerializer
+from .services.admin_access import user_is_platform_admin
 from .services.kyc_review import customer_in_review_queue, jeweller_in_review_queue
 
 User = get_user_model()
 
 
 def _require_admin(request):
-    if not request.user.is_authenticated or request.user.user_type != User.ADMIN:
+    if not user_is_platform_admin(request.user):
         return Response({"detail": "Forbidden."}, status=status.HTTP_403_FORBIDDEN)
     return None
 
@@ -277,7 +278,7 @@ class AdminFreezeUserView(APIView):
             return Response(
                 {"detail": "User not found."}, status=status.HTTP_404_NOT_FOUND
             )
-        if user.user_type == User.ADMIN:
+        if user_is_platform_admin(user):
             return Response(
                 {"detail": "Cannot change admin accounts."},
                 status=status.HTTP_400_BAD_REQUEST,

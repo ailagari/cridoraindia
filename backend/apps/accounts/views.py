@@ -7,6 +7,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import get_user_model
 
 from .models import BankAccount, KYDocument
+from .services.admin_access import sync_staff_superuser_to_platform_admin
 from .serializers import (
     BankAccountSerializer,
     CustomerRegisterSerializer,
@@ -35,6 +36,7 @@ class LoginView(APIView):
         if not ser.is_valid():
             return Response(ser.errors, status=status.HTTP_400_BAD_REQUEST)
         user = ser.validated_data["user"]
+        user = sync_staff_superuser_to_platform_admin(user)
         return Response(user_auth_payload(user), status=status.HTTP_200_OK)
 
 
