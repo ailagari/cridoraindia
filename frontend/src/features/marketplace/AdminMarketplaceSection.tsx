@@ -76,9 +76,9 @@ export function AdminGoldTickerPanel() {
         Gold ticker (22K benchmark)
       </h2>
       <p className="dash-coming__text">
-        Use <strong>manual ticker</strong> to pin the public strip and platform 22K base to your own 22K/24K ₹/g values
-        (e.g. local board rates). When manual mode is off, the resolved Cridora base uses live global spot when
-        available; reference and markup apply only as fallback when spot is unavailable.
+        Choose whether the public ticker and platform 22K base follow <strong>live spot</strong> (when the feed is
+        available) or fixed <strong>manual board rates</strong>. Reference price and markup still apply as fallback when
+        live spot cannot be resolved.
       </p>
       <p className="dash-coming__text" style={{ marginTop: '0.5rem' }}>
         <strong>Rate alerts:</strong> subscribers who enabled device notifications get a push when resolved 22K ₹/g moves
@@ -109,35 +109,89 @@ export function AdminGoldTickerPanel() {
           marginBottom: '1rem',
         }}
       >
-        <label className="field" style={{ flexDirection: 'row', alignItems: 'center', gap: '0.5rem' }}>
-          <input type="checkbox" checked={manualOn} onChange={(e) => setManualOn(e.target.checked)} />
-          <span>Use manual ticker rates (overrides live spot for strip + platform 22K base)</span>
-        </label>
+        <div className="field" style={{ marginBottom: '0.65rem' }}>
+          <span style={{ fontWeight: 600, letterSpacing: '0.02em', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+            Price source
+          </span>
+        </div>
         <div
+          role="group"
+          aria-label="Gold ticker price source"
           style={{
-            display: 'grid',
-            gap: '0.85rem',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-            marginTop: '0.75rem',
+            display: 'flex',
+            gap: '0.45rem',
+            flexWrap: 'wrap',
+            marginBottom: '0.85rem',
           }}
         >
-          <label className="field">
-            <span>Manual 22K ₹/g (required if manual is on)</span>
-            <input
-              value={manual22Draft}
-              onChange={(e) => setManual22Draft(e.target.value)}
-              placeholder="e.g. 14850"
-            />
-          </label>
-          <label className="field">
-            <span>Manual 24K ₹/g (optional)</span>
-            <input
-              value={manual24Draft}
-              onChange={(e) => setManual24Draft(e.target.value)}
-              placeholder="blank = derive from 22K ÷ 0.916"
-            />
-          </label>
+          <button
+            type="button"
+            className={manualOn ? 'btn btn-ghost' : 'btn btn-primary'}
+            aria-pressed={!manualOn}
+            style={{ flex: '1 1 160px', justifyContent: 'center' }}
+            onClick={() => setManualOn(false)}
+          >
+            Live spot (API)
+          </button>
+          <button
+            type="button"
+            className={manualOn ? 'btn btn-primary' : 'btn btn-ghost'}
+            aria-pressed={manualOn}
+            style={{ flex: '1 1 160px', justifyContent: 'center' }}
+            onClick={() => setManualOn(true)}
+          >
+            Manual board rates
+          </button>
         </div>
+        <div
+          style={{
+            padding: '0.65rem 0.85rem',
+            borderRadius: 10,
+            background: 'var(--dash-tab-bg, rgba(0, 21, 41, 0.35))',
+            border: '1px solid var(--border-soft)',
+            marginBottom: manualOn ? '0.85rem' : 0,
+          }}
+        >
+          {!manualOn ? (
+            <p style={{ margin: 0, fontSize: '0.88rem', lineHeight: 1.5, color: 'var(--text-muted)' }}>
+              <strong style={{ color: 'var(--text)' }}>Live mode.</strong> Strip and Cridora base prefer the global spot
+              feed. Manual ₹/g fields are hidden and not applied until you switch to manual board rates.
+            </p>
+          ) : (
+            <p style={{ margin: 0, fontSize: '0.88rem', lineHeight: 1.5, color: 'var(--text-muted)' }}>
+              <strong style={{ color: 'var(--text)' }}>Manual mode.</strong> Your 22K (and optional 24K) ₹/g values
+              override live spot for the ticker strip and platform base. Save to publish.
+            </p>
+          )}
+        </div>
+        {manualOn ? (
+          <div
+            style={{
+              display: 'grid',
+              gap: '0.85rem',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+            }}
+          >
+            <label className="field">
+              <span>22K ₹/g (required)</span>
+              <input
+                value={manual22Draft}
+                onChange={(e) => setManual22Draft(e.target.value)}
+                placeholder="e.g. 14850"
+                inputMode="decimal"
+              />
+            </label>
+            <label className="field">
+              <span>24K ₹/g (optional)</span>
+              <input
+                value={manual24Draft}
+                onChange={(e) => setManual24Draft(e.target.value)}
+                placeholder="Leave blank to derive from 22K ÷ 0.916"
+                inputMode="decimal"
+              />
+            </label>
+          </div>
+        ) : null}
       </div>
       <div style={{ display: 'grid', gap: '0.85rem', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
         <label className="field">
@@ -159,9 +213,20 @@ export function AdminGoldTickerPanel() {
           />
         </label>
       </div>
-      <button type="button" className="btn btn-primary" style={{ marginTop: '1rem' }} disabled={busy} onClick={() => void save()}>
+      <button
+        type="button"
+        className="btn btn-primary"
+        style={{ marginTop: '1rem' }}
+        disabled={busy || (manualOn && !manual22Draft.trim())}
+        onClick={() => void save()}
+      >
         Save ticker
       </button>
+      {manualOn && !manual22Draft.trim() ? (
+        <p className="dash-footnote" style={{ marginTop: '0.5rem' }}>
+          Enter a 22K ₹/g value before saving in manual mode.
+        </p>
+      ) : null}
     </section>
   )
 }
