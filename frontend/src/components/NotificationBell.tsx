@@ -4,6 +4,7 @@ import { MOCK_NOTIFICATIONS, type AppNotification } from '@/lib/mockNotification
 import { useAuth } from '@/context/AuthContext'
 import { authFetch } from '@/lib/api'
 import {
+  fetchWebPushServerStatus,
   getBrowserPushActive,
   pushNotificationsSupported,
   registerWebPushSubscription,
@@ -70,6 +71,7 @@ export function NotificationBell({ compact = false, role = 'customer' }: Props) 
   const [pushActive, setPushActive] = useState(false)
   const [pushBusy, setPushBusy] = useState(false)
   const [pushError, setPushError] = useState('')
+  const [pushServerReady, setPushServerReady] = useState<boolean | null>(null)
   const rootRef = useRef<HTMLDivElement>(null)
 
   const items = useMemo(
@@ -113,6 +115,18 @@ export function NotificationBell({ compact = false, role = 'customer' }: Props) 
     if (!open || !user) return
     void refreshPushState()
   }, [open, user, refreshPushState])
+
+  useEffect(() => {
+    if (!open || !user) return
+    let cancelled = false
+    setPushServerReady(null)
+    void fetchWebPushServerStatus().then((s) => {
+      if (!cancelled) setPushServerReady(s.configured)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [open, user])
 
   useEffect(() => {
     if (!open) return
@@ -247,6 +261,15 @@ export function NotificationBell({ compact = false, role = 'customer' }: Props) 
                   <span className="notif-push-status">Blocked in browser settings — allow notifications for this site.</span>
                 ) : pushActive ? (
                   <span className="notif-push-status notif-push-status--on">On for this device</span>
+                ) : pushServerReady === false ? (
+                  <>
+                    <span className="notif-push-status">Unavailable on this deployment</span>
+                    <span className="notif-push-detail">
+                      Web Push needs VAPID keys on the server (hosting env vars). Sample alerts below still appear here.
+                    </span>
+                  </>
+                ) : pushServerReady === null ? (
+                  <span className="notif-push-status">Checking server setup…</span>
                 ) : (
                   <span className="notif-push-status">Off</span>
                 )}
@@ -262,7 +285,7 @@ export function NotificationBell({ compact = false, role = 'customer' }: Props) 
                   >
                     Turn off
                   </button>
-                ) : (
+                ) : pushServerReady === true ? (
                   <button
                     type="button"
                     className="btn btn-primary notif-push-btn"
@@ -271,7 +294,7 @@ export function NotificationBell({ compact = false, role = 'customer' }: Props) 
                   >
                     Enable
                   </button>
-                )
+                ) : null
               ) : null}
             </div>
           ) : (

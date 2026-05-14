@@ -85,11 +85,7 @@ export function CustomerDashboardPage() {
           children="Browse verified jewellers and BIS 916 products on the public site — this hub links deeper workflows when they are connected."
         />
       ) : null}
-      {active === 'invest_fractional' ? (
-        <div className="dash-panel-max">
-          <FractionalPurchasePanel />
-        </div>
-      ) : null}
+      {active === 'invest_fractional' ? <FractionalPurchasePanel /> : null}
       {active === 'redeem_hub' ? (
         <ComingSoon
           title="Redeem & liquidity"

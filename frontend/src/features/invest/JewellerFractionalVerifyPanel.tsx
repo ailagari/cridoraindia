@@ -50,8 +50,9 @@ export function JewellerFractionalVerifyPanel() {
   return (
     <div className="dash-panel-max">
       <p className="dash-panel-lead">
-        Customers who chose <strong>pay at counter</strong> appear here after they place an order. Confirm cash or offline
-        payment received at your showroom, then gold is credited to their Cridora wallet.
+        When a customer chooses <strong>pay at counter</strong>, their order appears here. If Web Push is configured on the
+        server and you enabled device alerts, you may also get a notification with the buyer&apos;s name, grams, and amount.
+        Confirm cash or offline payment at your showroom — gold is then credited to their Cridora wallet (their ledger).
       </p>
       <div style={{ marginBottom: '1rem' }}>
         <button type="button" className="btn btn-ghost" onClick={() => void load()}>
@@ -67,14 +68,24 @@ export function JewellerFractionalVerifyPanel() {
         <div style={{ display: 'grid', gap: '1rem', maxWidth: 640 }}>
           {rows.map((r) => (
             <div key={r.id} className="card" style={{ padding: '1.1rem' }}>
-              <p style={{ margin: '0 0 0.35rem', fontWeight: 800 }}>
-                {r.reference} · <span className="tabular">{r.grams} g</span>
+              <p style={{ margin: '0 0 0.35rem', fontWeight: 800, fontSize: '1rem' }}>
+                {r.customer.name || r.customer.email}
               </p>
-              <p style={{ margin: '0.25rem 0', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                {r.customer.name || r.customer.email} · {r.customer.email}
+              <p style={{ margin: '0 0 0.65rem', fontSize: '0.82rem', color: 'var(--text-muted)', lineHeight: 1.45 }}>
+                {r.customer.email}
               </p>
-              <p style={{ margin: '0.25rem 0', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                Total ₹{formatInr(r.total_inr)} (incl. GST) · rate ₹{formatInr(r.metal_rate_inr_per_gram)}/g
+              <p style={{ margin: '0 0 0.35rem', fontSize: '0.88rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
+                <span className="tabular" style={{ color: 'var(--text)', fontWeight: 700 }}>
+                  {r.grams} g
+                </span>
+                <span aria-hidden="true"> · </span>
+                <span className="tabular" style={{ color: 'var(--text)', fontWeight: 700 }}>
+                  ₹{formatInr(r.total_inr)}
+                </span>
+                <span> total (incl. GST)</span>
+              </p>
+              <p style={{ margin: '0 0 0.5rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                Order <strong>{r.reference}</strong> · rate ₹{formatInr(r.metal_rate_inr_per_gram)}/g (22K metal)
               </p>
               {r.customer_note ? (
                 <p style={{ margin: '0.35rem 0', fontSize: '0.8rem' }}>Note: {r.customer_note}</p>

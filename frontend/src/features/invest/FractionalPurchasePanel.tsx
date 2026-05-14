@@ -119,7 +119,7 @@ export function FractionalPurchasePanel() {
       setLastOrder(out.data)
       setOrderMsg(
         out.data.payment_method === 'counter'
-          ? `Order ${out.data.reference} created. Pay at the jeweller counter; they will verify and credit your gold.`
+          ? `Order ${out.data.reference} created. Pay ₹${formatInr(out.data.total_inr)} at the jeweller counter. They were notified with your name, grams, and amount. After they confirm payment received under Purchases, gold is credited to your wallet.`
           : `Order ${out.data.reference} created. Complete UPI payment, then confirm below.`,
       )
       await refreshOrders()
@@ -154,14 +154,14 @@ export function FractionalPurchasePanel() {
   }
 
   return (
-    <div className="dash-panel-max">
+    <div className="dash-panel-max fractional-buy-panel">
       <p className="dash-panel-lead">
         Buy fractional gold at your jeweller&apos;s live metal rate (Cridora 22K reference + their markup). GST on gold value is
         included in the quote. Pay with UPI (confirm here once paid) or at the showroom — your jeweller verifies counter
         payments before grams appear in your wallet.
       </p>
 
-      <p style={{ margin: '-0.75rem 0 1.25rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+      <div className="fractional-buy-live-rate" aria-live="polite">
         Cridora 22K (live):{' '}
         <strong className="tabular">
           ₹
@@ -173,7 +173,7 @@ export function FractionalPurchasePanel() {
           /g
         </strong>
         {liveBase?.source ? <span> · {liveBase.source.replace(/_/g, ' ')}</span> : null}
-      </p>
+      </div>
 
       <div className="card" style={{ marginBottom: '1.25rem', maxWidth: 560 }}>
         <div className="dash-form-stack">
@@ -198,11 +198,9 @@ export function FractionalPurchasePanel() {
           </div>
 
           <fieldset style={{ border: 'none', padding: 0, margin: 0 }}>
-            <legend style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
-              Quote basis
-            </legend>
+            <legend className="fractional-buy-legend">Quote basis</legend>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', cursor: 'pointer' }}>
+              <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', cursor: 'pointer', lineHeight: 1.45 }}>
                 <input
                   type="radio"
                   name="frac-mode"
@@ -212,9 +210,9 @@ export function FractionalPurchasePanel() {
                     setQuote(null)
                   }}
                 />
-                <span style={{ fontSize: '0.88rem' }}>Amount to pay (incl. GST)</span>
+                <span style={{ fontSize: '0.875rem' }}>Amount to pay (incl. GST)</span>
               </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', cursor: 'pointer' }}>
+              <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', cursor: 'pointer', lineHeight: 1.45 }}>
                 <input
                   type="radio"
                   name="frac-mode"
@@ -224,7 +222,7 @@ export function FractionalPurchasePanel() {
                     setQuote(null)
                   }}
                 />
-                <span style={{ fontSize: '0.88rem' }}>Gold quantity (grams)</span>
+                <span style={{ fontSize: '0.875rem' }}>Gold quantity (grams)</span>
               </label>
             </div>
           </fieldset>
@@ -268,48 +266,40 @@ export function FractionalPurchasePanel() {
                 fontSize: '0.88rem',
               }}
             >
-              <p style={{ margin: '0 0 0.65rem', fontWeight: 800, color: 'var(--gold-light)' }}>Live quote</p>
-              <p style={{ margin: '0.25rem 0', color: 'var(--text-muted)' }}>
-                Rate (22K metal this jeweller):{' '}
-                <strong className="tabular">₹{formatInr(quote.metal_rate_inr_per_gram)}/g</strong>
+              <p style={{ margin: '0 0 0.65rem', fontWeight: 800, color: 'var(--gold-light)', fontSize: '0.95rem' }}>
+                Live quote
               </p>
-              <p style={{ margin: '0.25rem 0', color: 'var(--text-muted)' }}>
-                Gold weight: <strong className="tabular">{quote.grams} g</strong>
-              </p>
-              <p style={{ margin: '0.25rem 0', color: 'var(--text-muted)' }}>
-                Gold value (pre-GST): <strong className="tabular">₹{formatInr(quote.gold_value_inr_pre_gst)}</strong>
-              </p>
-              <p style={{ margin: '0.25rem 0', color: 'var(--text-muted)' }}>
-                GST ({quote.gst_percent}%): <strong className="tabular">₹{formatInr(quote.gst_inr)}</strong>
-              </p>
-              <p style={{ margin: '0.5rem 0 0', fontWeight: 800 }}>
-                Total payable: <span className="tabular">₹{formatInr(quote.total_inr)}</span>
-              </p>
+              <div className="fractional-buy-quote-stack">
+                <p className="fractional-buy-quote-row" style={{ color: 'var(--text-muted)' }}>
+                  Rate (22K metal this jeweller):{' '}
+                  <strong className="tabular">₹{formatInr(quote.metal_rate_inr_per_gram)}/g</strong>
+                </p>
+                <p className="fractional-buy-quote-row" style={{ color: 'var(--text-muted)' }}>
+                  Gold weight: <strong className="tabular">{quote.grams} g</strong>
+                </p>
+                <p className="fractional-buy-quote-row" style={{ color: 'var(--text-muted)' }}>
+                  Gold value (pre-GST): <strong className="tabular">₹{formatInr(quote.gold_value_inr_pre_gst)}</strong>
+                </p>
+                <p className="fractional-buy-quote-row" style={{ color: 'var(--text-muted)' }}>
+                  GST ({quote.gst_percent}%): <strong className="tabular">₹{formatInr(quote.gst_inr)}</strong>
+                </p>
+                <p className="fractional-buy-quote-row fractional-buy-quote-total" style={{ fontWeight: 800 }}>
+                  Total payable: <span className="tabular">₹{formatInr(quote.total_inr)}</span>
+                </p>
+              </div>
             </div>
           ) : null}
 
           <fieldset style={{ border: 'none', padding: 0, margin: 0 }}>
-            <legend style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
-              Payment
-            </legend>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', cursor: 'pointer' }}>
-                <input
-                  type="radio"
-                  name="frac-pay"
-                  checked={payment === 'upi'}
-                  onChange={() => setPayment('upi')}
-                />
-                <span style={{ fontSize: '0.88rem' }}>UPI</span>
+            <legend className="fractional-buy-legend">Payment</legend>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem 1.25rem' }}>
+              <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', cursor: 'pointer', lineHeight: 1.45 }}>
+                <input type="radio" name="frac-pay" checked={payment === 'upi'} onChange={() => setPayment('upi')} />
+                <span style={{ fontSize: '0.875rem' }}>UPI</span>
               </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', cursor: 'pointer' }}>
-                <input
-                  type="radio"
-                  name="frac-pay"
-                  checked={payment === 'counter'}
-                  onChange={() => setPayment('counter')}
-                />
-                <span style={{ fontSize: '0.88rem' }}>Pay at counter</span>
+              <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', cursor: 'pointer', lineHeight: 1.45 }}>
+                <input type="radio" name="frac-pay" checked={payment === 'counter'} onChange={() => setPayment('counter')} />
+                <span style={{ fontSize: '0.875rem' }}>Pay at counter</span>
               </label>
             </div>
           </fieldset>
@@ -366,17 +356,29 @@ export function FractionalPurchasePanel() {
             {orders.map((o) => (
               <li
                 key={o.id}
+                className="fractional-order-li"
                 style={{
-                  padding: '0.75rem',
+                  padding: '0.85rem 1rem',
                   borderRadius: 12,
                   border: '1px solid var(--border-soft)',
                   background: 'var(--veil)',
                   fontSize: '0.82rem',
                 }}
               >
-                <strong>{o.reference}</strong> · {o.jeweller.business_name} ·{' '}
-                <span className="tabular">{o.grams} g</span> · ₹{formatInr(o.total_inr)} · {o.payment_method} ·{' '}
-                <span style={{ color: 'var(--gold-light)' }}>{o.status.replace(/_/g, ' ')}</span>
+                <div className="fractional-order-li-head">
+                  <strong>{o.reference}</strong>
+                  <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>{o.jeweller.business_name}</span>
+                </div>
+                <p className="fractional-order-li-meta">
+                  <span className="tabular">{o.grams} g</span>
+                  <span aria-hidden="true"> · </span>
+                  <span className="tabular">₹{formatInr(o.total_inr)}</span>
+                  <span aria-hidden="true"> · </span>
+                  <span>{o.payment_method}</span>
+                </p>
+                <p className="fractional-order-li-meta fractional-order-li-status" style={{ margin: 0 }}>
+                  {o.status.replace(/_/g, ' ')}
+                </p>
               </li>
             ))}
           </ul>

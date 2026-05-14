@@ -11,14 +11,23 @@ export function urlBase64ToUint8Array(base64String: string): Uint8Array {
   return outputArray
 }
 
-export async function fetchWebPushPublicKey(): Promise<string | null> {
+export type WebPushServerStatus = {
+  configured: boolean
+  publicKey: string | null
+}
+
+export async function fetchWebPushServerStatus(): Promise<WebPushServerStatus> {
   const res = await apiFetch('/api/v1/push/vapid-public-key/')
-  if (!res.ok) {
-    return null
+  const data = (await res.json().catch(() => ({}))) as {
+    public_key?: string | null
+    configured?: boolean
   }
-  const data = (await res.json()) as { public_key?: string | null; configured?: boolean }
-  if (!data.public_key) return null
-  return data.public_key
+  if (!res.ok) {
+    return { configured: false, publicKey: null }
+  }
+  const publicKey = data.public_key ?? null
+  const configured = Boolean(data.configured && publicKey)
+  return { configured, publicKey }
 }
 
 export function pushNotificationsSupported(): boolean {
@@ -28,9 +37,11 @@ export function pushNotificationsSupported(): boolean {
 }
 
 export async function registerWebPushSubscription(): Promise<void> {
-  const pub = await fetchWebPushPublicKey()
-  if (!pub) {
-    throw new Error('Push is not configured on the server.')
+  const { configured, publicKey: pub } = await fetchWebPushServerStatus()
+  if (!configured || !pub) {
+    throw new Error(
+      'Browser alerts are not turned on for this deployment yet (missing VAPID keys on the server). Your admin can add WEB_PUSH_VAPID_PUBLIC_KEY / WEB_PUSH_VAPID_PRIVATE_KEY.',
+    )
   }
   const perm = await Notification.requestPermission()
   if (perm !== 'granted') {
