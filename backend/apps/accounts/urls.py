@@ -40,7 +40,6 @@ from .views_push import (
     WebPushUnsubscribeView,
     WebPushVapidPublicKeyView,
 )
-
 urlpatterns = [
     path("push/vapid-public-key/", WebPushVapidPublicKeyView.as_view()),
     path("push/subscribe/", WebPushSubscribeView.as_view()),

@@ -21,7 +21,7 @@ function customerTitle(section: string): string {
   return 'Dashboard'
 }
 
-function HubPlaceholder({ title, children }: { title: string; children: string }) {
+function ComingSoon({ title, children }: { title: string; children: string }) {
   return (
     <div className="dash-panel-max">
       <div className="dash-coming dash-coming--payments">
@@ -73,33 +73,12 @@ export function CustomerDashboardPage() {
     >
       {active === 'portfolio_overview' ? <CustomerPortfolioPanel /> : null}
       {active === 'portfolio_holdings' ? (
-        <HubPlaceholder
-          title="Holdings & ledgers"
-          children="Per-jeweller ledgers for fractional gold, gold deposit, and GoldNest — grams, dates, lock-in, live value, and redemption eligibility once APIs expose full detail."
-        />
-      ) : null}
-      {active === 'portfolio_pnl' ? (
-        <HubPlaceholder
-          title="Profit / loss"
-          children="Live P/L vs invested amount and period filters tie to the same live gold rate feed as your overview; tax lots follow when transaction history exports ship."
-        />
-      ) : null}
-      {active === 'portfolio_locked' ? (
-        <HubPlaceholder
-          title="Lock-in"
-          children="During jeweller-configured lock-in (15 days–12 months): no cash redemption, transfer, loan, or emergency draw on affected grams — schedules and redeemable balances surface here."
-        />
-      ) : null}
-      {active === 'portfolio_activity' ? (
-        <HubPlaceholder
-          title="Activity"
-          children="Unified timeline for fractional buys, deposits, GoldNest instalments, transfers, ornament and cash redemption, loans, and emergency fund use — instant gram debits across every path."
-        />
+        <ComingSoon title="Vaults & ledgers" children="Per-jeweller balances (fractional, deposit, schemes) appear here as ledger APIs roll out." />
       ) : null}
       {active.startsWith('shop_') ? (
-        <HubPlaceholder
+        <ComingSoon
           title="Marketplace"
-          children="Jeweller network: compare live rate, sellback, lock-in, same-store making-charge benefits, and cross-redemption fees. Product catalogue: BIS 916 ornaments with “Use your gold” pricing. Prefer full web marketplace until this hub is API-complete."
+          children="Browse verified jewellers and BIS 916 products on the public site — this hub links deeper workflows when they are connected."
         />
       ) : null}
       {active === 'invest_fractional' ? (
@@ -107,16 +86,10 @@ export function CustomerDashboardPage() {
           <FractionalPurchasePanel />
         </div>
       ) : null}
-      {active.startsWith('invest_') && active !== 'invest_fractional' ? (
-        <HubPlaceholder
-          title="Grow gold"
-          children="Fractional purchase lives on this hub under “Fractional purchase”. Verified gold deposit and single-structure GoldNest (recurring contributions, maturity, optional making-charge benefits) — payment and jeweller policy hooks land with backend milestones."
-        />
-      ) : null}
-      {active.startsWith('redeem_') && active !== 'redeem_transfer' ? (
-        <HubPlaceholder
-          title="Use gold"
-          children="Ornament redemption (same-jeweller MC benefits vs cross-jeweller fees), cash sellback via your jeweller’s rate and deductions, zero-interest gold loans (2% processing), Cridora username/phone transfers with double confirmation, and emergency liquidity up to 80% portfolio."
+      {active === 'redeem_hub' ? (
+        <ComingSoon
+          title="Redeem & liquidity"
+          children="Ornament redemption, cash sellback, loans, and emergency liquidity — coordinated with your vault balances."
         />
       ) : null}
       {active === 'redeem_transfer' ? <GoldTransferPanel roleLabel="customer" /> : null}
@@ -125,35 +98,8 @@ export function CustomerDashboardPage() {
           <CustomerKycWorkflow />
         </div>
       ) : null}
-      {active === 'profile_account' ? (
-        <HubPlaceholder
-          title="Account"
-          children="Personal details, contact, and linked devices — profile service integration pending."
-        />
-      ) : null}
-      {active === 'profile_security' ? (
-        <HubPlaceholder
-          title="Security"
-          children="Password, passkeys, and session management will be configured here."
-        />
-      ) : null}
-      {active === 'profile_notifications' ? (
-        <HubPlaceholder
-          title="Alerts"
-          children="Push, email, and SMS preferences for ledger, price, and KYC events — use the header bell for the preview inbox until preferences API exists."
-        />
-      ) : null}
-      {active === 'profile_payments' ? (
-        <HubPlaceholder
-          title="Payments & mandates"
-          children="UPI mandates, settlement accounts, and INR receipts mirror Cridora v2 settlements when backends connect."
-        />
-      ) : null}
-      {active === 'profile_settings' ? (
-        <HubPlaceholder
-          title="Settings"
-          children="Locale, accessibility, theme, and data export toggles ship with platform settings rollout."
-        />
+      {active === 'profile_more' ? (
+        <ComingSoon title="Account" children="Security, notifications, and payout preferences — consolidated here as services go live." />
       ) : null}
     </DashboardLayout>
   )

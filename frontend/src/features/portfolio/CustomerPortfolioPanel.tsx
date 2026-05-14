@@ -84,8 +84,7 @@ export function CustomerPortfolioPanel() {
   return (
     <div className="dash-panel-max pf-scope">
       <p className="dash-panel-lead pf-lead-intro">
-        Live gold savings, portfolio utility, and redemption readiness — BIS 916, India only. Illustrative figures until
-        gram ledger APIs connect; totals stay stable per account for demos.
+        Portfolio overview — illustrative charts until live ledger feeds replace demo curves.
       </p>
 
       <div className="pf-grid pf-grid--kpis pf-stagger">
@@ -150,7 +149,7 @@ export function CustomerPortfolioPanel() {
         <article className="pf-card pf-card--lift pf-card--wide pf-card--ledger">
           <header className="pf-card__head">
             <h3 className="pf-card__title">Holding mix</h3>
-            <p className="pf-card__meta">Three holding types: fractional, deposit, GoldNest</p>
+            <p className="pf-card__meta">Fractional, deposit, scheme mix (sample)</p>
           </header>
           <div className="pf-donut-row">
             <div className="pf-donut-wrap pf-donut-wrap--compact">
@@ -180,7 +179,7 @@ export function CustomerPortfolioPanel() {
           <div>
             <h3 className="pf-card__title">Ledger by holding type</h3>
             <p className="pf-card__meta">
-              Fractional, deposits, and GoldNest — grams, dates, lock-in and eligibility roll up per jeweller in production.
+              Sample ledger rows — production ties to vault APIs per jeweller.
             </p>
           </div>
         </header>

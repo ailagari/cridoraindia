@@ -2,7 +2,6 @@ from decimal import Decimal
 
 from django.contrib.auth import get_user_model
 from django.db import transaction
-from django.db.models import F
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
@@ -16,7 +15,8 @@ from .fractional_service import (
     jeweller_metal_rate_inr_per_gram,
     validate_minimums,
 )
-from .models import FractionalGoldPurchase, GoldBalance
+from .models import FractionalGoldPurchase
+from .vault_service import credit_customer_fractional
 from apps.marketplace.spot_prices import resolve_cridora_base_22k_inr
 
 User = get_user_model()
@@ -51,13 +51,8 @@ def _ser_purchase(p: FractionalGoldPurchase) -> dict:
     }
 
 
-def _credit_customer_gold(customer: User, grams: Decimal) -> None:
-    GoldBalance.objects.select_for_update().get_or_create(
-        user=customer, defaults={"balance_grams": Decimal("0")}
-    )
-    GoldBalance.objects.filter(user=customer).update(
-        balance_grams=F("balance_grams") + grams
-    )
+def _credit_customer_gold(customer: User, jeweller: User, grams: Decimal) -> None:
+    credit_customer_fractional(customer, jeweller, grams)
 
 
 class FractionalQuoteView(APIView):
@@ -233,7 +228,7 @@ class FractionalOrderConfirmUpiView(APIView):
                     payment_method=FractionalGoldPurchase.PAY_UPI,
                     status=FractionalGoldPurchase.PENDING_PAYMENT,
                 )
-                _credit_customer_gold(purchase.customer, purchase.grams)
+                _credit_customer_gold(purchase.customer, purchase.jeweller, purchase.grams)
                 purchase.status = FractionalGoldPurchase.COMPLETED
                 purchase.jeweller_verified_at = timezone.now()
                 purchase.save(
@@ -289,7 +284,7 @@ class JewellerFractionalVerifyView(APIView):
                     jeweller=request.user,
                     status=FractionalGoldPurchase.AWAITING_COUNTER,
                 )
-                _credit_customer_gold(purchase.customer, purchase.grams)
+                _credit_customer_gold(purchase.customer, purchase.jeweller, purchase.grams)
                 purchase.status = FractionalGoldPurchase.COMPLETED
                 purchase.jeweller_verified_at = timezone.now()
                 purchase.save(

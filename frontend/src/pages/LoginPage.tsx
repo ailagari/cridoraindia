@@ -1,7 +1,7 @@
 import { type FormEvent, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
-import { userDashboardPath } from '@/lib/routes'
+import { dashboardLandingPath } from '@/lib/routes'
 
 export function LoginPage() {
   const { login, user, loading } = useAuth()
@@ -13,7 +13,7 @@ export function LoginPage() {
 
   useEffect(() => {
     if (loading || !user) return
-    navigate(userDashboardPath(user), { replace: true })
+    navigate(dashboardLandingPath(user), { replace: true })
   }, [loading, user, navigate])
 
   const onSubmit = async (e: FormEvent) => {
@@ -22,7 +22,7 @@ export function LoginPage() {
     setBusy(true)
     try {
       const u = await login(email, password)
-      navigate(userDashboardPath(u), { replace: true })
+      navigate(dashboardLandingPath(u), { replace: true })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Sign in failed')
     } finally {

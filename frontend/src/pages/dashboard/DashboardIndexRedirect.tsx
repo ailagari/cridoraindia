@@ -1,6 +1,6 @@
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
-import { userDashboardPath } from '@/lib/routes'
+import { dashboardLandingPath } from '@/lib/routes'
 
 export function DashboardIndexRedirect() {
   const { user, loading } = useAuth()
@@ -14,5 +14,5 @@ export function DashboardIndexRedirect() {
   if (!user) {
     return <Navigate to="/login" replace />
   }
-  return <Navigate to={userDashboardPath(user)} replace />
+  return <Navigate to={dashboardLandingPath(user)} replace />
 }

@@ -11,9 +11,33 @@ User = get_user_model()
 
 GOLD_HANDLE_LOCAL_RE = re.compile(r"^[a-zA-Z0-9_]{3,32}$")
 JEWELLER_CODE_RE = re.compile(r"^[a-z0-9][a-z0-9-]{1,31}$")
+CRIDORA_VAULT_ID_RE = re.compile(
+    r"^([a-z0-9_]{3,32})\.([a-z0-9][a-z0-9-]{1,31})@cridora$"
+)
 
 MIN_TRANSFER_GRAMS = Decimal("0.000001")
 MAX_TRANSFER_GRAMS = Decimal("999999.999999")
+
+
+def normalize_cridora_vault_public_id(raw: str) -> str | None:
+    s = (raw or "").strip().lower()
+    if CRIDORA_VAULT_ID_RE.match(s):
+        return s
+    return None
+
+
+def resolve_owner_by_vault_public_id(raw: str) -> User | None:
+    from .models import GoldVault
+
+    key = normalize_cridora_vault_public_id(raw)
+    if not key:
+        return None
+    v = (
+        GoldVault.objects.filter(vault_public_id__iexact=key)
+        .select_related("owner")
+        .first()
+    )
+    return v.owner if v else None
 
 
 def normalize_gold_upi(raw: str) -> str | None:

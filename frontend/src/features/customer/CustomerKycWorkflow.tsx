@@ -99,9 +99,8 @@ export function CustomerKycWorkflow() {
   const has = (t: string) => docs.some((d) => d.doc_type === t)
 
   const docDone = useMemo(() => {
-    const aadhaar = docs.find((d) => d.doc_type === 'aadhaar')
-    const pan = docs.find((d) => d.doc_type === 'pan')
-    return Boolean(aadhaar && pan)
+    const need = ['aadhaar', 'pan', 'selfie_photo'] as const
+    return need.every((t) => docs.some((d) => d.doc_type === t))
   }, [docs])
 
   const kycTone =
@@ -116,8 +115,10 @@ export function CustomerKycWorkflow() {
       <span className="pill">Customer KYC</span>
       <h2 className="dash-panel-title">Identity &amp; bank verification</h2>
       <p className="dash-panel-lead">
-        Status <span className={`kyc-pill kyc-pill--${kycTone}`}>{user?.kyc_status}</span> — upload clear Aadhaar and
-        PAN, then add settlement bank details (README: approved users unlock full platform use).
+        Status <span className={`kyc-pill kyc-pill--${kycTone}`}>{user?.kyc_status}</span> — Aadhaar, PAN, live selfie, and bank details are reviewed by Cridora compliance before full platform access.
+      </p>
+      <p style={{ color: 'var(--text-muted)', fontSize: '0.92rem', lineHeight: 1.5, marginTop: '-0.35rem' }}>
+        Uploads and bank details support compliance review, but <strong>verification is decided by Cridora admin</strong> — they may approve accounts they already know without waiting for every file.
       </p>
 
       <div className="kyc-stat-grid">
@@ -128,8 +129,8 @@ export function CustomerKycWorkflow() {
         </div>
         <div className={`kyc-stat kyc-stat--${docDone ? 'ok' : 'gold'}`}>
           <span className="kyc-stat__eyebrow">ID documents</span>
-          <p className="kyc-stat__value">{[has('aadhaar'), has('pan')].filter(Boolean).length} / 2</p>
-          <p className="kyc-stat__sub">Aadhaar + PAN on file</p>
+          <p className="kyc-stat__value">{[has('aadhaar'), has('pan'), has('selfie_photo')].filter(Boolean).length} / 3</p>
+          <p className="kyc-stat__sub">Identity bundle</p>
         </div>
         <div className="kyc-stat kyc-stat--violet">
           <span className="kyc-stat__eyebrow">Bank</span>
@@ -155,6 +156,7 @@ export function CustomerKycWorkflow() {
               [
                 { key: 'aadhaar', label: 'Aadhaar card' },
                 { key: 'pan', label: 'PAN card' },
+                { key: 'selfie_photo', label: 'Live selfie' },
               ] as const
             ).map((row) => {
               const d = docs.find((x) => x.doc_type === row.key)
@@ -170,7 +172,9 @@ export function CustomerKycWorkflow() {
                 <tr key={row.key}>
                   <td>
                     <div className="kyb-doc-name">{row.label}</div>
-                    <div className="kyb-doc-hint">PDF or clear photo, max ~8&nbsp;MB</div>
+                    <div className="kyb-doc-hint">
+                      {row.key === 'selfie_photo' ? 'Recent photo, clear face, JPG / PNG' : 'PDF or clear photo, max ~8 MB'}
+                    </div>
                   </td>
                   <td>
                     <span className={`kyb-pill kyb-pill--${st}`}>
@@ -182,7 +186,7 @@ export function CustomerKycWorkflow() {
                       id={inputId}
                       type="file"
                       className="sr-only"
-                      accept="image/*,.pdf"
+                      accept={row.key === 'selfie_photo' ? 'image/*' : 'image/*,.pdf'}
                       onChange={(e) => {
                         void uploadDoc(row.key, e.target.files?.[0] ?? null)
                         e.target.value = ''

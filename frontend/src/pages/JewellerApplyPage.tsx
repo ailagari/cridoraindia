@@ -1,6 +1,7 @@
-import { type FormEvent, useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { type FormEvent, useState } from 'react'
+import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
+import { dashboardLandingPath } from '@/lib/routes'
 
 const states = [
   'Andhra Pradesh',
@@ -34,30 +35,12 @@ export function JewellerApplyPage() {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
 
-  useEffect(() => {
-    if (!loading && user?.user_type === 'jeweller') {
-      navigate('/dashboard/jeweller?section=prof_kyb', { replace: true })
-    }
-  }, [loading, user, navigate])
-
-  if (loading) {
-    return (
-      <div className="container page">
-        <p style={{ color: 'var(--text-muted)' }}>Loading…</p>
-      </div>
-    )
-  }
-
-  if (user?.user_type === 'jeweller') {
-    return null
-  }
-
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault()
     setError('')
     setBusy(true)
     try {
-      await registerJeweller({
+      const u = await registerJeweller({
         email,
         password,
         first_name: firstName,
@@ -70,7 +53,7 @@ export function JewellerApplyPage() {
         state,
         pincode,
       })
-      navigate('/dashboard/jeweller?section=prof_kyb', { replace: true })
+      navigate(dashboardLandingPath(u), { replace: true })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Application failed')
     } finally {
@@ -78,17 +61,25 @@ export function JewellerApplyPage() {
     }
   }
 
+  if (loading) {
+    return (
+      <div className="container page">
+        <p style={{ color: 'var(--text-muted)' }}>Loading…</p>
+      </div>
+    )
+  }
+  if (user) {
+    return <Navigate to={dashboardLandingPath(user)} replace />
+  }
+
   return (
     <div className="container page" style={{ maxWidth: 560 }}>
       <div className="card">
-        <span className="pill">Jeweller KYB · apply</span>
-        <h1 style={{ marginTop: '0.75rem', fontSize: 'clamp(1.35rem, 3vw, 1.65rem)' }}>
-          Jeweller KYB application
-        </h1>
-        <p style={{ color: 'var(--text-muted)', marginTop: 0 }}>
-          Tell us about your firm. After account creation you will upload GST registration, trade
-          licence, Shop &amp; Establishment, BIS hallmarking (if applicable), and proprietor or
-          partner identity proofs — aligned with typical Indian jewellery business compliance.
+        <span className="pill">Jeweller KYB</span>
+        <h1 style={{ marginTop: '0.75rem', fontSize: 'clamp(1.35rem, 3vw, 1.65rem)' }}>Apply to join the network</h1>
+        <p style={{ color: 'var(--text-muted)', marginTop: 0, lineHeight: 1.55 }}>
+          Create your account with email and password — signed in immediately. Upload KYB documents next; approved jewellers
+          unlock operational tools.
         </p>
         <form onSubmit={onSubmit} style={{ marginTop: '1.25rem', display: 'grid', gap: '0.85rem' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
@@ -113,8 +104,8 @@ export function JewellerApplyPage() {
             />
           </div>
           <div className="field">
-            <label htmlFor="jphone">Mobile</label>
-            <input id="jphone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
+            <label htmlFor="jphone">Mobile (optional)</label>
+            <input id="jphone" type="tel" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
           </div>
           <div className="field">
             <label htmlFor="jpw">Password</label>

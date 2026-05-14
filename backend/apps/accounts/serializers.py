@@ -1,8 +1,10 @@
 from django.contrib.auth import get_user_model
+from decimal import Decimal
 from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .models import BankAccount, KYDocument
+from .vault_service import sync_customer_aggregate_balance, wallet_vault_payload
 
 User = get_user_model()
 
@@ -180,6 +182,9 @@ class UserMeSerializer(serializers.ModelSerializer):
             "gold_handle_local",
             "jeweller_code",
             "default_jeweller",
+            "jeweller_pref_nearby",
+            "jeweller_pref_ornament",
+            "jeweller_pref_redemption",
             "bank_account",
             "documents",
             "gold_wallet",
@@ -200,19 +205,13 @@ class UserMeSerializer(serializers.ModelSerializer):
             "gold_handle_local",
             "jeweller_code",
             "default_jeweller",
+            "jeweller_pref_nearby",
+            "jeweller_pref_ornament",
+            "jeweller_pref_redemption",
             "bank_account",
             "documents",
             "gold_wallet",
         )
-
-    def get_gold_wallet(self, obj):
-        if obj.user_type not in (User.CUSTOMER, User.JEWELLER):
-            return None
-        bal = getattr(obj, "gold_balance", None)
-        grams = bal.balance_grams if bal else None
-        if grams is None:
-            return {"balance_grams": "0"}
-        return {"balance_grams": str(grams)}
 
     def get_bank_account(self, obj):
         try:
@@ -227,14 +226,52 @@ class UserMeSerializer(serializers.ModelSerializer):
             qs, many=True, context=self.context
         ).data
 
+    def get_gold_wallet(self, obj):
+        if obj.user_type not in (User.CUSTOMER, User.JEWELLER):
+            return None
+        if obj.user_type == User.CUSTOMER:
+            sync_customer_aggregate_balance(obj)
+        bal = getattr(obj, "gold_balance", None)
+        grams = bal.balance_grams if bal else Decimal("0")
+        handle = (obj.gold_handle_local or "").strip().lower()
+        code = (obj.jeweller_code or "").strip().lower()
+        data = {
+            "cridora_member_id": obj.cridora_member_id or "",
+            "cridora_global_id": f"{handle}@cridora" if handle else "",
+            "merchant_cridora_id": f"{code}@cridora" if code else "",
+            "gold_upi": obj.gold_upi or "",
+            "gold_handle_local": obj.gold_handle_local or "",
+            "jeweller_code": obj.jeweller_code or "",
+            "default_jeweller_id": obj.default_jeweller_id,
+            "jeweller_pref_nearby_id": obj.jeweller_pref_nearby_id,
+            "jeweller_pref_ornament_id": obj.jeweller_pref_ornament_id,
+            "jeweller_pref_redemption_id": obj.jeweller_pref_redemption_id,
+            "balance_grams": str(grams),
+            "vaults": wallet_vault_payload(obj) if obj.user_type == User.CUSTOMER else [],
+        }
+        return GoldWalletSerializer(instance=data).data
+
+
+class VaultRowSerializer(serializers.Serializer):
+    vault_public_id = serializers.CharField(allow_blank=True)
+    custodian_id = serializers.IntegerField()
+    custodian_label = serializers.CharField(allow_blank=True)
+    fractional_grams = serializers.CharField()
+
 
 class GoldWalletSerializer(serializers.Serializer):
     cridora_member_id = serializers.CharField()
+    cridora_global_id = serializers.CharField(allow_blank=True)
+    merchant_cridora_id = serializers.CharField(allow_blank=True)
     gold_upi = serializers.CharField(allow_blank=True)
     gold_handle_local = serializers.CharField(allow_blank=True)
     jeweller_code = serializers.CharField(allow_blank=True)
     default_jeweller_id = serializers.IntegerField(allow_null=True)
+    jeweller_pref_nearby_id = serializers.IntegerField(allow_null=True)
+    jeweller_pref_ornament_id = serializers.IntegerField(allow_null=True)
+    jeweller_pref_redemption_id = serializers.IntegerField(allow_null=True)
     balance_grams = serializers.CharField()
+    vaults = VaultRowSerializer(many=True)
 
 
 class GoldTransferNotifySerializer(serializers.Serializer):

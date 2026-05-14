@@ -227,12 +227,12 @@ export function AdminDashboardPage() {
             <div className="admin-dash-stat admin-dash-stat--amber">
               <span className="admin-dash-stat__eyebrow">KYC queue</span>
               <p className="admin-dash-stat__value">{data.stats.kyc_review_queue_count}</p>
-              <p className="admin-dash-stat__sub">Customers with docs or bank submitted</p>
+              <p className="admin-dash-stat__sub">Customers not yet verified (uploads optional)</p>
             </div>
             <div className="admin-dash-stat admin-dash-stat--iris">
               <span className="admin-dash-stat__eyebrow">KYB queue</span>
               <p className="admin-dash-stat__value">{data.stats.kyb_review_queue_count}</p>
-              <p className="admin-dash-stat__sub">Jewellers with KYB uploads pending</p>
+              <p className="admin-dash-stat__sub">Jewellers not yet KYB-verified</p>
             </div>
             <div className="admin-dash-stat admin-dash-stat--cyan">
               <span className="admin-dash-stat__eyebrow">Identity pending</span>
@@ -284,22 +284,11 @@ export function AdminDashboardPage() {
           <UserDirectoryTable users={data.recent_users} busyId={busyId} onFreeze={runFreeze} />
         ) : null}
 
-        {active === 'fin_payments' ? (
+        {active === 'fin_hub' ? (
           <div className="dash-coming dash-coming--payments">
-            <h2 className="dash-coming__title">Settlement monitoring</h2>
+            <h2 className="dash-coming__title">Settlements</h2>
             <p className="dash-coming__text">
-              Track INR settlements, UPI and card rails, cross-jeweller redemption liability, and jeweller payout batches for
-              the live network. Lists stay empty until payment models are enabled.
-            </p>
-          </div>
-        ) : null}
-
-        {active === 'fin_ledger' ? (
-          <div className="dash-coming dash-coming--ledger">
-            <h2 className="dash-coming__title">Ledger &amp; reconciliation</h2>
-            <p className="dash-coming__text">
-              Gold gram ledger across buy, sellback, ornament redemption, loan use, transfer, and emergency rows — scoped to
-              BIS 916 gold in India; feeds mirror settlement monitoring as they connect.
+              INR flows, gram ledger reconciliation, and payout batches — surfaced here when treasury APIs connect.
             </p>
           </div>
         ) : null}
@@ -308,43 +297,20 @@ export function AdminDashboardPage() {
 
         {active === 'mkt_products' ? <AdminMarketplaceModerationPanel /> : null}
 
-        {(active === 'mkt_schemes' ||
-          active === 'mkt_offers' ||
-          active === 'mkt_reports') ? (
+        {active === 'mkt_programs' ? (
           <div className="dash-coming dash-coming--payments">
-            <h2 className="dash-coming__title">
-              {active === 'mkt_schemes'
-                ? 'GoldNest schemes'
-                : active === 'mkt_offers'
-                  ? 'Marketplace moderation'
-                  : 'Risk monitoring'}
-            </h2>
+            <h2 className="dash-coming__title">Programs & risk</h2>
             <p className="dash-coming__text">
-              {active === 'mkt_schemes'
-                ? 'Review recurring GoldNest plans (one plan structure per jeweller today), benefits text, and disclosures before customers subscribe.'
-                : active === 'mkt_offers'
-                  ? 'Moderate listings, abusive content, and trust signals on jeweller and product surfaces before they reach the public network.'
-                  : 'Settlement anomalies, cross-redemption exposure, default patterns on emergency draws, and jeweller concentration — dashboards plug into risk APIs when ready.'}
+              Scheme approvals, marketplace moderation, and risk surveillance consolidate on this track.
             </p>
           </div>
         ) : null}
 
-        {active === 'plat_emergency' ? (
-          <div className="dash-coming dash-coming--payments">
-            <h2 className="dash-coming__title">Emergency fund monitoring</h2>
-            <p className="dash-coming__text">
-              Cridora-backed liquidity up to 80% of portfolio value: monitor active draws, temporarily locked holdings, and
-              gold consumption on default — “instant liquidity without selling your gold.”
-            </p>
-          </div>
-        ) : null}
-
-        {active === 'plat_settings' ? (
+        {active === 'plat_control' ? (
           <div className="dash-coming dash-coming--ledger">
-            <h2 className="dash-coming__title">Platform settings</h2>
+            <h2 className="dash-coming__title">Platform controls</h2>
             <p className="dash-coming__text">
-              Feature flags, fee templates, launch scope (BIS 916, gold-only, India-only), and integration keys — Django admin
-              stays canonical for sensitive toggles until these move in-app.
+              Emergency liquidity oversight, fee templates, and integration posture — Django admin remains authoritative until exposed here.
             </p>
           </div>
         ) : null}

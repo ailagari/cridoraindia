@@ -2,21 +2,21 @@ import { NavLink, useLocation } from 'react-router-dom'
 import { NotificationBell } from '@/components/NotificationBell'
 import { PublicTabIcon } from '@/components/PublicTabIcon'
 import { useAuth } from '@/context/AuthContext'
-import { userDashboardPath } from '@/lib/routes'
+import { dashboardLandingPath } from '@/lib/routes'
 
 function topForPath(pathname: string): { to: string; label: string }[] {
   if (pathname === '/') {
     return [
       { to: '/', label: 'Overview' },
-      { to: '/why-cridora', label: 'Story' },
-      { to: '/features', label: 'Features' },
+      { to: '/how-it-works', label: 'Flow' },
+      { to: '/waitlist', label: 'Waitlist' },
     ]
   }
   if (pathname.startsWith('/why-cridora')) {
     return [
       { to: '/why-cridora', label: 'Why' },
-      { to: '/features', label: 'Features' },
-      { to: '/jewellers', label: 'Jewellers' },
+      { to: '/how-it-works', label: 'Flow' },
+      { to: '/jewellers', label: 'Network' },
     ]
   }
   if (pathname.startsWith('/jewellers') || pathname.startsWith('/marketplace')) {
@@ -34,8 +34,15 @@ function topForPath(pathname: string): { to: string; label: string }[] {
   if (pathname.startsWith('/features')) {
     return [
       { to: '/features', label: 'Overview' },
-      { to: '/why-cridora', label: 'Why' },
+      { to: '/how-it-works', label: 'Flow' },
       { to: '/marketplace', label: 'Shop' },
+    ]
+  }
+  if (pathname.startsWith('/how-it-works')) {
+    return [
+      { to: '/how-it-works', label: 'Flow' },
+      { to: '/jewellers', label: 'Network' },
+      { to: '/waitlist', label: 'Waitlist' },
     ]
   }
   return []
@@ -48,8 +55,12 @@ export function PublicMobileChrome() {
 
   const isShopPath = pathname.startsWith('/marketplace') || pathname.startsWith('/jewellers')
   const isJoinPath = pathname.startsWith('/signup') || pathname.startsWith('/jeweller/apply')
+  const discoverActive =
+    pathname.startsWith('/why-cridora') ||
+    pathname.startsWith('/features') ||
+    pathname.startsWith('/how-it-works')
 
-  const dashboardHref = user ? userDashboardPath(user) : '/login'
+  const dashboardHref = user ? dashboardLandingPath(user) : '/login'
   const accountActive =
     !!(user && (pathname.startsWith('/userdashboard') || pathname.startsWith('/dashboard'))) ||
     (!user && pathname.startsWith('/login'))
@@ -89,15 +100,13 @@ export function PublicMobileChrome() {
           )}
         </NavLink>
         <NavLink
-          to="/why-cridora"
-          className={({ isActive }) =>
-            `public-bottom-item${isActive ? ' public-bottom-item--active' : ''}`
-          }
+          to="/how-it-works"
+          className={() => `public-bottom-item${discoverActive ? ' public-bottom-item--active' : ''}`}
         >
-          {({ isActive }) => (
+          {() => (
             <>
               <span className="mobile-tab-ico">
-                <PublicTabIcon tab="discover" active={isActive} />
+                <PublicTabIcon tab="discover" active={discoverActive} />
               </span>
               <span className="mobile-tab-label">Discover</span>
             </>

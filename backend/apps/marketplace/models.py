@@ -7,7 +7,7 @@ from django.db import models
 class GoldTickerConfig(models.Model):
     """
     Platform gold benchmark for BIS 916 / 22K pricing (₹ per gram).
-    Admin adjusts reference and markup%; jewellers see resulting base for spot-linked SKUs.
+    Admin adjusts reference and markup%, optional manual ticker override, and rate-alert threshold.
     """
 
     reference_price_inr_per_gram_22k = models.DecimalField(
@@ -28,6 +28,24 @@ class GoldTickerConfig(models.Model):
         null=True,
         blank=True,
         help_text="Last resolved 22K rate at which alerts were checked (internal).",
+    )
+    manual_ticker_enabled = models.BooleanField(
+        default=False,
+        help_text="When on, public ticker and platform 22K base use manual rates below (overrides live spot).",
+    )
+    ticker_manual_22k_inr_per_gram = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Manual BIS 916 / 22K ₹ per gram for the ticker when manual mode is on.",
+    )
+    ticker_manual_24k_inr_per_gram = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Optional manual 24K ₹/g; if empty, 24K is derived as 22K ÷ 0.916.",
     )
     updated_at = models.DateTimeField(auto_now=True)
 

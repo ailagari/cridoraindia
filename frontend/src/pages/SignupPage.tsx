@@ -1,6 +1,7 @@
-import { type FormEvent, useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { type FormEvent, useState } from 'react'
+import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
+import { dashboardLandingPath } from '@/lib/routes'
 
 export function SignupPage() {
   const { user, loading, registerCustomer } = useAuth()
@@ -13,24 +14,19 @@ export function SignupPage() {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
 
-  useEffect(() => {
-    if (loading || !user || user.user_type !== 'customer') return
-    navigate('/userdashboard?section=profile_kyc', { replace: true })
-  }, [loading, user, navigate])
-
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault()
     setError('')
     setBusy(true)
     try {
-      await registerCustomer({
+      const u = await registerCustomer({
         email,
         password,
         first_name: firstName,
         last_name: lastName,
         phone,
       })
-      navigate('/userdashboard?section=profile_kyc', { replace: true })
+      navigate(dashboardLandingPath(u), { replace: true })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registration failed')
     } finally {
@@ -38,15 +34,24 @@ export function SignupPage() {
     }
   }
 
+  if (loading) {
+    return (
+      <div className="container page">
+        <p style={{ color: 'var(--text-muted)' }}>Loading…</p>
+      </div>
+    )
+  }
+  if (user) {
+    return <Navigate to={dashboardLandingPath(user)} replace />
+  }
+
   return (
     <div className="container page" style={{ maxWidth: 480 }}>
       <div className="card">
         <span className="pill">Customer onboarding</span>
-        <h1 style={{ marginTop: '0.75rem', fontSize: 'clamp(1.35rem, 3vw, 1.65rem)' }}>
-          Create your customer account
-        </h1>
-        <p style={{ color: 'var(--text-muted)', marginTop: 0 }}>
-          Next step: upload Aadhaar, PAN, and your bank details for KYC verification.
+        <h1 style={{ marginTop: '0.75rem', fontSize: 'clamp(1.35rem, 3vw, 1.65rem)' }}>Create your account</h1>
+        <p style={{ color: 'var(--text-muted)', marginTop: 0, lineHeight: 1.55 }}>
+          Email and password — you are signed in immediately. Complete KYC before purchases, deposits, or redemptions.
         </p>
         <form onSubmit={onSubmit} style={{ marginTop: '1.25rem', display: 'grid', gap: '0.85rem' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
@@ -72,13 +77,7 @@ export function SignupPage() {
           </div>
           <div className="field">
             <label htmlFor="phone">Mobile (optional)</label>
-            <input
-              id="phone"
-              type="tel"
-              autoComplete="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-            />
+            <input id="phone" type="tel" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
           </div>
           <div className="field">
             <label htmlFor="pw">Password (min 8 characters)</label>
@@ -94,12 +93,11 @@ export function SignupPage() {
           </div>
           {error ? <p className="form-error">{error}</p> : null}
           <button type="submit" className="btn btn-primary btn--block" disabled={busy}>
-            {busy ? 'Creating…' : 'Continue to KYC'}
+            {busy ? 'Creating…' : 'Sign up & continue to KYC'}
           </button>
         </form>
         <p className="form-footnote" style={{ marginTop: '1rem' }}>
-          Jeweller? <Link to="/jeweller/apply">Start KYB application</Link> · Already registered?{' '}
-          <Link to="/login">Login</Link>
+          Jeweller? <Link to="/jeweller/apply">Apply for KYB</Link> · <Link to="/login">Login</Link>
         </p>
       </div>
     </div>

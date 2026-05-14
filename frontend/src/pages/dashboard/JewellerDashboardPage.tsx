@@ -28,6 +28,17 @@ type MeJson = {
   shop_address?: string
 }
 
+function Coming({ title, body }: { title: string; body: string }) {
+  return (
+    <div className="dash-panel-max">
+      <div className="dash-coming dash-coming--catalog">
+        <h2 className="dash-coming__title">{title}</h2>
+        <p className="dash-coming__text">{body}</p>
+      </div>
+    </div>
+  )
+}
+
 export function JewellerDashboardPage() {
   const { refreshProfile } = useAuth()
   const [params, setParams] = useSearchParams()
@@ -64,29 +75,14 @@ export function JewellerDashboardPage() {
     >
       {active === 'desk_overview' ? <JewellerOverview /> : null}
       {active === 'desk_portfolio' ? <JewellerPortfolioPanel /> : null}
-      {active.startsWith('cust_') ? (
-        <JewellerComing
-          title="Customer management"
-          body="Customer roster, KYC posture, holdings by type, and liability snapshots once jeweller-scoped ledger APIs land."
-        />
+      {active === 'cust_hub' ? (
+        <Coming title="Customer vaults" body="Roster, holdings, and liabilities surface here when jeweller-scoped APIs connect." />
       ) : null}
       {active === 'mkt_products' ? <JewellerMarketplacePanel /> : null}
-      {active === 'mkt_schemes' ? (
-        <JewellerComing
-          title="GoldNest"
-          body="GoldNest today is one recurring plan shape per jeweller: contributions, live accumulation, maturity tracking, benefits, and optional making-charge perks — publish only after Cridora admin approval."
-        />
-      ) : null}
-      {active === 'mkt_rates' ? (
-        <JewellerComing
-          title="Live gold & sellback"
-          body="Publish live gold rate and customer-facing sellback; ornament redemption and cash sellback read these values. The sellback preview (live rate, deductions, amount receivable) follows the cash redemption logic customers see at checkout."
-        />
-      ) : null}
-      {active === 'mkt_rules' ? (
-        <JewellerComing
-          title="Lock-in & redemption"
-          body="Configure lock-in tiers (15 days–12 months or none), minimum redeemable quantity, same-store making-charge discounts (0%, reduced, flat MC, eligible categories), and cross-redemption fee disclosures."
+      {active === 'mkt_policy' ? (
+        <Coming
+          title="Rates & schemes"
+          body="GoldNest, live rates, lock-in, and cross-redemption rules — publish only after Cridora approval."
         />
       ) : null}
       {active === 'txn_purchases' ? (
@@ -94,11 +90,8 @@ export function JewellerDashboardPage() {
           <JewellerFractionalVerifyPanel />
         </div>
       ) : null}
-      {active.startsWith('txn_') && active !== 'txn_transfers' && active !== 'txn_purchases' ? (
-        <JewellerComing
-          title="Operations"
-          body="Sellback, ornament redemption queues, zero-interest gold loans (2% processing, max loan %, eligible holdings), transfers, and settlement batches — mirrored from treasury when transaction APIs connect. Counter fractional gold purchases are verified under Purchases."
-        />
+      {active === 'txn_ops' ? (
+        <Coming title="Redemptions & loans" body="Sellback queues, ornament redemption, and loan operations tie to the shared ledger." />
       ) : null}
       {active === 'txn_transfers' ? <GoldTransferPanel roleLabel="jeweller" /> : null}
       {active === 'prof_kyb' ? (
@@ -106,12 +99,8 @@ export function JewellerDashboardPage() {
           <JewellerKybWorkflow />
         </div>
       ) : null}
-      {active === 'prof_payouts' ? <JewellerPlaceholder kind="payments" /> : null}
-      {active === 'prof_shop' ? (
-        <JewellerComing
-          title="Showroom & credibility"
-          body="Logo, trust copy, credibility score inputs, city, live and sellback rates shown on jeweller cards, and feature tags (instant redemption, 0% MC, loans, GoldNest, emergency funds, cross-redemption)."
-        />
+      {active === 'prof_more' ? (
+        <Coming title="Business profile" body="Payouts, showroom copy, and credibility inputs live here as storefront APIs expand." />
       ) : null}
     </DashboardLayout>
   )
@@ -144,7 +133,7 @@ function JewellerOverview() {
         <div className={`dash-spot dash-spot--${tone}`}>
           <span className="dash-spot__eyebrow">KYB status</span>
           <p className="dash-spot__value">{user?.kyc_status}</p>
-          <p className="dash-spot__sub">Verified jewellers join the live savings and redemption network; storefront and listings stay private until Cridora admin approval.</p>
+          <p className="dash-spot__sub">Verified jewellers join the live network; listings remain private until approval.</p>
         </div>
         <div className="dash-spot dash-spot--gold">
           <span className="dash-spot__eyebrow">Business profile</span>
@@ -155,33 +144,9 @@ function JewellerOverview() {
         </div>
         <div className="dash-spot dash-spot--violet">
           <span className="dash-spot__eyebrow">Next steps</span>
-          <p className="dash-spot__value">KYB uploads</p>
-          <p className="dash-spot__sub">{me?.shop_address ?? 'Complete registrations in KYB documents tab.'}</p>
+          <p className="dash-spot__value">KYB documents</p>
+          <p className="dash-spot__sub">{me?.shop_address ?? 'Complete uploads under KYB.'}</p>
         </div>
-      </div>
-    </div>
-  )
-}
-
-function JewellerPlaceholder({ kind }: { kind: 'catalog' | 'payments' }) {
-  return (
-    <div className="dash-panel-max">
-      <div className={`dash-coming dash-coming--${kind}`}>
-        <h2 className="dash-coming__title">{kind === 'catalog' ? 'Catalogue' : 'Payouts'}</h2>
-        <p className="dash-coming__text">
-          Payout rails and jeweller settlement batches follow the shared ledger model once payment APIs ship on this stack.
-        </p>
-      </div>
-    </div>
-  )
-}
-
-function JewellerComing({ title, body }: { title: string; body: string }) {
-  return (
-    <div className="dash-panel-max">
-      <div className="dash-coming dash-coming--catalog">
-        <h2 className="dash-coming__title">{title}</h2>
-        <p className="dash-coming__text">{body}</p>
       </div>
     </div>
   )

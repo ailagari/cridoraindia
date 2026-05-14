@@ -7,6 +7,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import MarketplaceProduct, get_or_create_ticker, jeweller_profile_for
+from .spot_prices import invalidate_spot_price_cache
 from .serializers import (
     AdminProductModerationSerializer,
     AdminProductRowSerializer,
@@ -226,6 +227,7 @@ class AdminGoldTickerView(APIView):
             return Response(ser.errors, status=status.HTTP_400_BAD_REQUEST)
         ser.save()
         ticker.refresh_from_db()
+        invalidate_spot_price_cache()
         try:
             from .gold_rate_alerts import maybe_notify_gold_rate_move
 

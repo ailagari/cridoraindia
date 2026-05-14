@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth, type UserType } from '@/context/AuthContext'
-import { userDashboardPath } from '@/lib/routes'
+import { dashboardLandingPath } from '@/lib/routes'
 
 type Props = {
   allow: UserType | UserType[]
@@ -26,7 +26,7 @@ export function ProtectedRoute({ allow, children }: Props) {
   }
 
   if (!allowed.includes(user.user_type)) {
-    return <Navigate to={userDashboardPath(user)} replace />
+    return <Navigate to={dashboardLandingPath(user)} replace />
   }
 
   return <>{children}</>

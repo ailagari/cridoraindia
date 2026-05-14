@@ -81,8 +81,9 @@ export function GoldTransferPanel({ roleLabel }: Props) {
   return (
     <div className="dash-panel-max">
       <p className="dash-panel-lead">
-        GoldUPI transfers ({roleLabel}) — resolve <strong>username@jewellercode</strong>, confirm the recipient, then
-        send grams from your vault balance.
+        Transfer grams using a vault ID (<strong>handle.jewellercode@cridora</strong>) or legacy{' '}
+        <strong>username@jewellercode</strong>.{' '}
+        <span style={{ color: 'var(--text-faint)' }}>({roleLabel})</span>
       </p>
 
       {loadErr ? <p className="form-error">{loadErr}</p> : null}
@@ -97,11 +98,17 @@ export function GoldTransferPanel({ roleLabel }: Props) {
         >
           <div className="dash-form-stack">
             <div>
-              <span style={{ fontSize: '0.65rem', color: 'var(--text-faint)', fontWeight: 800 }}>Cridora ID</span>
+              <span style={{ fontSize: '0.65rem', color: 'var(--text-faint)', fontWeight: 800 }}>Member reference</span>
               <p style={{ margin: '0.15rem 0 0', fontWeight: 800 }}>{wallet.cridora_member_id || '—'}</p>
             </div>
+            {wallet.cridora_global_id ? (
+              <div>
+                <span style={{ fontSize: '0.65rem', color: 'var(--text-faint)', fontWeight: 800 }}>Global handle</span>
+                <p style={{ margin: '0.15rem 0 0', fontWeight: 700 }}>{wallet.cridora_global_id}</p>
+              </div>
+            ) : null}
             <div>
-              <span style={{ fontSize: '0.65rem', color: 'var(--text-faint)', fontWeight: 800 }}>GoldUPI</span>
+              <span style={{ fontSize: '0.65rem', color: 'var(--text-faint)', fontWeight: 800 }}>Routing (GoldUPI)</span>
               <p style={{ margin: '0.15rem 0 0', fontWeight: 800, color: 'var(--gold-light)' }}>{wallet.gold_upi || '—'}</p>
             </div>
             <div>
@@ -118,6 +125,25 @@ export function GoldTransferPanel({ roleLabel }: Props) {
             >
               Refresh balance
             </button>
+            {wallet.vaults && wallet.vaults.length > 0 ? (
+              <div style={{ marginTop: '0.5rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border-soft)' }}>
+                <span style={{ fontSize: '0.65rem', color: 'var(--text-faint)', fontWeight: 800 }}>Vaults</span>
+                <ul style={{ margin: '0.35rem 0 0', padding: 0, listStyle: 'none', display: 'grid', gap: '0.35rem' }}>
+                  {wallet.vaults.slice(0, 6).map((v) => (
+                    <li key={`${v.vault_public_id}-${v.custodian_id}`} style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                      <span style={{ color: 'var(--text)' }}>{v.fractional_grams} g</span>
+                      {v.vault_public_id ? (
+                        <>
+                          {' · '}
+                          <span className="tabular">{v.vault_public_id}</span>
+                        </>
+                      ) : null}
+                      {v.custodian_label ? ` · ${v.custodian_label}` : null}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
           </div>
         </div>
       ) : null}
@@ -125,12 +151,12 @@ export function GoldTransferPanel({ roleLabel }: Props) {
       <div className="card" style={{ marginBottom: '1rem', maxWidth: 520 }}>
         <div className="dash-form-stack">
           <div className="field">
-            <label htmlFor="gold-transfer-recipient-upi">Recipient GoldUPI</label>
+            <label htmlFor="gold-transfer-recipient-upi">Recipient handle</label>
             <input
               id="gold-transfer-recipient-upi"
               value={goldUpiInput}
               onChange={(e) => setGoldUpiInput(e.target.value)}
-              placeholder="democustomer@demogold"
+              placeholder="rahul4821.goldhouse@cridora or user@jewellercode"
               autoComplete="off"
             />
           </div>

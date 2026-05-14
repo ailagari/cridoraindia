@@ -7,8 +7,8 @@ export const ADMIN_NAV_GROUPS: DashboardNavGroup[] = [
     shortLabel: 'Home',
     icon: 'home',
     items: [
-      { sectionKey: 'ops_overview', label: 'Network pulse' },
-      { sectionKey: 'ops_portfolio', label: 'Platform portfolio' },
+      { sectionKey: 'ops_overview', label: 'Pulse' },
+      { sectionKey: 'ops_portfolio', label: 'Holdings' },
     ],
   },
   {
@@ -17,8 +17,8 @@ export const ADMIN_NAV_GROUPS: DashboardNavGroup[] = [
     shortLabel: 'KYC',
     icon: 'shield',
     items: [
-      { sectionKey: 'ap_kyc', label: 'KYC (customers)' },
-      { sectionKey: 'ap_kyb', label: 'Jeweller verification' },
+      { sectionKey: 'ap_kyc', label: 'Customers' },
+      { sectionKey: 'ap_kyb', label: 'Jewellers' },
     ],
   },
   {
@@ -27,21 +27,16 @@ export const ADMIN_NAV_GROUPS: DashboardNavGroup[] = [
     shortLabel: 'Market',
     icon: 'globe',
     items: [
-      { sectionKey: 'mkt_products', label: 'Product approval' },
-      { sectionKey: 'mkt_schemes', label: 'GoldNest schemes' },
-      { sectionKey: 'mkt_offers', label: 'Marketplace moderation' },
-      { sectionKey: 'mkt_reports', label: 'Risk monitoring' },
+      { sectionKey: 'mkt_products', label: 'Products' },
+      { sectionKey: 'mkt_programs', label: 'Programs & risk' },
     ],
   },
   {
     id: 'settlements',
-    label: 'Settlements',
+    label: 'Treasury',
     shortLabel: 'Money',
     icon: 'coins',
-    items: [
-      { sectionKey: 'fin_payments', label: 'Settlement monitoring' },
-      { sectionKey: 'fin_ledger', label: 'Ledger & reconciliation' },
-    ],
+    items: [{ sectionKey: 'fin_hub', label: 'Settlements' }],
   },
   {
     id: 'settings',
@@ -51,8 +46,7 @@ export const ADMIN_NAV_GROUPS: DashboardNavGroup[] = [
     items: [
       { sectionKey: 'people_users', label: 'Users' },
       { sectionKey: 'plat_gold', label: 'Gold ticker' },
-      { sectionKey: 'plat_emergency', label: 'Emergency funds' },
-      { sectionKey: 'plat_settings', label: 'Settings' },
+      { sectionKey: 'plat_control', label: 'Controls' },
     ],
   },
 ]
@@ -65,8 +59,13 @@ export const ADMIN_LEGACY_SECTION: Record<string, string> = {
   kyc: 'ap_kyc',
   kyb: 'ap_kyb',
   users: 'people_users',
-  payments: 'fin_payments',
-  ledger: 'fin_ledger',
+  payments: 'fin_hub',
+  ledger: 'fin_hub',
+  mkt_schemes: 'mkt_programs',
+  mkt_offers: 'mkt_programs',
+  mkt_reports: 'mkt_programs',
+  plat_emergency: 'plat_control',
+  plat_settings: 'plat_control',
 }
 
 export function normalizeAdminSection(raw: string | null): string | null {

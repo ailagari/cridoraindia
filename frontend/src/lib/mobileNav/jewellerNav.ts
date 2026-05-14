@@ -16,12 +16,7 @@ export const JEWELLER_NAV_GROUPS: DashboardNavGroup[] = [
     label: 'Customers',
     shortLabel: 'Clients',
     icon: 'users',
-    items: [
-      { sectionKey: 'cust_all', label: 'Customer management' },
-      { sectionKey: 'cust_kyc', label: 'KYC pending' },
-      { sectionKey: 'cust_value', label: 'High value' },
-      { sectionKey: 'cust_locked', label: 'Lock-in exposure' },
-    ],
+    items: [{ sectionKey: 'cust_hub', label: 'Customer vaults' }],
   },
   {
     id: 'marketplace',
@@ -29,10 +24,8 @@ export const JEWELLER_NAV_GROUPS: DashboardNavGroup[] = [
     shortLabel: 'Market',
     icon: 'shop',
     items: [
-      { sectionKey: 'mkt_products', label: 'Product listings' },
-      { sectionKey: 'mkt_schemes', label: 'GoldNest' },
-      { sectionKey: 'mkt_rates', label: 'Live gold & sellback' },
-      { sectionKey: 'mkt_rules', label: 'Lock-in & redemption' },
+      { sectionKey: 'mkt_products', label: 'Listings' },
+      { sectionKey: 'mkt_policy', label: 'Rates & schemes' },
     ],
   },
   {
@@ -42,11 +35,8 @@ export const JEWELLER_NAV_GROUPS: DashboardNavGroup[] = [
     icon: 'coins',
     items: [
       { sectionKey: 'txn_purchases', label: 'Purchases' },
-      { sectionKey: 'txn_sellback', label: 'Sellback' },
-      { sectionKey: 'txn_redemptions', label: 'Redemption queue' },
-      { sectionKey: 'txn_loans', label: 'Loan configuration' },
+      { sectionKey: 'txn_ops', label: 'Redemptions' },
       { sectionKey: 'txn_transfers', label: 'Transfers' },
-      { sectionKey: 'txn_settlements', label: 'Ledger & settlement' },
     ],
   },
   {
@@ -55,9 +45,8 @@ export const JEWELLER_NAV_GROUPS: DashboardNavGroup[] = [
     shortLabel: 'Profile',
     icon: 'profile',
     items: [
-      { sectionKey: 'prof_kyb', label: 'KYB & verification' },
-      { sectionKey: 'prof_payouts', label: 'Payouts' },
-      { sectionKey: 'prof_shop', label: 'Showroom & credibility' },
+      { sectionKey: 'prof_kyb', label: 'KYB' },
+      { sectionKey: 'prof_more', label: 'Business' },
     ],
   },
 ]
@@ -69,8 +58,21 @@ export const JEWELLER_LEGACY_SECTION: Record<string, string> = {
   portfolio: 'desk_portfolio',
   kyb: 'prof_kyb',
   catalog: 'mkt_products',
-  payments: 'prof_payouts',
-  mkt_offers: 'mkt_rates',
+  payments: 'prof_more',
+  mkt_offers: 'mkt_policy',
+  cust_all: 'cust_hub',
+  cust_kyc: 'cust_hub',
+  cust_value: 'cust_hub',
+  cust_locked: 'cust_hub',
+  mkt_schemes: 'mkt_policy',
+  mkt_rates: 'mkt_policy',
+  mkt_rules: 'mkt_policy',
+  txn_sellback: 'txn_ops',
+  txn_redemptions: 'txn_ops',
+  txn_loans: 'txn_ops',
+  txn_settlements: 'txn_ops',
+  prof_payouts: 'prof_more',
+  prof_shop: 'prof_more',
 }
 
 export function normalizeJewellerSection(raw: string | null): string | null {

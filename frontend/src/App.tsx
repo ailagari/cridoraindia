@@ -7,6 +7,9 @@ import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { HomePage } from '@/pages/HomePage'
 import { WhyCridoraPage } from '@/pages/WhyCridoraPage'
 import { FeaturesPage } from '@/pages/FeaturesPage'
+import { HowItWorksPage } from '@/pages/HowItWorksPage'
+import { InvestorRelationsPage } from '@/pages/InvestorRelationsPage'
+import { WaitlistPage } from '@/pages/WaitlistPage'
 import { ProductMarketplacePage } from '@/pages/ProductMarketplacePage'
 import { MarketplaceProductDetailPage } from '@/pages/MarketplaceProductDetailPage'
 import { JewellerDirectoryPage } from '@/pages/JewellerDirectoryPage'
@@ -32,6 +35,9 @@ export default function App() {
               <Route index element={<HomePage />} />
               <Route path="why-cridora" element={<WhyCridoraPage />} />
               <Route path="features" element={<FeaturesPage />} />
+              <Route path="how-it-works" element={<HowItWorksPage />} />
+              <Route path="investors" element={<InvestorRelationsPage />} />
+              <Route path="waitlist" element={<WaitlistPage />} />
               <Route path="verified-jewellers" element={<Navigate to="/jewellers" replace />} />
               <Route path="jewellers" element={<JewellerDirectoryPage />} />
               <Route path="jewellers/:id" element={<JewellerPublicPage />} />

@@ -8,12 +8,7 @@ from django.contrib.auth import get_user_model
 
 from .models import BankAccount, KYDocument
 from .serializers import BankAccountSerializer, KYDocumentReadSerializer, UserMeSerializer
-from .services.kyc_review import (
-    customer_in_review_queue,
-    customer_ready_for_kyc_approval,
-    jeweller_in_review_queue,
-    jeweller_ready_for_kyb_approval,
-)
+from .services.kyc_review import customer_in_review_queue, jeweller_in_review_queue
 
 User = get_user_model()
 
@@ -47,16 +42,16 @@ def _user_summary(u: User) -> dict:
             row["bank_status"] = None
         doc_types = list(u.kyc_documents.values_list("doc_type", flat=True))
         row["documents_uploaded"] = sorted(set(doc_types))
-        can_ok, _ = customer_ready_for_kyc_approval(u)
-        row["can_approve_kyc"] = bool(
-            can_ok and u.kyc_status == User.KYC_PENDING
+        row["can_approve_kyc"] = u.kyc_status in (
+            User.KYC_PENDING,
+            User.KYC_REJECTED,
         )
     if u.user_type == User.JEWELLER:
         doc_types = list(u.kyc_documents.values_list("doc_type", flat=True))
         row["documents_uploaded"] = sorted(set(doc_types))
-        can_ok, _ = jeweller_ready_for_kyb_approval(u)
-        row["can_approve_kyb"] = bool(
-            can_ok and u.kyc_status == User.KYC_PENDING
+        row["can_approve_kyb"] = u.kyc_status in (
+            User.KYC_PENDING,
+            User.KYC_REJECTED,
         )
     return row
 
@@ -177,10 +172,10 @@ class AdminCustomerKYCActionView(APIView):
                 {"detail": "Customer not found."}, status=status.HTTP_404_NOT_FOUND
             )
         if action == "approve":
-            ok, errmsg = customer_ready_for_kyc_approval(user)
-            if not ok:
+            if user.kyc_status == User.KYC_VERIFIED:
                 return Response(
-                    {"detail": errmsg}, status=status.HTTP_400_BAD_REQUEST
+                    {"detail": "Customer is already verified."},
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
             now = timezone.now()
             user.kyc_status = User.KYC_VERIFIED
@@ -235,10 +230,10 @@ class AdminJewellerKYBActionView(APIView):
                 {"detail": "Jeweller not found."}, status=status.HTTP_404_NOT_FOUND
             )
         if action == "approve":
-            ok, errmsg = jeweller_ready_for_kyb_approval(user)
-            if not ok:
+            if user.kyc_status == User.KYC_VERIFIED:
                 return Response(
-                    {"detail": errmsg}, status=status.HTTP_400_BAD_REQUEST
+                    {"detail": "Jeweller is already verified."},
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
             now = timezone.now()
             user.kyc_status = User.KYC_VERIFIED

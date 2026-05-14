@@ -6,6 +6,9 @@ type Ticker = {
   admin_markup_percent: string
   rate_move_alert_threshold_inr: string
   rate_alert_baseline_inr_per_gram_22k: string | null
+  manual_ticker_enabled?: boolean
+  ticker_manual_22k_inr_per_gram?: string | null
+  ticker_manual_24k_inr_per_gram?: string | null
   platform_base_inr_per_gram_22k: string
   cridora_base_source?: string
   updated_at: string
@@ -16,6 +19,9 @@ export function AdminGoldTickerPanel() {
   const [refDraft, setRefDraft] = useState('')
   const [mkDraft, setMkDraft] = useState('')
   const [alertDraft, setAlertDraft] = useState('')
+  const [manualOn, setManualOn] = useState(false)
+  const [manual22Draft, setManual22Draft] = useState('')
+  const [manual24Draft, setManual24Draft] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
 
@@ -32,6 +38,9 @@ export function AdminGoldTickerPanel() {
     setRefDraft(j.reference_price_inr_per_gram_22k)
     setMkDraft(j.admin_markup_percent)
     setAlertDraft(j.rate_move_alert_threshold_inr ?? '10')
+    setManualOn(Boolean(j.manual_ticker_enabled))
+    setManual22Draft(j.ticker_manual_22k_inr_per_gram ?? '')
+    setManual24Draft(j.ticker_manual_24k_inr_per_gram ?? '')
   }, [])
 
   useEffect(() => {
@@ -47,6 +56,9 @@ export function AdminGoldTickerPanel() {
         reference_price_inr_per_gram_22k: refDraft.trim(),
         admin_markup_percent: mkDraft.trim(),
         rate_move_alert_threshold_inr: alertDraft.trim(),
+        manual_ticker_enabled: manualOn,
+        ticker_manual_22k_inr_per_gram: manual22Draft.trim() || null,
+        ticker_manual_24k_inr_per_gram: manual24Draft.trim() ? manual24Draft.trim() : null,
       },
     })
     setBusy(false)
@@ -64,9 +76,9 @@ export function AdminGoldTickerPanel() {
         Gold ticker (22K benchmark)
       </h2>
       <p className="dash-coming__text">
-        Reference and admin markup define the <strong>fallback</strong> 22K benchmark when the live global spot feed is
-        unavailable. When spot is live, the resolved Cridora base (shown in the read-only ticker below) is used for all
-        jeweller pricing unless a jeweller chooses a manual rate.
+        Use <strong>manual ticker</strong> to pin the public strip and platform 22K base to your own 22K/24K ₹/g values
+        (e.g. local board rates). When manual mode is off, the resolved Cridora base uses live global spot when
+        available; reference and markup apply only as fallback when spot is unavailable.
       </p>
       <p className="dash-coming__text" style={{ marginTop: '0.5rem' }}>
         <strong>Rate alerts:</strong> subscribers who enabled device notifications get a push when resolved 22K ₹/g moves
@@ -88,6 +100,45 @@ export function AdminGoldTickerPanel() {
           {data.updated_at}
         </p>
       ) : null}
+      <div
+        className="card"
+        style={{
+          padding: '1rem',
+          borderRadius: 12,
+          border: '1px solid var(--border-soft)',
+          marginBottom: '1rem',
+        }}
+      >
+        <label className="field" style={{ flexDirection: 'row', alignItems: 'center', gap: '0.5rem' }}>
+          <input type="checkbox" checked={manualOn} onChange={(e) => setManualOn(e.target.checked)} />
+          <span>Use manual ticker rates (overrides live spot for strip + platform 22K base)</span>
+        </label>
+        <div
+          style={{
+            display: 'grid',
+            gap: '0.85rem',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+            marginTop: '0.75rem',
+          }}
+        >
+          <label className="field">
+            <span>Manual 22K ₹/g (required if manual is on)</span>
+            <input
+              value={manual22Draft}
+              onChange={(e) => setManual22Draft(e.target.value)}
+              placeholder="e.g. 14850"
+            />
+          </label>
+          <label className="field">
+            <span>Manual 24K ₹/g (optional)</span>
+            <input
+              value={manual24Draft}
+              onChange={(e) => setManual24Draft(e.target.value)}
+              placeholder="blank = derive from 22K ÷ 0.916"
+            />
+          </label>
+        </div>
+      </div>
       <div style={{ display: 'grid', gap: '0.85rem', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
         <label className="field">
           <span>Reference price (₹/g)</span>

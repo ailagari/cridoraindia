@@ -32,6 +32,9 @@ class GoldTickerReadSerializer(serializers.ModelSerializer):
             "admin_markup_percent",
             "rate_move_alert_threshold_inr",
             "rate_alert_baseline_inr_per_gram_22k",
+            "manual_ticker_enabled",
+            "ticker_manual_22k_inr_per_gram",
+            "ticker_manual_24k_inr_per_gram",
             "platform_base_inr_per_gram_22k",
             "cridora_base_source",
             "updated_at",
@@ -54,12 +57,45 @@ class GoldTickerAdminSerializer(serializers.ModelSerializer):
             "reference_price_inr_per_gram_22k",
             "admin_markup_percent",
             "rate_move_alert_threshold_inr",
+            "manual_ticker_enabled",
+            "ticker_manual_22k_inr_per_gram",
+            "ticker_manual_24k_inr_per_gram",
         )
 
     def validate_rate_move_alert_threshold_inr(self, value):
         if value < 0:
             raise serializers.ValidationError("Must be zero or greater (0 disables alerts).")
         return value
+
+    def validate(self, attrs):
+        from decimal import Decimal
+
+        enabled = attrs.get("manual_ticker_enabled")
+        if enabled is None and self.instance is not None:
+            enabled = self.instance.manual_ticker_enabled
+
+        key_22 = "ticker_manual_22k_inr_per_gram"
+        k22 = attrs.get(key_22) if key_22 in attrs else None
+        if k22 is None and self.instance is not None:
+            k22 = self.instance.ticker_manual_22k_inr_per_gram
+
+        key_24 = "ticker_manual_24k_inr_per_gram"
+        k24 = attrs.get(key_24) if key_24 in attrs else None
+        if key_24 not in attrs and self.instance is not None:
+            k24 = self.instance.ticker_manual_24k_inr_per_gram
+
+        if enabled:
+            if k22 is None or k22 <= Decimal("0"):
+                raise serializers.ValidationError(
+                    {
+                        key_22: "Enter a positive 22K ₹/g when manual ticker is enabled.",
+                    }
+                )
+        if k24 is not None and k24 <= Decimal("0"):
+            raise serializers.ValidationError(
+                {key_24: "Leave blank or enter a positive 24K ₹/g."}
+            )
+        return attrs
 
 
 class JewellerPricingProfileSerializer(serializers.ModelSerializer):

@@ -532,17 +532,17 @@ class Command(BaseCommand):
                 gbc.balance_grams = Decimal("50")
                 gbc.save(update_fields=["balance_grams"])
 
-        for email, code in (
-            ("dummy.jeweller.kochi@cridora.test", "heritagekochi"),
-            ("dummy.jeweller.mumbai@cridora.test", "metrogold"),
-            ("dummy.jeweller.bengaluru@cridora.test", "gardencity"),
+        for email, code, handle_sfx in (
+            ("dummy.jeweller.kochi@cridora.test", "heritagekochi", "showroom_kochi"),
+            ("dummy.jeweller.mumbai@cridora.test", "metrogold", "showroom_mumbai"),
+            ("dummy.jeweller.bengaluru@cridora.test", "gardencity", "showroom_blr"),
         ):
             u = User.objects.filter(email__iexact=email, user_type=User.JEWELLER).first()
             if not u:
                 continue
             u.jeweller_code = code
             if not u.gold_handle_local:
-                u.gold_handle_local = "showroom"
+                u.gold_handle_local = handle_sfx
             u.save(update_fields=["jeweller_code", "gold_handle_local"])
             u.gold_upi = compute_gold_upi(u)
             u.save(update_fields=["gold_upi"])

@@ -8,22 +8,16 @@ export const CUSTOMER_NAV_GROUPS: DashboardNavGroup[] = [
     shortLabel: 'Market',
     icon: 'shop',
     items: [
-      { sectionKey: 'shop_jewellers', label: 'Jeweller network' },
-      { sectionKey: 'shop_products', label: 'Product catalogue' },
-      { sectionKey: 'shop_schemes', label: 'GoldNest' },
+      { sectionKey: 'shop_jewellers', label: 'Jewellers' },
+      { sectionKey: 'shop_products', label: 'Products' },
     ],
   },
   {
     id: 'invest',
-    label: 'Grow gold',
-    shortLabel: 'Grow',
+    label: 'Invest',
+    shortLabel: 'Invest',
     icon: 'coins',
-    items: [
-      { sectionKey: 'invest_fractional', label: 'Fractional purchase' },
-      { sectionKey: 'invest_deposit', label: 'Gold deposit' },
-      { sectionKey: 'invest_goldnest', label: 'GoldNest' },
-      { sectionKey: 'invest_history', label: 'History' },
-    ],
+    items: [{ sectionKey: 'invest_fractional', label: 'Buy gold' }],
   },
   {
     id: 'portfolio',
@@ -32,10 +26,7 @@ export const CUSTOMER_NAV_GROUPS: DashboardNavGroup[] = [
     icon: 'portfolio',
     items: [
       { sectionKey: 'portfolio_overview', label: 'Overview' },
-      { sectionKey: 'portfolio_holdings', label: 'Holdings & ledgers' },
-      { sectionKey: 'portfolio_pnl', label: 'Profit / loss' },
-      { sectionKey: 'portfolio_locked', label: 'Lock-in' },
-      { sectionKey: 'portfolio_activity', label: 'Activity' },
+      { sectionKey: 'portfolio_holdings', label: 'Vaults' },
     ],
   },
   {
@@ -44,11 +35,8 @@ export const CUSTOMER_NAV_GROUPS: DashboardNavGroup[] = [
     shortLabel: 'Use',
     icon: 'grid',
     items: [
-      { sectionKey: 'redeem_ornament', label: 'Ornament redemption' },
-      { sectionKey: 'redeem_cash', label: 'Cash sellback' },
-      { sectionKey: 'redeem_loan', label: 'Gold loan' },
       { sectionKey: 'redeem_transfer', label: 'Transfer' },
-      { sectionKey: 'redeem_emergency', label: 'Emergency funds' },
+      { sectionKey: 'redeem_hub', label: 'Redeem & liquidity' },
     ],
   },
   {
@@ -57,12 +45,8 @@ export const CUSTOMER_NAV_GROUPS: DashboardNavGroup[] = [
     shortLabel: 'Profile',
     icon: 'profile',
     items: [
-      { sectionKey: 'profile_account', label: 'Account' },
       { sectionKey: 'profile_kyc', label: 'KYC' },
-      { sectionKey: 'profile_security', label: 'Security' },
-      { sectionKey: 'profile_notifications', label: 'Alerts' },
-      { sectionKey: 'profile_payments', label: 'Payments' },
-      { sectionKey: 'profile_settings', label: 'Settings' },
+      { sectionKey: 'profile_more', label: 'Account' },
     ],
   },
 ]
@@ -73,8 +57,24 @@ export const CUSTOMER_LEGACY_SECTION: Record<string, string> = {
   overview: 'portfolio_overview',
   kyc: 'profile_kyc',
   portfolio: 'portfolio_overview',
-  payments: 'profile_payments',
+  payments: 'profile_more',
   shop_offers: 'shop_products',
+  shop_schemes: 'shop_products',
+  invest_deposit: 'invest_fractional',
+  invest_goldnest: 'invest_fractional',
+  invest_history: 'invest_fractional',
+  portfolio_pnl: 'portfolio_holdings',
+  portfolio_locked: 'portfolio_holdings',
+  portfolio_activity: 'portfolio_holdings',
+  redeem_ornament: 'redeem_hub',
+  redeem_cash: 'redeem_hub',
+  redeem_loan: 'redeem_hub',
+  redeem_emergency: 'redeem_hub',
+  profile_account: 'profile_more',
+  profile_security: 'profile_more',
+  profile_notifications: 'profile_more',
+  profile_payments: 'profile_more',
+  profile_settings: 'profile_more',
 }
 
 export function normalizeCustomerSection(raw: string | null): string | null {

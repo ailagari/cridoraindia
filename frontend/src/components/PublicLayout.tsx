@@ -3,21 +3,21 @@ import { CridoraLogo } from '@/components/CridoraLogo'
 import { PublicHeaderActions, PublicMobileChrome } from '@/components/PublicMobileChrome'
 import { GoldTickerStrip } from '@/components/GoldTickerStrip'
 import { useAuth } from '@/context/AuthContext'
-import { userDashboardPath } from '@/lib/routes'
+import { dashboardLandingPath } from '@/lib/routes'
 
 const primaryNav = [
   { to: '/', label: 'Home' },
-  { to: '/why-cridora', label: 'Why Cridora' },
-  { to: '/features', label: 'Features' },
-  { to: '/jewellers', label: 'Jeweller marketplace' },
-  { to: '/marketplace', label: 'Product marketplace' },
+  { to: '/how-it-works', label: 'How it works' },
+  { to: '/jewellers', label: 'Jewellers' },
+  { to: '/marketplace', label: 'Products' },
+  { to: '/waitlist', label: 'Waitlist' },
 ] as const
 
 export function PublicLayout() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
 
-  const dashboardHref = user ? userDashboardPath(user) : '/'
+  const dashboardHref = user ? dashboardLandingPath(user) : '/'
 
   return (
     <div className="app-shell">
@@ -115,16 +115,18 @@ export function PublicLayout() {
         }}
       >
         <div className="container">
-          <p style={{ margin: '0 0 1rem', color: 'var(--text-muted)' }}>
-            Cridora connects savers and verified jewellers for live gold savings, portfolio tracking, and redemption (BIS 916,
-            India). Customers buy, track, use, and redeem; jewellers manage storefronts, rates, and listings; Cridora
-            administers KYC/KYB, listing review, and network safeguards.
+          <p style={{ margin: '0 0 1rem', color: 'var(--text-muted)', maxWidth: '56ch', lineHeight: 1.55 }}>
+            Cridora connects verified jewellers and savers for India-first gold vaults, marketplace discovery, and supervised
+            redemption.
           </p>
           <div className="nav-links" style={{ gap: '0.75rem 1.25rem' }}>
             <Link to="/why-cridora">Why Cridora</Link>
             <Link to="/features">Features</Link>
-            <Link to="/jewellers">Jeweller marketplace</Link>
-            <Link to="/marketplace">Product marketplace</Link>
+            <Link to="/how-it-works">How it works</Link>
+            <Link to="/investors">Investors</Link>
+            <Link to="/jewellers">Jewellers</Link>
+            <Link to="/marketplace">Products</Link>
+            <Link to="/waitlist">Waitlist</Link>
           </div>
         </div>
       </footer>

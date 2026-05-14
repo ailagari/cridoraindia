@@ -169,8 +169,10 @@ export function JewellerKybWorkflow() {
       <span className="pill">Jeweller KYB</span>
       <h2 className="dash-panel-title">Compliance &amp; document centre</h2>
       <p className="dash-panel-lead">
-        Firm <strong style={{ color: 'var(--text)' }}>{user?.email}</strong> · GSTIN on file from application ·
-        README visibility rules: listings stay private until site admin approval.
+        Firm <strong style={{ color: 'var(--text)' }}>{user?.email}</strong> · GSTIN from your application · catalogue and storefront stay private until Cridora admin verifies KYB.
+      </p>
+      <p style={{ color: 'var(--text-muted)', fontSize: '0.92rem', lineHeight: 1.5, marginTop: '-0.35rem' }}>
+        Essential documents below support audit and onboarding, but <strong>KYB verification is decided by Cridora admin</strong> — known jewellers may be approved without a complete upload set.
       </p>
 
       {message ? <p className="message-success">{message}</p> : null}

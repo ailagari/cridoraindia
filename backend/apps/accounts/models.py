@@ -75,6 +75,31 @@ class User(AbstractUser):
         on_delete=models.SET_NULL,
         related_name="default_for_customers",
         limit_choices_to={"user_type": JEWELLER},
+        help_text="Primary default jeweller (routing, transfers, marketplace).",
+    )
+    jeweller_pref_nearby = models.ForeignKey(
+        "self",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="nearby_pref_for_customers",
+        limit_choices_to={"user_type": JEWELLER},
+    )
+    jeweller_pref_ornament = models.ForeignKey(
+        "self",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="ornament_pref_for_customers",
+        limit_choices_to={"user_type": JEWELLER},
+    )
+    jeweller_pref_redemption = models.ForeignKey(
+        "self",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="redemption_pref_for_customers",
+        limit_choices_to={"user_type": JEWELLER},
     )
 
     class Meta:
@@ -138,6 +163,7 @@ class KYDocument(models.Model):
     # Customer KYC — identity & tax
     AADHAAR = "aadhaar"
     PAN = "pan"
+    SELFIE = "selfie_photo"
 
     # Jeweller KYB — typical India jewellery business compliance
     PAN_BUSINESS = "pan_business"
@@ -153,7 +179,7 @@ class KYDocument(models.Model):
     MSME_UDYAM = "msme_udyam"
     IEC_IMPORT_EXPORT = "iec_import_export"
 
-    CUSTOMER_DOC_TYPES = [AADHAAR, PAN]
+    CUSTOMER_DOC_TYPES = [AADHAAR, PAN, SELFIE]
     JEWELLER_DOC_TYPES = [
         PAN_BUSINESS,
         GST_CERTIFICATE,
@@ -172,6 +198,7 @@ class KYDocument(models.Model):
     DOC_TYPE_CHOICES = [
         (AADHAAR, "Aadhaar card"),
         (PAN, "PAN card"),
+        (SELFIE, "Live selfie / photograph"),
         (PAN_BUSINESS, "Business PAN"),
         (GST_CERTIFICATE, "GST registration certificate"),
         (SHOP_ESTABLISHMENT, "Shop & Establishment registration"),
@@ -224,6 +251,94 @@ class GoldBalance(models.Model):
 
     def __str__(self):
         return f"GoldBalance({self.user_id}, {self.balance_grams}g)"
+
+
+class GoldVault(models.Model):
+    """Customer gold held with a specific custodian jeweller (vault ID: handle.jewellercode@cridora)."""
+
+    owner = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="gold_vaults_owned",
+        limit_choices_to={"user_type": User.CUSTOMER},
+    )
+    custodian = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="gold_vaults_custodied",
+        limit_choices_to={"user_type": User.JEWELLER},
+    )
+    vault_public_id = models.CharField(
+        max_length=160,
+        unique=True,
+        null=True,
+        blank=True,
+        help_text="Public routing ID, e.g. rahul4821.goldhousekochi@cridora",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["owner", "custodian"],
+                name="uniq_goldvault_owner_custodian",
+            ),
+        ]
+
+    def __str__(self):
+        return f"GoldVault({self.owner_id}@{self.custodian_id})"
+
+
+class VaultHolding(models.Model):
+    """Gram balance inside a vault by MVP holding type."""
+
+    FRACTIONAL = "fractional"
+    DEPOSIT = "deposit"
+    GOLDEN_SCHEME = "golden_scheme"
+    HOLDING_TYPE_CHOICES = [
+        (FRACTIONAL, "Fractional gold"),
+        (DEPOSIT, "Gold deposit"),
+        (GOLDEN_SCHEME, "Golden scheme"),
+    ]
+
+    vault = models.ForeignKey(
+        GoldVault,
+        on_delete=models.CASCADE,
+        related_name="holdings",
+    )
+    holding_type = models.CharField(
+        max_length=24,
+        choices=HOLDING_TYPE_CHOICES,
+        default=FRACTIONAL,
+    )
+    balance_grams = models.DecimalField(max_digits=16, decimal_places=6, default=0)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["vault", "holding_type"],
+                name="uniq_vault_holding_type",
+            ),
+        ]
+
+    def __str__(self):
+        return f"VaultHolding({self.vault_id}, {self.holding_type})"
+
+
+class PhoneOTPChallenge(models.Model):
+    """Short-lived SMS OTP (integration-ready; codes verified server-side)."""
+
+    phone_normalized = models.CharField(max_length=16, db_index=True)
+    code_hash = models.CharField(max_length=64)
+    expires_at = models.DateTimeField(db_index=True)
+    consumed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"OTP({self.phone_normalized})"
 
 
 class GoldTransfer(models.Model):

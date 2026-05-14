@@ -37,6 +37,10 @@ _CACHE_TTL = 30
 _CACHE_KEY_LAST_GOOD = "marketplace_spot_prices_inr_last_good"
 _CACHE_TTL_LAST_GOOD = 86400 * 7
 
+
+def invalidate_spot_price_cache() -> None:
+    cache.delete(_CACHE_KEY_INR)
+
 DEFAULT_USD_INR = Decimal("83")
 CACHE_KEY_USD_INR = "marketplace_fx_usd_inr_frankfurter"
 CACHE_TTL_USD_INR = 3600
@@ -126,9 +130,15 @@ def _build_spot_inr_from_feed() -> dict | None:
 
 def resolve_cridora_base_22k_inr() -> tuple[Decimal, str]:
     """
-    Single source of truth for platform 22K ₹/g: live spot cache/feed, then last-good spot,
-    then GoldTickerConfig admin benchmark.
+    Single source of truth for platform 22K ₹/g: admin manual ticker (if enabled), then live spot
+    cache/feed, then last-good spot, then GoldTickerConfig admin benchmark.
     """
+    ticker = get_or_create_ticker()
+    if ticker.manual_ticker_enabled and ticker.ticker_manual_22k_inr_per_gram is not None:
+        raw = ticker.ticker_manual_22k_inr_per_gram
+        if raw > 0:
+            return Decimal(str(raw)).quantize(Decimal("0.01")), "manual_ticker"
+
     cached = cache.get(_CACHE_KEY_INR)
     if cached and isinstance(cached.get("gold"), dict):
         v = cached["gold"].get("22K")
@@ -148,8 +158,32 @@ def resolve_cridora_base_22k_inr() -> tuple[Decimal, str]:
         if v is not None:
             return Decimal(str(v)).quantize(Decimal("0.01")), "stale_spot_cache"
 
-    t = get_or_create_ticker()
-    return t.platform_base_inr_per_gram(), "admin_fallback"
+    return ticker.platform_base_inr_per_gram(), "admin_fallback"
+
+
+def _manual_ticker_spot_payload(ticker) -> dict:
+    k22 = float(ticker.ticker_manual_22k_inr_per_gram)
+    if ticker.ticker_manual_24k_inr_per_gram is not None and float(
+        ticker.ticker_manual_24k_inr_per_gram
+    ) > 0:
+        k24 = float(ticker.ticker_manual_24k_inr_per_gram)
+    else:
+        k24 = k22 / 0.916
+    k24 = round(k24, 2)
+    k22_r = round(k22, 2)
+    return {
+        "currency": "INR",
+        "unit": "per_gram",
+        "source": "manual_ticker",
+        "note": "Admin-set ticker rates (override global spot for platform 22K base and public ticker).",
+        "gold": {
+            "24K": k24,
+            "22K": k22_r,
+            "21K": round(k24 * GOLD_KARAT_PURITY["21K"], 2),
+            "18K": round(k24 * GOLD_KARAT_PURITY["18K"], 2),
+        },
+        "silver": {},
+    }
 
 
 def _platform_ticker_fallback_inr() -> dict:
@@ -176,6 +210,14 @@ class MarketplaceSpotPricesView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
+        ticker = get_or_create_ticker()
+        if (
+            ticker.manual_ticker_enabled
+            and ticker.ticker_manual_22k_inr_per_gram is not None
+            and ticker.ticker_manual_22k_inr_per_gram > 0
+        ):
+            return Response(_manual_ticker_spot_payload(ticker))
+
         cached = cache.get(_CACHE_KEY_INR)
         if cached is not None:
             return Response(cached)

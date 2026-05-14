@@ -17,3 +17,15 @@ export function userDashboardPath(user: AuthUser): string {
       return '/'
   }
 }
+
+/** After login or “open dashboard”: surface KYC/KYB until the account is verified. */
+export function dashboardLandingPath(user: AuthUser): string {
+  const base = userDashboardPath(user)
+  if (user.user_type === 'customer' && user.kyc_status !== 'verified') {
+    return `${base}?section=profile_kyc`
+  }
+  if (user.user_type === 'jeweller' && user.kyc_status !== 'verified') {
+    return `${base}?section=prof_kyb`
+  }
+  return base
+}

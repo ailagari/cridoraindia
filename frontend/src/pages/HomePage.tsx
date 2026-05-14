@@ -9,39 +9,39 @@ const POSITIONING_LINE =
 const TAGLINE = 'Live gold savings, portfolio & redemption network'
 
 const HERO_POINTS = [
-  'Buy gold: fractional purchase, verified gold deposit, and GoldNest (recurring savings) — BIS 916, India only; live portfolio value.',
-  'Track gold: total grams, live ₹ value, profit/loss, redeemable quantity; ledgers split by fractional, deposit, and GoldNest.',
-  'Use & redeem: ornament redemption (same-jeweller making-charge benefits or cross-jeweller settlement), cash sellback, 0% gold loans (2% processing), transfers, and emergency liquidity — nationwide in the Cridora network.',
+  'Accumulate gold across verified jewellers with clear vault IDs.',
+  'See grams and live value without drowning in feature lists.',
+  'Redeem or transfer with policies visible before you confirm.',
 ] as const
 
 const EXPLORE = [
   {
-    title: 'Why Cridora',
-    blurb: 'Trust positioning for savers, jewellers, and the platform — buy, track, use, redeem anywhere in the network.',
-    to: '/why-cridora',
+    title: 'How it works',
+    blurb: 'Four calm steps from jeweller choice to redemption.',
+    to: '/how-it-works',
     primary: true,
+    cta: 'View flow',
+  },
+  {
+    title: 'Why Cridora',
+    blurb: 'Positioning for savers and partners—when you want the full narrative.',
+    to: '/why-cridora',
+    primary: false,
     cta: 'Read more',
   },
   {
-    title: 'Features',
-    blurb: 'Marketplace, portfolio, ornament and cash redemption, loans, transfers, and emergency funds — how each path works.',
-    to: '/features',
-    primary: false,
-    cta: 'View features',
-  },
-  {
-    title: 'Jeweller marketplace',
-    blurb: 'Pick trusted partners — live rate, sellback, lock-in, credibility, same-store benefits, cross-redemption fees.',
+    title: 'Jewellers',
+    blurb: 'Compare verified storefronts, rates, and trust signals.',
     to: '/jewellers',
     primary: false,
-    cta: 'Compare jewellers',
+    cta: 'Browse network',
   },
   {
-    title: 'Product marketplace',
-    blurb: 'Ornaments and coins with BIS 916, making charges, and “Use your gold” checkout.',
+    title: 'Products',
+    blurb: 'BIS 916 ornaments with transparent pricing inputs.',
     to: '/marketplace',
     primary: false,
-    cta: 'Browse products',
+    cta: 'Browse showcase',
   },
 ] as const
 
@@ -119,13 +119,13 @@ export function HomePage() {
                 }}
               >
                 <Link to="/signup" className="btn btn-primary">
-                  Open a customer account
+                  Open account
                 </Link>
-                <Link to="/jeweller/apply" className="btn btn-ghost">
-                  Apply as jeweller
+                <Link to="/how-it-works" className="btn btn-ghost">
+                  How it works
                 </Link>
-                <Link to="/marketplace" className="btn btn-ghost">
-                  Product marketplace
+                <Link to="/waitlist" className="btn btn-ghost">
+                  Waitlist
                 </Link>
               </div>
             </div>
@@ -204,29 +204,22 @@ export function HomePage() {
               }}
             >
               <li>
-                <strong style={{ color: 'var(--text)' }}>Three holding types</strong> — fractional gold, verified
-                deposits, and GoldNest; each appears separately in portfolio, ledgers, redemption, and reports.
+                <strong style={{ color: 'var(--text)' }}>Vault-aware ledger</strong> — fractional gold, deposits, and schemes stay
+                separated per jeweller relationship.
               </li>
               <li>
-                <strong style={{ color: 'var(--text)' }}>Portfolio dashboard</strong> — total grams, live value,
-                profit/loss, redeemable gold; per-jeweller detail with lock-in and eligibility.
+                <strong style={{ color: 'var(--text)' }}>Portfolio clarity</strong> — grams, indicative value, and eligibility without redundant dashboards.
               </li>
               <li>
-                <strong style={{ color: 'var(--text)' }}>Ornament redemption</strong> — same jeweller: making-charge
-                benefits (0%, reduced, category rules). Other jeweller: making, GST on making, cross-platform fee; gold
-                liability settles between partners.
-              </li>
-              <li>
-                <strong style={{ color: 'var(--text)' }}>Trust gates</strong> — customer KYC, jeweller verification,
-                product and marketplace moderation before anything goes public.
+                <strong style={{ color: 'var(--text)' }}>Governed marketplace</strong> — KYC, KYB, and listing review before anything is public.
               </li>
             </ul>
             <p style={{ marginTop: '1.25rem', display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
-              <Link to="/why-cridora" className="btn btn-ghost">
-                Why Cridora
+              <Link to="/how-it-works" className="btn btn-ghost">
+                How it works
               </Link>
-              <Link to="/features" className="btn btn-ghost">
-                Platform features
+              <Link to="/investors" className="btn btn-ghost">
+                Investors
               </Link>
             </p>
             <div className="media-frame media-frame--trust-strip">
@@ -258,8 +251,7 @@ export function HomePage() {
             ...sd(d()),
           }}
         >
-          Start from a small amount, compare jewellers, and use gold as a utility — with KYC, KYB, and admin review on
-          public listings. Today’s network focuses on gold, BIS 916, and India. Deeper narrative on{' '}
+          Start small, compare jewellers, and treat gold as infrastructure—not noise. India-first, BIS 916 focus. Deeper story on{' '}
           <Link to="/why-cridora">Why Cridora</Link>.
         </p>
         <div

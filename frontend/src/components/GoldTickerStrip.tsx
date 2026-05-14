@@ -70,20 +70,24 @@ export function GoldTickerStrip({ variant = 'public' }: Props) {
         : NaN
 
   const headline =
-    spot?.source === 'spot'
-      ? 'Live INR · global spot (XAU)'
-      : spot?.source === 'stale_cache'
-        ? 'INR rates (cached spot)'
-        : spot?.source === 'platform_floor'
-          ? 'Platform benchmark (INR)'
-          : spot == null && adminFallback != null
+    spot?.source === 'manual_ticker'
+      ? 'Ticker · admin set (INR)'
+      : spot?.source === 'spot'
+        ? 'Live INR · global spot (XAU)'
+        : spot?.source === 'stale_cache'
+          ? 'INR rates (cached spot)'
+          : spot?.source === 'platform_floor'
             ? 'Platform benchmark (INR)'
-            : 'Gold rates (INR)'
+            : spot == null && adminFallback != null
+              ? 'Platform benchmark (INR)'
+              : 'Gold rates (INR)'
 
   const subNote =
-    spot?.source === 'spot' || spot?.source === 'stale_cache'
-      ? 'BIS 916 / 22K and 24K fine · indicative · not IBJA'
-      : 'BIS 916 / 22K · admin reference when spot offline'
+    spot?.source === 'manual_ticker'
+      ? 'BIS 916 / 22K and 24K · values set in admin'
+      : spot?.source === 'spot' || spot?.source === 'stale_cache'
+        ? 'BIS 916 / 22K and 24K fine · indicative · not IBJA'
+        : 'BIS 916 / 22K · admin reference when spot offline'
 
   if (variant === 'dash') {
     return (

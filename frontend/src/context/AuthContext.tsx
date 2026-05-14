@@ -37,6 +37,17 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null)
 
+function extractApiMessage(data: Record<string, unknown>, fallback: string): string {
+  const d = data.detail
+  if (typeof d === 'string' && d) return d
+  const parts: string[] = []
+  for (const v of Object.values(data)) {
+    if (Array.isArray(v) && v.length > 0) parts.push(String(v[0]))
+    else if (typeof v === 'string' && v) parts.push(v)
+  }
+  return parts.join(' ') || fallback
+}
+
 function readStoredUser(): AuthUser | null {
   const raw = localStorage.getItem('cridora_user')
   if (!raw) return null
@@ -92,13 +103,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         unknown
       >
       if (!res.ok) {
-        const em = data.email
-        const pw = data.password
-        const msg =
-          (Array.isArray(em) ? String(em[0]) : em != null ? String(em) : '') ||
-          (Array.isArray(pw) ? String(pw[0]) : pw != null ? String(pw) : '') ||
-          (data.detail != null ? String(data.detail) : '') ||
-          'Sign in failed'
+        const msg = extractApiMessage(data, 'Sign in failed')
         throw new Error(msg)
       }
       return persistSession(data)
@@ -117,12 +122,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         unknown
       >
       if (!res.ok) {
-        const em = data.email
-        const msg =
-          (Array.isArray(em) ? String(em[0]) : em != null ? String(em) : '') ||
-          (data.detail != null ? String(data.detail) : '') ||
-          'Registration failed'
-        throw new Error(msg)
+        throw new Error(extractApiMessage(data, 'Registration failed'))
       }
       return persistSession(data)
     },
@@ -140,12 +140,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         unknown
       >
       if (!res.ok) {
-        const em = data.email
-        const msg =
-          (Array.isArray(em) ? String(em[0]) : em != null ? String(em) : '') ||
-          (data.detail != null ? String(data.detail) : '') ||
-          'Application failed'
-        throw new Error(msg)
+        throw new Error(extractApiMessage(data, 'Application failed'))
       }
       return persistSession(data)
     },

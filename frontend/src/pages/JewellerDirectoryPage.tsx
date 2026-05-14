@@ -25,23 +25,25 @@ export function JewellerDirectoryPage() {
           }}
         />
         <div className="container" style={{ position: 'relative', zIndex: 1 }}>
-          <span className="pill">Compare showrooms · KYB verified</span>
+          <span className="pill">Verified network</span>
           <h1
             style={{
-              fontSize: 'clamp(1.75rem, 4vw, 2.75rem)',
+              fontSize: 'clamp(1.85rem, 4vw, 2.65rem)',
               margin: '0.75rem 0',
-              textTransform: 'uppercase',
-              fontStyle: 'italic',
-              letterSpacing: '-0.03em',
+              fontWeight: 650,
+              letterSpacing: '-0.02em',
             }}
           >
-            Jeweller <span style={{ color: 'var(--gold-light)' }}>marketplace</span>
+            Jeweller marketplace
           </h1>
+          <p style={{ margin: 0, maxWidth: '46ch', color: 'var(--text-muted)', lineHeight: 1.55 }}>
+            Compare live references, sellback posture, and trust signals—one row per showroom.
+          </p>
         </div>
       </section>
 
       <div className="container" style={{ marginTop: '2rem' }}>
-        <JewellerMarketplaceGrid intro="Each card summarises identity, live and sellback rates, lock-in rules, minimum redeemable gold, same-store making benefits, cross-redemption fees, credibility signals, and shortcuts to products or signup. Preview rows fill in when live data is thin; verified KYB listings replace matching names automatically. Sort by making charge, buyback, deposit yield, or loan availability." />
+        <JewellerMarketplaceGrid intro="Cards reflect KYB-verified jewellers: identity, indicative rates, lock-in, credibility, and shortcuts into products." />
       </div>
     </div>
   )

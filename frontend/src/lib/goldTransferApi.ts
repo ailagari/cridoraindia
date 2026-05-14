@@ -1,12 +1,25 @@
 import { authFetch } from '@/lib/api'
 
+export type VaultRowDTO = {
+  vault_public_id: string
+  custodian_id: number
+  custodian_label: string
+  fractional_grams: string
+}
+
 export type GoldWalletDTO = {
   cridora_member_id: string
+  cridora_global_id?: string
+  merchant_cridora_id?: string
   gold_upi: string
   gold_handle_local: string
   jeweller_code: string
   default_jeweller_id: number | null
+  jeweller_pref_nearby_id?: number | null
+  jeweller_pref_ornament_id?: number | null
+  jeweller_pref_redemption_id?: number | null
   balance_grams: string
+  vaults?: VaultRowDTO[]
 }
 
 export type GoldResolveRecipient = {
