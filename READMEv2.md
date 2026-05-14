@@ -1,4 +1,4 @@
-# Cridora India v2 — MVP build spec (agent reference)
+# Cridora India v2 — MVP build spec (agentt reference)
 
 **Stack:** React + Vite (`frontend/`) · Django REST (`backend/`)
 
