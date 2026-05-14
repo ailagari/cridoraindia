@@ -133,6 +133,12 @@ class JewellerPricingProfileSerializer(serializers.ModelSerializer):
             "feat_goldnest_available",
             "feat_emergency_funds",
             "feat_cross_redemption",
+            "golden_scheme_enabled",
+            "golden_scheme_duration_months",
+            "golden_scheme_min_monthly_inr",
+            "golden_scheme_lock_in_note",
+            "golden_scheme_benefits",
+            "golden_scheme_rate_application_note",
             "updated_at",
             "jeweller_metal_rate_effective_updated_at",
         )
@@ -229,6 +235,20 @@ class PublicMarketplaceProductSerializer(serializers.BaseSerializer):
         return _annotate_product_public(product, expose_platform_base=False)
 
 
+def _golden_scheme_storefront_summary(profile: JewellerPricingProfile) -> str:
+    if not profile.golden_scheme_enabled:
+        return ""
+    parts: list[str] = []
+    if profile.golden_scheme_duration_months:
+        parts.append(f"{profile.golden_scheme_duration_months}-month plan")
+    if (
+        profile.golden_scheme_min_monthly_inr is not None
+        and profile.golden_scheme_min_monthly_inr > 0
+    ):
+        parts.append(f"from ₹{profile.golden_scheme_min_monthly_inr}/mo")
+    return " · ".join(parts) if parts else "Golden Scheme — see showroom"
+
+
 def public_jeweller_storefront(user) -> dict:
     profile = jeweller_profile_for(user)
     cridora_base, _ = resolve_cridora_base_22k_inr()
@@ -292,6 +312,22 @@ def public_jeweller_storefront(user) -> dict:
         "feat_goldnest_available": profile.feat_goldnest_available,
         "feat_emergency_funds": profile.feat_emergency_funds,
         "feat_cross_redemption": profile.feat_cross_redemption,
+        "golden_scheme_enabled": profile.golden_scheme_enabled,
+        "golden_scheme_summary": _golden_scheme_storefront_summary(profile),
+        "golden_scheme_duration_months": (
+            str(profile.golden_scheme_duration_months)
+            if profile.golden_scheme_duration_months
+            else ""
+        ),
+        "golden_scheme_min_monthly_inr": (
+            str(profile.golden_scheme_min_monthly_inr)
+            if profile.golden_scheme_min_monthly_inr is not None
+            else ""
+        ),
+        "golden_scheme_lock_in_note": profile.golden_scheme_lock_in_note or "",
+        "golden_scheme_benefits": profile.golden_scheme_benefits or "",
+        "golden_scheme_rate_application_note": profile.golden_scheme_rate_application_note
+        or "",
     }
 
 

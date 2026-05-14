@@ -246,9 +246,28 @@ export function NotificationBell({ compact = false, role = 'customer' }: Props) 
             </button>
           </div>
           <p className="notif-panel-hint">
-            {useAdminFeed
-              ? 'Uploads awaiting KYC or KYB review appear here. Enable device notifications to get pushes on this phone or desktop.'
-              : 'In-app alerts below are samples. Turn on browser notifications to get real alerts on this device (HTTPS or localhost; install the PWA on iOS 16.4+ for Web Push).'}
+            {useAdminFeed ? (
+              <>
+                Uploads awaiting KYC or KYB review appear here.
+                {pushServerReady === false ? (
+                  <span>
+                    {' '}
+                    <strong>Unavailable on this deployment:</strong> Web Push needs VAPID keys on the server (hosting env
+                    vars). Enable still appears once keys are set.
+                  </span>
+                ) : (
+                  ' Enable device notifications to get pushes on this phone or desktop.'
+                )}
+              </>
+            ) : pushServerReady === false ? (
+              <>
+                <strong>Unavailable on this deployment.</strong> Web Push needs VAPID keys on the server (hosting env vars:
+                WEB_PUSH_VAPID_PUBLIC_KEY, WEB_PUSH_VAPID_PRIVATE_KEY, WEB_PUSH_VAPID_CONTACT). Sample alerts below still appear
+                here for UI preview — they are not live notifications.
+              </>
+            ) : (
+              'In-app alerts below are samples. Turn on browser notifications to get real alerts on this device (HTTPS or localhost; install the PWA on iOS 16.4+ for Web Push).'
+            )}
           </p>
           {adminFeedError ? <p className="form-error notif-panel-hint">{adminFeedError}</p> : null}
           {user ? (
@@ -264,9 +283,7 @@ export function NotificationBell({ compact = false, role = 'customer' }: Props) 
                 ) : pushServerReady === false ? (
                   <>
                     <span className="notif-push-status">Unavailable on this deployment</span>
-                    <span className="notif-push-detail">
-                      Web Push needs VAPID keys on the server (hosting env vars). Sample alerts below still appear here.
-                    </span>
+                    <span className="notif-push-detail">See the note above — VAPID env vars are missing on the server.</span>
                   </>
                 ) : pushServerReady === null ? (
                   <span className="notif-push-status">Checking server setup…</span>

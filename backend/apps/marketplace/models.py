@@ -195,6 +195,36 @@ class JewellerPricingProfile(models.Model):
         blank=True,
         help_text="Optional URL of your gold-rate feed for reference; not fetched automatically by Cridora yet.",
     )
+    golden_scheme_enabled = models.BooleanField(
+        default=False,
+        help_text="Jeweller offers a Golden Scheme (monthly jewellery savings) disclosure on storefront.",
+    )
+    golden_scheme_duration_months = models.PositiveSmallIntegerField(
+        null=True,
+        blank=True,
+        help_text="Typical plan duration in months (MVP disclosure).",
+    )
+    golden_scheme_min_monthly_inr = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Minimum monthly contribution (₹) disclosed to customers.",
+    )
+    golden_scheme_lock_in_note = models.CharField(
+        max_length=240,
+        blank=True,
+        help_text="Lock-in / tenure rules for the scheme (customer-facing).",
+    )
+    golden_scheme_benefits = models.TextField(
+        blank=True,
+        help_text="Benefits narrative (bonus months, ornament benefits, etc.).",
+    )
+    golden_scheme_rate_application_note = models.CharField(
+        max_length=280,
+        blank=True,
+        help_text="How gold rate applies e.g. at investment vs redemption (MVP disclosure).",
+    )
 
     def __str__(self):
         return f"PricingProfile({self.jeweller_id})"

@@ -96,6 +96,13 @@ export type JewellerStorefrontDTO = {
   feat_goldnest_available: boolean
   feat_emergency_funds: boolean
   feat_cross_redemption: boolean
+  golden_scheme_enabled?: boolean
+  golden_scheme_summary?: string
+  golden_scheme_duration_months?: string
+  golden_scheme_min_monthly_inr?: string
+  golden_scheme_lock_in_note?: string
+  golden_scheme_benefits?: string
+  golden_scheme_rate_application_note?: string
 }
 
 export async function fetchMarketplaceProduct(id: number): Promise<MarketplaceProductDTO | null> {

@@ -450,6 +450,11 @@ export function JewellerMarketplaceGrid({ intro }: Props) {
                       <strong style={{ color: 'var(--text)' }}>Same-store MC:</strong>{' '}
                       {dashEmpty(j.same_store_mc_benefit ?? '')}
                     </div>
+                    {j.golden_scheme_enabled && (j.golden_scheme_summary ?? '').trim() !== '' ? (
+                      <div>
+                        <strong style={{ color: 'var(--text)' }}>Golden Scheme:</strong> {j.golden_scheme_summary}
+                      </div>
+                    ) : null}
                   </div>
                 </div>
 

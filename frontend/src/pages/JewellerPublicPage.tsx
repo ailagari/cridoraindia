@@ -155,6 +155,36 @@ export function JewellerPublicPage() {
           </div>
         ) : null}
 
+        {row.golden_scheme_enabled ? (
+          <div className="card" style={{ marginTop: '1.5rem', padding: '1.25rem', borderRadius: 20 }}>
+            <h2 style={{ margin: '0 0 0.75rem', fontSize: '1rem' }}>Golden Scheme (jewellery savings)</h2>
+            {(row.golden_scheme_summary ?? '').trim() !== '' ? (
+              <p style={{ margin: '0 0 0.75rem', fontWeight: 700, color: 'var(--gold-light)' }}>{row.golden_scheme_summary}</p>
+            ) : null}
+            <ul style={{ margin: 0, paddingLeft: '1.1rem', color: 'var(--text-muted)', fontSize: '0.88rem', lineHeight: 1.55 }}>
+              {(row.golden_scheme_duration_months ?? '').trim() !== '' ? (
+                <li>Typical tenure: {row.golden_scheme_duration_months} months</li>
+              ) : null}
+              {(row.golden_scheme_min_monthly_inr ?? '').trim() !== '' ? (
+                <li>
+                  Minimum monthly contribution: ₹{formatInr(parseNum(row.golden_scheme_min_monthly_inr ?? '0'), 0)}
+                </li>
+              ) : null}
+              {(row.golden_scheme_lock_in_note ?? '').trim() !== '' ? (
+                <li>Lock-in / tenure: {row.golden_scheme_lock_in_note}</li>
+              ) : null}
+              {(row.golden_scheme_rate_application_note ?? '').trim() !== '' ? (
+                <li>Gold rate: {row.golden_scheme_rate_application_note}</li>
+              ) : null}
+            </ul>
+            {(row.golden_scheme_benefits ?? '').trim() !== '' ? (
+              <p style={{ margin: '0.85rem 0 0', whiteSpace: 'pre-wrap', color: 'var(--text-muted)', fontSize: '0.88rem' }}>
+                {row.golden_scheme_benefits}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+
         <p style={{ marginTop: '1.5rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
           {row.approved_listing_count} approved listing{row.approved_listing_count === 1 ? '' : 's'} on the product marketplace.
         </p>

@@ -40,6 +40,13 @@ function demoBase(overrides: Partial<JewellerStorefrontDTO>): JewellerStorefront
     feat_goldnest_available: false,
     feat_emergency_funds: false,
     feat_cross_redemption: true,
+    golden_scheme_enabled: false,
+    golden_scheme_summary: '',
+    golden_scheme_duration_months: '',
+    golden_scheme_min_monthly_inr: '',
+    golden_scheme_lock_in_note: '',
+    golden_scheme_benefits: '',
+    golden_scheme_rate_application_note: '',
     ...overrides,
   }
 }

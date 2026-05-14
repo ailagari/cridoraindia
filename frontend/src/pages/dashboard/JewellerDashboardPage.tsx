@@ -6,6 +6,7 @@ import { JewellerKybWorkflow } from '@/features/jeweller/JewellerKybWorkflow'
 import { JewellerPortfolioPanel } from '@/features/portfolio/JewellerPortfolioPanel'
 import { GoldTransferPanel } from '@/features/gold/GoldTransferPanel'
 import { JewellerMarketplacePanel } from '@/features/marketplace/JewellerMarketplacePanel'
+import { JewellerRatesSchemesPanel } from '@/features/marketplace/JewellerRatesSchemesPanel'
 import { JewellerFractionalVerifyPanel } from '@/features/invest/JewellerFractionalVerifyPanel'
 import { useAuth } from '@/context/AuthContext'
 import { authFetch } from '@/lib/api'
@@ -85,10 +86,9 @@ export function JewellerDashboardPage() {
       ) : null}
       {active === 'mkt_products' ? <JewellerMarketplacePanel /> : null}
       {active === 'mkt_policy' ? (
-        <Coming
-          title="Rates & schemes"
-          body="GoldNest, live rates, lock-in, and cross-redemption rules — publish only after Cridora approval."
-        />
+        <div className="dash-panel-max">
+          <JewellerRatesSchemesPanel />
+        </div>
       ) : null}
       {active === 'txn_purchases' ? (
         <div className="dash-panel-max">
