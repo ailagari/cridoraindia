@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
+import { LIVE_PRICE_POLL_MS } from '@/lib/liveDeskIntervals'
 import { fetchGoldTicker } from '@/lib/marketplaceApi'
+import { useLivePoll } from '@/lib/useLivePoll'
 
 export type LiveCridoraBase = {
   platformBaseInrPerGram22k: string
@@ -7,12 +9,10 @@ export type LiveCridoraBase = {
   updatedAt?: string
 }
 
-const DEFAULT_POLL_MS = 60_000
-
 /**
- * Resolved Cridora 22K ₹/g from the gold-ticker API (live spot / cache / admin fallback).
+ * Resolved Cridora 22K ₹/g from the gold-ticker API (HTTP polling while tab visible).
  */
-export function useLiveCridoraBase(pollMs: number = DEFAULT_POLL_MS) {
+export function useLiveCridoraBase(pollMs: number = LIVE_PRICE_POLL_MS) {
   const [data, setData] = useState<LiveCridoraBase | null>(null)
 
   const refresh = useCallback(async () => {
@@ -28,18 +28,10 @@ export function useLiveCridoraBase(pollMs: number = DEFAULT_POLL_MS) {
   }, [])
 
   useEffect(() => {
-    let cancelled = false
-    void (async () => {
-      await refresh()
-    })()
-    const id = window.setInterval(() => {
-      if (!cancelled) void refresh()
-    }, pollMs)
-    return () => {
-      cancelled = true
-      window.clearInterval(id)
-    }
-  }, [refresh, pollMs])
+    void refresh()
+  }, [refresh])
+
+  useLivePoll(refresh, pollMs, true)
 
   return { data, refresh }
 }

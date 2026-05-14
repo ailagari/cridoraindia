@@ -6,6 +6,8 @@ import { FractionalPurchasePanel } from '@/features/invest/FractionalPurchasePan
 import { CustomerKycWorkflow } from '@/features/customer/CustomerKycWorkflow'
 import { CustomerPortfolioPanel } from '@/features/portfolio/CustomerPortfolioPanel'
 import { useAuth } from '@/context/AuthContext'
+import { LIVE_PROFILE_POLL_MS } from '@/lib/liveDeskIntervals'
+import { useLivePoll } from '@/lib/useLivePoll'
 import {
   CUSTOMER_DEFAULT_SECTION,
   CUSTOMER_NAV_GROUPS,
@@ -40,6 +42,8 @@ export function CustomerDashboardPage() {
   useEffect(() => {
     void refreshProfile()
   }, [refreshProfile])
+
+  useLivePoll(refreshProfile, LIVE_PROFILE_POLL_MS, true)
 
   const normalized = normalizeCustomerSection(rawSection)
   const active = normalized ?? CUSTOMER_DEFAULT_SECTION

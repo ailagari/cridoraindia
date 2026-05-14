@@ -24,6 +24,9 @@ FRONTEND_DIST = Path(
     os.environ.get("FRONTEND_DIST", str(BASE_DIR.parent / "frontend" / "dist"))
 ).resolve()
 
+# Absolute URLs for KYC document links in emails/admin when Request has no Host (optional).
+DJANGO_PUBLIC_BASE_URL = (os.environ.get("DJANGO_PUBLIC_BASE_URL") or "").strip().rstrip("/")
+
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",

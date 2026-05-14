@@ -27,7 +27,6 @@ export function JewellerApplyPage() {
   const [lastName, setLastName] = useState('')
   const [phone, setPhone] = useState('')
   const [businessName, setBusinessName] = useState('')
-  const [gstin, setGstin] = useState('')
   const [shopAddress, setShopAddress] = useState('')
   const [city, setCity] = useState('')
   const [state, setState] = useState('')
@@ -47,7 +46,6 @@ export function JewellerApplyPage() {
         last_name: lastName,
         phone,
         business_name: businessName,
-        gstin: gstin.toUpperCase(),
         shop_address: shopAddress,
         city,
         state,
@@ -78,8 +76,8 @@ export function JewellerApplyPage() {
         <span className="pill">Jeweller KYB</span>
         <h1 style={{ marginTop: '0.75rem', fontSize: 'clamp(1.35rem, 3vw, 1.65rem)' }}>Apply to join the network</h1>
         <p style={{ color: 'var(--text-muted)', marginTop: 0, lineHeight: 1.55 }}>
-          Create your account with email and password — signed in immediately. Upload KYB documents next; approved jewellers
-          unlock operational tools.
+          Create your account with email and password — signed in immediately. Upload KYB documents next; add your GSTIN later under{' '}
+          <strong style={{ color: 'var(--text)' }}>Business</strong> in the jeweller dashboard. Approved jewellers unlock operational tools.
         </p>
         <form onSubmit={onSubmit} style={{ marginTop: '1.25rem', display: 'grid', gap: '0.85rem' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
@@ -122,17 +120,6 @@ export function JewellerApplyPage() {
           <div className="field">
             <label htmlFor="biz">Registered business / brand name</label>
             <input id="biz" value={businessName} onChange={(e) => setBusinessName(e.target.value)} required />
-          </div>
-          <div className="field">
-            <label htmlFor="gstin">15-character GSTIN</label>
-            <input
-              id="gstin"
-              value={gstin}
-              onChange={(e) => setGstin(e.target.value.toUpperCase())}
-              maxLength={15}
-              minLength={15}
-              required
-            />
           </div>
           <div className="field">
             <label htmlFor="addr">Shop address</label>

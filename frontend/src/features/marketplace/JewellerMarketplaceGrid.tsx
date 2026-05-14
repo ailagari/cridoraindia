@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react'
 import { Link } from 'react-router-dom'
 import { mergeJewellerListWithDemos } from '@/lib/jewellerMarketplaceDemos'
+import { LIVE_STOREFRONT_GRID_POLL_MS } from '@/lib/liveDeskIntervals'
 import { fetchVerifiedJewellers, type JewellerStorefrontDTO } from '@/lib/marketplaceApi'
 import { useLiveCridoraBase } from '@/hooks/useLiveCridoraBase'
 
@@ -98,7 +99,7 @@ export function JewellerMarketplaceGrid({ intro }: Props) {
   const [selectedCity, setSelectedCity] = useState('All Cities')
   const [sortBy, setSortBy] = useState<JewellerSortKey>('name')
 
-  const { data: liveBase, refresh: refreshLiveBase } = useLiveCridoraBase()
+  const { data: liveBase } = useLiveCridoraBase()
 
   const refresh = useCallback(async () => {
     const data = await fetchVerifiedJewellers()
@@ -112,10 +113,9 @@ export function JewellerMarketplaceGrid({ intro }: Props) {
   useEffect(() => {
     const id = window.setInterval(() => {
       void refresh()
-      void refreshLiveBase()
-    }, 60_000)
+    }, LIVE_STOREFRONT_GRID_POLL_MS)
     return () => window.clearInterval(id)
-  }, [refresh, refreshLiveBase])
+  }, [refresh])
 
   const cities = useMemo(() => {
     const set = new Set<string>()

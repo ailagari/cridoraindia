@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react'
 import { authFetch } from '@/lib/api'
 import { fetchGoldTicker, type GoldTickerPayload } from '@/lib/marketplaceApi'
+import { LIVE_MARKETPLACE_EDITOR_POLL_MS } from '@/lib/liveDeskIntervals'
 import { MAKING_FIXED_PER_GRAM, MAKING_PERCENT_OF_METAL } from '@/lib/marketplacePricing'
+import { useLivePoll } from '@/lib/useLivePoll'
 
 type ProductRow = Record<string, unknown>
 
@@ -180,9 +182,21 @@ export function JewellerMarketplacePanel() {
     setProducts(lJson.results ?? [])
   }, [])
 
+  const pollProductsAndTicker = useCallback(async () => {
+    if (busy) return
+    const tk = await fetchGoldTicker()
+    setTicker(tk)
+    const ls = await authFetch('/api/v1/jeweller/marketplace/products/')
+    if (!ls.ok) return
+    const lJson = (await ls.json()) as { results: ProductRow[] }
+    setProducts(lJson.results ?? [])
+  }, [busy])
+
   useEffect(() => {
     void refresh()
   }, [refresh])
+
+  useLivePoll(pollProductsAndTicker, LIVE_MARKETPLACE_EDITOR_POLL_MS, true)
 
   const saveProfile = async () => {
     setBusy(true)

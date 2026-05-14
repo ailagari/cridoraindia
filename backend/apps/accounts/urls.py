@@ -6,6 +6,7 @@ from .views import (
     CustomerRegisterView,
     HealthView,
     JewellerApplyView,
+    JewellerBusinessProfileView,
     KYDocumentListView,
     KYDocumentUploadView,
     LoginView,
@@ -22,10 +23,14 @@ from .views_gold import (
 )
 from .views_admin import (
     AdminCustomerKYCActionView,
+    AdminDocumentRequestReuploadView,
     AdminFreezeUserView,
     AdminJewellerKYBActionView,
+    AdminNotificationsListView,
+    AdminNotificationsMarkReadView,
     AdminOverviewView,
     AdminUserDocumentsView,
+    AdminVerificationRevokeView,
 )
 from .fractional_views import (
     FractionalOrderConfirmUpiView,
@@ -50,6 +55,7 @@ urlpatterns = [
     path("auth/register/", CustomerRegisterView.as_view()),
     path("auth/jeweller/apply/", JewellerApplyView.as_view()),
     path("auth/me/", MeView.as_view()),
+    path("jeweller/business-profile/", JewellerBusinessProfileView.as_view()),
     path("gold/wallet/", GoldWalletView.as_view()),
     path("gold/resolve/", GoldUPIResolveView.as_view()),
     path("gold/transfers/", GoldTransferCreateView.as_view()),
@@ -73,6 +79,8 @@ urlpatterns = [
     path("kyc/documents/", KYDocumentListView.as_view()),
     path("kyc/documents/upload/", KYDocumentUploadView.as_view()),
     path("admin/overview/", AdminOverviewView.as_view()),
+    path("admin/notifications/", AdminNotificationsListView.as_view()),
+    path("admin/notifications/mark-read/", AdminNotificationsMarkReadView.as_view()),
     path(
         "admin/users/<int:user_id>/documents/",
         AdminUserDocumentsView.as_view(),
@@ -84,6 +92,14 @@ urlpatterns = [
     path(
         "admin/users/<int:user_id>/kyb/<str:action>/",
         AdminJewellerKYBActionView.as_view(),
+    ),
+    path(
+        "admin/users/<int:user_id>/verification/revoke/",
+        AdminVerificationRevokeView.as_view(),
+    ),
+    path(
+        "admin/users/<int:user_id>/documents/<int:doc_id>/request-reupload/",
+        AdminDocumentRequestReuploadView.as_view(),
     ),
     path("admin/users/<int:user_id>/freeze/", AdminFreezeUserView.as_view()),
 ]

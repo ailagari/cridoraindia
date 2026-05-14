@@ -1,5 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { LIVE_PRICE_POLL_MS } from '@/lib/liveDeskIntervals'
 import { fetchGoldTicker, fetchSpotPrices, type GoldTickerPayload, type SpotPricesPayload } from '@/lib/marketplaceApi'
+import { useLivePoll } from '@/lib/useLivePoll'
 
 function formatInr(n: number, fractionDigits = 0): string {
   return n.toLocaleString('en-IN', { maximumFractionDigits: fractionDigits })
@@ -23,33 +25,28 @@ export function GoldTickerStrip({ variant = 'public' }: Props) {
   const [spot, setSpot] = useState<SpotPricesPayload | null>(null)
   const [adminFallback, setAdminFallback] = useState<GoldTickerPayload | null>(null)
 
-  useEffect(() => {
-    let cancelled = false
-    const load = () => {
-      void (async () => {
-        const sp = await fetchSpotPrices()
-        if (cancelled) {
-          return
-        }
-        setSpot(sp)
-        const needAdmin = !sp || !sp.gold || spot22k(sp) == null
-        if (needAdmin) {
-          const tick = await fetchGoldTicker()
-          if (!cancelled) {
-            setAdminFallback(tick)
-          }
-        } else if (!cancelled) {
-          setAdminFallback(null)
-        }
-      })()
-    }
-    load()
-    const id = window.setInterval(load, 60_000)
-    return () => {
-      cancelled = true
-      window.clearInterval(id)
-    }
+  const pollMs = LIVE_PRICE_POLL_MS
+  const pollLabel = useMemo(() => `${(pollMs / 1000).toFixed(1)}s`, [pollMs])
+
+  const load = useCallback(() => {
+    void (async () => {
+      const sp = await fetchSpotPrices()
+      setSpot(sp)
+      const needAdmin = !sp || !sp.gold || spot22k(sp) == null
+      if (needAdmin) {
+        const tick = await fetchGoldTicker()
+        setAdminFallback(tick)
+      } else {
+        setAdminFallback(null)
+      }
+    })()
   }, [])
+
+  useEffect(() => {
+    void load()
+  }, [load])
+
+  useLivePoll(load, pollMs, true)
 
   const s22 = spot ? spot22k(spot) : null
   const s24 = spot ? spot24k(spot) : null
@@ -169,7 +166,7 @@ export function GoldTickerStrip({ variant = 'public' }: Props) {
           /g
         </span>
         <span style={{ marginLeft: 'auto', fontSize: '0.65rem', color: 'var(--text-faint)' }}>
-          {subNote} · refresh ~1 min
+          {subNote} · auto · ~{pollLabel}
         </span>
       </div>
     </div>

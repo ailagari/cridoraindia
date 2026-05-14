@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { GoldResolveRecipient, GoldWalletDTO } from '@/lib/goldTransferApi'
+import { LIVE_BALANCE_POLL_MS } from '@/lib/liveDeskIntervals'
+import { useLivePoll } from '@/lib/useLivePoll'
 import {
   fetchGoldWallet,
   resolveGoldUPI,
@@ -35,6 +37,8 @@ export function GoldTransferPanel({ roleLabel }: Props) {
   useEffect(() => {
     void refreshWallet()
   }, [refreshWallet])
+
+  useLivePoll(refreshWallet, LIVE_BALANCE_POLL_MS, true)
 
   const onResolve = async () => {
     setResolveErr('')

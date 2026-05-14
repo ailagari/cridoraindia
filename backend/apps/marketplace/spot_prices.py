@@ -206,40 +206,44 @@ def _platform_ticker_fallback_inr() -> dict:
     }
 
 
+def public_spot_prices_payload() -> dict:
+    """Same JSON shape as MarketplaceSpotPricesView (AllowAny)."""
+    ticker = get_or_create_ticker()
+    if (
+        ticker.manual_ticker_enabled
+        and ticker.ticker_manual_22k_inr_per_gram is not None
+        and ticker.ticker_manual_22k_inr_per_gram > 0
+    ):
+        return _manual_ticker_spot_payload(ticker)
+
+    cached = cache.get(_CACHE_KEY_INR)
+    if cached is not None:
+        return cached
+
+    data = _build_spot_inr_from_feed()
+    if data is None:
+        stale = cache.get(_CACHE_KEY_LAST_GOOD)
+        if stale is not None:
+            return {
+                **stale,
+                "source": "stale_cache",
+                "note": "Last successful spot conversion — feed temporarily unavailable.",
+            }
+        return _platform_ticker_fallback_inr()
+
+    cache.set(_CACHE_KEY_INR, data, timeout=_CACHE_TTL)
+    cache.set(_CACHE_KEY_LAST_GOOD, data, timeout=_CACHE_TTL_LAST_GOOD)
+    try:
+        from .gold_rate_alerts import maybe_notify_gold_rate_move
+
+        maybe_notify_gold_rate_move()
+    except Exception:
+        logger.exception("Gold rate alert check failed after spot refresh")
+    return data
+
+
 class MarketplaceSpotPricesView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
-        ticker = get_or_create_ticker()
-        if (
-            ticker.manual_ticker_enabled
-            and ticker.ticker_manual_22k_inr_per_gram is not None
-            and ticker.ticker_manual_22k_inr_per_gram > 0
-        ):
-            return Response(_manual_ticker_spot_payload(ticker))
-
-        cached = cache.get(_CACHE_KEY_INR)
-        if cached is not None:
-            return Response(cached)
-
-        data = _build_spot_inr_from_feed()
-        if data is None:
-            stale = cache.get(_CACHE_KEY_LAST_GOOD)
-            if stale is not None:
-                out = {
-                    **stale,
-                    "source": "stale_cache",
-                    "note": "Last successful spot conversion — feed temporarily unavailable.",
-                }
-                return Response(out)
-            return Response(_platform_ticker_fallback_inr())
-
-        cache.set(_CACHE_KEY_INR, data, timeout=_CACHE_TTL)
-        cache.set(_CACHE_KEY_LAST_GOOD, data, timeout=_CACHE_TTL_LAST_GOOD)
-        try:
-            from .gold_rate_alerts import maybe_notify_gold_rate_move
-
-            maybe_notify_gold_rate_move()
-        except Exception:
-            logger.exception("Gold rate alert check failed after spot refresh")
-        return Response(data)
+        return Response(public_spot_prices_payload())

@@ -6,8 +6,14 @@ from rest_framework.views import APIView
 
 from django.contrib.auth import get_user_model
 
-from .models import BankAccount, KYDocument
-from .serializers import BankAccountSerializer, KYDocumentReadSerializer, UserMeSerializer
+from .models import AdminNotification, AdminNotificationRead, BankAccount, KYDocument
+from .serializers import (
+    AdminNotificationSerializer,
+    AdminUserInspectProfileSerializer,
+    BankAccountSerializer,
+    KYDocumentReadSerializer,
+    UserMeSerializer,
+)
 from .services.admin_access import user_is_platform_admin
 from .services.kyc_review import customer_in_review_queue, jeweller_in_review_queue
 
@@ -150,7 +156,7 @@ class AdminUserDocumentsView(APIView):
             except BankAccount.DoesNotExist:
                 bank = None
 
-        profile = UserMeSerializer(u, context={"request": request}).data
+        profile = AdminUserInspectProfileSerializer(u).data
 
         return Response({"profile": profile, "documents": payload, "bank": bank})
 
@@ -262,6 +268,139 @@ class AdminJewellerKYBActionView(APIView):
                 "kyc_status": user.kyc_status,
             }
         )
+
+
+class AdminVerificationRevokeView(APIView):
+    """Return customer/jeweller to pending review (drops public KYB visibility for jewellers)."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, user_id):
+        err = _require_admin(request)
+        if err:
+            return err
+        try:
+            user = User.objects.get(pk=user_id)
+        except User.DoesNotExist:
+            return Response(
+                {"detail": "User not found."}, status=status.HTTP_404_NOT_FOUND
+            )
+        if user.user_type not in (User.CUSTOMER, User.JEWELLER):
+            return Response(
+                {"detail": "Only customer or jeweller accounts can be revoked."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        user.kyc_status = User.KYC_PENDING
+        user.kyc_verified_at = None
+        user.save(update_fields=["kyc_status", "kyc_verified_at"])
+        return Response(
+            {
+                "detail": "Verification revoked; account is pending review again.",
+                "kyc_status": user.kyc_status,
+            }
+        )
+
+
+class AdminDocumentRequestReuploadView(APIView):
+    """Reject one document with reason and set account back to pending (jeweller drops public visibility)."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, user_id, doc_id):
+        err = _require_admin(request)
+        if err:
+            return err
+        reason = (request.data.get("reason") or "").strip()
+        if not reason:
+            return Response(
+                {"detail": "reason is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            doc = KYDocument.objects.select_related("user").get(
+                pk=doc_id, user_id=user_id
+            )
+        except KYDocument.DoesNotExist:
+            return Response(
+                {"detail": "Document not found."}, status=status.HTTP_404_NOT_FOUND
+            )
+        target = doc.user
+        if target.user_type not in (User.CUSTOMER, User.JEWELLER):
+            return Response(
+                {"detail": "Invalid account type for document review."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        now = timezone.now()
+        doc.status = KYDocument.DOC_REJECTED
+        doc.rejection_reason = reason
+        doc.reviewed_at = now
+        doc.save(update_fields=["status", "rejection_reason", "reviewed_at"])
+
+        target.kyc_status = User.KYC_PENDING
+        target.kyc_verified_at = None
+        target.save(update_fields=["kyc_status", "kyc_verified_at"])
+
+        return Response(
+            {
+                "detail": "Re-upload requested for this document.",
+                "kyc_status": target.kyc_status,
+                "document_id": doc.id,
+            }
+        )
+
+
+class AdminNotificationsListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        err = _require_admin(request)
+        if err:
+            return err
+        try:
+            limit = int(request.query_params.get("limit") or 40)
+        except ValueError:
+            limit = 40
+        limit = max(1, min(limit, 100))
+
+        rows = list(AdminNotification.objects.all()[:limit])
+        ids = [n.id for n in rows]
+        read_ids = set(
+            AdminNotificationRead.objects.filter(
+                user=request.user, notification_id__in=ids
+            ).values_list("notification_id", flat=True)
+        )
+        unread_in_feed = sum(1 for pk in ids if pk not in read_ids)
+        ser = AdminNotificationSerializer(
+            rows,
+            many=True,
+            context={"request": request, "read_ids": read_ids},
+        )
+        return Response({"results": ser.data, "unread_in_feed": unread_in_feed})
+
+
+class AdminNotificationsMarkReadView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        err = _require_admin(request)
+        if err:
+            return err
+        mark_all = bool(request.data.get("all"))
+        ids = request.data.get("notification_ids")
+        if mark_all:
+            qs = AdminNotification.objects.all().order_by("-id")[:500]
+        elif isinstance(ids, list) and ids:
+            qs = AdminNotification.objects.filter(id__in=ids[:200])
+        else:
+            return Response(
+                {"detail": "Provide notification_ids (array) or all=true."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        for notif in qs.iterator(chunk_size=100):
+            AdminNotificationRead.objects.get_or_create(
+                user=request.user, notification=notif
+            )
+        return Response({"ok": True})
 
 
 class AdminFreezeUserView(APIView):

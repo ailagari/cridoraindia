@@ -9,7 +9,9 @@ import {
   type FractionalQuoteDTO,
 } from '@/lib/fractionalPurchaseApi'
 import { fetchGoldWallet } from '@/lib/goldTransferApi'
+import { LIVE_BALANCE_POLL_MS } from '@/lib/liveDeskIntervals'
 import { useLiveCridoraBase } from '@/hooks/useLiveCridoraBase'
+import { useLivePoll } from '@/lib/useLivePoll'
 
 function formatInr(s: string): string {
   const n = Number.parseFloat(s)
@@ -49,9 +51,18 @@ export function FractionalPurchasePanel() {
     })
   }, [])
 
+  const refreshWalletHint = useCallback(async () => {
+    if (busy) return
+    const w = await fetchGoldWallet()
+    if (w) setBalanceHint(w.balance_grams)
+  }, [busy])
+
   useEffect(() => {
     void refreshOrders()
   }, [refreshOrders])
+
+  useLivePoll(refreshOrders, LIVE_BALANCE_POLL_MS, !busy)
+  useLivePoll(refreshWalletHint, LIVE_BALANCE_POLL_MS, !busy)
 
   const runQuote = async () => {
     setQuoteErr('')

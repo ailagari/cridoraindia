@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { DashboardLayout } from '@/components/DashboardLayout'
+import { JewellerBusinessProfilePanel } from '@/features/jeweller/JewellerBusinessProfilePanel'
 import { JewellerKybWorkflow } from '@/features/jeweller/JewellerKybWorkflow'
 import { JewellerPortfolioPanel } from '@/features/portfolio/JewellerPortfolioPanel'
 import { GoldTransferPanel } from '@/features/gold/GoldTransferPanel'
@@ -8,6 +9,8 @@ import { JewellerMarketplacePanel } from '@/features/marketplace/JewellerMarketp
 import { JewellerFractionalVerifyPanel } from '@/features/invest/JewellerFractionalVerifyPanel'
 import { useAuth } from '@/context/AuthContext'
 import { authFetch } from '@/lib/api'
+import { LIVE_PROFILE_POLL_MS } from '@/lib/liveDeskIntervals'
+import { useLivePoll } from '@/lib/useLivePoll'
 import {
   JEWELLER_DEFAULT_SECTION,
   JEWELLER_NAV_GROUPS,
@@ -47,6 +50,8 @@ export function JewellerDashboardPage() {
   useEffect(() => {
     void refreshProfile()
   }, [refreshProfile])
+
+  useLivePoll(refreshProfile, LIVE_PROFILE_POLL_MS, true)
 
   const normalized = normalizeJewellerSection(rawSection)
   const active = normalized ?? JEWELLER_DEFAULT_SECTION
@@ -99,9 +104,7 @@ export function JewellerDashboardPage() {
           <JewellerKybWorkflow />
         </div>
       ) : null}
-      {active === 'prof_more' ? (
-        <Coming title="Business profile" body="Payouts, showroom copy, and credibility inputs live here as storefront APIs expand." />
-      ) : null}
+      {active === 'prof_more' ? <JewellerBusinessProfilePanel /> : null}
     </DashboardLayout>
   )
 }
@@ -110,19 +113,19 @@ function JewellerOverview() {
   const { user } = useAuth()
   const [me, setMe] = useState<MeJson | null>(null)
 
-  useEffect(() => {
-    let cancel = false
-    void authFetch('/api/v1/auth/me/')
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        if (!cancel && data && typeof data === 'object') {
-          setMe(data as MeJson)
-        }
-      })
-    return () => {
-      cancel = true
+  const refreshMe = useCallback(async () => {
+    const r = await authFetch('/api/v1/auth/me/')
+    const data = r.ok ? ((await r.json()) as MeJson) : null
+    if (data && typeof data === 'object') {
+      setMe(data)
     }
-  }, [user?.id])
+  }, [])
+
+  useEffect(() => {
+    void refreshMe()
+  }, [refreshMe, user?.id])
+
+  useLivePoll(refreshMe, LIVE_PROFILE_POLL_MS, true)
 
   const tone =
     user?.kyc_status === 'verified' ? 'ok' : user?.kyc_status === 'rejected' ? 'bad' : 'wait'

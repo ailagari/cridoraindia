@@ -5,6 +5,8 @@ export type AppNotification = {
   time: string
   read: boolean
   kind: 'transaction' | 'kyc' | 'alert' | 'promo'
+  /** In-app navigation when supported (admin feed). */
+  link_path?: string
 }
 
 export const MOCK_NOTIFICATIONS: AppNotification[] = [

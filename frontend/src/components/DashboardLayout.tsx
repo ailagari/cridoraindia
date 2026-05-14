@@ -145,7 +145,10 @@ export function DashboardLayout({
                     }}
                     onClick={() => pickSection(item.sectionKey)}
                   >
-                    {item.label}
+                    <span className="dash-side-btn-label">{item.label}</span>
+                    {typeof item.badge === 'number' && item.badge > 0 ? (
+                      <span className="dash-nav-badge">{item.badge > 99 ? '99+' : item.badge}</span>
+                    ) : null}
                   </button>
                 )
               })}
@@ -222,7 +225,7 @@ export function DashboardLayout({
           </div>
           <div className="dash-topbar-right" style={{ alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
             {(role === 'jeweller' || role === 'admin') ? <GoldTickerStrip variant="dash" /> : null}
-            <NotificationBell compact />
+            <NotificationBell compact role={role} />
             <Link to="/" className="dash-public-link">
               Public site
             </Link>
@@ -240,7 +243,10 @@ export function DashboardLayout({
                 style={active ? { borderColor: meta.accentVar, color: meta.accentVar } : undefined}
                 onClick={() => pickSection(item.sectionKey)}
               >
-                {item.label}
+                <span className="dash-hub-pill-label">{item.label}</span>
+                {typeof item.badge === 'number' && item.badge > 0 ? (
+                  <span className="dash-hub-badge">{item.badge > 99 ? '99+' : item.badge}</span>
+                ) : null}
               </button>
             )
           })}

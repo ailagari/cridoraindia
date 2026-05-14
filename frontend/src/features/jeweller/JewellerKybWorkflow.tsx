@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { authFetch, authUpload } from '@/lib/api'
 import { useAuth } from '@/context/AuthContext'
+import { LIVE_KYC_POLL_MS } from '@/lib/liveDeskIntervals'
+import { useLivePoll } from '@/lib/useLivePoll'
 
 type DocRow = {
   id: number
@@ -121,6 +123,8 @@ export function JewellerKybWorkflow() {
     }
   }, [user, load])
 
+  useLivePoll(load, LIVE_KYC_POLL_MS, user?.user_type === 'jeweller')
+
   const docByType = useMemo(() => {
     const m = new Map<string, DocRow>()
     for (const d of docs) {
@@ -169,7 +173,8 @@ export function JewellerKybWorkflow() {
       <span className="pill">Jeweller KYB</span>
       <h2 className="dash-panel-title">Compliance &amp; document centre</h2>
       <p className="dash-panel-lead">
-        Firm <strong style={{ color: 'var(--text)' }}>{user?.email}</strong> · GSTIN from your application · catalogue and storefront stay private until Cridora admin verifies KYB.
+        Firm <strong style={{ color: 'var(--text)' }}>{user?.email}</strong> · add or edit GSTIN under{' '}
+        <strong style={{ color: 'var(--text)' }}>Business</strong> in your dashboard · catalogue and storefront stay private until Cridora admin verifies KYB.
       </p>
       <p style={{ color: 'var(--text-muted)', fontSize: '0.92rem', lineHeight: 1.5, marginTop: '-0.35rem' }}>
         Essential documents below support audit and onboarding, but <strong>KYB verification is decided by Cridora admin</strong> — known jewellers may be approved without a complete upload set.

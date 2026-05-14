@@ -445,3 +445,48 @@ class WebPushSubscription(models.Model):
 
     def __str__(self):
         return f"WebPushSubscription(user={self.user_id})"
+
+
+class AdminNotification(models.Model):
+    """In-app admin feed + source for push metadata (KYC/KYB review prompts)."""
+
+    KIND_KYC_UPLOAD = "kyc_upload"
+    KIND_KYB_UPLOAD = "kyb_upload"
+    KIND_CHOICES = [
+        (KIND_KYC_UPLOAD, "Customer KYC upload"),
+        (KIND_KYB_UPLOAD, "Jeweller KYB upload"),
+    ]
+
+    kind = models.CharField(max_length=32, choices=KIND_CHOICES)
+    title = models.CharField(max_length=180)
+    body = models.TextField()
+    link_path = models.CharField(max_length=512)
+    actor = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"AdminNotification({self.kind}, {self.created_at})"
+
+
+class AdminNotificationRead(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="+")
+    notification = models.ForeignKey(
+        AdminNotification, on_delete=models.CASCADE, related_name="reads"
+    )
+    read_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "notification"], name="uniq_admin_notification_read"
+            ),
+        ]

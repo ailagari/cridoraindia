@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { authFetch } from '@/lib/api'
+import { LIVE_ADMIN_TICKER_POLL_MS, LIVE_ADMIN_POLL_MS } from '@/lib/liveDeskIntervals'
+import { useLivePoll } from '@/lib/useLivePoll'
 
 type Ticker = {
   reference_price_inr_per_gram_22k: string
@@ -46,6 +48,16 @@ export function AdminGoldTickerPanel() {
   useEffect(() => {
     void load()
   }, [load])
+
+  const refreshSnapshot = useCallback(async () => {
+    if (busy) return
+    const res = await authFetch('/api/v1/admin/gold-ticker/')
+    if (!res.ok) return
+    const j = (await res.json()) as Ticker
+    setData(j)
+  }, [busy])
+
+  useLivePoll(refreshSnapshot, LIVE_ADMIN_TICKER_POLL_MS, true)
 
   const save = async () => {
     setBusy(true)
@@ -256,6 +268,8 @@ export function AdminMarketplaceModerationPanel() {
   useEffect(() => {
     void load()
   }, [load])
+
+  useLivePoll(load, LIVE_ADMIN_POLL_MS, true)
 
   const moderate = async (id: number, action: 'approve' | 'reject') => {
     if (action === 'reject' && !rejectReason.trim()) {

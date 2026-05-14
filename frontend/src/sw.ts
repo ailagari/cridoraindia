@@ -64,12 +64,19 @@ self.addEventListener('notificationclick', (event: NotificationEvent) => {
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
       for (const c of clientList) {
         if (c.url.startsWith(self.location.origin) && 'focus' in c) {
-          return (c as WindowClient).focus()
+          const wc = c as WindowClient & { navigate?: (u: string) => Promise<unknown> }
+          return wc.focus().then(() => {
+            if (typeof wc.navigate === 'function') {
+              return wc.navigate(targetUrl)
+            }
+            return undefined
+          })
         }
       }
       if (self.clients.openWindow) {
         return self.clients.openWindow(targetUrl)
       }
+      return undefined
     }),
   )
 })

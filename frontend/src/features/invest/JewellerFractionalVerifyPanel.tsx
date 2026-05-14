@@ -4,6 +4,8 @@ import {
   jewellerFractionalVerify,
   type JewellerFractionalPendingRow,
 } from '@/lib/fractionalPurchaseApi'
+import { LIVE_BALANCE_POLL_MS } from '@/lib/liveDeskIntervals'
+import { useLivePoll } from '@/lib/useLivePoll'
 
 function formatInr(s: string): string {
   const n = Number.parseFloat(s)
@@ -25,6 +27,8 @@ export function JewellerFractionalVerifyPanel() {
   useEffect(() => {
     void load()
   }, [load])
+
+  useLivePoll(load, LIVE_BALANCE_POLL_MS, busyId == null)
 
   const verify = async (id: number) => {
     setBusyId(id)

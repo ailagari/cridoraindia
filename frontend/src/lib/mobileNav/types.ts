@@ -1,6 +1,8 @@
 export type DashboardNavItem = {
   sectionKey: string
   label: string
+  /** Review-queue count (e.g. admin KYC/KYB). Shown when greater than zero. */
+  badge?: number
 }
 
 export type DashboardNavGroup = {

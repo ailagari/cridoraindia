@@ -17,7 +17,7 @@ export function JewellerPublicPage() {
   const numericId = id ? Number.parseInt(id, 10) : NaN
   const [row, setRow] = useState<JewellerStorefrontDTO | null>(null)
   const [error, setError] = useState('')
-  const { data: liveBase, refresh: refreshLiveBase } = useLiveCridoraBase()
+  const { data: liveBase } = useLiveCridoraBase()
 
   useEffect(() => {
     if (!Number.isFinite(numericId)) {
@@ -39,13 +39,6 @@ export function JewellerPublicPage() {
       cancel = true
     }
   }, [numericId])
-
-  useEffect(() => {
-    const t = window.setInterval(() => {
-      void refreshLiveBase()
-    }, 60_000)
-    return () => window.clearInterval(t)
-  }, [refreshLiveBase])
 
   if (error || !Number.isFinite(numericId)) {
     return (

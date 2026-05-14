@@ -1,12 +1,24 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { MOCK_NOTIFICATIONS, type AppNotification } from '@/lib/mockNotifications'
 import { useAuth } from '@/context/AuthContext'
+import { authFetch } from '@/lib/api'
 import {
   getBrowserPushActive,
   pushNotificationsSupported,
   registerWebPushSubscription,
   unregisterWebPushSubscription,
 } from '@/lib/webPushApi'
+
+type ApiAdminNotification = {
+  id: number
+  kind: string
+  title: string
+  body: string
+  link_path: string
+  created_at: string
+  unread: boolean
+}
 
 function kindClass(k: AppNotification['kind']): string {
   if (k === 'transaction') return 'notif-kind notif-kind--tx'
@@ -15,21 +27,73 @@ function kindClass(k: AppNotification['kind']): string {
   return 'notif-kind notif-kind--alert'
 }
 
-type Props = {
-  /** When true, use compact icon-only button for dense headers. */
-  compact?: boolean
+function formatNotifyTime(iso: string): string {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  const diff = Date.now() - d.getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return 'Just now'
+  if (mins < 60) return `${mins}m ago`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 48) return `${hrs}h ago`
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 }
 
-export function NotificationBell({ compact = false }: Props) {
+function mapAdminApiRow(r: ApiAdminNotification): AppNotification {
+  const kind: AppNotification['kind'] =
+    r.kind === 'kyb_upload' || r.kind === 'kyc_upload' ? 'kyc' : 'alert'
+  return {
+    id: String(r.id),
+    title: r.title,
+    body: r.body,
+    time: formatNotifyTime(r.created_at),
+    read: !r.unread,
+    kind,
+    link_path: r.link_path,
+  }
+}
+
+type Props = {
+  compact?: boolean
+  role?: 'customer' | 'jeweller' | 'admin'
+}
+
+export function NotificationBell({ compact = false, role = 'customer' }: Props) {
   const { user } = useAuth()
+  const navigate = useNavigate()
+  const useAdminFeed = role === 'admin' && user?.user_type === 'admin'
+
   const [open, setOpen] = useState(false)
-  const [items, setItems] = useState<AppNotification[]>(() => [...MOCK_NOTIFICATIONS])
+  const [mockItems, setMockItems] = useState<AppNotification[]>(() => [...MOCK_NOTIFICATIONS])
+  const [adminItems, setAdminItems] = useState<AppNotification[]>([])
+  const [adminFeedError, setAdminFeedError] = useState('')
   const [pushActive, setPushActive] = useState(false)
   const [pushBusy, setPushBusy] = useState(false)
   const [pushError, setPushError] = useState('')
   const rootRef = useRef<HTMLDivElement>(null)
 
+  const items = useMemo(
+    () => (useAdminFeed ? adminItems : mockItems),
+    [useAdminFeed, adminItems, mockItems],
+  )
+
   const unread = useMemo(() => items.filter((i) => !i.read).length, [items])
+
+  const loadAdminFeed = useCallback(async () => {
+    if (!useAdminFeed) return
+    setAdminFeedError('')
+    const res = await authFetch('/api/v1/admin/notifications/?limit=40')
+    const body = (await res.json().catch(() => ({}))) as {
+      detail?: string
+      results?: ApiAdminNotification[]
+    }
+    if (!res.ok) {
+      setAdminFeedError(body.detail ?? 'Could not load notifications.')
+      return
+    }
+    const rows = Array.isArray(body.results) ? body.results.map(mapAdminApiRow) : []
+    setAdminItems(rows)
+  }, [useAdminFeed])
 
   const refreshPushState = useCallback(async () => {
     if (!user || !pushNotificationsSupported()) {
@@ -58,6 +122,22 @@ export function NotificationBell({ compact = false }: Props) {
     document.addEventListener('mousedown', onDoc)
     return () => document.removeEventListener('mousedown', onDoc)
   }, [open])
+
+  useEffect(() => {
+    if (!useAdminFeed) return
+    void loadAdminFeed()
+  }, [useAdminFeed, loadAdminFeed])
+
+  useEffect(() => {
+    if (!useAdminFeed || !user) return
+    const t = window.setInterval(() => void loadAdminFeed(), 120000)
+    return () => window.clearInterval(t)
+  }, [useAdminFeed, user, loadAdminFeed])
+
+  useEffect(() => {
+    if (!open || !useAdminFeed) return
+    void loadAdminFeed()
+  }, [open, useAdminFeed, loadAdminFeed])
 
   const enablePush = useCallback(async () => {
     if (!user) return
@@ -88,9 +168,42 @@ export function NotificationBell({ compact = false }: Props) {
 
   const pushSupported = pushNotificationsSupported()
 
-  const markAllRead = useCallback(() => {
-    setItems((prev) => prev.map((i) => ({ ...i, read: true })))
-  }, [])
+  const markAllRead = useCallback(async () => {
+    if (useAdminFeed) {
+      const res = await authFetch('/api/v1/admin/notifications/mark-read/', {
+        method: 'POST',
+        jsonBody: { all: true },
+      })
+      if (!res.ok) {
+        void res.json().catch(() => undefined)
+        return
+      }
+      setAdminItems((prev) => prev.map((i) => ({ ...i, read: true })))
+      return
+    }
+    setMockItems((prev) => prev.map((i) => ({ ...i, read: true })))
+  }, [useAdminFeed])
+
+  const onItemActivate = useCallback(
+    async (n: AppNotification) => {
+      if (!useAdminFeed) return
+      const nid = Number.parseInt(n.id, 10)
+      if (!Number.isNaN(nid)) {
+        await authFetch('/api/v1/admin/notifications/mark-read/', {
+          method: 'POST',
+          jsonBody: { notification_ids: [nid] },
+        })
+        setAdminItems((prev) =>
+          prev.map((row) => (row.id === n.id ? { ...row, read: true } : row)),
+        )
+      }
+      if (n.link_path) {
+        navigate(n.link_path)
+        setOpen(false)
+      }
+    },
+    [navigate, useAdminFeed],
+  )
 
   return (
     <div className="notif-bell-wrap" ref={rootRef}>
@@ -114,14 +227,16 @@ export function NotificationBell({ compact = false }: Props) {
         <div className="notif-panel card" role="dialog" aria-label="Notifications">
           <div className="notif-panel-head">
             <h2 className="notif-panel-title">Alerts</h2>
-            <button type="button" className="btn btn-ghost notif-panel-clear" onClick={markAllRead}>
+            <button type="button" className="btn btn-ghost notif-panel-clear" onClick={() => void markAllRead()}>
               Mark read
             </button>
           </div>
           <p className="notif-panel-hint">
-            In-app alerts below are samples. Turn on browser notifications to get real alerts on this device (HTTPS or
-            localhost; install the PWA on iOS 16.4+ for Web Push).
+            {useAdminFeed
+              ? 'Uploads awaiting KYC or KYB review appear here. Enable device notifications to get pushes on this phone or desktop.'
+              : 'In-app alerts below are samples. Turn on browser notifications to get real alerts on this device (HTTPS or localhost; install the PWA on iOS 16.4+ for Web Push).'}
           </p>
+          {adminFeedError ? <p className="form-error notif-panel-hint">{adminFeedError}</p> : null}
           {user ? (
             <div className="notif-push-row">
               <div className="notif-push-copy">
@@ -165,14 +280,26 @@ export function NotificationBell({ compact = false }: Props) {
             </p>
           )}
           <ul className="notif-list">
-            {items.map((n) => (
-              <li key={n.id} className={`notif-item${n.read ? '' : ' notif-item--unread'}`}>
-                <span className={kindClass(n.kind)}>{n.kind}</span>
-                <p className="notif-item-title">{n.title}</p>
-                <p className="notif-item-body">{n.body}</p>
-                <p className="notif-item-time">{n.time}</p>
-              </li>
-            ))}
+            {items.map((n) =>
+              useAdminFeed ? (
+                <li key={n.id}>
+                  <button type="button" className={`notif-item-btn${n.read ? '' : ' notif-item-btn--unread'}`} onClick={() => void onItemActivate(n)}>
+                    <span className={kindClass(n.kind)}>{n.kind}</span>
+                    <p className="notif-item-title">{n.title}</p>
+                    <p className="notif-item-body">{n.body}</p>
+                    <p className="notif-item-time">{n.time}</p>
+                    {n.link_path ? <span className="notif-item-open-hint">Tap to open in dashboard</span> : null}
+                  </button>
+                </li>
+              ) : (
+                <li key={n.id} className={`notif-item${n.read ? '' : ' notif-item--unread'}`}>
+                  <span className={kindClass(n.kind)}>{n.kind}</span>
+                  <p className="notif-item-title">{n.title}</p>
+                  <p className="notif-item-body">{n.body}</p>
+                  <p className="notif-item-time">{n.time}</p>
+                </li>
+              ),
+            )}
           </ul>
         </div>
       ) : null}

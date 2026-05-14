@@ -12,6 +12,7 @@ from .serializers import (
     BankAccountSerializer,
     CustomerRegisterSerializer,
     JewellerApplySerializer,
+    JewellerBusinessProfileSerializer,
     KYDocumentReadSerializer,
     LoginSerializer,
     UserMeSerializer,
@@ -67,6 +68,43 @@ class MeView(APIView):
 
     def get(self, request):
         data = UserMeSerializer(request.user, context={"request": request}).data
+        return Response(data)
+
+
+class JewellerBusinessProfileView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request):
+        if request.user.user_type != User.JEWELLER:
+            return Response(
+                {"detail": "Only jewellers can update business profile."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        ser = JewellerBusinessProfileSerializer(data=request.data, partial=True)
+        if not ser.is_valid():
+            return Response(ser.errors, status=status.HTTP_400_BAD_REQUEST)
+        if not ser.validated_data:
+            return Response(
+                UserMeSerializer(request.user, context={"request": request}).data
+            )
+        u = request.user
+        fields_to_update: list[str] = []
+        mapping = {
+            "business_name": lambda x: (x or "").strip(),
+            "gstin": lambda x: (x or "").strip().upper(),
+            "shop_address": lambda x: (x or "").strip(),
+            "city": lambda x: (x or "").strip(),
+            "state": lambda x: (x or "").strip(),
+            "pincode": lambda x: (x or "").strip(),
+        }
+        for key, normalize in mapping.items():
+            if key not in ser.validated_data:
+                continue
+            setattr(u, key, normalize(ser.validated_data[key]))
+            fields_to_update.append(key)
+        if fields_to_update:
+            u.save(update_fields=fields_to_update)
+        data = UserMeSerializer(u, context={"request": request}).data
         return Response(data)
 
 

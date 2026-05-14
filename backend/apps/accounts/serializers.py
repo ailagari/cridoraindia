@@ -1,9 +1,10 @@
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from decimal import Decimal
 from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .models import BankAccount, KYDocument
+from .models import AdminNotification, AdminNotificationRead, BankAccount, KYDocument
 from .vault_service import sync_customer_aggregate_balance, wallet_vault_payload
 
 User = get_user_model()
@@ -76,7 +77,7 @@ class JewellerApplySerializer(serializers.Serializer):
     last_name = serializers.CharField(max_length=150)
     phone = serializers.CharField(max_length=20, required=False, allow_blank=True)
     business_name = serializers.CharField(max_length=255)
-    gstin = serializers.CharField(max_length=15)
+    gstin = serializers.CharField(max_length=15, required=False, allow_blank=True)
     shop_address = serializers.CharField(max_length=512)
     city = serializers.CharField(max_length=100)
     state = serializers.CharField(max_length=100)
@@ -91,6 +92,8 @@ class JewellerApplySerializer(serializers.Serializer):
 
     def validate_gstin(self, value):
         v = (value or "").strip().upper()
+        if not v:
+            return ""
         if len(v) != 15:
             raise serializers.ValidationError(
                 "GSTIN must be 15 characters (India format)."
@@ -99,6 +102,7 @@ class JewellerApplySerializer(serializers.Serializer):
 
     def create(self, validated_data):
         email = validated_data["email"]
+        gstin_val = (validated_data.get("gstin") or "").strip().upper()
         return User.objects.create_user(
             username=email,
             email=email,
@@ -108,12 +112,61 @@ class JewellerApplySerializer(serializers.Serializer):
             phone=(validated_data.get("phone") or "").strip(),
             user_type=User.JEWELLER,
             business_name=validated_data["business_name"].strip(),
-            gstin=validated_data["gstin"],
+            gstin=gstin_val,
             shop_address=validated_data["shop_address"].strip(),
             city=validated_data["city"].strip(),
             state=validated_data["state"].strip(),
             pincode=validated_data["pincode"].strip(),
         )
+
+
+class JewellerBusinessProfileSerializer(serializers.Serializer):
+    """Jeweller-only POST/PATCH for GSTIN and showroom identity after signup."""
+
+    business_name = serializers.CharField(max_length=255, required=False, allow_blank=True)
+    gstin = serializers.CharField(max_length=15, required=False, allow_blank=True)
+    shop_address = serializers.CharField(max_length=512, required=False, allow_blank=True)
+    city = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    state = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    pincode = serializers.CharField(max_length=10, required=False, allow_blank=True)
+
+    def validate_gstin(self, value):
+        v = (value or "").strip().upper()
+        if not v:
+            return ""
+        if len(v) != 15:
+            raise serializers.ValidationError(
+                "GSTIN must be 15 characters (India format)."
+            )
+        return v
+
+
+class AdminUserInspectProfileSerializer(serializers.ModelSerializer):
+    """Scalar profile for admin inspect modal (no nested wallet/doc payloads)."""
+
+    class Meta:
+        model = User
+        fields = (
+            "id",
+            "email",
+            "first_name",
+            "last_name",
+            "phone",
+            "user_type",
+            "kyc_status",
+            "kyc_verified_at",
+            "date_joined",
+            "is_active",
+            "business_name",
+            "gstin",
+            "shop_address",
+            "city",
+            "state",
+            "pincode",
+            "jeweller_code",
+            "cridora_member_id",
+        )
+        read_only_fields = fields
 
 
 class BankAccountSerializer(serializers.ModelSerializer):
@@ -150,10 +203,19 @@ class KYDocumentReadSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
     def get_file_url(self, obj):
+        if not obj.file:
+            return None
+        relative = obj.file.url
         request = self.context.get("request")
-        if obj.file and request:
-            return request.build_absolute_uri(obj.file.url)
-        return None
+        if request:
+            try:
+                return request.build_absolute_uri(relative)
+            except Exception:
+                pass
+        base = getattr(settings, "DJANGO_PUBLIC_BASE_URL", "") or ""
+        if base:
+            return f"{base}{relative}" if relative.startswith("/") else f"{base}/{relative}"
+        return relative
 
 
 class UserMeSerializer(serializers.ModelSerializer):
@@ -278,6 +340,25 @@ class GoldTransferNotifySerializer(serializers.Serializer):
     grams = serializers.CharField()
     to_gold_upi = serializers.CharField()
     to_display_name = serializers.CharField()
+
+
+class AdminNotificationSerializer(serializers.ModelSerializer):
+    unread = serializers.SerializerMethodField()
+
+    class Meta:
+        model = AdminNotification
+        fields = ("id", "kind", "title", "body", "link_path", "created_at", "unread")
+
+    def get_unread(self, obj: AdminNotification):
+        read_ids = self.context.get("read_ids")
+        if read_ids is not None:
+            return obj.pk not in read_ids
+        request = self.context.get("request")
+        if not request or not getattr(request.user, "is_authenticated", False):
+            return True
+        return not AdminNotificationRead.objects.filter(
+            notification=obj, user=request.user
+        ).exists()
 
 
 def user_auth_payload(user):

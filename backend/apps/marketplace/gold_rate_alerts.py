@@ -38,7 +38,7 @@ def maybe_notify_gold_rate_move(*, force: bool = False) -> None:
     current = current.quantize(Decimal("0.01"))
     ticker_pk = get_or_create_ticker().pk
 
-    title = "Gold rate alert"
+    title = "Gold price alert"
     body: str | None = None
     with transaction.atomic():
         t = GoldTickerConfig.objects.select_for_update().get(pk=ticker_pk)
@@ -61,9 +61,10 @@ def maybe_notify_gold_rate_move(*, force: bool = False) -> None:
         if swing < threshold:
             return
 
-        direction = "up" if delta > 0 else "down"
+        direction_label = "up" if delta > 0 else "down"
         body = (
-            f"Cridora 22K is now ₹{_fmt_rupees(current)}/g ({direction} ₹{_fmt_rupees(swing)} since last alert)."
+            f"Gold price moved {direction_label}: Cridora 22K is now ₹{_fmt_rupees(current)}/g "
+            f"(₹{_fmt_rupees(swing)} change since the last alert)."
         )
         GoldTickerConfig.objects.filter(pk=t.pk).update(
             rate_alert_baseline_inr_per_gram_22k=current

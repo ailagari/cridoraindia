@@ -2,6 +2,7 @@ import json
 from typing import Any
 
 from django.conf import settings
+from django.db.models import Q
 from pywebpush import WebPushException, webpush
 
 from .models import WebPushSubscription
@@ -59,3 +60,19 @@ def send_push_broadcast(payload: dict[str, Any]) -> int:
             if status == 410:
                 sub.delete()
     return n
+
+
+def send_push_to_platform_admins(payload: dict[str, Any]) -> int:
+    """Notify platform admins only (JWT/browser admins + Django staff superusers)."""
+    from django.contrib.auth import get_user_model
+
+    AdminUser = get_user_model()
+    if not webpush_configured():
+        return 0
+    admins = AdminUser.objects.filter(
+        Q(user_type=AdminUser.ADMIN) | Q(is_superuser=True, is_staff=True)
+    ).distinct()
+    total = 0
+    for admin_user in admins.iterator(chunk_size=100):
+        total += send_push_to_user(admin_user, payload)
+    return total

@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { ProductPhoto } from '@/components/ProductPhoto'
 import {
@@ -8,6 +15,7 @@ import {
   type MarketplaceProductDTO,
   type JewellerStorefrontDTO,
 } from '@/lib/marketplaceApi'
+import { useLivePoll } from '@/lib/useLivePoll'
 import {
   calculateCheckoutPrice,
   makingChargesShortLabel,
@@ -15,6 +23,7 @@ import {
   type PriceBreakdown,
 } from '@/lib/marketplacePricing'
 import { mergeJewellerListWithDemos } from '@/lib/jewellerMarketplaceDemos'
+import { LIVE_CATALOG_POLL_MS, LIVE_DIRECTORY_POLL_MS } from '@/lib/liveDeskIntervals'
 import { mergeProductCatalogWithDemos } from '@/lib/productMarketplaceDemos'
 import { MarketplaceProductListSummary, formatInr } from '@/features/marketplace/productPricing'
 import { useLiveCridoraBase } from '@/hooks/useLiveCridoraBase'
@@ -480,6 +489,11 @@ export function ProductMarketplacePage() {
     setCatalog(merged)
   }, [jewellerFilterId])
 
+  const refreshJewellerOptions = useCallback(async () => {
+    const list = await fetchVerifiedJewellers()
+    setJewellerOptions(mergeJewellerListWithDemos(list))
+  }, [])
+
   const checkoutParam = searchParams.get('checkout')
   useEffect(() => {
     if (!checkoutParam || !/^\d+$/.test(checkoutParam)) {
@@ -502,15 +516,13 @@ export function ProductMarketplacePage() {
     void refreshCatalog()
   }, [refreshCatalog])
 
+  useLivePoll(refreshCatalog, LIVE_CATALOG_POLL_MS, true)
+
+  useLivePoll(refreshJewellerOptions, LIVE_DIRECTORY_POLL_MS, true)
+
   useEffect(() => {
-    let cancel = false
-    void fetchVerifiedJewellers().then((list) => {
-      if (!cancel) setJewellerOptions(mergeJewellerListWithDemos(list))
-    })
-    return () => {
-      cancel = true
-    }
-  }, [])
+    void refreshJewellerOptions()
+  }, [refreshJewellerOptions])
 
   const categories = useMemo(() => {
     const set = new Set<string>()

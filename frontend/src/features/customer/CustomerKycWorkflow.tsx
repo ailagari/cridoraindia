@@ -1,6 +1,8 @@
 import { type FormEvent, useCallback, useEffect, useMemo, useState } from 'react'
 import { authFetch, authUpload } from '@/lib/api'
 import { useAuth } from '@/context/AuthContext'
+import { LIVE_KYC_POLL_MS } from '@/lib/liveDeskIntervals'
+import { useLivePoll } from '@/lib/useLivePoll'
 
 type DocRow = {
   id: number
@@ -45,6 +47,8 @@ export function CustomerKycWorkflow() {
       void load()
     }
   }, [user, load])
+
+  useLivePoll(load, LIVE_KYC_POLL_MS, user?.user_type === 'customer' && !busyBank)
 
   const uploadDoc = async (docType: string, file: File | null) => {
     if (!file) return
