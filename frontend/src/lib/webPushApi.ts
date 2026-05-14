@@ -36,6 +36,52 @@ export function pushNotificationsSupported(): boolean {
   return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window
 }
 
+/** iPad/iPhone/iPod (excludes desktop Safari). */
+export function likelyIosMobile(): boolean {
+  if (typeof navigator === 'undefined') return false
+  return /iPad|iPhone|iPod/i.test(navigator.userAgent)
+}
+
+/** True when the PWA runs full-screen from Add to Home Screen (or similar). */
+export function displayModeStandalone(): boolean {
+  if (typeof window === 'undefined') return false
+  const mqStandalone = window.matchMedia?.('(display-mode: standalone)')?.matches
+  const mqFullscreen = window.matchMedia?.('(display-mode: fullscreen)')?.matches
+  const safariStandalone = Boolean((navigator as Navigator & { standalone?: boolean }).standalone)
+  return Boolean(mqStandalone || mqFullscreen || safariStandalone)
+}
+
+/**
+ * Short guidance when Push API is unavailable or unlikely to work (helps iOS Add-to-HS flow).
+ */
+export function pushSetupHint(): string | null {
+  if (typeof window === 'undefined') return null
+  if (!window.isSecureContext) {
+    return 'Open Cridora over HTTPS — insecure origins cannot receive push notifications.'
+  }
+  if (!pushNotificationsSupported() && likelyIosMobile()) {
+    if (!displayModeStandalone()) {
+      return 'On iPhone/iPad: open this site in Safari → Share → Add to Home Screen, then launch Cridora from the home screen icon (not the Safari tab). Web Push works only from that installed app on iOS 16.4+.'
+    }
+    return 'This installed app needs iOS / iPadOS 16.4 or newer for Web Push. Update the device, then tap Enable again.'
+  }
+  if (!pushNotificationsSupported()) {
+    return 'This browser does not support Web Push. On Android use current Chrome or Edge (not a restricted WebView). Avoid private/incognito mode when subscribing.'
+  }
+  return null
+}
+
+async function refreshServiceWorkerRegistration(): Promise<ServiceWorkerRegistration> {
+  const reg =
+    (await navigator.serviceWorker.getRegistration()) ?? (await navigator.serviceWorker.ready)
+  try {
+    await reg.update()
+  } catch {
+    /* ignore transient network errors */
+  }
+  return navigator.serviceWorker.ready
+}
+
 export async function registerWebPushSubscription(): Promise<void> {
   const { configured, publicKey: pub } = await fetchWebPushServerStatus()
   if (!configured || !pub) {
@@ -47,7 +93,7 @@ export async function registerWebPushSubscription(): Promise<void> {
   if (perm !== 'granted') {
     throw new Error('Notification permission was not granted.')
   }
-  const reg = await navigator.serviceWorker.ready
+  const reg = await refreshServiceWorkerRegistration()
   const existing = await reg.pushManager.getSubscription()
   if (existing) {
     await existing.unsubscribe()

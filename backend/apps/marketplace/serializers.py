@@ -5,7 +5,18 @@ from .models import (
     GoldTickerConfig,
     JewellerPricingProfile,
     MarketplaceProduct,
+    get_or_create_ticker,
     jeweller_profile_for,
+)
+from .metal_pricing import (
+    METAL_CODES,
+    MODE_MANUAL_BOARD,
+    cridora_reference_inr_per_metal,
+    indicative_buyback_inr_per_metal,
+    jeweller_effective_rate_inr,
+    normalize_metal_buyback_json,
+    normalize_metal_pricing_json,
+    sync_gold_22k_legacy_fields_from_json,
 )
 from .pricing import (
     gold_metal_value_inr,
@@ -17,7 +28,7 @@ from .pricing import (
     sellback_rate_inr_per_gram,
     stone_component_inr,
 )
-from .spot_prices import resolve_cridora_base_22k_inr
+from .spot_prices import public_spot_prices_payload, resolve_cridora_base_22k_inr
 
 User = get_user_model()
 
@@ -36,6 +47,9 @@ class GoldTickerReadSerializer(serializers.ModelSerializer):
             "manual_ticker_enabled",
             "ticker_manual_22k_inr_per_gram",
             "ticker_manual_24k_inr_per_gram",
+            "gold_deposit_yield_apr_percent",
+            "gold_loan_interest_apr_percent",
+            "gold_loan_processing_fee_inr",
             "platform_base_inr_per_gram_22k",
             "cridora_base_source",
             "updated_at",
@@ -61,6 +75,9 @@ class GoldTickerAdminSerializer(serializers.ModelSerializer):
             "manual_ticker_enabled",
             "ticker_manual_22k_inr_per_gram",
             "ticker_manual_24k_inr_per_gram",
+            "gold_deposit_yield_apr_percent",
+            "gold_loan_interest_apr_percent",
+            "gold_loan_processing_fee_inr",
         )
 
     def validate_rate_move_alert_threshold_inr(self, value):
@@ -101,10 +118,17 @@ class GoldTickerAdminSerializer(serializers.ModelSerializer):
 
 class JewellerPricingProfileSerializer(serializers.ModelSerializer):
     jeweller_metal_rate_effective_updated_at = serializers.SerializerMethodField()
+    gold_deposit_yield_apr_percent = serializers.SerializerMethodField()
+    gold_loan_interest_apr_percent = serializers.SerializerMethodField()
+    gold_loan_processing_fee_inr = serializers.SerializerMethodField()
+    metal_rate_preview = serializers.SerializerMethodField()
 
     class Meta:
         model = JewellerPricingProfile
         fields = (
+            "metal_pricing_json",
+            "metal_buyback_json",
+            "gold_loan_jeweller_deduction_inr_per_gram",
             "gold_rate_source",
             "gold_rate_external_api_url",
             "manual_gold_rate_inr_per_gram",
@@ -118,6 +142,7 @@ class JewellerPricingProfileSerializer(serializers.ModelSerializer):
             "buyback_headline_inr_per_gram",
             "gold_deposit_yield_apr_percent",
             "gold_loan_interest_apr_percent",
+            "gold_loan_processing_fee_inr",
             "logo_url",
             "credibility_score",
             "lock_in_summary",
@@ -141,29 +166,95 @@ class JewellerPricingProfileSerializer(serializers.ModelSerializer):
             "golden_scheme_rate_application_note",
             "updated_at",
             "jeweller_metal_rate_effective_updated_at",
+            "metal_rate_preview",
         )
-        read_only_fields = ("updated_at", "jeweller_metal_rate_effective_updated_at")
+        read_only_fields = (
+            "updated_at",
+            "jeweller_metal_rate_effective_updated_at",
+            "gold_rate_source",
+            "gold_rate_external_api_url",
+            "manual_gold_rate_inr_per_gram",
+            "live_markup_percent",
+            "live_markup_inr_per_gram",
+            "sellback_deduction_percent",
+            "sellback_fixed_inr_per_gram",
+            "gold_deposit_yield_apr_percent",
+            "gold_loan_interest_apr_percent",
+            "gold_loan_processing_fee_inr",
+            "metal_rate_preview",
+        )
 
     def get_jeweller_metal_rate_effective_updated_at(self, obj: JewellerPricingProfile) -> str:
         return jeweller_rate_effective_updated_at(obj).isoformat()
 
+    def get_gold_deposit_yield_apr_percent(self, obj: JewellerPricingProfile) -> str:
+        t = get_or_create_ticker()
+        return str(t.gold_deposit_yield_apr_percent)
+
+    def get_gold_loan_interest_apr_percent(self, obj: JewellerPricingProfile) -> str:
+        t = get_or_create_ticker()
+        return str(t.gold_loan_interest_apr_percent)
+
+    def get_gold_loan_processing_fee_inr(self, obj: JewellerPricingProfile) -> str:
+        t = get_or_create_ticker()
+        return str(t.gold_loan_processing_fee_inr)
+
+    def get_metal_rate_preview(self, obj: JewellerPricingProfile) -> dict[str, dict[str, str]]:
+        spot = public_spot_prices_payload()
+        base, _ = resolve_cridora_base_22k_inr()
+        out: dict[str, dict[str, str]] = {}
+        for code in METAL_CODES:
+            ref = cridora_reference_inr_per_metal(
+                code, cridora_base_22k=base, spot=spot
+            )
+            eff = jeweller_effective_rate_inr(
+                obj, code, cridora_base_22k=base, spot=spot
+            )
+            buy = indicative_buyback_inr_per_metal(
+                obj, code, jeweller_effective_inr_per_gram=eff
+            )
+            out[code] = {
+                "cridora_inr_per_gram": str(ref),
+                "your_board_inr_per_gram": str(eff),
+                "preview_buyback_inr_per_gram": str(buy),
+            }
+        return out
+
     def validate(self, attrs):
-        source = attrs.get("gold_rate_source")
-        if source is None and self.instance is not None:
-            source = self.instance.gold_rate_source
-        manual = attrs.get("manual_gold_rate_inr_per_gram")
-        if manual is None and self.instance is not None:
-            manual = self.instance.manual_gold_rate_inr_per_gram
-        if source == JewellerPricingProfile.GOLD_RATE_MANUAL:
-            if manual is None or manual <= 0:
-                raise serializers.ValidationError(
-                    {
-                        "manual_gold_rate_inr_per_gram": (
-                            "Set a positive 22K ₹/g rate when using manual pricing."
-                        )
-                    }
-                )
+        pmap = attrs.get("metal_pricing_json")
+        if pmap is not None:
+            norm = normalize_metal_pricing_json(pmap)
+            g22 = norm.get("gold_22k") or {}
+            if g22.get("mode") == MODE_MANUAL_BOARD:
+                from decimal import Decimal
+
+                try:
+                    m = Decimal(str(g22.get("manual_inr_per_gram") or "0"))
+                except Exception:
+                    m = Decimal("0")
+                if m <= 0:
+                    raise serializers.ValidationError(
+                        {
+                            "metal_pricing_json": (
+                                "Gold 22K fixed board ₹/g must be greater than zero."
+                            )
+                        }
+                    )
         return attrs
+
+    def update(self, instance, validated_data):
+        if "metal_pricing_json" in validated_data:
+            validated_data["metal_pricing_json"] = normalize_metal_pricing_json(
+                validated_data["metal_pricing_json"]
+            )
+        if "metal_buyback_json" in validated_data:
+            validated_data["metal_buyback_json"] = normalize_metal_buyback_json(
+                validated_data["metal_buyback_json"]
+            )
+        inst = super().update(instance, validated_data)
+        sync_gold_22k_legacy_fields_from_json(inst)
+        inst.save()
+        return inst
 
 
 def _annotate_product_public(
@@ -251,6 +342,7 @@ def _golden_scheme_storefront_summary(profile: JewellerPricingProfile) -> str:
 
 def public_jeweller_storefront(user) -> dict:
     profile = jeweller_profile_for(user)
+    ticker = get_or_create_ticker()
     cridora_base, _ = resolve_cridora_base_22k_inr()
     store_22 = jeweller_store_22k_inr(profile, cridora_base)
     ref_metal = reference_metal_rate_inr_per_gram_for_jeweller(profile, cridora_base)
@@ -282,8 +374,12 @@ def public_jeweller_storefront(user) -> dict:
             and profile.buyback_headline_inr_per_gram > 0
         ),
         "reference_metal_inr_per_gram": str(ref_metal),
-        "gold_deposit_yield_apr_percent": str(profile.gold_deposit_yield_apr_percent),
-        "gold_loan_interest_apr_percent": str(profile.gold_loan_interest_apr_percent),
+        "gold_deposit_yield_apr_percent": str(ticker.gold_deposit_yield_apr_percent),
+        "gold_loan_interest_apr_percent": str(ticker.gold_loan_interest_apr_percent),
+        "gold_loan_processing_fee_inr": str(ticker.gold_loan_processing_fee_inr),
+        "gold_loan_jeweller_deduction_inr_per_gram": str(
+            profile.gold_loan_jeweller_deduction_inr_per_gram
+        ),
         "gold_deposit_note": profile.gold_deposit_note,
         "default_gold_markup_percent": str(profile.default_gold_markup_percent),
         "sellback_deduction_percent": str(profile.sellback_deduction_percent),

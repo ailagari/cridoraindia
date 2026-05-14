@@ -2,6 +2,7 @@ from decimal import Decimal
 
 from django.utils import timezone
 
+from .metal_pricing import jeweller_store_22k_inr, sellback_rate_inr_per_gram
 from .models import JewellerPricingProfile, MarketplaceProduct
 
 
@@ -20,19 +21,6 @@ def jeweller_rate_effective_updated_at(profile: JewellerPricingProfile) -> timez
     if profile.gold_rate_source == JewellerPricingProfile.GOLD_RATE_MANUAL:
         return pu
     return max(pu, tu)
-
-
-def jeweller_store_22k_inr(
-    profile: JewellerPricingProfile, cridora_base: Decimal
-) -> Decimal:
-    if profile.gold_rate_source == JewellerPricingProfile.GOLD_RATE_MANUAL:
-        m = profile.manual_gold_rate_inr_per_gram
-        if m is not None and m > 0:
-            return m.quantize(Decimal("0.01"))
-        return cridora_base.quantize(Decimal("0.01"))
-    p = profile.live_markup_percent / Decimal("100")
-    fixed = profile.live_markup_inr_per_gram
-    return (cridora_base * (Decimal("1") + p) + fixed).quantize(Decimal("0.01"))
 
 
 def markup_for_product(product: MarketplaceProduct, profile: JewellerPricingProfile) -> Decimal:
@@ -61,15 +49,6 @@ def stone_component_inr(product: MarketplaceProduct) -> Decimal:
     if not product.stone_included or product.stone_cost_inr is None:
         return Decimal("0")
     return max(Decimal("0"), product.stone_cost_inr)
-
-
-def sellback_rate_inr_per_gram(
-    metal_rate: Decimal, profile: JewellerPricingProfile
-) -> Decimal:
-    pct = profile.sellback_deduction_percent / Decimal("100")
-    after_pct = metal_rate * (Decimal("1") - pct)
-    out = after_pct - profile.sellback_fixed_inr_per_gram
-    return max(Decimal("0"), out.quantize(Decimal("0.01")))
 
 
 def gold_metal_value_inr(product: MarketplaceProduct, metal_rate: Decimal) -> Decimal:

@@ -1,42 +1,63 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react'
 import { Link } from 'react-router-dom'
 import { authFetch } from '@/lib/api'
-import { fetchGoldTicker, type GoldTickerPayload } from '@/lib/marketplaceApi'
+import { fetchGoldTicker, fetchSpotPrices, type GoldTickerPayload, type SpotPricesPayload } from '@/lib/marketplaceApi'
 import { LIVE_MARKETPLACE_EDITOR_POLL_MS } from '@/lib/liveDeskIntervals'
 import { useLivePoll } from '@/lib/useLivePoll'
+import { formatInr, numOrZero, parseN } from '@/features/marketplace/jewellerMarketplaceShared'
 import {
-  formatInr,
-  inferSellbackMode,
-  numOrZero,
-  parseN,
-  previewIndicativeBuyback,
-  type SellbackMode,
-} from '@/features/marketplace/jewellerMarketplaceShared'
+  buybackDraftFromApi,
+  computeJewellerBoardInrPerGram,
+  cridoraRefInrForMetal,
+  defaultBuybackDraft,
+  defaultPricingDraft,
+  JEWELLER_METAL_ROWS,
+  previewBuybackInrPerGram,
+  pricingDraftFromApi,
+  type MetalBuybackDraft,
+  type MetalCode,
+  type MetalPricingDraft,
+  type MetalPricingMode,
+} from '@/features/marketplace/jewellerMetalRates'
 
 type ProfileApi = Record<string, unknown>
+
+const modeOptions: { value: MetalPricingMode; label: string }[] = [
+  { value: 'match_cridora', label: 'Match Cridora reference' },
+  { value: 'markup_on_cridora', label: 'Cridora + markup (% / ₹g)' },
+  { value: 'manual_board_inr', label: 'Fixed board ₹/g' },
+  { value: 'external_api', label: 'External rate feed (URL)' },
+]
 
 export function JewellerRatesSchemesPanel() {
   const [loadError, setLoadError] = useState('')
   const [formError, setFormError] = useState('')
   const [busy, setBusy] = useState(false)
   const [jewellerRatePolicyAsOf, setJewellerRatePolicyAsOf] = useState('')
-  const [sellbackDeductionMode, setSellbackDeductionMode] = useState<SellbackMode>('percent')
   const [ticker, setTicker] = useState<GoldTickerPayload | null>(null)
+  const [spot, setSpot] = useState<SpotPricesPayload | null>(null)
+
+  const [pricingByMetal, setPricingByMetal] = useState<
+    Record<MetalCode, MetalPricingDraft>
+  >(() => {
+    const o = {} as Record<MetalCode, MetalPricingDraft>
+    for (const { code } of JEWELLER_METAL_ROWS) o[code] = defaultPricingDraft()
+    return o
+  })
+  const [buybackByMetal, setBuybackByMetal] = useState<
+    Record<MetalCode, MetalBuybackDraft>
+  >(() => {
+    const o = {} as Record<MetalCode, MetalBuybackDraft>
+    for (const { code } of JEWELLER_METAL_ROWS) o[code] = defaultBuybackDraft()
+    return o
+  })
 
   const [ratesDraft, setRatesDraft] = useState({
-    gold_rate_source: 'live_cridora' as 'live_cridora' | 'manual',
-    gold_rate_external_api_url: '',
-    manual_gold_rate_inr_per_gram: '',
-    live_markup_percent: '',
-    live_markup_inr_per_gram: '',
     default_gold_markup_percent: '',
-    sellback_deduction_percent: '',
-    sellback_fixed_inr_per_gram: '',
     gold_deposit_note: '',
     representative_making_charge_inr_per_gram: '',
     buyback_headline_inr_per_gram: '',
-    gold_deposit_yield_apr_percent: '',
-    gold_loan_interest_apr_percent: '',
+    gold_loan_jeweller_deduction_inr_per_gram: '',
     golden_scheme_enabled: false,
     golden_scheme_duration_months: '',
     golden_scheme_min_monthly_inr: '',
@@ -45,13 +66,21 @@ export function JewellerRatesSchemesPanel() {
     golden_scheme_rate_application_note: '',
   })
 
+  const [platformDisclosures, setPlatformDisclosures] = useState({
+    gold_deposit_yield_apr_percent: '0',
+    gold_loan_interest_apr_percent: '0',
+    gold_loan_processing_fee_inr: '0',
+  })
+
   const refresh = useCallback(async () => {
     setLoadError('')
-    const [pr, tk] = await Promise.all([
+    const [pr, tk, sp] = await Promise.all([
       authFetch('/api/v1/jeweller/marketplace/profile/'),
       fetchGoldTicker(),
+      fetchSpotPrices(),
     ])
     setTicker(tk)
+    setSpot(sp)
     if (!pr.ok) {
       const j = await pr.json().catch(() => ({}))
       setLoadError((j as { detail?: string }).detail ?? 'Could not load pricing profile.')
@@ -59,15 +88,10 @@ export function JewellerRatesSchemesPanel() {
     }
     const pJson = (await pr.json()) as ProfileApi
     setJewellerRatePolicyAsOf(String(pJson.jeweller_metal_rate_effective_updated_at ?? ''))
+    setPricingByMetal(pricingDraftFromApi(pJson.metal_pricing_json))
+    setBuybackByMetal(buybackDraftFromApi(pJson.metal_buyback_json))
     setRatesDraft({
-      gold_rate_source: pJson.gold_rate_source === 'manual' ? 'manual' : 'live_cridora',
-      gold_rate_external_api_url: String(pJson.gold_rate_external_api_url ?? ''),
-      manual_gold_rate_inr_per_gram: String(pJson.manual_gold_rate_inr_per_gram ?? ''),
-      live_markup_percent: String(pJson.live_markup_percent ?? '0'),
-      live_markup_inr_per_gram: String(pJson.live_markup_inr_per_gram ?? '0'),
       default_gold_markup_percent: String(pJson.default_gold_markup_percent ?? ''),
-      sellback_deduction_percent: String(pJson.sellback_deduction_percent ?? ''),
-      sellback_fixed_inr_per_gram: String(pJson.sellback_fixed_inr_per_gram ?? ''),
       gold_deposit_note: String(pJson.gold_deposit_note ?? ''),
       representative_making_charge_inr_per_gram: String(
         pJson.representative_making_charge_inr_per_gram ?? '0',
@@ -76,8 +100,9 @@ export function JewellerRatesSchemesPanel() {
         pJson.buyback_headline_inr_per_gram != null && String(pJson.buyback_headline_inr_per_gram) !== ''
           ? String(pJson.buyback_headline_inr_per_gram)
           : '',
-      gold_deposit_yield_apr_percent: String(pJson.gold_deposit_yield_apr_percent ?? '0'),
-      gold_loan_interest_apr_percent: String(pJson.gold_loan_interest_apr_percent ?? '0'),
+      gold_loan_jeweller_deduction_inr_per_gram: String(
+        pJson.gold_loan_jeweller_deduction_inr_per_gram ?? '0',
+      ),
       golden_scheme_enabled: Boolean(pJson.golden_scheme_enabled),
       golden_scheme_duration_months:
         pJson.golden_scheme_duration_months != null && String(pJson.golden_scheme_duration_months) !== ''
@@ -91,51 +116,94 @@ export function JewellerRatesSchemesPanel() {
       golden_scheme_benefits: String(pJson.golden_scheme_benefits ?? ''),
       golden_scheme_rate_application_note: String(pJson.golden_scheme_rate_application_note ?? ''),
     })
-    setSellbackDeductionMode(
-      inferSellbackMode(
-        String(pJson.sellback_deduction_percent ?? ''),
-        String(pJson.sellback_fixed_inr_per_gram ?? ''),
-      ),
-    )
+    setPlatformDisclosures({
+      gold_deposit_yield_apr_percent: String(pJson.gold_deposit_yield_apr_percent ?? '0'),
+      gold_loan_interest_apr_percent: String(pJson.gold_loan_interest_apr_percent ?? '0'),
+      gold_loan_processing_fee_inr: String(pJson.gold_loan_processing_fee_inr ?? '0'),
+    })
   }, [])
 
-  const pollTicker = useCallback(async () => {
+  const pollLive = useCallback(async () => {
     if (busy) return
-    setTicker(await fetchGoldTicker())
+    const [tk, sp] = await Promise.all([fetchGoldTicker(), fetchSpotPrices()])
+    setTicker(tk)
+    setSpot(sp)
   }, [busy])
 
   useEffect(() => {
     void refresh()
   }, [refresh])
 
-  useLivePoll(pollTicker, LIVE_MARKETPLACE_EDITOR_POLL_MS, true)
+  useLivePoll(pollLive, LIVE_MARKETPLACE_EDITOR_POLL_MS, true)
+
+  const platformBaseInr = useMemo(
+    () => (ticker ? parseN(ticker.platform_base_inr_per_gram_22k) : 0),
+    [ticker],
+  )
+  const reference22kInr = useMemo(
+    () => (ticker ? parseN(ticker.reference_price_inr_per_gram_22k) : 0),
+    [ticker],
+  )
+  const adminMarkupTicker = useMemo(() => (ticker ? parseN(ticker.admin_markup_percent) : 0), [ticker])
+
+  const jewellerStore22k = useMemo(() => {
+    const ref = cridoraRefInrForMetal('gold_22k', platformBaseInr, spot)
+    return computeJewellerBoardInrPerGram(ref, pricingByMetal.gold_22k)
+  }, [platformBaseInr, spot, pricingByMetal])
+
+  const referenceMetalInr = useMemo(() => {
+    const m = parseN(ratesDraft.default_gold_markup_percent)
+    return jewellerStore22k * (1 + m / 100)
+  }, [jewellerStore22k, ratesDraft.default_gold_markup_percent])
+
+  const indicativeBuybackGoldDisplay = useMemo(() => {
+    if (ratesDraft.buyback_headline_inr_per_gram.trim() !== '') {
+      return parseN(ratesDraft.buyback_headline_inr_per_gram)
+    }
+    return previewBuybackInrPerGram(referenceMetalInr, buybackByMetal.gold_22k)
+  }, [referenceMetalInr, buybackByMetal, ratesDraft.buyback_headline_inr_per_gram])
 
   const saveRatesAndSchemes = async () => {
     setBusy(true)
     setFormError('')
-    const sellbackPct =
-      sellbackDeductionMode === 'percent' ? numOrZero(ratesDraft.sellback_deduction_percent) : '0'
-    const sellbackFix =
-      sellbackDeductionMode === 'fixed' ? numOrZero(ratesDraft.sellback_fixed_inr_per_gram) : '0'
     const durRaw = ratesDraft.golden_scheme_duration_months.trim()
     const durParsed = Number.parseInt(durRaw, 10)
     const durNum =
       durRaw === '' || Number.isNaN(durParsed) ? null : Math.max(0, Math.floor(durParsed))
     const minMonthlyRaw = ratesDraft.golden_scheme_min_monthly_inr.trim()
+
+    const metal_pricing_json: Record<string, Record<string, string>> = {}
+    for (const { code } of JEWELLER_METAL_ROWS) {
+      const p = pricingByMetal[code]
+      metal_pricing_json[code] = {
+        mode: p.mode,
+        markup_percent: numOrZero(p.markup_percent),
+        markup_inr_per_gram: numOrZero(p.markup_inr_per_gram),
+        manual_inr_per_gram:
+          p.mode === 'manual_board_inr' ? numOrZero(p.manual_inr_per_gram) : '0',
+        external_api_url: p.external_api_url.trim().slice(0, 512),
+      }
+    }
+
+    const metal_buyback_json: Record<string, Record<string, string>> = {}
+    for (const { code } of JEWELLER_METAL_ROWS) {
+      const b = buybackByMetal[code]
+      metal_buyback_json[code] = {
+        deduction_percent: numOrZero(b.deduction_percent),
+        fixed_inr_per_gram: numOrZero(b.fixed_inr_per_gram),
+        jeweller_deduction_inr_per_gram: numOrZero(b.jeweller_deduction_inr_per_gram),
+      }
+    }
+
     const res = await authFetch('/api/v1/jeweller/marketplace/profile/', {
       method: 'PATCH',
       jsonBody: {
-        gold_rate_source: ratesDraft.gold_rate_source,
-        gold_rate_external_api_url: ratesDraft.gold_rate_external_api_url.trim(),
-        manual_gold_rate_inr_per_gram:
-          ratesDraft.gold_rate_source === 'manual' && ratesDraft.manual_gold_rate_inr_per_gram.trim() !== ''
-            ? numOrZero(ratesDraft.manual_gold_rate_inr_per_gram)
-            : null,
-        live_markup_percent: numOrZero(ratesDraft.live_markup_percent),
-        live_markup_inr_per_gram: numOrZero(ratesDraft.live_markup_inr_per_gram),
+        metal_pricing_json,
+        metal_buyback_json,
+        gold_loan_jeweller_deduction_inr_per_gram: numOrZero(
+          ratesDraft.gold_loan_jeweller_deduction_inr_per_gram,
+        ),
         default_gold_markup_percent: numOrZero(ratesDraft.default_gold_markup_percent),
-        sellback_deduction_percent: sellbackPct,
-        sellback_fixed_inr_per_gram: sellbackFix,
         gold_deposit_note: ratesDraft.gold_deposit_note.trim(),
         representative_making_charge_inr_per_gram: numOrZero(
           ratesDraft.representative_making_charge_inr_per_gram,
@@ -144,8 +212,6 @@ export function JewellerRatesSchemesPanel() {
           ratesDraft.buyback_headline_inr_per_gram.trim() === ''
             ? null
             : numOrZero(ratesDraft.buyback_headline_inr_per_gram),
-        gold_deposit_yield_apr_percent: numOrZero(ratesDraft.gold_deposit_yield_apr_percent),
-        gold_loan_interest_apr_percent: numOrZero(ratesDraft.gold_loan_interest_apr_percent),
         golden_scheme_enabled: ratesDraft.golden_scheme_enabled,
         golden_scheme_duration_months: durNum,
         golden_scheme_min_monthly_inr: minMonthlyRaw === '' ? null : numOrZero(minMonthlyRaw),
@@ -163,56 +229,7 @@ export function JewellerRatesSchemesPanel() {
     await refresh()
   }
 
-  const platformBaseInr = useMemo(
-    () => (ticker ? parseN(ticker.platform_base_inr_per_gram_22k) : 0),
-    [ticker],
-  )
-  const reference22kInr = useMemo(
-    () => (ticker ? parseN(ticker.reference_price_inr_per_gram_22k) : 0),
-    [ticker],
-  )
-  const adminMarkupTicker = useMemo(() => (ticker ? parseN(ticker.admin_markup_percent) : 0), [ticker])
-
-  const jewellerStore22k = useMemo(() => {
-    if (ratesDraft.gold_rate_source === 'manual') {
-      const m = parseN(ratesDraft.manual_gold_rate_inr_per_gram)
-      return m > 0 ? m : platformBaseInr
-    }
-    const lp = parseN(ratesDraft.live_markup_percent)
-    const lf = parseN(ratesDraft.live_markup_inr_per_gram)
-    return platformBaseInr * (1 + lp / 100) + lf
-  }, [
-    ratesDraft.gold_rate_source,
-    ratesDraft.manual_gold_rate_inr_per_gram,
-    ratesDraft.live_markup_percent,
-    ratesDraft.live_markup_inr_per_gram,
-    platformBaseInr,
-  ])
-
-  const referenceMetalInr = useMemo(() => {
-    const m = parseN(ratesDraft.default_gold_markup_percent)
-    return jewellerStore22k * (1 + m / 100)
-  }, [jewellerStore22k, ratesDraft.default_gold_markup_percent])
-
-  const indicativeBuybackPreview = useMemo(
-    () =>
-      previewIndicativeBuyback(
-        jewellerStore22k,
-        parseN(ratesDraft.default_gold_markup_percent),
-        sellbackDeductionMode,
-        ratesDraft.sellback_deduction_percent,
-        ratesDraft.sellback_fixed_inr_per_gram,
-      ),
-    [
-      jewellerStore22k,
-      ratesDraft.default_gold_markup_percent,
-      sellbackDeductionMode,
-      ratesDraft.sellback_deduction_percent,
-      ratesDraft.sellback_fixed_inr_per_gram,
-    ],
-  )
-
-  const tableInput: CSSProperties = {
+  const inp: CSSProperties = {
     width: '100%',
     maxWidth: 200,
     padding: '0.45rem 0.55rem',
@@ -224,12 +241,20 @@ export function JewellerRatesSchemesPanel() {
     fontSize: '0.85rem',
   }
 
+  const setPricing = (code: MetalCode, patch: Partial<MetalPricingDraft>) => {
+    setPricingByMetal((prev) => ({ ...prev, [code]: { ...prev[code], ...patch } }))
+  }
+
+  const setBuyback = (code: MetalCode, patch: Partial<MetalBuybackDraft>) => {
+    setBuybackByMetal((prev) => ({ ...prev, [code]: { ...prev[code], ...patch } }))
+  }
+
   return (
     <div className="dash-panel-max jeweller-rates-schemes">
       <p className="dash-panel-lead">
-        Phase 1 MVP: configure <strong>buy-side metal reference</strong>, <strong>sellback</strong>, making comparison,
-        deposit disclosures, and <strong>Golden Scheme</strong> (monthly jewellery savings) copy shown on your storefront.
-        Product SKUs stay under{' '}
+        Set how each metal tracks the <strong>Cridora reference</strong> (live ticker or admin manual board), your{' '}
+        <strong>buyback spreads</strong> per purity, and disclosures. Default SKU markup still applies on{' '}
+        <strong>gold 22K ornaments</strong> only — configure SKUs under{' '}
         <Link to="/dashboard/jeweller?section=mkt_products">Marketplace · Listings</Link>.
       </p>
 
@@ -238,16 +263,16 @@ export function JewellerRatesSchemesPanel() {
 
       <section className="card" style={{ padding: '1.25rem', marginBottom: '1.25rem', borderRadius: 18 }}>
         <h2 className="dash-coming__title" style={{ marginTop: 0 }}>
-          Gold rate management &amp; sellback
+          Cridora reference (what customers compare against)
         </h2>
         <p className="dash-coming__text" style={{ marginBottom: '1rem' }}>
-          Cridora benchmark 22K plus your <strong>percentage</strong> and/or <strong>fixed ₹/g</strong> markups, or a{' '}
-          <strong>manual 22K ₹/g</strong>. Default SKU markup applies on top for ornament listings. Cash sellback uses your
-          deduction spread vs reference metal; optional headline buyback overrides the derived rate on cards.
+          The platform publishes a single <strong>resolved 22K ₹/g</strong> from live spot or the admin manual ticker
+          (plus admin markup rules). That value is your <strong>gold 22K reference</strong>. Other purities use the same
+          spot curve (or sane derivation when silver spot is briefly unavailable).
         </p>
         {jewellerRatePolicyAsOf.trim() !== '' ? (
           <p style={{ margin: '0 0 1rem', fontSize: '0.82rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
-            Customer quotes reference this policy as last effective{' '}
+            Quotes reference this policy as last effective{' '}
             <strong>
               {new Date(jewellerRatePolicyAsOf).toLocaleString('en-IN', {
                 dateStyle: 'medium',
@@ -278,7 +303,7 @@ export function JewellerRatesSchemesPanel() {
               color: 'var(--text-faint)',
             }}
           >
-            Platform ticker (reference only · jewellers see customer rates elsewhere)
+            Platform ticker snapshot
           </p>
           {ticker ? (
             <div
@@ -291,15 +316,15 @@ export function JewellerRatesSchemesPanel() {
               }}
             >
               <span>
-                <span style={{ color: 'var(--text-muted)' }}>Reference </span>
+                <span style={{ color: 'var(--text-muted)' }}>Admin benchmark 22K </span>
                 <strong className="tabular">₹{formatInr(reference22kInr, 2)}/g</strong>
               </span>
               <span>
-                <span style={{ color: 'var(--text-muted)' }}>Platform markup </span>
+                <span style={{ color: 'var(--text-muted)' }}>Admin markup </span>
                 <strong className="tabular">{formatInr(adminMarkupTicker, 3)}%</strong>
               </span>
               <span>
-                <span style={{ color: 'var(--text-muted)' }}>Resolved 22K base </span>
+                <span style={{ color: 'var(--text-muted)' }}>Resolved Cridora 22K </span>
                 <strong className="tabular" style={{ color: 'var(--gold-light)' }}>
                   ₹{formatInr(platformBaseInr, 2)}/g
                 </strong>
@@ -320,300 +345,324 @@ export function JewellerRatesSchemesPanel() {
           )}
         </div>
 
-        <div className="dash-table-scroll card" style={{ padding: 0, overflowX: 'auto' }}>
-          <table className="admin-user-table">
-            <thead>
-              <tr>
-                <th scope="col">Parameter</th>
-                <th scope="col">Value</th>
-                <th scope="col">Notes</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>Your store 22K (before default SKU markup)</td>
-                <td className="tabular" style={{ fontWeight: 700 }}>
-                  ₹{formatInr(jewellerStore22k, 2)}/g
-                </td>
-                <td style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                  From live base + your markups, or manual 22K.
-                </td>
-              </tr>
-              <tr>
-                <td>Gold rate source</td>
-                <td colSpan={2}>
-                  <select
-                    style={{ ...tableInput, maxWidth: 280 }}
-                    value={ratesDraft.gold_rate_source}
-                    onChange={(e) =>
-                      setRatesDraft((p) => ({
-                        ...p,
-                        gold_rate_source: e.target.value === 'manual' ? 'manual' : 'live_cridora',
-                      }))
-                    }
+        <div style={{ display: 'grid', gap: '1rem' }}>
+          {JEWELLER_METAL_ROWS.map(({ code, label, sub }) => {
+            const cridoraRef = cridoraRefInrForMetal(code, platformBaseInr, spot)
+            const board = computeJewellerBoardInrPerGram(cridoraRef, pricingByMetal[code])
+            const buy = previewBuybackInrPerGram(board, buybackByMetal[code])
+            const pr = pricingByMetal[code]
+            const bb = buybackByMetal[code]
+            return (
+              <div
+                key={code}
+                className="card"
+                style={{
+                  padding: '1rem 1.1rem',
+                  borderRadius: 16,
+                  border: '1px solid var(--border-soft)',
+                  background: 'var(--veil-35)',
+                }}
+              >
+                <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: '0.75rem' }}>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '1rem' }}>{label}</h3>
+                    <p style={{ margin: '0.25rem 0 0', fontSize: '0.78rem', color: 'var(--text-muted)' }}>{sub}</p>
+                  </div>
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
+                      gap: '0.65rem',
+                      fontSize: '0.8rem',
+                      textAlign: 'right',
+                    }}
                   >
-                    <option value="live_cridora">Live benchmark 22K + my markups</option>
-                    <option value="manual">Manual 22K ₹/g (fixed)</option>
-                  </select>
-                </td>
-              </tr>
-              {ratesDraft.gold_rate_source === 'live_cridora' ? (
-                <>
-                  <tr>
-                    <td>Markup on benchmark 22K (%)</td>
-                    <td>
-                      <input
-                        style={tableInput}
-                        inputMode="decimal"
-                        value={ratesDraft.live_markup_percent}
-                        onChange={(e) => setRatesDraft((p) => ({ ...p, live_markup_percent: e.target.value }))}
-                      />
-                    </td>
-                    <td style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Before ₹/g add-on.</td>
-                  </tr>
-                  <tr>
-                    <td>Extra on benchmark (₹/g)</td>
-                    <td>
-                      <input
-                        style={tableInput}
-                        inputMode="decimal"
-                        value={ratesDraft.live_markup_inr_per_gram}
-                        onChange={(e) => setRatesDraft((p) => ({ ...p, live_markup_inr_per_gram: e.target.value }))}
-                      />
-                    </td>
-                    <td style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Added after percent markup.</td>
-                  </tr>
-                </>
-              ) : (
-                <tr>
-                  <td>Manual 22K rate (₹/g)</td>
-                  <td>
-                    <input
-                      style={tableInput}
-                      inputMode="decimal"
-                      value={ratesDraft.manual_gold_rate_inr_per_gram}
+                    <div>
+                      <div style={{ color: 'var(--text-faint)', fontSize: '0.62rem', fontWeight: 800 }}>CRIDORA REF</div>
+                      <div className="tabular" style={{ fontWeight: 700 }}>
+                        ₹{formatInr(cridoraRef, 2)}/g
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{ color: 'var(--text-faint)', fontSize: '0.62rem', fontWeight: 800 }}>YOUR BOARD</div>
+                      <div className="tabular" style={{ fontWeight: 800, color: 'var(--gold-light)' }}>
+                        ₹{formatInr(board, 2)}/g
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{ color: 'var(--text-faint)', fontSize: '0.62rem', fontWeight: 800 }}>
+                        BUYBACK PREVIEW
+                      </div>
+                      <div className="tabular" style={{ fontWeight: 700 }}>
+                        ₹{formatInr(buy, 2)}/g
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ marginTop: '0.85rem', display: 'grid', gap: '0.65rem' }}>
+                  <label className="field" style={{ margin: 0 }}>
+                    <span style={{ fontSize: '0.78rem' }}>Pricing vs Cridora</span>
+                    <select
+                      style={{ ...inp, maxWidth: '100%' }}
+                      value={pr.mode}
                       onChange={(e) =>
-                        setRatesDraft((p) => ({ ...p, manual_gold_rate_inr_per_gram: e.target.value }))
+                        setPricing(code, { mode: e.target.value as MetalPricingMode })
                       }
-                    />
-                  </td>
-                  <td style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                    Drives SKUs and fractional quotes when not overridden per SKU.
-                  </td>
-                </tr>
-              )}
-              <tr>
-                <td>Optional external rate API (URL)</td>
-                <td colSpan={2}>
-                  <input
-                    type="url"
-                    style={{ ...tableInput, maxWidth: 'min(100%, 420px)', width: '100%' }}
-                    value={ratesDraft.gold_rate_external_api_url}
-                    onChange={(e) =>
-                      setRatesDraft((p) => ({ ...p, gold_rate_external_api_url: e.target.value }))
-                    }
-                    placeholder="https://example.com/your-internal-gold-quote"
-                  />
-                  <p style={{ margin: '0.35rem 0 0', fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: 1.45 }}>
-                    Stored for your records — Cridora does not poll automatically yet.
-                  </p>
-                </td>
-              </tr>
-              <tr>
-                <td>Default gold markup (ornaments)</td>
-                <td>
-                  <label className="field" style={{ margin: 0, gap: '0.35rem' }}>
-                    <span className="sr-only">Default gold markup percent</span>
-                    <input
-                      style={tableInput}
-                      inputMode="decimal"
-                      value={ratesDraft.default_gold_markup_percent}
-                      onChange={(e) =>
-                        setRatesDraft((p) => ({ ...p, default_gold_markup_percent: e.target.value }))
-                      }
-                    />
-                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>% on your store 22K</span>
+                    >
+                      {modeOptions.map((o) => (
+                        <option key={o.value} value={o.value}>
+                          {o.label}
+                        </option>
+                      ))}
+                    </select>
                   </label>
-                </td>
-                <td style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                  Applied when a SKU does not override markup.
-                </td>
-              </tr>
-              <tr>
-                <td>Reference metal (after default SKU markup)</td>
-                <td className="tabular" style={{ fontWeight: 700 }}>
-                  ₹{formatInr(referenceMetalInr, 2)}/g
-                </td>
-                <td style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                  Basis for sellback preview when no headline override.
-                </td>
-              </tr>
-              <tr>
-                <td>Sellback deduction</td>
-                <td>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.65rem', alignItems: 'center' }}>
+
+                  {pr.mode === 'markup_on_cridora' ? (
                     <div
-                      role="group"
-                      aria-label="Sellback deduction type"
                       style={{
-                        display: 'inline-flex',
-                        borderRadius: 10,
-                        border: '1px solid var(--border-soft)',
-                        overflow: 'hidden',
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+                        gap: '0.65rem',
                       }}
                     >
-                      <button
-                        type="button"
-                        className={sellbackDeductionMode === 'percent' ? 'btn btn-primary' : 'btn btn-ghost'}
-                        style={{
-                          borderRadius: 0,
-                          border: 'none',
-                          padding: '0.4rem 0.65rem',
-                          fontSize: '0.7rem',
-                        }}
-                        onClick={() => setSellbackDeductionMode('percent')}
-                      >
-                        Percent
-                      </button>
-                      <button
-                        type="button"
-                        className={sellbackDeductionMode === 'fixed' ? 'btn btn-primary' : 'btn btn-ghost'}
-                        style={{
-                          borderRadius: 0,
-                          border: 'none',
-                          padding: '0.4rem 0.65rem',
-                          fontSize: '0.7rem',
-                        }}
-                        onClick={() => setSellbackDeductionMode('fixed')}
-                      >
-                        Fixed ₹/g
-                      </button>
+                      <label className="field" style={{ margin: 0 }}>
+                        <span>Markup % on reference</span>
+                        <input
+                          style={inp}
+                          inputMode="decimal"
+                          value={pr.markup_percent}
+                          onChange={(e) => setPricing(code, { markup_percent: e.target.value })}
+                        />
+                      </label>
+                      <label className="field" style={{ margin: 0 }}>
+                        <span>Plus ₹/g after %</span>
+                        <input
+                          style={inp}
+                          inputMode="decimal"
+                          value={pr.markup_inr_per_gram}
+                          onChange={(e) => setPricing(code, { markup_inr_per_gram: e.target.value })}
+                        />
+                      </label>
                     </div>
-                    {sellbackDeductionMode === 'percent' ? (
-                      <label className="field" style={{ margin: 0, flex: '1 1 120px' }}>
-                        <span className="sr-only">Sellback percent</span>
+                  ) : null}
+
+                  {pr.mode === 'manual_board_inr' ? (
+                    <label className="field" style={{ margin: 0 }}>
+                      <span>Your fixed board ₹/g</span>
+                      <input
+                        style={inp}
+                        inputMode="decimal"
+                        value={pr.manual_inr_per_gram}
+                        onChange={(e) => setPricing(code, { manual_inr_per_gram: e.target.value })}
+                      />
+                    </label>
+                  ) : null}
+
+                  {pr.mode === 'external_api' ? (
+                    <label className="field" style={{ margin: 0 }}>
+                      <span>HTTPS endpoint for your internal quote (not polled yet)</span>
+                      <input
+                        type="url"
+                        style={{ ...inp, maxWidth: '100%' }}
+                        value={pr.external_api_url}
+                        onChange={(e) => setPricing(code, { external_api_url: e.target.value })}
+                        placeholder="https://api.your-system.example/gold-rate"
+                      />
+                      <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 4 }}>
+                        Preview still follows Cridora until Cridora connects this feed.
+                      </span>
+                    </label>
+                  ) : null}
+
+                  <div
+                    style={{
+                      borderTop: '1px solid var(--border-soft)',
+                      paddingTop: '0.65rem',
+                      marginTop: '0.25rem',
+                    }}
+                  >
+                    <p
+                      style={{
+                        margin: '0 0 0.5rem',
+                        fontSize: '0.62rem',
+                        fontWeight: 800,
+                        letterSpacing: '0.1em',
+                        color: 'var(--text-faint)',
+                      }}
+                    >
+                      Buyback vs your board ₹/g
+                    </p>
+                    <div
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+                        gap: '0.65rem',
+                      }}
+                    >
+                      <label className="field" style={{ margin: 0 }}>
+                        <span>Deduct %</span>
                         <input
-                          style={tableInput}
+                          style={inp}
                           inputMode="decimal"
-                          value={ratesDraft.sellback_deduction_percent}
-                          onChange={(e) =>
-                            setRatesDraft((p) => ({ ...p, sellback_deduction_percent: e.target.value }))
-                          }
-                          aria-label="Sellback deduction percent"
+                          value={bb.deduction_percent}
+                          onChange={(e) => setBuyback(code, { deduction_percent: e.target.value })}
                         />
                       </label>
-                    ) : (
-                      <label className="field" style={{ margin: 0, flex: '1 1 120px' }}>
-                        <span className="sr-only">Sellback fixed per gram</span>
+                      <label className="field" style={{ margin: 0 }}>
+                        <span>Less ₹/g (fixed)</span>
                         <input
-                          style={tableInput}
+                          style={inp}
                           inputMode="decimal"
-                          value={ratesDraft.sellback_fixed_inr_per_gram}
-                          onChange={(e) =>
-                            setRatesDraft((p) => ({ ...p, sellback_fixed_inr_per_gram: e.target.value }))
-                          }
-                          aria-label="Sellback fixed rupees per gram"
+                          value={bb.fixed_inr_per_gram}
+                          onChange={(e) => setBuyback(code, { fixed_inr_per_gram: e.target.value })}
                         />
                       </label>
-                    )}
+                      <label className="field" style={{ margin: 0 }}>
+                        <span>Less ₹/g (your extra)</span>
+                        <input
+                          style={inp}
+                          inputMode="decimal"
+                          value={bb.jeweller_deduction_inr_per_gram}
+                          onChange={(e) =>
+                            setBuyback(code, { jeweller_deduction_inr_per_gram: e.target.value })
+                          }
+                        />
+                      </label>
+                    </div>
                   </div>
-                </td>
-                <td style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                  Only the selected mode is saved; the other is stored as 0.
-                </td>
-              </tr>
-              <tr>
-                <td>Preview indicative buyback</td>
-                <td className="tabular" style={{ fontWeight: 700, color: 'var(--gold-light)' }}>
-                  ₹{formatInr(indicativeBuybackPreview, 2)}/g
-                </td>
-                <td style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Before headline override.</td>
-              </tr>
-              <tr>
-                <td>Typical making charge (comparison)</td>
-                <td>
-                  <label className="field" style={{ margin: 0 }}>
-                    <span className="sr-only">Typical making charge per gram</span>
-                    <input
-                      style={tableInput}
-                      inputMode="decimal"
-                      value={ratesDraft.representative_making_charge_inr_per_gram}
-                      onChange={(e) =>
-                        setRatesDraft((p) => ({
-                          ...p,
-                          representative_making_charge_inr_per_gram: e.target.value,
-                        }))
-                      }
-                    />
-                  </label>
-                </td>
-                <td style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Shown on your jeweller card.</td>
-              </tr>
-              <tr>
-                <td>Optional buyback headline ₹/g</td>
-                <td>
-                  <label className="field" style={{ margin: 0 }}>
-                    <span className="sr-only">Optional buyback headline</span>
-                    <input
-                      style={tableInput}
-                      inputMode="decimal"
-                      value={ratesDraft.buyback_headline_inr_per_gram}
-                      onChange={(e) =>
-                        setRatesDraft((p) => ({ ...p, buyback_headline_inr_per_gram: e.target.value }))
-                      }
-                      placeholder="Leave blank to derive"
-                    />
-                  </label>
-                </td>
-                <td style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                  Overrides derived buyback on storefront when set.
-                </td>
-              </tr>
-              <tr>
-                <td>Gold deposit yield (% APR)</td>
-                <td>
-                  <input
-                    style={tableInput}
-                    inputMode="decimal"
-                    value={ratesDraft.gold_deposit_yield_apr_percent}
-                    onChange={(e) =>
-                      setRatesDraft((p) => ({ ...p, gold_deposit_yield_apr_percent: e.target.value }))
-                    }
-                  />
-                </td>
-                <td style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Directory disclosure.</td>
-              </tr>
-              <tr>
-                <td>Gold loan interest (% APR)</td>
-                <td>
-                  <input
-                    style={tableInput}
-                    inputMode="decimal"
-                    value={ratesDraft.gold_loan_interest_apr_percent}
-                    onChange={(e) =>
-                      setRatesDraft((p) => ({ ...p, gold_loan_interest_apr_percent: e.target.value }))
-                    }
-                  />
-                </td>
-                <td style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Use 0 if zero-interest programme.</td>
-              </tr>
-              <tr>
-                <td colSpan={3} style={{ padding: '0.85rem 1rem', verticalAlign: 'top' }}>
-                  <label className="field" style={{ margin: 0, width: '100%' }}>
-                    <span>Gold deposit note (marketplace)</span>
-                    <textarea
-                      className="dash-textarea"
-                      rows={3}
-                      value={ratesDraft.gold_deposit_note}
-                      onChange={(e) => setRatesDraft((p) => ({ ...p, gold_deposit_note: e.target.value }))}
-                      style={{ width: '100%', maxWidth: '100%', marginTop: '0.35rem' }}
-                    />
-                  </label>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+                </div>
+              </div>
+            )
+          })}
         </div>
+      </section>
+
+      <section className="card" style={{ padding: '1.25rem', marginBottom: '1.25rem', borderRadius: 18 }}>
+        <h2 className="dash-coming__title" style={{ marginTop: 0 }}>
+          Gold 22K ornaments — default markup &amp; card buyback
+        </h2>
+        <p className="dash-coming__text" style={{ marginBottom: '1rem' }}>
+          Listings inherit <strong>default gold markup %</strong> on top of your gold 22K board rate unless a SKU
+          overrides it. Storefront buyback headline uses this ladder unless you set an explicit headline override.
+        </p>
+        <div style={{ display: 'grid', gap: '0.85rem', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
+          <label className="field">
+            <span>Default ornament markup (% on your 22K board)</span>
+            <input
+              inputMode="decimal"
+              value={ratesDraft.default_gold_markup_percent}
+              onChange={(e) =>
+                setRatesDraft((p) => ({ ...p, default_gold_markup_percent: e.target.value }))
+              }
+            />
+          </label>
+          <div className="card" style={{ padding: '0.75rem', borderRadius: 12, margin: 0 }}>
+            <p style={{ margin: 0, fontSize: '0.72rem', color: 'var(--text-faint)', fontWeight: 800 }}>REFERENCE METAL</p>
+            <p style={{ margin: '0.35rem 0 0', fontWeight: 800 }} className="tabular">
+              ₹{formatInr(referenceMetalInr, 2)}/g
+            </p>
+          </div>
+          <div className="card" style={{ padding: '0.75rem', borderRadius: 12, margin: 0 }}>
+            <p style={{ margin: 0, fontSize: '0.72rem', color: 'var(--text-faint)', fontWeight: 800 }}>
+              INDICATIVE BUYBACK
+            </p>
+            <p style={{ margin: '0.35rem 0 0', fontWeight: 800, color: 'var(--gold-light)' }} className="tabular">
+              ₹{formatInr(indicativeBuybackGoldDisplay, 2)}/g
+            </p>
+          </div>
+        </div>
+        <label className="field" style={{ marginTop: '1rem' }}>
+          <span>Optional buyback headline ₹/g (overrides derived rate on cards)</span>
+          <input
+            inputMode="decimal"
+            value={ratesDraft.buyback_headline_inr_per_gram}
+            onChange={(e) =>
+              setRatesDraft((p) => ({ ...p, buyback_headline_inr_per_gram: e.target.value }))
+            }
+            placeholder="Leave blank to derive from reference metal + gold 22K buyback row"
+          />
+        </label>
+        <label className="field" style={{ marginTop: '0.85rem' }}>
+          <span>Typical making charge ₹/g (comparison cards)</span>
+          <input
+            inputMode="decimal"
+            value={ratesDraft.representative_making_charge_inr_per_gram}
+            onChange={(e) =>
+              setRatesDraft((p) => ({
+                ...p,
+                representative_making_charge_inr_per_gram: e.target.value,
+              }))
+            }
+          />
+        </label>
+      </section>
+
+      <section className="card" style={{ padding: '1.25rem', marginBottom: '1.25rem', borderRadius: 18 }}>
+        <h2 className="dash-coming__title" style={{ marginTop: 0 }}>
+          Deposit &amp; loan disclosures (platform + your adjustment)
+        </h2>
+        <p className="dash-coming__text" style={{ marginBottom: '1rem' }}>
+          Gold deposit yield and headline loan APR / processing fee are configured by <strong>Cridora admins</strong>{' '}
+          (market-linked benchmarks). You may disclose an extra <strong>₹/g</strong> adjustment customers see beside
+          loan quotes.
+        </p>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+            gap: '0.85rem',
+            marginBottom: '1rem',
+          }}
+        >
+          <div className="card" style={{ padding: '0.85rem', borderRadius: 12, margin: 0 }}>
+            <p style={{ margin: 0, fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-faint)' }}>
+              DEPOSIT YIELD (% APR)
+            </p>
+            <p style={{ margin: '0.35rem 0 0', fontWeight: 800 }} className="tabular">
+              {formatInr(parseN(platformDisclosures.gold_deposit_yield_apr_percent), 3)}%
+            </p>
+          </div>
+          <div className="card" style={{ padding: '0.85rem', borderRadius: 12, margin: 0 }}>
+            <p style={{ margin: 0, fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-faint)' }}>
+              LOAN APR (% · PLATFORM)
+            </p>
+            <p style={{ margin: '0.35rem 0 0', fontWeight: 800 }} className="tabular">
+              {formatInr(parseN(platformDisclosures.gold_loan_interest_apr_percent), 3)}%
+            </p>
+          </div>
+          <div className="card" style={{ padding: '0.85rem', borderRadius: 12, margin: 0 }}>
+            <p style={{ margin: 0, fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-faint)' }}>
+              PROCESSING FEE (₹ · PLATFORM)
+            </p>
+            <p style={{ margin: '0.35rem 0 0', fontWeight: 800 }} className="tabular">
+              ₹{formatInr(parseN(platformDisclosures.gold_loan_processing_fee_inr), 0)}
+            </p>
+          </div>
+        </div>
+        <label className="field">
+          <span>Your loan disclosure: extra ₹/g vs live reference (optional)</span>
+          <input
+            inputMode="decimal"
+            value={ratesDraft.gold_loan_jeweller_deduction_inr_per_gram}
+            onChange={(e) =>
+              setRatesDraft((p) => ({
+                ...p,
+                gold_loan_jeweller_deduction_inr_per_gram: e.target.value,
+              }))
+            }
+          />
+        </label>
+        <label className="field" style={{ marginTop: '0.85rem' }}>
+          <span>Gold deposit / vault note</span>
+          <textarea
+            className="dash-textarea"
+            rows={3}
+            value={ratesDraft.gold_deposit_note}
+            onChange={(e) => setRatesDraft((p) => ({ ...p, gold_deposit_note: e.target.value }))}
+            style={{ width: '100%', maxWidth: '100%', marginTop: '0.35rem' }}
+          />
+        </label>
       </section>
 
       <section className="card" style={{ padding: '1.25rem', marginBottom: '1.25rem', borderRadius: 18 }}>
@@ -621,9 +670,7 @@ export function JewellerRatesSchemesPanel() {
           Golden Scheme (jewellery savings)
         </h2>
         <p className="dash-coming__text" style={{ marginBottom: '1rem' }}>
-          MVP disclosure only: customers contribute monthly toward ornament savings; gold rate may apply at investment or
-          redemption per your policy. Admin scheme moderation can be layered later — today this copy surfaces on your public
-          jeweller card when enabled.
+          MVP disclosure only — surfaces on your public jeweller card when enabled.
         </p>
         <label className="field" style={{ flexDirection: 'row', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
           <input
@@ -657,7 +704,6 @@ export function JewellerRatesSchemesPanel() {
             <input
               value={ratesDraft.golden_scheme_lock_in_note}
               onChange={(e) => setRatesDraft((p) => ({ ...p, golden_scheme_lock_in_note: e.target.value }))}
-              placeholder="e.g. 30-day gap after 11th installment before ornament closing"
             />
           </label>
           <label className="field" style={{ gridColumn: '1 / -1' }}>
@@ -667,7 +713,6 @@ export function JewellerRatesSchemesPanel() {
               onChange={(e) =>
                 setRatesDraft((p) => ({ ...p, golden_scheme_rate_application_note: e.target.value }))
               }
-              placeholder="e.g. Board rate on installment date · ornament close at month-end rate"
             />
           </label>
           <label className="field" style={{ gridColumn: '1 / -1' }}>
@@ -677,7 +722,6 @@ export function JewellerRatesSchemesPanel() {
               rows={4}
               value={ratesDraft.golden_scheme_benefits}
               onChange={(e) => setRatesDraft((p) => ({ ...p, golden_scheme_benefits: e.target.value }))}
-              placeholder="Bonus months, MC waivers, ornament bonus grams…"
               style={{ width: '100%', marginTop: '0.35rem' }}
             />
           </label>

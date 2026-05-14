@@ -7,6 +7,7 @@ import {
   fetchWebPushServerStatus,
   getBrowserPushActive,
   pushNotificationsSupported,
+  pushSetupHint,
   registerWebPushSubscription,
   unregisterWebPushSubscription,
 } from '@/lib/webPushApi'
@@ -72,7 +73,11 @@ export function NotificationBell({ compact = false, role = 'customer' }: Props) 
   const [pushBusy, setPushBusy] = useState(false)
   const [pushError, setPushError] = useState('')
   const [pushServerReady, setPushServerReady] = useState<boolean | null>(null)
+  const [pushTestBusy, setPushTestBusy] = useState(false)
+  const [pushTestMsg, setPushTestMsg] = useState('')
   const rootRef = useRef<HTMLDivElement>(null)
+
+  const setupHint = pushSetupHint()
 
   const items = useMemo(
     () => (useAdminFeed ? adminItems : mockItems),
@@ -173,10 +178,39 @@ export function NotificationBell({ compact = false, role = 'customer' }: Props) 
     try {
       await unregisterWebPushSubscription()
       setPushActive(false)
+      setPushTestMsg('')
     } catch (e) {
       setPushError(e instanceof Error ? e.message : 'Could not disable push.')
     } finally {
       setPushBusy(false)
+    }
+  }, [])
+
+  const sendAdminTestPush = useCallback(async () => {
+    setPushTestBusy(true)
+    setPushTestMsg('')
+    try {
+      const res = await authFetch('/api/v1/admin/push/test/', {
+        method: 'POST',
+        jsonBody: {
+          title: 'Cridora test',
+          body: 'Push delivery works — you can dismiss this.',
+          url: '/',
+        },
+      })
+      const body = (await res.json().catch(() => ({}))) as { detail?: string; sent?: number }
+      if (!res.ok) {
+        setPushTestMsg(body.detail ?? `Test failed (${res.status}).`)
+        return
+      }
+      const n = typeof body.sent === 'number' ? body.sent : 0
+      setPushTestMsg(
+        `Sent to ${n} device(s). Check the notification tray; Focus / DND can hide banners.`,
+      )
+    } catch (e) {
+      setPushTestMsg(e instanceof Error ? e.message : 'Could not reach server.')
+    } finally {
+      setPushTestBusy(false)
     }
   }, [])
 
@@ -245,6 +279,11 @@ export function NotificationBell({ compact = false, role = 'customer' }: Props) 
               Mark read
             </button>
           </div>
+          {user && setupHint ? (
+            <p className="notif-panel-hint" style={{ marginTop: '-0.35rem', color: 'var(--gold-light)' }}>
+              {setupHint}
+            </p>
+          ) : null}
           <p className="notif-panel-hint">
             {useAdminFeed ? (
               <>
@@ -319,6 +358,23 @@ export function NotificationBell({ compact = false, role = 'customer' }: Props) 
               Sign in to enable device notifications.
             </p>
           )}
+          {useAdminFeed && user && pushActive && pushServerReady === true ? (
+            <div className="notif-push-row" style={{ marginTop: '0.5rem', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                className="btn btn-ghost notif-push-btn"
+                disabled={pushTestBusy}
+                onClick={() => void sendAdminTestPush()}
+              >
+                Send test notification
+              </button>
+              {pushTestMsg ? (
+                <span className="notif-push-detail" style={{ flex: '1 1 100%' }}>
+                  {pushTestMsg}
+                </span>
+              ) : null}
+            </div>
+          ) : null}
           <ul className="notif-list">
             {items.map((n) =>
               useAdminFeed ? (

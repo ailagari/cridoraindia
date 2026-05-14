@@ -143,6 +143,12 @@ export function JewellerPublicPage() {
             <p style={{ margin: '0.35rem 0 0', fontSize: '1.2rem', fontWeight: 800 }} className="tabular">
               {formatInr(parseNum(row.gold_loan_interest_apr_percent), 2)}% APR
             </p>
+            <p style={{ margin: '0.35rem 0 0', fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+              Processing ₹{formatInr(parseNum(row.gold_loan_processing_fee_inr ?? '0'), 0)}
+              {parseNum(row.gold_loan_jeweller_deduction_inr_per_gram ?? '0') > 0
+                ? ` · jeweller notes ₹${formatInr(parseNum(row.gold_loan_jeweller_deduction_inr_per_gram ?? '0'), 2)}/g vs live reference`
+                : null}
+            </p>
           </div>
         </div>
 

@@ -44,10 +44,13 @@ self.addEventListener('push', (event: PushEvent) => {
       data = { ...fallback, body: text }
     }
   }
+  const title = (data.title || fallback.title || 'Cridora').trim() || 'Cridora'
+  const bodyRaw = typeof data.body === 'string' ? data.body.trim() : ''
+  const body = bodyRaw.length > 0 ? bodyRaw : 'Open Cridora for details.'
   const targetUrl = new URL(data.url || '/', self.location.origin).href
   event.waitUntil(
-    self.registration.showNotification(data.title || fallback.title!, {
-      body: data.body,
+    self.registration.showNotification(title, {
+      body,
       icon: '/favicon.svg',
       badge: '/favicon.svg',
       data: { url: targetUrl },

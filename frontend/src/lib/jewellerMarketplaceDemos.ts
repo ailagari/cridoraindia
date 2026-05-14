@@ -47,6 +47,8 @@ function demoBase(overrides: Partial<JewellerStorefrontDTO>): JewellerStorefront
     golden_scheme_lock_in_note: '',
     golden_scheme_benefits: '',
     golden_scheme_rate_application_note: '',
+    gold_loan_processing_fee_inr: '0',
+    gold_loan_jeweller_deduction_inr_per_gram: '0',
     ...overrides,
   }
 }

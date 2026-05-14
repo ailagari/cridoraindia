@@ -8,6 +8,9 @@ export type GoldTickerPayload = {
   ticker_manual_24k_inr_per_gram?: string | null
   platform_base_inr_per_gram_22k: string
   cridora_base_source?: string
+  gold_deposit_yield_apr_percent?: string
+  gold_loan_interest_apr_percent?: string
+  gold_loan_processing_fee_inr?: string
   updated_at: string
 }
 
@@ -103,6 +106,8 @@ export type JewellerStorefrontDTO = {
   golden_scheme_lock_in_note?: string
   golden_scheme_benefits?: string
   golden_scheme_rate_application_note?: string
+  gold_loan_processing_fee_inr?: string
+  gold_loan_jeweller_deduction_inr_per_gram?: string
 }
 
 export async function fetchMarketplaceProduct(id: number): Promise<MarketplaceProductDTO | null> {

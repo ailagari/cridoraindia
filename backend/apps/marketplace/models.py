@@ -29,6 +29,24 @@ class GoldTickerConfig(models.Model):
         blank=True,
         help_text="Last resolved 22K rate at which alerts were checked (internal).",
     )
+    gold_deposit_yield_apr_percent = models.DecimalField(
+        max_digits=8,
+        decimal_places=3,
+        default=Decimal("0"),
+        help_text="Platform-disclosed gold deposit / saver yield (% APR) shown on jeweller storefronts.",
+    )
+    gold_loan_interest_apr_percent = models.DecimalField(
+        max_digits=8,
+        decimal_places=3,
+        default=Decimal("0"),
+        help_text="Platform-disclosed gold-backed loan interest (% APR).",
+    )
+    gold_loan_processing_fee_inr = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=Decimal("0"),
+        help_text="Platform-disclosed one-time processing fee (₹) for gold loans.",
+    )
     manual_ticker_enabled = models.BooleanField(
         default=False,
         help_text="When on, public ticker and platform 22K base use manual rates below (overrides live spot).",
@@ -195,6 +213,22 @@ class JewellerPricingProfile(models.Model):
         blank=True,
         help_text="Optional URL of your gold-rate feed for reference; not fetched automatically by Cridora yet.",
     )
+    metal_pricing_json = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Per-metal pricing modes vs Cridora reference (gold/silver purities).",
+    )
+    metal_buyback_json = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Per-metal sellback deduction blocks.",
+    )
+    gold_loan_jeweller_deduction_inr_per_gram = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=Decimal("0"),
+        help_text="Jeweller-disclosed extra ₹/g adjustment vs live loan reference (storefront disclosure).",
+    )
     golden_scheme_enabled = models.BooleanField(
         default=False,
         help_text="Jeweller offers a Golden Scheme (monthly jewellery savings) disclosure on storefront.",
@@ -338,4 +372,12 @@ def get_or_create_ticker() -> GoldTickerConfig:
 
 def jeweller_profile_for(user):
     profile, _ = JewellerPricingProfile.objects.get_or_create(jeweller=user)
+    if not profile.metal_pricing_json:
+        from .metal_pricing import populate_metal_json_from_legacy, sync_gold_22k_legacy_fields_from_json
+
+        pop = populate_metal_json_from_legacy(profile)
+        profile.metal_pricing_json = pop["pricing"]
+        profile.metal_buyback_json = pop["buyback"]
+        sync_gold_22k_legacy_fields_from_json(profile)
+        profile.save()
     return profile

@@ -11,6 +11,9 @@ type Ticker = {
   manual_ticker_enabled?: boolean
   ticker_manual_22k_inr_per_gram?: string | null
   ticker_manual_24k_inr_per_gram?: string | null
+  gold_deposit_yield_apr_percent?: string
+  gold_loan_interest_apr_percent?: string
+  gold_loan_processing_fee_inr?: string
   platform_base_inr_per_gram_22k: string
   cridora_base_source?: string
   updated_at: string
@@ -24,6 +27,9 @@ export function AdminGoldTickerPanel() {
   const [manualOn, setManualOn] = useState(false)
   const [manual22Draft, setManual22Draft] = useState('')
   const [manual24Draft, setManual24Draft] = useState('')
+  const [depositYieldDraft, setDepositYieldDraft] = useState('0')
+  const [loanAprDraft, setLoanAprDraft] = useState('0')
+  const [loanFeeDraft, setLoanFeeDraft] = useState('0')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
 
@@ -43,6 +49,9 @@ export function AdminGoldTickerPanel() {
     setManualOn(Boolean(j.manual_ticker_enabled))
     setManual22Draft(j.ticker_manual_22k_inr_per_gram ?? '')
     setManual24Draft(j.ticker_manual_24k_inr_per_gram ?? '')
+    setDepositYieldDraft(j.gold_deposit_yield_apr_percent ?? '0')
+    setLoanAprDraft(j.gold_loan_interest_apr_percent ?? '0')
+    setLoanFeeDraft(j.gold_loan_processing_fee_inr ?? '0')
   }, [])
 
   useEffect(() => {
@@ -71,6 +80,9 @@ export function AdminGoldTickerPanel() {
         manual_ticker_enabled: manualOn,
         ticker_manual_22k_inr_per_gram: manual22Draft.trim() || null,
         ticker_manual_24k_inr_per_gram: manual24Draft.trim() ? manual24Draft.trim() : null,
+        gold_deposit_yield_apr_percent: depositYieldDraft.trim(),
+        gold_loan_interest_apr_percent: loanAprDraft.trim(),
+        gold_loan_processing_fee_inr: loanFeeDraft.trim(),
       },
     })
     setBusy(false)
@@ -224,6 +236,41 @@ export function AdminGoldTickerPanel() {
             placeholder="10"
           />
         </label>
+      </div>
+      <div
+        style={{
+          marginTop: '1rem',
+          padding: '1rem',
+          borderRadius: 12,
+          border: '1px solid var(--border-soft)',
+          background: 'var(--veil-35)',
+        }}
+      >
+        <p style={{ margin: '0 0 0.75rem', fontWeight: 700, fontSize: '0.88rem' }}>
+          Jeweller storefront disclosures (platform-wide)
+        </p>
+        <p style={{ margin: '0 0 0.85rem', fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
+          Deposit yield, headline loan APR, and processing fee appear on verified jeweller directory cards. Jewellers can
+          still disclose their own ₹/g loan adjustment in Rates &amp; schemes.
+        </p>
+        <div style={{ display: 'grid', gap: '0.85rem', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
+          <label className="field">
+            <span>Gold deposit yield (% APR)</span>
+            <input
+              value={depositYieldDraft}
+              onChange={(e) => setDepositYieldDraft(e.target.value)}
+              inputMode="decimal"
+            />
+          </label>
+          <label className="field">
+            <span>Gold loan APR (%)</span>
+            <input value={loanAprDraft} onChange={(e) => setLoanAprDraft(e.target.value)} inputMode="decimal" />
+          </label>
+          <label className="field">
+            <span>Gold loan processing fee (₹)</span>
+            <input value={loanFeeDraft} onChange={(e) => setLoanFeeDraft(e.target.value)} inputMode="decimal" />
+          </label>
+        </div>
       </div>
       <button
         type="button"

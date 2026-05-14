@@ -1,4 +1,5 @@
 import json
+import logging
 from typing import Any
 
 from django.conf import settings
@@ -6,6 +7,11 @@ from django.db.models import Q
 from pywebpush import WebPushException, webpush
 
 from .models import WebPushSubscription
+
+logger = logging.getLogger(__name__)
+
+# FCM/APNs: ttl=0 tends to mean deliver-immediately-or-drop; non-zero TTL improves delivery when the device is briefly offline.
+_WEB_PUSH_TTL_SECONDS = 86_400
 
 
 def webpush_configured() -> bool:
@@ -27,6 +33,7 @@ def send_push_payload(subscription: WebPushSubscription, payload: dict[str, Any]
         data=json.dumps(payload),
         vapid_private_key=private_key,
         vapid_claims={"sub": settings.WEB_PUSH_VAPID_CONTACT.strip()},
+        ttl=_WEB_PUSH_TTL_SECONDS,
     )
 
 
@@ -43,6 +50,14 @@ def send_push_to_user(user, payload: dict[str, Any]) -> int:
             status = getattr(getattr(exc, "response", None), "status_code", None)
             if status == 410:
                 sub.delete()
+            else:
+                logger.warning(
+                    "Web Push delivery failed for user_id=%s endpoint_prefix=%s status=%s error=%s",
+                    sub.user_id,
+                    (sub.endpoint[:64] + "…") if len(sub.endpoint) > 64 else sub.endpoint,
+                    status,
+                    exc,
+                )
     return n
 
 
@@ -59,6 +74,14 @@ def send_push_broadcast(payload: dict[str, Any]) -> int:
             status = getattr(getattr(exc, "response", None), "status_code", None)
             if status == 410:
                 sub.delete()
+            else:
+                logger.warning(
+                    "Web Push broadcast failed for user_id=%s endpoint_prefix=%s status=%s error=%s",
+                    sub.user_id,
+                    (sub.endpoint[:64] + "…") if len(sub.endpoint) > 64 else sub.endpoint,
+                    status,
+                    exc,
+                )
     return n
 
 
