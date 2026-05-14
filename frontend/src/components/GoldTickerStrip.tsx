@@ -71,7 +71,7 @@ export function GoldTickerStrip({ variant = 'public' }: Props) {
 
   const headline =
     spot?.source === 'manual_ticker'
-      ? 'Ticker · admin set (INR)'
+      ? 'Gold Price Live(INR)'
       : spot?.source === 'spot'
         ? 'Live INR · global spot (XAU)'
         : spot?.source === 'stale_cache'
