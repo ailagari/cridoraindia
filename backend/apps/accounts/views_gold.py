@@ -7,6 +7,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from .jeweller_liability_service import jeweller_liability_grams
 from .gold_identity import (
     compute_gold_upi,
     effective_custodian,
@@ -44,6 +45,9 @@ def _wallet_payload(user: User) -> dict:
     cridora_global = f"{handle}@cridora" if handle else ""
     merchant_id = f"{code}@cridora" if code else ""
     vaults = wallet_vault_payload(user) if user.user_type == User.CUSTOMER else []
+    liability_s = ""
+    if user.user_type == User.JEWELLER:
+        liability_s = str(jeweller_liability_grams(user))
     return GoldWalletSerializer(
         {
             "cridora_member_id": user.cridora_member_id or "",
@@ -58,6 +62,7 @@ def _wallet_payload(user: User) -> dict:
             "jeweller_pref_redemption_id": user.jeweller_pref_redemption_id,
             "balance_grams": str(grams),
             "vaults": vaults,
+            "custodial_liability_grams": liability_s,
         }
     ).data
 

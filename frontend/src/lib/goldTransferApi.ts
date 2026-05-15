@@ -23,6 +23,8 @@ export type GoldWalletDTO = {
   jeweller_pref_redemption_id?: number | null
   balance_grams: string
   vaults?: VaultRowDTO[]
+  /** Grams liability to customers (jeweller accounts only). */
+  custodial_liability_grams?: string
 }
 
 export type GoldResolveRecipient = {

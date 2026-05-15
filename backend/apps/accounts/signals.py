@@ -92,7 +92,7 @@ def jeweller_push_on_counter_fractional_order(sender, instance, created, **kwarg
         grams_s = _format_grams_trimmed(instance.grams)
         total_s = f"{instance.total_inr:.2f}"
         title = "Confirm counter gold payment"
-        body = f"{label} · {grams_s} g · ₹{total_s} — open Purchases to confirm."
+        body = f"{label} · {grams_s} g · ₹{total_s} — customer generates an OTP after paying; enter it under Purchases."
         send_push_to_user(
             jeweller,
             {

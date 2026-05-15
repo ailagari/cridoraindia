@@ -2,12 +2,13 @@ from decimal import Decimal
 
 from django.contrib.auth import get_user_model
 from django.db import transaction
-from django.utils import timezone
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from .fractional_completion import apply_fractional_purchase_credit_and_liabilities
+from .fractional_counter_otp import issue_counter_otp, verify_counter_otp
 from .fractional_service import (
     GST_PERCENT,
     breakdown_from_grams,
@@ -16,7 +17,6 @@ from .fractional_service import (
     validate_minimums,
 )
 from .models import FractionalGoldPurchase
-from .vault_service import credit_customer_fractional
 from apps.marketplace.models import jeweller_profile_for
 from apps.marketplace.pricing import jeweller_rate_effective_updated_at
 
@@ -50,10 +50,6 @@ def _ser_purchase(p: FractionalGoldPurchase) -> dict:
         if p.jeweller_verified_at
         else None,
     }
-
-
-def _credit_customer_gold(customer: User, jeweller: User, grams: Decimal) -> None:
-    credit_customer_fractional(customer, jeweller, grams)
 
 
 class FractionalQuoteView(APIView):
@@ -160,9 +156,9 @@ class FractionalOrdersView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
         pay = (request.data.get("payment_method") or "").strip().lower()
-        if pay not in (FractionalGoldPurchase.PAY_UPI, FractionalGoldPurchase.PAY_COUNTER):
+        if pay != FractionalGoldPurchase.PAY_COUNTER:
             return Response(
-                {"detail": "payment_method must be upi or counter."},
+                {"detail": "Only pay-at-counter purchases are available."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         mode = (request.data.get("mode") or "").strip().lower()
@@ -190,11 +186,6 @@ class FractionalOrdersView(APIView):
 
         note = (request.data.get("customer_note") or "").strip()[:255]
 
-        if pay == FractionalGoldPurchase.PAY_UPI:
-            initial_status = FractionalGoldPurchase.PENDING_PAYMENT
-        else:
-            initial_status = FractionalGoldPurchase.AWAITING_COUNTER
-
         p = FractionalGoldPurchase.objects.create(
             customer=user,
             jeweller=jeweller,
@@ -204,15 +195,49 @@ class FractionalOrdersView(APIView):
             gst_percent=GST_PERCENT,
             gst_inr=b["gst_inr"],
             total_inr=b["total_inr"],
-            payment_method=pay,
-            status=initial_status,
+            payment_method=FractionalGoldPurchase.PAY_COUNTER,
+            status=FractionalGoldPurchase.AWAITING_COUNTER,
             customer_note=note,
         )
         return Response(_ser_purchase(p), status=status.HTTP_201_CREATED)
 
 
+class FractionalCounterOtpIssueView(APIView):
+    """Customer generates an in-app OTP after paying at the jeweller counter."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk: int):
+        if request.user.user_type != User.CUSTOMER:
+            return Response(
+                {"detail": "Customers only."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        try:
+            with transaction.atomic():
+                purchase = FractionalGoldPurchase.objects.select_for_update().get(
+                    pk=pk,
+                    customer=request.user,
+                )
+                code, expires_at = issue_counter_otp(purchase)
+        except FractionalGoldPurchase.DoesNotExist:
+            return Response(
+                {"detail": "Order not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        except ValueError as e:
+            return Response(
+                {"detail": str(e)},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        payload = _ser_purchase(purchase)
+        payload["otp"] = code
+        payload["otp_expires_at"] = expires_at.isoformat()
+        return Response(payload)
+
+
 class FractionalOrderConfirmUpiView(APIView):
-    """Customer confirms UPI payment manually; credits gold immediately (no PSP webhook yet)."""
+    """Legacy UPI self-confirm — disabled for new orders; retained for migration hooks."""
 
     permission_classes = [IsAuthenticated]
 
@@ -230,12 +255,7 @@ class FractionalOrderConfirmUpiView(APIView):
                     payment_method=FractionalGoldPurchase.PAY_UPI,
                     status=FractionalGoldPurchase.PENDING_PAYMENT,
                 )
-                _credit_customer_gold(purchase.customer, purchase.jeweller, purchase.grams)
-                purchase.status = FractionalGoldPurchase.COMPLETED
-                purchase.jeweller_verified_at = timezone.now()
-                purchase.save(
-                    update_fields=["status", "jeweller_verified_at", "updated_at"]
-                )
+                apply_fractional_purchase_credit_and_liabilities(purchase)
         except FractionalGoldPurchase.DoesNotExist:
             return Response(
                 {
@@ -265,6 +285,7 @@ class JewellerFractionalPendingView(APIView):
             row["customer"] = {
                 "email": p.customer.email,
                 "name": f"{p.customer.first_name} {p.customer.last_name}".strip(),
+                "cridora_member_id": p.customer.cridora_member_id or "",
             }
             out.append(row)
         return Response({"results": out})
@@ -279,6 +300,9 @@ class JewellerFractionalVerifyView(APIView):
                 {"detail": "Jewellers only."},
                 status=status.HTTP_403_FORBIDDEN,
             )
+        raw_otp = request.data.get("otp") if isinstance(request.data, dict) else None
+        if raw_otp is None:
+            raw_otp = request.POST.get("otp")
         try:
             with transaction.atomic():
                 purchase = FractionalGoldPurchase.objects.select_for_update().get(
@@ -286,12 +310,13 @@ class JewellerFractionalVerifyView(APIView):
                     jeweller=request.user,
                     status=FractionalGoldPurchase.AWAITING_COUNTER,
                 )
-                _credit_customer_gold(purchase.customer, purchase.jeweller, purchase.grams)
-                purchase.status = FractionalGoldPurchase.COMPLETED
-                purchase.jeweller_verified_at = timezone.now()
-                purchase.save(
-                    update_fields=["status", "jeweller_verified_at", "updated_at"]
-                )
+                ok, detail = verify_counter_otp(purchase, str(raw_otp or ""))
+                if not ok:
+                    return Response(
+                        {"detail": detail},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                apply_fractional_purchase_credit_and_liabilities(purchase)
         except FractionalGoldPurchase.DoesNotExist:
             return Response(
                 {"detail": "Pending counter order not found."},

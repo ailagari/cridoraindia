@@ -91,9 +91,11 @@ function dashEmpty(s: string): string {
 
 type Props = {
   intro?: string
+  /** Customer dashboard: CTAs open fractional buy / catalogue inside `/userdashboard`. */
+  variant?: 'public' | 'customer_dashboard'
 }
 
-export function JewellerMarketplaceGrid({ intro }: Props) {
+export function JewellerMarketplaceGrid({ intro, variant = 'public' }: Props) {
   const [rows, setRows] = useState<JewellerStorefrontDTO[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCity, setSelectedCity] = useState('All Cities')
@@ -539,11 +541,17 @@ export function JewellerMarketplaceGrid({ intro }: Props) {
                     </span>
                   )}
                   <Link
-                    to={j.id > 0 ? `/signup?jeweller=${j.id}` : '/signup'}
+                    to={
+                      j.id > 0
+                        ? variant === 'customer_dashboard'
+                          ? `/userdashboard?section=invest_fractional&jeweller_id=${j.id}`
+                          : `/signup?jeweller=${j.id}`
+                        : '/signup'
+                    }
                     className="btn btn-primary"
                     style={{ padding: '0.4rem 0.65rem', borderRadius: 12, fontSize: '0.7rem' }}
                   >
-                    Invest
+                    {variant === 'customer_dashboard' ? 'Buy gold' : 'Invest'}
                   </Link>
                   <button
                     type="button"
@@ -555,7 +563,15 @@ export function JewellerMarketplaceGrid({ intro }: Props) {
                     Set default
                   </button>
                   <Link
-                    to={j.id > 0 ? `/marketplace?jeweller=${j.id}` : '/marketplace'}
+                    to={
+                      j.id > 0
+                        ? variant === 'customer_dashboard'
+                          ? `/userdashboard?section=shop_products&jeweller=${j.id}`
+                          : `/marketplace?jeweller=${j.id}`
+                        : variant === 'customer_dashboard'
+                          ? '/userdashboard?section=shop_products'
+                          : '/marketplace'
+                    }
                     style={{ fontSize: '0.72rem', color: 'var(--gold-light)', marginLeft: 4 }}
                   >
                     Browse products →

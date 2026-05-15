@@ -4,6 +4,7 @@ from decimal import Decimal
 from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
 
+from .jeweller_liability_service import jeweller_liability_grams
 from .models import AdminNotification, AdminNotificationRead, BankAccount, KYDocument
 from .vault_service import sync_customer_aggregate_balance, wallet_vault_payload
 
@@ -297,6 +298,9 @@ class UserMeSerializer(serializers.ModelSerializer):
         grams = bal.balance_grams if bal else Decimal("0")
         handle = (obj.gold_handle_local or "").strip().lower()
         code = (obj.jeweller_code or "").strip().lower()
+        liability_s = ""
+        if obj.user_type == User.JEWELLER:
+            liability_s = str(jeweller_liability_grams(obj))
         data = {
             "cridora_member_id": obj.cridora_member_id or "",
             "cridora_global_id": f"{handle}@cridora" if handle else "",
@@ -310,6 +314,7 @@ class UserMeSerializer(serializers.ModelSerializer):
             "jeweller_pref_redemption_id": obj.jeweller_pref_redemption_id,
             "balance_grams": str(grams),
             "vaults": wallet_vault_payload(obj) if obj.user_type == User.CUSTOMER else [],
+            "custodial_liability_grams": liability_s,
         }
         return GoldWalletSerializer(instance=data).data
 
@@ -343,6 +348,9 @@ class GoldWalletSerializer(serializers.Serializer):
     jeweller_pref_redemption_id = serializers.IntegerField(allow_null=True)
     balance_grams = serializers.CharField()
     vaults = VaultRowSerializer(many=True)
+    custodial_liability_grams = serializers.CharField(
+        required=False, allow_blank=True, default=""
+    )
 
 
 class GoldTransferNotifySerializer(serializers.Serializer):

@@ -17,7 +17,10 @@ export const CUSTOMER_NAV_GROUPS: DashboardNavGroup[] = [
     label: 'Invest',
     shortLabel: 'Invest',
     icon: 'coins',
-    items: [{ sectionKey: 'invest_fractional', label: 'Buy gold' }],
+    items: [
+      { sectionKey: 'invest_fractional', label: 'Buy gold' },
+      { sectionKey: 'invest_deposit', label: 'Gold deposit' },
+    ],
   },
   {
     id: 'portfolio',
@@ -60,7 +63,7 @@ export const CUSTOMER_LEGACY_SECTION: Record<string, string> = {
   payments: 'profile_more',
   shop_offers: 'shop_products',
   shop_schemes: 'shop_products',
-  invest_deposit: 'invest_fractional',
+  invest_deposit: 'invest_deposit',
   invest_goldnest: 'invest_fractional',
   invest_history: 'invest_fractional',
   portfolio_pnl: 'portfolio_holdings',

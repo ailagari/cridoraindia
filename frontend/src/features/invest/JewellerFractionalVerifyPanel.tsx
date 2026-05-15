@@ -18,6 +18,7 @@ export function JewellerFractionalVerifyPanel() {
   const [msg, setMsg] = useState('')
   const [err, setErr] = useState('')
   const [busyId, setBusyId] = useState<number | null>(null)
+  const [otpByOrderId, setOtpByOrderId] = useState<Record<number, string>>({})
 
   const load = useCallback(async () => {
     setErr('')
@@ -31,16 +32,26 @@ export function JewellerFractionalVerifyPanel() {
   useLivePoll(load, LIVE_BALANCE_POLL_MS, busyId == null)
 
   const verify = async (id: number) => {
+    const otp = (otpByOrderId[id] ?? '').trim()
+    if (!otp) {
+      setErr('Enter the OTP from the customer’s app.')
+      return
+    }
     setBusyId(id)
     setErr('')
     setMsg('')
     try {
-      const out = await jewellerFractionalVerify(id)
+      const out = await jewellerFractionalVerify(id, otp)
       if (!out.ok) {
         setErr(out.detail)
         return
       }
-      setMsg(`Order ${out.data.reference} verified — customer credited ${out.data.grams} g.`)
+      setMsg(`Order ${out.data.reference} verified — customer credited ${out.data.grams} g. Matching custodial liability recorded.`)
+      setOtpByOrderId((m) => {
+        const next = { ...m }
+        delete next[id]
+        return next
+      })
       await load()
     } finally {
       setBusyId(null)
@@ -50,9 +61,9 @@ export function JewellerFractionalVerifyPanel() {
   return (
     <div className="dash-panel-max">
       <p className="dash-panel-lead">
-        When a customer chooses <strong>pay at counter</strong>, their order appears here. If Web Push is configured on the
-        server and you enabled device alerts, you may also get a notification with the buyer&apos;s name, grams, and amount.
-        Confirm cash or offline payment at your showroom — gold is then credited to their Cridora wallet (their ledger).
+        When a customer pays at your counter, they generate a <strong>6-digit OTP</strong> in their Cridora app after paying.
+        Enter that code below — when it matches, their gold is credited and a matching <strong>custodial liability</strong> is
+        recorded on your ledger.
       </p>
       <div style={{ marginBottom: '1rem' }}>
         <button type="button" className="btn btn-ghost" onClick={() => void load()}>
@@ -63,7 +74,7 @@ export function JewellerFractionalVerifyPanel() {
       {msg ? <p style={{ color: 'var(--text-muted)', marginBottom: '1rem' }}>{msg}</p> : null}
 
       {rows.length === 0 ? (
-        <p style={{ color: 'var(--text-muted)' }}>No counter payments awaiting verification.</p>
+        <p style={{ color: 'var(--text-muted)' }}>No counter payments awaiting OTP verification.</p>
       ) : (
         <div style={{ display: 'grid', gap: '1rem', maxWidth: 640 }}>
           {rows.map((r) => (
@@ -74,6 +85,11 @@ export function JewellerFractionalVerifyPanel() {
               <p style={{ margin: '0 0 0.65rem', fontSize: '0.82rem', color: 'var(--text-muted)', lineHeight: 1.45 }}>
                 {r.customer.email}
               </p>
+              {r.customer.cridora_member_id ? (
+                <p style={{ margin: '0 0 0.65rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                  Member ID <strong className="tabular">{r.customer.cridora_member_id}</strong>
+                </p>
+              ) : null}
               <p style={{ margin: '0 0 0.35rem', fontSize: '0.88rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
                 <span className="tabular" style={{ color: 'var(--text)', fontWeight: 700 }}>
                   {r.grams} g
@@ -90,6 +106,26 @@ export function JewellerFractionalVerifyPanel() {
               {r.customer_note ? (
                 <p style={{ margin: '0.35rem 0', fontSize: '0.8rem' }}>Note: {r.customer_note}</p>
               ) : null}
+              <label className="field" htmlFor={`otp-${r.id}`} style={{ marginTop: '0.65rem', display: 'block' }}>
+                Customer OTP
+              </label>
+              <input
+                id={`otp-${r.id}`}
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                maxLength={8}
+                className="tabular"
+                style={{ width: '100%', maxWidth: 220, letterSpacing: '0.12em', fontWeight: 700 }}
+                value={otpByOrderId[r.id] ?? ''}
+                onChange={(e) =>
+                  setOtpByOrderId((m) => ({
+                    ...m,
+                    [r.id]: e.target.value.replace(/\D/g, '').slice(0, 6),
+                  }))
+                }
+                placeholder="000000"
+              />
               <button
                 type="button"
                 className="btn btn-primary btn--block"
@@ -97,7 +133,7 @@ export function JewellerFractionalVerifyPanel() {
                 disabled={busyId != null}
                 onClick={() => void verify(r.id)}
               >
-                {busyId === r.id ? 'Verifying…' : 'Confirm payment received'}
+                {busyId === r.id ? 'Verifying…' : 'Verify OTP & credit gold'}
               </button>
             </div>
           ))}

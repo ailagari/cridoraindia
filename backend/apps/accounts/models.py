@@ -426,6 +426,76 @@ class FractionalGoldPurchase(models.Model):
         return f"FractionalGoldPurchase({self.customer_id}, {self.grams}g, {self.status})"
 
 
+class FractionalCounterOtp(models.Model):
+    """In-app OTP for pay-at-counter fractional purchases; jeweller enters plaintext code."""
+
+    purchase = models.OneToOneField(
+        FractionalGoldPurchase,
+        on_delete=models.CASCADE,
+        related_name="counter_otp",
+    )
+    code_hash = models.CharField(max_length=64)
+    expires_at = models.DateTimeField(db_index=True)
+    failed_attempts = models.PositiveSmallIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"FractionalCounterOtp(purchase={self.purchase_id})"
+
+
+class JewellerLiabilityBalance(models.Model):
+    """Aggregate custodial gold grams the jeweller owes Cridora customers (vault-backed)."""
+
+    jeweller = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name="custodial_liability_balance",
+        limit_choices_to={"user_type": User.JEWELLER},
+    )
+    liability_grams = models.DecimalField(max_digits=16, decimal_places=6, default=0)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"JewellerLiabilityBalance({self.jeweller_id}, {self.liability_grams}g)"
+
+
+class JewellerLiabilityLedgerEntry(models.Model):
+    """Audit row: liability increased when customer fractional grams are credited at this jeweller."""
+
+    jeweller = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="custodial_liability_entries",
+        limit_choices_to={"user_type": User.JEWELLER},
+    )
+    customer = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="jeweller_liability_entries_as_customer",
+        limit_choices_to={"user_type": User.CUSTOMER},
+    )
+    grams = models.DecimalField(max_digits=16, decimal_places=6)
+    fractional_purchase = models.ForeignKey(
+        FractionalGoldPurchase,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="liability_entries",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"JewellerLiabilityLedgerEntry(j={self.jeweller_id}, {self.grams}g)"
+
+
 class WebPushSubscription(models.Model):
     """Browser Web Push subscription (VAPID); one row per push endpoint."""
 

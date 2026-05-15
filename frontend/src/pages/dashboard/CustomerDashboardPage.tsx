@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { DashboardLayout } from '@/components/DashboardLayout'
+import { CustomerJewellersBrowsePanel } from '@/features/marketplace/CustomerJewellersBrowsePanel'
+import { CustomerProductsBrowsePanel } from '@/features/marketplace/CustomerProductsBrowsePanel'
 import { GoldTransferPanel } from '@/features/gold/GoldTransferPanel'
+import { CustomerDepositInfoPanel } from '@/features/invest/CustomerDepositInfoPanel'
 import { FractionalPurchasePanel } from '@/features/invest/FractionalPurchasePanel'
 import { CustomerKycWorkflow } from '@/features/customer/CustomerKycWorkflow'
 import { CustomerPortfolioPanel } from '@/features/portfolio/CustomerPortfolioPanel'
@@ -50,7 +53,18 @@ export function CustomerDashboardPage() {
 
   const setSection = useCallback(
     (key: string) => {
-      setParams(key === CUSTOMER_DEFAULT_SECTION ? {} : { section: key }, { replace: true })
+      setParams(
+        (prev) => {
+          const next = new URLSearchParams(prev)
+          if (key === CUSTOMER_DEFAULT_SECTION) {
+            next.delete('section')
+          } else {
+            next.set('section', key)
+          }
+          return next
+        },
+        { replace: true },
+      )
     },
     [setParams],
   )
@@ -59,9 +73,23 @@ export function CustomerDashboardPage() {
     if (!rawSection) return
     const n = normalizeCustomerSection(rawSection)
     if (n && n !== rawSection) {
-      setParams({ section: n }, { replace: true })
+      setParams(
+        (prev) => {
+          const next = new URLSearchParams(prev)
+          next.set('section', n)
+          return next
+        },
+        { replace: true },
+      )
     } else if (!n) {
-      setParams({}, { replace: true })
+      setParams(
+        (prev) => {
+          const next = new URLSearchParams(prev)
+          next.delete('section')
+          return next
+        },
+        { replace: true },
+      )
     }
   }, [rawSection, setParams])
 
@@ -79,13 +107,10 @@ export function CustomerDashboardPage() {
       {active === 'portfolio_holdings' ? (
         <ComingSoon title="Vaults & ledgers" children="Per-jeweller balances (fractional, deposit, schemes) appear here as ledger APIs roll out." />
       ) : null}
-      {active.startsWith('shop_') ? (
-        <ComingSoon
-          title="Marketplace"
-          children="Browse verified jewellers and BIS 916 products on the public site — this hub links deeper workflows when they are connected."
-        />
-      ) : null}
+      {active === 'shop_jewellers' ? <CustomerJewellersBrowsePanel /> : null}
+      {active === 'shop_products' ? <CustomerProductsBrowsePanel /> : null}
       {active === 'invest_fractional' ? <FractionalPurchasePanel /> : null}
+      {active === 'invest_deposit' ? <CustomerDepositInfoPanel /> : null}
       {active === 'redeem_hub' ? (
         <ComingSoon
           title="Redeem & liquidity"

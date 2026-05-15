@@ -33,6 +33,7 @@ from .views_admin import (
     AdminVerificationRevokeView,
 )
 from .fractional_views import (
+    FractionalCounterOtpIssueView,
     FractionalOrderConfirmUpiView,
     FractionalOrdersView,
     FractionalQuoteView,
@@ -64,6 +65,10 @@ urlpatterns = [
     path("gold/pay/<path:gold_upi>/", GoldTransferPublicMetaView.as_view()),
     path("fractional/quote/", FractionalQuoteView.as_view()),
     path("fractional/orders/", FractionalOrdersView.as_view()),
+    path(
+        "fractional/orders/<int:pk>/counter-otp/",
+        FractionalCounterOtpIssueView.as_view(),
+    ),
     path(
         "fractional/orders/<int:pk>/confirm-upi/",
         FractionalOrderConfirmUpiView.as_view(),

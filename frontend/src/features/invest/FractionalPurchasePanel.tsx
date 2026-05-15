@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { fetchVerifiedJewellers, type JewellerStorefrontDTO } from '@/lib/marketplaceApi'
 import {
-  fractionalConfirmUpi,
   fractionalCreateOrder,
+  fractionalIssueCounterOtp,
   fractionalListOrders,
   fractionalQuote,
   type FractionalPurchaseDTO,
@@ -19,7 +20,16 @@ function formatInr(s: string): string {
   return n.toLocaleString('en-IN', { maximumFractionDigits: 2 })
 }
 
+function formatExpiry(iso: string): string {
+  const t = Date.parse(iso)
+  if (Number.isNaN(t)) return iso
+  return new Date(t).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })
+}
+
 export function FractionalPurchasePanel() {
+  const [params] = useSearchParams()
+  const jewellerFromUrl = params.get('jeweller_id')
+
   const [jewellers, setJewellers] = useState<JewellerStorefrontDTO[]>([])
   const [jewellerId, setJewellerId] = useState<number | ''>('')
   const [inputMode, setInputMode] = useState<'by_total_inr' | 'by_grams'>('by_total_inr')
@@ -27,13 +37,13 @@ export function FractionalPurchasePanel() {
   const [gramsInput, setGramsInput] = useState('5')
   const [quote, setQuote] = useState<FractionalQuoteDTO | null>(null)
   const [quoteErr, setQuoteErr] = useState('')
-  const [payment, setPayment] = useState<'upi' | 'counter'>('upi')
   const [note, setNote] = useState('')
   const [busy, setBusy] = useState(false)
   const [orders, setOrders] = useState<FractionalPurchaseDTO[]>([])
   const [orderMsg, setOrderMsg] = useState('')
   const [lastOrder, setLastOrder] = useState<FractionalPurchaseDTO | null>(null)
   const [balanceHint, setBalanceHint] = useState('')
+  const [otpReveal, setOtpReveal] = useState<{ orderId: number; otp: string; expiresAt: string } | null>(null)
 
   const refreshOrders = useCallback(async () => {
     setOrders(await fractionalListOrders())
@@ -44,11 +54,15 @@ export function FractionalPurchasePanel() {
       const real = list.filter((j) => j.id > 0)
       setJewellers(real)
       setJewellerId((prev) => {
+        if (jewellerFromUrl) {
+          const id = Number.parseInt(jewellerFromUrl, 10)
+          if (Number.isFinite(id) && id > 0) return id
+        }
         if (prev !== '') return prev
         return real[0]?.id ?? ''
       })
     })
-  }, [])
+  }, [jewellerFromUrl])
 
   const refreshWalletHint = useCallback(async () => {
     if (busy) return
@@ -97,6 +111,7 @@ export function FractionalPurchasePanel() {
   const submitOrder = async () => {
     setOrderMsg('')
     setLastOrder(null)
+    setOtpReveal(null)
     if (!quote || jewellerId === '') {
       setOrderMsg('Update the live quote first.')
       return
@@ -105,7 +120,7 @@ export function FractionalPurchasePanel() {
     try {
       const out = await fractionalCreateOrder({
         jeweller_id: jewellerId,
-        payment_method: payment,
+        payment_method: 'counter',
         mode: inputMode === 'by_grams' ? 'by_grams' : 'by_total_inr',
         grams: inputMode === 'by_grams' ? gramsInput.trim() : undefined,
         total_inr: inputMode === 'by_total_inr' ? inrInput.trim() : undefined,
@@ -117,9 +132,7 @@ export function FractionalPurchasePanel() {
       }
       setLastOrder(out.data)
       setOrderMsg(
-        out.data.payment_method === 'counter'
-          ? `Order ${out.data.reference} created. Pay ₹${formatInr(out.data.total_inr)} at the jeweller counter. They were notified with your name, grams, and amount. After they confirm payment received under Purchases, gold is credited to your wallet.`
-          : `Order ${out.data.reference} created. Complete UPI payment, then confirm below.`,
+        `Order ${out.data.reference} created. Pay ₹${formatInr(out.data.total_inr)} at the jeweller counter (cash or their QR/UPI). Then tap Generate OTP and show the code to the jeweller — they enter it under Purchases to credit your gold.`,
       )
       await refreshOrders()
       const w = await fetchGoldWallet()
@@ -129,26 +142,24 @@ export function FractionalPurchasePanel() {
     }
   }
 
-  const confirmUpi = async () => {
-    if (!lastOrder || lastOrder.payment_method !== 'upi' || lastOrder.status !== 'pending_payment') {
-      setOrderMsg('Create a new UPI order first.')
-      return
-    }
-    setBusy(true)
+  const issueOtp = async (orderId: number) => {
     setOrderMsg('')
+    setBusy(true)
     try {
-      const out = await fractionalConfirmUpi(lastOrder.id)
+      const out = await fractionalIssueCounterOtp(orderId)
       if (!out.ok) {
         setOrderMsg(out.detail)
+        setOtpReveal(null)
         return
       }
-      setLastOrder(out.data)
-      setOrderMsg('Payment recorded. Gold has been credited to your wallet.')
-      await refreshOrders()
-      const w = await fetchGoldWallet()
-      if (w) setBalanceHint(w.balance_grams)
+      setOtpReveal({
+        orderId: out.data.id,
+        otp: out.data.otp,
+        expiresAt: out.data.otp_expires_at,
+      })
     } finally {
       setBusy(false)
+      await refreshOrders()
     }
   }
 
@@ -156,8 +167,8 @@ export function FractionalPurchasePanel() {
     <div className="dash-panel-max fractional-buy-panel">
       <p className="dash-panel-lead">
         Buy fractional gold at the selected jeweller&apos;s metal rate (their manual ₹/g or the platform benchmark with their
-        percentage and fixed ₹/g markups). GST on gold value is included in the quote. Pay with UPI (confirm here once paid)
-        or at the showroom — your jeweller verifies counter payments before grams appear in your wallet.
+        percentage and fixed ₹/g markups). GST on gold value is included in the quote. Pay at the showroom, then generate an
+        in-app OTP so the jeweller can verify payment and credit grams to your wallet.
       </p>
 
       <p className="fractional-buy-live-rate" aria-live="polite" style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>
@@ -284,19 +295,10 @@ export function FractionalPurchasePanel() {
             </div>
           ) : null}
 
-          <fieldset style={{ border: 'none', padding: 0, margin: 0 }}>
-            <legend className="fractional-buy-legend">Payment</legend>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem 1.25rem' }}>
-              <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', cursor: 'pointer', lineHeight: 1.45 }}>
-                <input type="radio" name="frac-pay" checked={payment === 'upi'} onChange={() => setPayment('upi')} />
-                <span style={{ fontSize: '0.875rem' }}>UPI</span>
-              </label>
-              <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', cursor: 'pointer', lineHeight: 1.45 }}>
-                <input type="radio" name="frac-pay" checked={payment === 'counter'} onChange={() => setPayment('counter')} />
-                <span style={{ fontSize: '0.875rem' }}>Pay at counter</span>
-              </label>
-            </div>
-          </fieldset>
+          <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-muted)', lineHeight: 1.45 }}>
+            Payment is <strong>at the jeweller counter only</strong> for now (cash or the jeweller&apos;s own QR/UPI). Cridora
+            records grams after OTP verification.
+          </p>
 
           <div className="field">
             <label htmlFor="frac-note">Reference note (optional)</label>
@@ -304,7 +306,7 @@ export function FractionalPurchasePanel() {
               id="frac-note"
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              placeholder="UPI ref or receipt id"
+              placeholder="Receipt id"
             />
           </div>
 
@@ -319,17 +321,49 @@ export function FractionalPurchasePanel() {
 
           {orderMsg ? <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.88rem' }}>{orderMsg}</p> : null}
 
-          {lastOrder &&
-          lastOrder.payment_method === 'upi' &&
-          lastOrder.status === 'pending_payment' ? (
+          {lastOrder && lastOrder.status === 'awaiting_counter' ? (
             <div className="dash-form-stack" style={{ marginTop: '0.5rem' }}>
-              <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                Complete your bank UPI transfer for ₹{formatInr(lastOrder.total_inr)} to the jeweller or platform account you
-                were given, then confirm here so your gold is credited.
-              </p>
-              <button type="button" className="btn btn-primary btn--block" disabled={busy} onClick={() => void confirmUpi()}>
-                I have paid via UPI — credit my gold
+              <button
+                type="button"
+                className="btn btn-primary btn--block"
+                disabled={busy}
+                onClick={() => void issueOtp(lastOrder.id)}
+              >
+                Generate verification OTP
               </button>
+            </div>
+          ) : null}
+
+          {otpReveal ? (
+            <div
+              style={{
+                marginTop: '0.65rem',
+                padding: '1rem',
+                borderRadius: 12,
+                border: '1px solid var(--gold-muted, #b8860b)',
+                background: 'var(--veil-35)',
+              }}
+              role="status"
+              aria-live="polite"
+            >
+              <p style={{ margin: '0 0 0.35rem', fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 700 }}>
+                Order #{otpReveal.orderId} · Show this to the jeweller
+              </p>
+              <p
+                className="tabular"
+                style={{
+                  margin: '0 0 0.5rem',
+                  fontSize: '1.75rem',
+                  fontWeight: 800,
+                  letterSpacing: '0.25em',
+                  fontVariantNumeric: 'tabular-nums',
+                }}
+              >
+                {otpReveal.otp}
+              </p>
+              <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                Expires {formatExpiry(otpReveal.expiresAt)} · Regenerate if needed before expiry.
+              </p>
             </div>
           ) : null}
 
@@ -370,9 +404,20 @@ export function FractionalPurchasePanel() {
                   <span aria-hidden="true"> · </span>
                   <span>{o.payment_method}</span>
                 </p>
-                <p className="fractional-order-li-meta fractional-order-li-status" style={{ margin: 0 }}>
+                <p className="fractional-order-li-meta fractional-order-li-status" style={{ margin: '0 0 0.5rem' }}>
                   {o.status.replace(/_/g, ' ')}
                 </p>
+                {o.status === 'awaiting_counter' ? (
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn--block"
+                    style={{ marginTop: '0.25rem' }}
+                    disabled={busy}
+                    onClick={() => void issueOtp(o.id)}
+                  >
+                    Generate OTP
+                  </button>
+                ) : null}
               </li>
             ))}
           </ul>
