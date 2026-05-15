@@ -79,8 +79,12 @@ export function JewellerDashboardPage() {
       onSectionChange={setSection}
       title={head}
     >
-      {active === 'desk_overview' ? <JewellerOverview /> : null}
-      {active === 'desk_portfolio' ? <JewellerPortfolioPanel /> : null}
+      {active === 'desk_overview' ? (
+        <>
+          <JewellerOverview />
+          <JewellerPortfolioPanel />
+        </>
+      ) : null}
       {active === 'cust_hub' ? (
         <Coming title="Customer vaults" body="Roster, holdings, and liabilities surface here when jeweller-scoped APIs connect." />
       ) : null}

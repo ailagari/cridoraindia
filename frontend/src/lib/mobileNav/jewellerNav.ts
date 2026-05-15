@@ -6,10 +6,7 @@ export const JEWELLER_NAV_GROUPS: DashboardNavGroup[] = [
     label: 'Desk',
     shortLabel: 'Desk',
     icon: 'home',
-    items: [
-      { sectionKey: 'desk_overview', label: 'Overview' },
-      { sectionKey: 'desk_portfolio', label: 'Portfolio' },
-    ],
+    items: [{ sectionKey: 'desk_overview', label: 'Overview' }],
   },
   {
     id: 'customers',
@@ -55,7 +52,8 @@ export const JEWELLER_DEFAULT_SECTION = 'desk_overview'
 
 export const JEWELLER_LEGACY_SECTION: Record<string, string> = {
   overview: 'desk_overview',
-  portfolio: 'desk_portfolio',
+  portfolio: 'desk_overview',
+  desk_portfolio: 'desk_overview',
   kyb: 'prof_kyb',
   catalog: 'mkt_products',
   payments: 'prof_more',

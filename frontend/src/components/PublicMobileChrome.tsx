@@ -2,7 +2,12 @@ import { NavLink, useLocation } from 'react-router-dom'
 import { NotificationBell } from '@/components/NotificationBell'
 import { PublicTabIcon } from '@/components/PublicTabIcon'
 import { useAuth } from '@/context/AuthContext'
-import { dashboardLandingPath, isDashboardPath } from '@/lib/routes'
+import {
+  dashboardAccountShortcutPath,
+  dashboardLandingPath,
+  isAccountShortcutSection,
+  isDashboardPath,
+} from '@/lib/routes'
 
 function topForPath(pathname: string): { to: string; label: string }[] {
   if (pathname === '/') {
@@ -49,22 +54,22 @@ function topForPath(pathname: string): { to: string; label: string }[] {
 }
 
 export function PublicMobileChrome() {
-  const { pathname } = useLocation()
+  const { pathname, search } = useLocation()
   const { user } = useAuth()
   const pills = topForPath(pathname)
 
   const isShopPath = pathname.startsWith('/marketplace') || pathname.startsWith('/jewellers')
   const isJoinPath = pathname.startsWith('/signup') || pathname.startsWith('/jeweller/apply')
-  const joinTabActive = user ? isDashboardPath(pathname) : isJoinPath
+  const sectionParam = new URLSearchParams(search).get('section')
+  const accountShortcutActive = !!user && isDashboardPath(pathname) && isAccountShortcutSection(user, sectionParam)
+  const deskOnDashboard = !!user && isDashboardPath(pathname) && !accountShortcutActive
+  const joinTabActive = user ? deskOnDashboard : isJoinPath
   const discoverActive =
     pathname.startsWith('/why-cridora') ||
     pathname.startsWith('/features') ||
     pathname.startsWith('/how-it-works')
 
-  const dashboardHref = user ? dashboardLandingPath(user) : '/login'
-  const accountActive =
-    !!(user && (pathname.startsWith('/userdashboard') || pathname.startsWith('/dashboard'))) ||
-    (!user && pathname.startsWith('/login'))
+  const accountNavTabActive = accountShortcutActive || (!user && pathname.startsWith('/login'))
 
   return (
     <>
@@ -127,7 +132,7 @@ export function PublicMobileChrome() {
           )}
         </NavLink>
         <NavLink
-          to={user ? dashboardHref : '/signup'}
+          to={user ? dashboardLandingPath(user) : '/signup'}
           className={() => `public-bottom-item${joinTabActive ? ' public-bottom-item--active' : ''}`}
         >
           {() => (
@@ -140,15 +145,15 @@ export function PublicMobileChrome() {
           )}
         </NavLink>
         <NavLink
-          to={dashboardHref}
-          className={() => `public-bottom-item${accountActive ? ' public-bottom-item--active' : ''}`}
+          to={user ? dashboardAccountShortcutPath(user) : '/login'}
+          className={() => `public-bottom-item${accountNavTabActive ? ' public-bottom-item--active' : ''}`}
         >
           {() => (
             <>
               <span className="mobile-tab-ico">
-                <PublicTabIcon tab={user ? 'dashboard' : 'account'} active={accountActive} />
+                <PublicTabIcon tab="account" active={accountNavTabActive} />
               </span>
-              <span className="mobile-tab-label">{user ? 'Dashboard' : 'Account'}</span>
+              <span className="mobile-tab-label">Account</span>
             </>
           )}
         </NavLink>
