@@ -9,6 +9,7 @@ import { GoldTransferPanel } from '@/features/gold/GoldTransferPanel'
 import { JewellerMarketplacePanel } from '@/features/marketplace/JewellerMarketplacePanel'
 import { JewellerRatesSchemesPanel } from '@/features/marketplace/JewellerRatesSchemesPanel'
 import { JewellerFractionalVerifyPanel } from '@/features/invest/JewellerFractionalVerifyPanel'
+import { JewellerSellbacksPanel } from '@/features/redeem/JewellerSellbacksPanel'
 import { useAuth } from '@/context/AuthContext'
 import { authFetch } from '@/lib/api'
 import { LIVE_PROFILE_POLL_MS } from '@/lib/liveDeskIntervals'
@@ -99,7 +100,13 @@ export function JewellerDashboardPage() {
         </div>
       ) : null}
       {active === 'txn_ops' ? (
-        <Coming title="Redemptions & loans" body="Sellback queues, ornament redemption, and loan operations tie to the shared ledger." />
+        <>
+          <JewellerSellbacksPanel />
+          <Coming
+            title="Ornament redemption & loans"
+            body="Catalog-backed ornament redemption and loan workflows will join this operations hub."
+          />
+        </>
       ) : null}
       {active === 'txn_transfers' ? <GoldTransferPanel roleLabel="jeweller" /> : null}
       {active === 'prof_kyb' ? (

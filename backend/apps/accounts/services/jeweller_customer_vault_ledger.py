@@ -10,7 +10,7 @@ from django.contrib.auth import get_user_model
 from django.db.models import Q
 from django.utils import timezone
 
-from apps.accounts.models import FractionalGoldPurchase, GoldTransfer, GoldVault
+from apps.accounts.models import FractionalGoldPurchase, GoldSellbackRequest, GoldTransfer, GoldVault
 from apps.marketplace.models import jeweller_profile_for
 from apps.marketplace.pricing import reference_metal_rate_inr_per_gram_for_jeweller
 from apps.marketplace.spot_prices import resolve_cridora_base_22k_inr
@@ -42,7 +42,9 @@ def jeweller_can_access_customer_vault_ledger(jeweller: User, customer_id: int) 
         to_user_id=customer_id,
         to_custodian_id=jeweller.id,
     )
-    return GoldTransfer.objects.filter(q_touch).exists()
+    if GoldTransfer.objects.filter(q_touch).exists():
+        return True
+    return GoldSellbackRequest.objects.filter(jeweller=jeweller, customer_id=customer_id).exists()
 
 
 def jeweller_customer_vault_ledger_payload(jeweller: User, customer_id: int) -> dict[str, Any]:
@@ -111,6 +113,25 @@ def jeweller_customer_vault_ledger_payload(jeweller: User, customer_id: int) -> 
                 "current_value_inr": str(current_inr),
                 "reference": f"GT-{t.id}",
                 "counterparty_label": label,
+            }
+        )
+
+    sellbacks = (
+        GoldSellbackRequest.objects.filter(customer_id=customer_id, jeweller=jeweller)
+        .order_by("-created_at")[:_MAX_ROWS]
+    )
+    for s in sellbacks:
+        rows.append(
+            {
+                "occurred_at": _occurred_iso(s.created_at),
+                "transaction_type": "sellback",
+                "grams": str(s.grams),
+                "metal_type": METAL_TYPE_LABEL,
+                "purchase_value_inr": None,
+                "invoice_total_inr": None,
+                "current_value_inr": str(s.cash_estimate_inr.quantize(Decimal("0.01"))),
+                "reference": f"SB-{s.id}",
+                "counterparty_label": "",
             }
         )
 

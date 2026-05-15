@@ -22,6 +22,8 @@ function formatLedgerTxnType(t: string): string {
       return 'Transfer in'
     case 'transfer_out':
       return 'Transfer out'
+    case 'sellback':
+      return 'Cash sellback'
     case 'deposit':
       return 'Deposit'
     case 'redeem':

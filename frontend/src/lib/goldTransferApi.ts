@@ -126,6 +126,69 @@ export async function fetchJewellerCustomerVaultLedger(
   return (await res.json()) as JewellerVaultLedgerPayloadDTO
 }
 
+export type SellbackQuoteDTO = {
+  jeweller_id: number
+  jeweller_label: string
+  grams: string
+  vault_balance_grams: string
+  minimum_redeemable_grams: string
+  reference_metal_inr_per_gram: string
+  buyback_inr_per_gram: string
+  cash_estimate_inr: string
+}
+
+export type JewellerSellbackRowDTO = {
+  id: number
+  reference: string
+  created_at: string
+  customer_id: number
+  customer_label: string
+  grams: string
+  reference_metal_inr_per_gram_snapshot: string
+  buyback_inr_per_gram_snapshot: string
+  cash_estimate_inr: string
+  status: string
+}
+
+export async function postGoldSellbackQuote(
+  jewellerId: number,
+  grams: string,
+): Promise<{ ok: true; data: SellbackQuoteDTO } | { ok: false; detail: string }> {
+  const res = await authFetch('/api/v1/gold/sellback/quote/', {
+    method: 'POST',
+    jsonBody: { jeweller_id: jewellerId, grams },
+  })
+  const data = (await res.json()) as SellbackQuoteDTO & { detail?: string }
+  if (!res.ok) {
+    return { ok: false, detail: data.detail ?? 'Could not get quote.' }
+  }
+  return { ok: true, data: data as SellbackQuoteDTO }
+}
+
+export async function postGoldSellbackConfirm(
+  jewellerId: number,
+  grams: string,
+): Promise<{ ok: true; wallet: GoldWalletDTO; detail: string } | { ok: false; detail: string }> {
+  const res = await authFetch('/api/v1/gold/sellback/confirm/', {
+    method: 'POST',
+    jsonBody: { jeweller_id: jewellerId, grams },
+  })
+  const data = (await res.json()) as { detail?: string; wallet?: GoldWalletDTO }
+  if (!res.ok) {
+    return { ok: false, detail: data.detail ?? 'Sellback failed.' }
+  }
+  if (!data.wallet) {
+    return { ok: false, detail: 'Unexpected response.' }
+  }
+  return { ok: true, wallet: data.wallet, detail: data.detail ?? 'Done.' }
+}
+
+export async function fetchJewellerSellbacks(): Promise<{ results: JewellerSellbackRowDTO[] } | null> {
+  const res = await authFetch('/api/v1/jeweller/sellbacks/')
+  if (!res.ok) return null
+  return (await res.json()) as { results: JewellerSellbackRowDTO[] }
+}
+
 export async function resolveGoldUPI(gold_upi: string): Promise<{
   found: boolean
   recipient?: GoldResolveRecipient

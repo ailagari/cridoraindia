@@ -2652,6 +2652,78 @@ img {
   }
 }
 
+.jeweller-sellbacks-wrap {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+.jeweller-sellbacks-table {
+  width: 100%;
+  max-width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+  table-layout: fixed;
+}
+
+.jeweller-sellbacks-table th,
+.jeweller-sellbacks-table td {
+  padding: 0.55rem 0.45rem;
+  border-bottom: 1px solid var(--border-soft);
+  vertical-align: top;
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+}
+
+.jeweller-sellbacks-table th {
+  text-align: left;
+  font-size: 0.55rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  background: rgba(165, 180, 252, 0.06);
+}
+
+@media (max-width: 767px) {
+  .jeweller-sellbacks-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .jeweller-sellbacks-table tbody tr {
+    display: block;
+    padding: 0.65rem 0;
+    border-bottom: 1px solid var(--border-soft);
+  }
+
+  .jeweller-sellbacks-table tbody td {
+    display: block;
+    padding: 0.3rem 0;
+    border: none;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .jeweller-sellbacks-table tbody td::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 0.22rem;
+    font-size: 0.55rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+  }
+}
+
 .admin-user-table {
   width: 100%;
   min-width: 640px;

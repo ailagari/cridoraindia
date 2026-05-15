@@ -9,6 +9,7 @@ import { FractionalPurchasePanel } from '@/features/invest/FractionalPurchasePan
 import { CustomerKycWorkflow } from '@/features/customer/CustomerKycWorkflow'
 import { CustomerPortfolioPanel } from '@/features/portfolio/CustomerPortfolioPanel'
 import { CustomerVaultsPanel } from '@/features/portfolio/CustomerVaultsPanel'
+import { CustomerSellbackPanel } from '@/features/redeem/CustomerSellbackPanel'
 import { useAuth } from '@/context/AuthContext'
 import { LIVE_PROFILE_POLL_MS } from '@/lib/liveDeskIntervals'
 import { useLivePoll } from '@/lib/useLivePoll'
@@ -111,10 +112,13 @@ export function CustomerDashboardPage() {
       {active === 'invest_fractional' ? <FractionalPurchasePanel /> : null}
       {active === 'invest_deposit' ? <CustomerDepositInfoPanel /> : null}
       {active === 'redeem_hub' ? (
-        <ComingSoon
-          title="Redeem & liquidity"
-          children="Ornament redemption, cash sellback, loans, and emergency liquidity — coordinated with your vault balances."
-        />
+        <>
+          <CustomerSellbackPanel />
+          <ComingSoon
+            title="More liquidity options"
+            children="Ornament redemption, loans, and emergency funds will plug in here next."
+          />
+        </>
       ) : null}
       {active === 'redeem_transfer' ? <GoldTransferPanel roleLabel="customer" /> : null}
       {active === 'profile_kyc' ? (

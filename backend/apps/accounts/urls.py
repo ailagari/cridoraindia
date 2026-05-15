@@ -44,6 +44,11 @@ from .fractional_views import (
     JewellerFractionalPendingView,
     JewellerFractionalVerifyView,
 )
+from .sellback_views import (
+    GoldSellbackConfirmView,
+    GoldSellbackQuoteView,
+    JewellerSellbackListView,
+)
 from .views_festival_broadcast import (
     AdminFestivalBroadcastCancelView,
     AdminFestivalBroadcastListCreateView,
@@ -77,6 +82,8 @@ urlpatterns = [
     path("auth/me/", MeView.as_view()),
     path("jeweller/business-profile/", JewellerBusinessProfileView.as_view()),
     path("gold/wallet/", GoldWalletView.as_view()),
+    path("gold/sellback/quote/", GoldSellbackQuoteView.as_view()),
+    path("gold/sellback/confirm/", GoldSellbackConfirmView.as_view()),
     path("gold/resolve/", GoldUPIResolveView.as_view()),
     path("gold/transfers/", GoldTransferCreateView.as_view()),
     path("gold/identity/", GoldIdentityUpsertView.as_view()),
@@ -97,6 +104,7 @@ urlpatterns = [
         FractionalOrderConfirmUpiView.as_view(),
     ),
     path("jeweller/fractional/pending/", JewellerFractionalPendingView.as_view()),
+    path("jeweller/sellbacks/", JewellerSellbackListView.as_view()),
     path(
         "jeweller/custody-vaults/<int:customer_id>/ledger/",
         JewellerCustomerVaultLedgerView.as_view(),

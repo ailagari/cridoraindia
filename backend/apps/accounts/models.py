@@ -427,6 +427,53 @@ class FractionalGoldPurchase(models.Model):
         return f"FractionalGoldPurchase({self.customer_id}, {self.grams}g, {self.status})"
 
 
+class GoldSellbackRequest(models.Model):
+    """Customer sells fractional vault gold back to the custodian jeweller (cash estimate; payout offline in MVP)."""
+
+    STATUS_COMPLETED = "completed"
+
+    STATUS_CHOICES = [
+        (STATUS_COMPLETED, "Completed"),
+    ]
+
+    customer = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="gold_sellbacks",
+        limit_choices_to={"user_type": User.CUSTOMER},
+    )
+    jeweller = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="gold_sellbacks_as_jeweller",
+        limit_choices_to={"user_type": User.JEWELLER},
+    )
+    grams = models.DecimalField(max_digits=16, decimal_places=6)
+    reference_metal_inr_per_gram_snapshot = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        help_text="Jeweller reference 22K metal ₹/g at quote time (before sellback spread).",
+    )
+    buyback_inr_per_gram_snapshot = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        help_text="Indicative buyback ₹/g credited to customer (policy + headline rules).",
+    )
+    cash_estimate_inr = models.DecimalField(
+        max_digits=16,
+        decimal_places=2,
+        help_text="grams × buyback ₹/g at execution.",
+    )
+    status = models.CharField(max_length=24, choices=STATUS_CHOICES, default=STATUS_COMPLETED)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"GoldSellbackRequest({self.customer_id}, {self.jeweller_id}, {self.grams}g)"
+
+
 class FractionalCounterOtp(models.Model):
     """In-app OTP for pay-at-counter fractional purchases; jeweller enters plaintext code."""
 
@@ -494,7 +541,14 @@ class JewellerLiabilityBalance(models.Model):
 
 
 class JewellerLiabilityLedgerEntry(models.Model):
-    """Audit row: liability increased when customer fractional grams are credited at this jeweller."""
+    """Audit row: liability credits on fractional sales and releases on customer sellback."""
+
+    LEDGER_KIND_FRACTIONAL_CREDIT = "fractional_credit"
+    LEDGER_KIND_SELLBACK_RELEASE = "sellback_release"
+    LEDGER_KIND_CHOICES = [
+        (LEDGER_KIND_FRACTIONAL_CREDIT, "Fractional credit"),
+        (LEDGER_KIND_SELLBACK_RELEASE, "Sellback release"),
+    ]
 
     jeweller = models.ForeignKey(
         User,
@@ -511,12 +565,24 @@ class JewellerLiabilityLedgerEntry(models.Model):
         limit_choices_to={"user_type": User.CUSTOMER},
     )
     grams = models.DecimalField(max_digits=16, decimal_places=6)
+    kind = models.CharField(
+        max_length=32,
+        choices=LEDGER_KIND_CHOICES,
+        default=LEDGER_KIND_FRACTIONAL_CREDIT,
+    )
     fractional_purchase = models.ForeignKey(
         FractionalGoldPurchase,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name="liability_entries",
+    )
+    gold_sellback = models.ForeignKey(
+        GoldSellbackRequest,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="sellback_liability_entries",
     )
     created_at = models.DateTimeField(auto_now_add=True)
 
