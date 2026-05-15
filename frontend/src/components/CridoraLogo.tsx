@@ -15,15 +15,12 @@ export function CridoraLogo({ size = 'sm', showWordmark = true, className = '' }
           flexShrink: 0,
           width: s,
           height: s,
-          borderRadius: '22%',
-          border: '1px solid var(--border-soft)',
-          background: 'var(--bg-elevated)',
-          boxShadow: 'var(--logo-glow-shadow)',
           display: 'grid',
           placeItems: 'center',
+          filter: 'drop-shadow(0 2px 10px rgba(212, 168, 92, 0.35))',
         }}
       >
-        <svg width={s - 8} height={s - 8} viewBox="0 0 40 40" fill="none" aria-hidden>
+        <svg width={s} height={s} viewBox="0 0 40 40" fill="none" aria-hidden>
           <circle cx="20" cy="20" r="18" stroke={`url(#${gid})`} strokeWidth="2.5" />
           <path
             d="M14 20C14 16.6863 16.6863 14 20 14"
