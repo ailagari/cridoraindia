@@ -80,6 +80,24 @@ export type JewellerCustodyVaultsPayloadDTO = {
   custodian_estimated_value_inr_total: string
 }
 
+export type JewellerVaultLedgerEntryDTO = {
+  occurred_at: string
+  transaction_type: string
+  grams: string
+  metal_type: string
+  purchase_value_inr: string | null
+  invoice_total_inr: string | null
+  current_value_inr: string
+  reference: string
+  counterparty_label: string
+}
+
+export type JewellerVaultLedgerPayloadDTO = {
+  customer_id: number
+  reference_rate_inr_per_gram: string
+  entries: JewellerVaultLedgerEntryDTO[]
+}
+
 export type GoldResolveRecipient = {
   gold_upi: string
   display_name: string
@@ -98,6 +116,14 @@ export async function fetchJewellerCustodyVaults(): Promise<JewellerCustodyVault
   const res = await authFetch('/api/v1/jeweller/custody-vaults/')
   if (!res.ok) return null
   return (await res.json()) as JewellerCustodyVaultsPayloadDTO
+}
+
+export async function fetchJewellerCustomerVaultLedger(
+  customerId: number,
+): Promise<JewellerVaultLedgerPayloadDTO | null> {
+  const res = await authFetch(`/api/v1/jeweller/custody-vaults/${customerId}/ledger/`)
+  if (!res.ok) return null
+  return (await res.json()) as JewellerVaultLedgerPayloadDTO
 }
 
 export async function resolveGoldUPI(gold_upi: string): Promise<{

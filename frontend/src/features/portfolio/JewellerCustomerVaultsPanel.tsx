@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
-import { fetchJewellerCustodyVaults, type JewellerCustodyVaultRowDTO } from '@/lib/goldTransferApi'
+import {
+  fetchJewellerCustodyVaults,
+  fetchJewellerCustomerVaultLedger,
+  type JewellerCustodyVaultRowDTO,
+  type JewellerVaultLedgerPayloadDTO,
+} from '@/lib/goldTransferApi'
 import { LIVE_BALANCE_POLL_MS } from '@/lib/liveDeskIntervals'
 import { useLivePoll } from '@/lib/useLivePoll'
 import { formatJewellerMetalRateAsOf } from '@/features/marketplace/productPricing'
@@ -9,11 +14,51 @@ function parseG(s: string): number {
   return Number.isFinite(n) ? n : 0
 }
 
+function formatLedgerTxnType(t: string): string {
+  switch (t) {
+    case 'fractional':
+      return 'Fractional purchase'
+    case 'transfer_in':
+      return 'Transfer in'
+    case 'transfer_out':
+      return 'Transfer out'
+    case 'deposit':
+      return 'Deposit'
+    case 'redeem':
+      return 'Redeem'
+    default:
+      return t.replace(/_/g, ' ')
+  }
+}
+
+function formatLedgerRowDate(iso: string): string {
+  const ms = Date.parse(iso)
+  if (Number.isNaN(ms)) return iso
+  return new Date(ms).toLocaleString('en-IN', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  })
+}
+
+function formatInrLedger(s: string | null | undefined): string {
+  if (s == null || s === '') return '—'
+  const n = Number.parseFloat(s)
+  if (!Number.isFinite(n)) return s
+  return n.toLocaleString('en-IN', { maximumFractionDigits: 2 })
+}
+
+type LedgerRowState =
+  | { status: 'idle' }
+  | { status: 'loading' }
+  | { status: 'error'; message: string }
+  | { status: 'ok'; data: JewellerVaultLedgerPayloadDTO }
+
 export function JewellerCustomerVaultsPanel() {
   const [rows, setRows] = useState<JewellerCustodyVaultRowDTO[]>([])
   const [gramsTotal, setGramsTotal] = useState('0')
   const [inrTotal, setInrTotal] = useState('0')
   const [loadErr, setLoadErr] = useState('')
+  const [ledgerByCustomer, setLedgerByCustomer] = useState<Record<number, LedgerRowState>>({})
 
   const refresh = useCallback(async () => {
     setLoadErr('')
@@ -33,6 +78,31 @@ export function JewellerCustomerVaultsPanel() {
   }, [refresh])
 
   useLivePoll(refresh, LIVE_BALANCE_POLL_MS, true)
+
+  const ensureLedger = useCallback(async (customerId: number) => {
+    let skipFetch = false
+    setLedgerByCustomer((prev) => {
+      const cur = prev[customerId]
+      if (cur?.status === 'loading' || cur?.status === 'ok') {
+        skipFetch = true
+        return prev
+      }
+      return { ...prev, [customerId]: { status: 'loading' } }
+    })
+    if (skipFetch) return
+    const data = await fetchJewellerCustomerVaultLedger(customerId)
+    if (!data) {
+      setLedgerByCustomer((prev) => ({
+        ...prev,
+        [customerId]: { status: 'error', message: 'Could not load ledger.' },
+      }))
+      return
+    }
+    setLedgerByCustomer((prev) => ({
+      ...prev,
+      [customerId]: { status: 'ok', data },
+    }))
+  }, [])
 
   const sampleRateIso = rows[0]?.jeweller_metal_rate_last_updated_at
 
@@ -117,6 +187,107 @@ export function JewellerCustomerVaultsPanel() {
                   /g
                 </p>
               </div>
+
+              <details
+                className="jeweller-mkt-acc card jeweller-vault-ledger-acc"
+                style={{ marginTop: '1rem' }}
+                onToggle={(ev) => {
+                  if (!ev.currentTarget.open) return
+                  void ensureLedger(v.customer_id)
+                }}
+              >
+                <summary>Transaction ledger</summary>
+                <div className="jeweller-mkt-acc__body jeweller-vault-ledger-acc__body">
+                  {(() => {
+                    const st = ledgerByCustomer[v.customer_id] ?? { status: 'idle' as const }
+                    if (st.status === 'idle' || st.status === 'loading') {
+                      return (
+                        <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                          {st.status === 'loading' ? 'Loading ledger…' : 'Open to load ledger.'}
+                        </p>
+                      )
+                    }
+                    if (st.status === 'error') {
+                      return (
+                        <div>
+                          <p className="form-error" style={{ margin: '0 0 0.65rem' }}>
+                            {st.message}
+                          </p>
+                          <button type="button" className="btn btn-ghost" onClick={() => void ensureLedger(v.customer_id)}>
+                            Retry
+                          </button>
+                        </div>
+                      )
+                    }
+                    const payload = st.data
+                    return (
+                      <>
+                        <p style={{ margin: '0 0 0.85rem', fontSize: '0.76rem', color: 'var(--text-muted)', lineHeight: 1.45 }}>
+                          Activity at your custodian vault for this customer.{' '}
+                          <strong className="tabular">
+                            Current value column uses ₹{formatInrLedger(payload.reference_rate_inr_per_gram)}/g reference (same basis as card estimate).
+                          </strong>{' '}
+                          Purchase value for fractional rows is metal ₹ before GST (invoice total includes GST).
+                        </p>
+                        {payload.entries.length === 0 ? (
+                          <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                            No ledger entries recorded yet.
+                          </p>
+                        ) : (
+                          <div className="jeweller-vault-ledger-wrap">
+                            <table className="jeweller-vault-ledger-table">
+                              <thead>
+                                <tr>
+                                  <th scope="col">Date</th>
+                                  <th scope="col">Type</th>
+                                  <th scope="col">Grams</th>
+                                  <th scope="col">Metal</th>
+                                  <th scope="col">Purchase value</th>
+                                  <th scope="col">Current value</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {payload.entries.map((e) => (
+                                  <tr key={`${e.reference}-${e.occurred_at}`}>
+                                    <td data-label="Date">{formatLedgerRowDate(e.occurred_at)}</td>
+                                    <td data-label="Type">
+                                      <span>{formatLedgerTxnType(e.transaction_type)}</span>
+                                      {e.counterparty_label.trim() ? (
+                                        <span className="jeweller-vault-ledger-counterparty">
+                                          {' · '}
+                                          {e.transaction_type === 'transfer_out'
+                                            ? `To ${e.counterparty_label}`
+                                            : e.transaction_type === 'transfer_in'
+                                              ? `From ${e.counterparty_label}`
+                                              : e.counterparty_label}
+                                        </span>
+                                      ) : null}
+                                    </td>
+                                    <td data-label="Grams">
+                                      <span className="tabular">{e.grams} g</span>
+                                    </td>
+                                    <td data-label="Metal">{e.metal_type}</td>
+                                    <td data-label="Purchase value">
+                                      {e.purchase_value_inr != null ? (
+                                        <span className="tabular">₹{formatInrLedger(e.purchase_value_inr)}</span>
+                                      ) : (
+                                        '—'
+                                      )}
+                                    </td>
+                                    <td data-label="Current value">
+                                      <span className="tabular">₹{formatInrLedger(e.current_value_inr)}</span>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </>
+                    )
+                  })()}
+                </div>
+              </details>
             </div>
           ))}
         </div>

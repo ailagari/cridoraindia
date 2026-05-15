@@ -21,6 +21,7 @@ from .views_gold import (
     GoldUPIResolveView,
     GoldWalletView,
     JewellerCustodyVaultsView,
+    JewellerCustomerVaultLedgerView,
 )
 from .views_admin import (
     AdminCustomerKYCActionView,
@@ -96,6 +97,10 @@ urlpatterns = [
         FractionalOrderConfirmUpiView.as_view(),
     ),
     path("jeweller/fractional/pending/", JewellerFractionalPendingView.as_view()),
+    path(
+        "jeweller/custody-vaults/<int:customer_id>/ledger/",
+        JewellerCustomerVaultLedgerView.as_view(),
+    ),
     path("jeweller/custody-vaults/", JewellerCustodyVaultsView.as_view()),
     path(
         "jeweller/fractional/orders/<int:pk>/verify/",

@@ -26,6 +26,10 @@ from .gold_identity import (
 )
 from .models import GoldBalance, GoldTransfer
 from .serializers import GoldTransferNotifySerializer, GoldWalletSerializer
+from .services.jeweller_customer_vault_ledger import (
+    jeweller_can_access_customer_vault_ledger,
+    jeweller_customer_vault_ledger_payload,
+)
 from .vault_service import (
     credit_customer_fractional,
     debit_customer_fractional,
@@ -157,6 +161,26 @@ class JewellerCustodyVaultsView(APIView):
                 "custodian_estimated_value_inr_total": str(est_inr_total.quantize(Decimal("0.01"))),
             }
         )
+
+
+class JewellerCustomerVaultLedgerView(APIView):
+    """Fractional purchases + vault transfers for one customer at this custodian."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, customer_id: int):
+        user = request.user
+        if user.user_type != User.JEWELLER:
+            return Response(
+                {"detail": "Jewellers only."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        if not jeweller_can_access_customer_vault_ledger(user, customer_id):
+            return Response(
+                {"detail": "Ledger not available for this customer."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        return Response(jeweller_customer_vault_ledger_payload(user, customer_id))
 
 
 class GoldUPIResolveView(APIView):
