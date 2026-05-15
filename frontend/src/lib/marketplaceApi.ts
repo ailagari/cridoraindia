@@ -40,6 +40,11 @@ export type MarketplaceProductDTO = {
   jeweller_id: number
   name: string
   category: string
+  product_category_id?: number
+  metal_purity_id?: number
+  metal_purity_slug?: string
+  metal_purity_label?: string
+  stock_quantity?: number
   gold_weight_grams: string
   making_charge_mode: string
   making_charge_per_gram: string
@@ -71,6 +76,8 @@ export type MarketplaceProductDTO = {
   same_store_benefit_note: string
   /** Cridora cross-jeweller checkout fee (₹) when `is_x_redeem`; from platform ticker config. */
   cross_platform_fee_inr: string
+  same_store_making_charge_percent?: string
+  same_store_making_charge_per_gram?: string
 }
 
 export type JewellerStorefrontDTO = {
@@ -119,6 +126,22 @@ export type JewellerStorefrontDTO = {
   golden_scheme_rate_application_note?: string
   gold_loan_processing_fee_percent?: string
   gold_loan_jeweller_deduction_inr_per_gram?: string
+}
+
+export type CatalogMetalPurityDTO = { id: number; slug: string; label: string }
+export type CatalogProductCategoryDTO = { id: number; slug: string; label: string }
+
+export type MarketplaceCatalogMetaDTO = {
+  metal_purities: CatalogMetalPurityDTO[]
+  product_categories: CatalogProductCategoryDTO[]
+}
+
+export async function fetchMarketplaceCatalogMeta(): Promise<MarketplaceCatalogMetaDTO | null> {
+  const res = await apiFetch('/api/v1/marketplace/catalog-meta/')
+  if (!res.ok) {
+    return null
+  }
+  return (await res.json()) as MarketplaceCatalogMetaDTO
 }
 
 export async function fetchMarketplaceProduct(id: number): Promise<MarketplaceProductDTO | null> {

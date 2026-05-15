@@ -5,13 +5,18 @@ import {
   fetchMarketplaceProduct,
   type MarketplaceProductDTO,
 } from '@/lib/marketplaceApi'
+import { fetchGoldWallet } from '@/lib/goldTransferApi'
 import {
   MarketplaceProductPricingBreakdown,
   formatInr,
   formatJewellerMetalRateAsOf,
   hasStoneOrOtherMetal,
 } from '@/features/marketplace/productPricing'
-import { makingChargesShortLabel } from '@/lib/marketplacePricing'
+import {
+  makingChargesShortLabel,
+  sameStoreMakingExplainer,
+  type CheckoutPricingContext,
+} from '@/lib/marketplacePricing'
 
 function Row({
   label,
@@ -37,6 +42,7 @@ export function MarketplaceProductDetailPage() {
   const navigate = useNavigate()
   const [product, setProduct] = useState<MarketplaceProductDTO | null>(null)
   const [loadError, setLoadError] = useState('')
+  const [pricingContext, setPricingContext] = useState<CheckoutPricingContext | undefined>(undefined)
 
   const idNum = productId && /^\d+$/.test(productId) ? Number.parseInt(productId, 10) : NaN
 
@@ -60,6 +66,22 @@ export function MarketplaceProductDetailPage() {
     void load()
   }, [load])
 
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      const w = await fetchGoldWallet()
+      if (cancelled) return
+      if (!w) {
+        setPricingContext(undefined)
+        return
+      }
+      setPricingContext({ customerDefaultJewellerId: w.default_jeweller_id })
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   const goCheckout = () => {
     if (!product) return
     navigate(`/marketplace?checkout=${product.id}`)
@@ -79,6 +101,7 @@ export function MarketplaceProductDetailPage() {
   const stoneCompVal = Number.parseFloat(product.stone_component_inr)
   const showStone = hasStoneOrOtherMetal(product)
   const jewellerRateAsOf = formatJewellerMetalRateAsOf(product.jeweller_metal_rate_last_updated_at)
+  const sameStoreLine = sameStoreMakingExplainer(product)
 
   return (
     <div style={{ paddingBottom: '4rem' }}>
@@ -124,7 +147,9 @@ export function MarketplaceProductDetailPage() {
             </h1>
             <p style={{ margin: '0 0 1rem', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
               {product.category ? `${product.category} · ` : ''}
-              {product.gold_weight_grams} g gold · BIS 916 · Making {makingChargesShortLabel(product)}
+              {product.gold_weight_grams} g · {(product.metal_purity_label ?? '').trim() || 'Hallmark'} · Making{' '}
+              {makingChargesShortLabel(product)}
+              {product.stock_quantity != null ? ` · Stock ${product.stock_quantity}` : ''}
             </p>
             {showStone ? (
               <p style={{ margin: '0 0 1rem', fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
@@ -139,7 +164,11 @@ export function MarketplaceProductDetailPage() {
               </p>
             ) : null}
 
-            {(product.same_store_benefit_note ?? '').trim() ? (
+            {sameStoreLine ? (
+              <p style={{ margin: '0 0 1.25rem', fontSize: '0.82rem', lineHeight: 1.5, color: 'var(--text-muted)' }}>
+                <strong style={{ color: 'var(--text)' }}>Same-shop making:</strong> {sameStoreLine}
+              </p>
+            ) : (product.same_store_benefit_note ?? '').trim() ? (
               <p style={{ margin: '0 0 1.25rem', fontSize: '0.82rem', lineHeight: 1.5, color: 'var(--text-muted)' }}>
                 <strong style={{ color: 'var(--text)' }}>Jeweller note:</strong> {product.same_store_benefit_note}
               </p>
@@ -156,7 +185,7 @@ export function MarketplaceProductDetailPage() {
               ) : null}
             </p>
 
-            <MarketplaceProductPricingBreakdown p={product} />
+            <MarketplaceProductPricingBreakdown p={product} pricingContext={pricingContext} />
 
             <div
               style={{

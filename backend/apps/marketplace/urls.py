@@ -11,6 +11,7 @@ from .views import (
     JewellerProductImageUploadView,
     JewellerProductDetailView,
     JewellerProductListCreateView,
+    MarketplaceCatalogMetaView,
     MarketplaceGoldTickerPublicView,
     MarketplaceJewellerDetailPublicView,
     MarketplaceJewellersPublicView,
@@ -20,6 +21,7 @@ from .views import (
 
 urlpatterns = [
     path("marketplace/spot-prices/", MarketplaceSpotPricesView.as_view()),
+    path("marketplace/catalog-meta/", MarketplaceCatalogMetaView.as_view()),
     path("marketplace/gold-ticker/", MarketplaceGoldTickerPublicView.as_view()),
     path("marketplace/jewellers/", MarketplaceJewellersPublicView.as_view()),
     path("marketplace/jewellers/<int:pk>/", MarketplaceJewellerDetailPublicView.as_view()),

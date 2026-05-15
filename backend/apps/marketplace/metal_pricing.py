@@ -230,6 +230,21 @@ def jeweller_store_22k_inr(profile: JewellerPricingProfile, cridora_base: Decima
     return jeweller_store_22k_inr_legacy(profile, cridora_base)
 
 
+def jeweller_22k_board_follows_live_ticker(profile: JewellerPricingProfile) -> bool:
+    """
+    True when showroom gold 22K ₹/g moves with live spot/Cridora reference (including markup-on-live).
+
+    False only when the jeweller pins a fixed manual ₹/g board rate.
+    """
+    raw = profile.metal_pricing_json if isinstance(profile.metal_pricing_json, dict) else {}
+    if raw.get("gold_22k"):
+        pmap = normalize_metal_pricing_json(profile.metal_pricing_json)
+        b22 = pmap.get("gold_22k") or default_pricing_block()
+        mode = b22.get("mode") or MODE_MATCH_CRIDORA
+        return mode != MODE_MANUAL_BOARD
+    return profile.gold_rate_source != JewellerPricingProfile.GOLD_RATE_MANUAL
+
+
 def sellback_components_for_metal(
     profile: JewellerPricingProfile, metal_code: str
 ) -> tuple[Decimal, Decimal, Decimal]:

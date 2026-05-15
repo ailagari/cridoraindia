@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
 import { authFetch } from '@/lib/api'
-import { LIVE_ADMIN_TICKER_POLL_MS, LIVE_ADMIN_POLL_MS } from '@/lib/liveDeskIntervals'
+import { LIVE_ADMIN_TICKER_POLL_MS } from '@/lib/liveDeskIntervals'
 import { useLivePoll } from '@/lib/useLivePoll'
 
 type DeductionMode = 'percent' | 'fixed_inr'
@@ -837,191 +837,21 @@ export function AdminGoldTickerPanel() {
   )
 }
 
-type ProductAdminRow = Record<string, unknown>
-
-function AdminModerationPricingCell({ row }: { row: ProductAdminRow }) {
-  const perG = (label: string, val: unknown) => {
-    const s = formatMaybeStrInr(val)
-    return (
-      <div className="tabular">
-        <span style={{ color: 'var(--text-muted)' }}>{label} </span>
-        {s === '—' ? (
-          <strong>—</strong>
-        ) : (
-          <>
-            <strong style={label.startsWith('Cridora') ? { color: 'var(--gold-light)' } : undefined}>₹{s}</strong>
-            <span style={{ color: 'var(--text-muted)' }}> /g</span>
-          </>
-        )}
-      </div>
-    )
-  }
-  const gv = formatMaybeStrInr(row.gold_metal_value_inr)
-  return (
-    <td style={{ fontSize: '0.76rem', lineHeight: 1.45, verticalAlign: 'top', maxWidth: 220 }}>
-      {perG('Live market 22K', row.platform_base_inr_per_gram_22k)}
-      {perG('Board', row.metal_rate_inr_per_gram_used)}
-      <div className="tabular">
-        <span style={{ color: 'var(--text-muted)' }}>Gold value </span>
-        {gv === '—' ? <strong>—</strong> : <strong>₹{gv}</strong>}
-      </div>
-      {perG('Sellback', row.sellback_indicative_inr_per_gram)}
-    </td>
-  )
-}
-
-export function AdminMarketplaceModerationPanel() {
-  const [rows, setRows] = useState<ProductAdminRow[]>([])
-  const [filter, setFilter] = useState<'pending' | 'all'>('pending')
-  const [error, setError] = useState('')
-  const [busyId, setBusyId] = useState<number | null>(null)
-  const [rejectReason, setRejectReason] = useState('')
-  const { message: modSuccessMsg, show: showModSuccess, clear: clearModSuccess } = useTimedSuccessMessage()
-
-  const load = useCallback(async () => {
-    setError('')
-    const q = filter === 'pending' ? '?status=pending' : ''
-    const res = await authFetch(`/api/v1/admin/marketplace/products/${q}`)
-    if (!res.ok) {
-      const j = await res.json().catch(() => ({}))
-      setError((j as { detail?: string }).detail ?? 'Could not load products.')
-      return
-    }
-    const j = (await res.json()) as { results: ProductAdminRow[] }
-    setRows(j.results ?? [])
-  }, [filter])
-
-  useEffect(() => {
-    void load()
-  }, [load])
-
-  useLivePoll(load, LIVE_ADMIN_POLL_MS, true)
-
-  const moderate = async (id: number, action: 'approve' | 'reject', skuLabel: string) => {
-    if (action === 'reject' && !rejectReason.trim()) {
-      setError('Add a rejection reason.')
-      return
-    }
-    setBusyId(id)
-    setError('')
-    clearModSuccess()
-    const res = await authFetch(`/api/v1/admin/marketplace/products/${id}/moderate/`, {
-      method: 'POST',
-      jsonBody:
-        action === 'approve'
-          ? { action: 'approve' }
-          : { action: 'reject', reason: rejectReason.trim() },
-    })
-    setBusyId(null)
-    if (!res.ok) {
-      const j = await res.json().catch(() => ({}))
-      setError(JSON.stringify(j))
-      return
-    }
-    setRejectReason('')
-    await load()
-    const label = skuLabel.trim() || 'SKU'
-    showModSuccess(action === 'approve' ? `Approved “${label}”.` : `Rejected “${label}”.`)
-  }
-
+export function AdminMarketplaceCatalogSetupPanel() {
   return (
     <section className="card" style={{ padding: '1.25rem', borderRadius: 18 }}>
       <h2 className="dash-coming__title" style={{ marginTop: 0 }}>
-        Product approval
+        Catalogue reference data
       </h2>
       <p className="dash-coming__text">
-        BIS 916 ornaments and related SKUs stay private until approved. Configure the live 22K benchmark under
-        Control → Ticker &amp; fees.
+        Verified jewellers publish SKUs directly — no product approval queue. Use Django admin to maintain{' '}
+        <strong>metal purities</strong> (hallmark / fineness factors for quotes) and <strong>product categories</strong>.
+        Jewellers choose which purities they stock from their Catalogue dashboard.
       </p>
-      <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
-        <button
-          type="button"
-          className="btn btn-ghost"
-          style={
-            filter === 'pending'
-              ? { borderColor: 'var(--gold)', color: 'var(--gold-light)' }
-              : undefined
-          }
-          onClick={() => setFilter('pending')}
-        >
-          Pending
-        </button>
-        <button
-          type="button"
-          className="btn btn-ghost"
-          style={
-            filter === 'all' ? { borderColor: 'var(--gold)', color: 'var(--gold-light)' } : undefined
-          }
-          onClick={() => setFilter('all')}
-        >
-          All
-        </button>
-        <button type="button" className="btn btn-ghost" onClick={() => void load()}>
-          Refresh
-        </button>
-      </div>
-      {error ? <p className="form-error">{error}</p> : null}
-      <AdminFormSuccessBanner message={modSuccessMsg} layout="block" />
-      <label className="field">
-        <span>Rejection reason (required to reject)</span>
-        <textarea className="dash-textarea" rows={2} value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} />
-      </label>
-      <div className="dash-table-scroll card" style={{ marginTop: '1rem' }}>
-        <table className="admin-user-table">
-          <thead>
-            <tr>
-              <th>SKU</th>
-              <th>Jeweller</th>
-              <th>Status</th>
-              <th>Calculated pricing</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.length === 0 ? (
-              <tr>
-                <td colSpan={5} style={{ padding: '1rem', color: 'var(--text-muted)' }}>
-                  Nothing in this queue.
-                </td>
-              </tr>
-            ) : (
-              rows.map((row) => {
-                const id = Number(row.id)
-                const skuName = String(row.name ?? '')
-                return (
-                  <tr key={id}>
-                    <td>{skuName}</td>
-                    <td>{String(row.jeweller_name ?? row.jeweller_email ?? '')}</td>
-                    <td>{String(row.moderation_status ?? '')}</td>
-                    <AdminModerationPricingCell row={row} />
-                    <td>
-                      <div className="kyb-actions">
-                        <button
-                          type="button"
-                          className="btn btn-primary kyb-btn-sm"
-                          disabled={busyId === id || row.moderation_status === 'approved'}
-                          onClick={() => void moderate(id, 'approve', skuName)}
-                        >
-                          Approve
-                        </button>
-                        <button
-                          type="button"
-                          className="btn btn-ghost kyb-btn-sm"
-                          disabled={busyId === id}
-                          style={{ borderColor: 'rgba(217,83,79,0.45)', color: '#f0a8a5' }}
-                          onClick={() => void moderate(id, 'reject', skuName)}
-                        >
-                          Reject
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                )
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
+      <p className="dash-coming__text" style={{ marginTop: '0.75rem', marginBottom: 0 }}>
+        Django admin: <span className="tabular">Marketplace → Metal purities</span> and{' '}
+        <span className="tabular">Marketplace → Product categories</span>.
+      </p>
     </section>
   )
 }

@@ -134,6 +134,43 @@ class GoldTickerConfig(models.Model):
         return adjusted_inr_from_decimal(self.reference_price_inr_per_gram_22k, family="gold", key="22K", ticker=self)
 
 
+class MetalPurity(models.Model):
+    """Admin-managed hallmark / fineness options (Django admin). Jewellers enable subsets on their pricing profile."""
+
+    slug = models.SlugField(max_length=48, unique=True)
+    label = models.CharField(max_length=120)
+    fine_fraction = models.DecimalField(
+        max_digits=7,
+        decimal_places=4,
+        default=Decimal("0.9160"),
+        help_text="Fine gold fraction vs gross ornament weight (916 → 0.916). Metal quote remains 22K board ₹/g.",
+    )
+    sort_order = models.PositiveSmallIntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["sort_order", "id"]
+
+    def __str__(self):
+        return self.label
+
+
+class ProductCategory(models.Model):
+    """Admin-managed catalogue categories for marketplace SKUs."""
+
+    slug = models.SlugField(max_length=80, unique=True)
+    label = models.CharField(max_length=120)
+    sort_order = models.PositiveSmallIntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["sort_order", "id"]
+        verbose_name_plural = "Product categories"
+
+    def __str__(self):
+        return self.label
+
+
 class JewellerPricingProfile(models.Model):
     """Sellback rules and default spot markup for a jeweller storefront."""
 
@@ -314,6 +351,12 @@ class JewellerPricingProfile(models.Model):
         blank=True,
         help_text="How gold rate applies e.g. at investment vs redemption (MVP disclosure).",
     )
+    metal_purities_offered = models.ManyToManyField(
+        MetalPurity,
+        blank=True,
+        related_name="jeweller_profiles_offering",
+        help_text="Purities this showroom sells. Leave empty to allow only BIS 916 when listing SKUs.",
+    )
 
     def __str__(self):
         return f"PricingProfile({self.jeweller_id})"
@@ -342,7 +385,24 @@ class MarketplaceProduct(models.Model):
         related_name="marketplace_products",
     )
     name = models.CharField(max_length=255)
-    category = models.CharField(max_length=80)
+    category = models.CharField(
+        max_length=80,
+        help_text="Denormalized copy of product_category.label for legacy filters.",
+    )
+    product_category = models.ForeignKey(
+        ProductCategory,
+        on_delete=models.PROTECT,
+        related_name="products",
+    )
+    metal_purity = models.ForeignKey(
+        MetalPurity,
+        on_delete=models.PROTECT,
+        related_name="products",
+    )
+    stock_quantity = models.PositiveIntegerField(
+        default=1,
+        help_text="Units in stock (0 = visible but out of stock).",
+    )
     gold_weight_grams = models.DecimalField(max_digits=10, decimal_places=3)
     MAKING_FIXED_PER_GRAM = "fixed_per_gram"
     MAKING_PERCENT_OF_METAL = "percent_of_metal"
@@ -399,7 +459,21 @@ class MarketplaceProduct(models.Model):
     same_store_benefit_note = models.CharField(
         max_length=255,
         blank=True,
-        help_text="Optional per-SKU same-store benefit line on product cards.",
+        help_text="Legacy text line; prefer same_store_making_charge_* for pricing.",
+    )
+    same_store_making_charge_percent = models.DecimalField(
+        max_digits=8,
+        decimal_places=4,
+        null=True,
+        blank=True,
+        help_text="When making_charge_mode is percent: making charge as percent of gold metal for customers whose default jeweller is this listing jeweller.",
+    )
+    same_store_making_charge_per_gram = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="When making_charge_mode is fixed: MC ₹/g for same-store customers.",
     )
 
     is_published = models.BooleanField(default=True)
@@ -415,6 +489,16 @@ class MarketplaceProduct(models.Model):
 
     class Meta:
         ordering = ["-updated_at"]
+
+    def save(self, *args, **kwargs):
+        if self.product_category_id:
+            try:
+                lbl = self.product_category.label
+            except ProductCategory.DoesNotExist:
+                lbl = None
+            if lbl:
+                self.category = str(lbl)[:80]
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.name
@@ -436,3 +520,10 @@ def jeweller_profile_for(user):
         sync_gold_22k_legacy_fields_from_json(profile)
         profile.save()
     return profile
+
+
+def allowed_metal_purities_qs(profile: JewellerPricingProfile):
+    qs = profile.metal_purities_offered.filter(is_active=True)
+    if qs.exists():
+        return qs
+    return MetalPurity.objects.filter(slug="bis916", is_active=True)

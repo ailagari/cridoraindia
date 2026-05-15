@@ -6,6 +6,9 @@ from .models import (
     GoldTickerConfig,
     JewellerPricingProfile,
     MarketplaceProduct,
+    MetalPurity,
+    ProductCategory,
+    allowed_metal_purities_qs,
     get_or_create_ticker,
     jeweller_profile_for,
 )
@@ -232,6 +235,12 @@ class JewellerPricingProfileSerializer(serializers.ModelSerializer):
     gold_loan_processing_fee_percent = serializers.SerializerMethodField()
     metal_rate_preview = serializers.SerializerMethodField()
     admin_buyback_reference_preview = serializers.SerializerMethodField()
+    metal_purities_offered = serializers.SerializerMethodField()
+    metal_purity_ids = serializers.ListField(
+        child=serializers.IntegerField(min_value=1),
+        write_only=True,
+        required=False,
+    )
 
     class Meta:
         model = JewellerPricingProfile
@@ -278,6 +287,8 @@ class JewellerPricingProfileSerializer(serializers.ModelSerializer):
             "jeweller_metal_rate_effective_updated_at",
             "metal_rate_preview",
             "admin_buyback_reference_preview",
+            "metal_purities_offered",
+            "metal_purity_ids",
         )
         read_only_fields = (
             "updated_at",
@@ -296,6 +307,10 @@ class JewellerPricingProfileSerializer(serializers.ModelSerializer):
             "metal_rate_preview",
             "admin_buyback_reference_preview",
         )
+
+    def get_metal_purities_offered(self, obj: JewellerPricingProfile) -> list[dict[str, str | int]]:
+        rows = obj.metal_purities_offered.filter(is_active=True).order_by("sort_order", "id")
+        return [{"id": p.id, "slug": p.slug, "label": p.label} for p in rows]
 
     def get_jeweller_metal_rate_effective_updated_at(self, obj: JewellerPricingProfile) -> str:
         return jeweller_rate_effective_updated_at(obj).isoformat()
@@ -364,6 +379,7 @@ class JewellerPricingProfileSerializer(serializers.ModelSerializer):
         return attrs
 
     def update(self, instance, validated_data):
+        ids = validated_data.pop("metal_purity_ids", None)
         if "metal_pricing_json" in validated_data:
             validated_data["metal_pricing_json"] = normalize_metal_pricing_json(
                 validated_data["metal_pricing_json"]
@@ -375,6 +391,9 @@ class JewellerPricingProfileSerializer(serializers.ModelSerializer):
         inst = super().update(instance, validated_data)
         sync_gold_22k_legacy_fields_from_json(inst)
         inst.save()
+        if ids is not None:
+            allowed = MetalPurity.objects.filter(pk__in=ids, is_active=True)
+            inst.metal_purities_offered.set(allowed)
         return inst
 
 
@@ -392,11 +411,25 @@ def _annotate_product_public(
     rate_as_of = jeweller_rate_effective_updated_at(profile)
 
     jeweller_name = product.jeweller.business_name or product.jeweller.email
+    cat_label = (
+        product.product_category.label
+        if getattr(product, "product_category_id", None)
+        else product.category
+    )
     row = {
         "id": product.id,
         "jeweller_id": product.jeweller_id,
         "name": product.name,
-        "category": product.category,
+        "category": cat_label,
+        "product_category_id": product.product_category_id,
+        "metal_purity_id": product.metal_purity_id,
+        "metal_purity_slug": (
+            product.metal_purity.slug if getattr(product, "metal_purity_id", None) else ""
+        ),
+        "metal_purity_label": (
+            product.metal_purity.label if getattr(product, "metal_purity_id", None) else ""
+        ),
+        "stock_quantity": product.stock_quantity,
         "gold_weight_grams": str(product.gold_weight_grams),
         "making_charge_mode": product.making_charge_mode,
         "making_charge_per_gram": str(product.making_charge_per_gram),
@@ -436,6 +469,16 @@ def _annotate_product_public(
             str(product.stone_cost_inr) if product.stone_cost_inr is not None else ""
         ),
         "same_store_benefit_note": product.same_store_benefit_note or "",
+        "same_store_making_charge_percent": (
+            str(product.same_store_making_charge_percent)
+            if product.same_store_making_charge_percent is not None
+            else ""
+        ),
+        "same_store_making_charge_per_gram": (
+            str(product.same_store_making_charge_per_gram)
+            if product.same_store_making_charge_per_gram is not None
+            else ""
+        ),
         "cross_platform_fee_inr": str(ticker.cross_platform_fee_inr),
     }
     if expose_platform_base:
@@ -473,7 +516,6 @@ def public_jeweller_storefront(user) -> dict:
     listing_count = MarketplaceProduct.objects.filter(
         jeweller=user,
         is_published=True,
-        moderation_status=MarketplaceProduct.MOD_APPROVED,
     ).count()
     return {
         "id": user.id,
@@ -551,11 +593,21 @@ def public_jeweller_storefront(user) -> dict:
 
 
 class JewellerProductWriteSerializer(serializers.ModelSerializer):
+    product_category = serializers.PrimaryKeyRelatedField(
+        queryset=ProductCategory.objects.filter(is_active=True)
+    )
+    metal_purity = serializers.PrimaryKeyRelatedField(
+        queryset=MetalPurity.objects.filter(is_active=True)
+    )
+    stock_quantity = serializers.IntegerField(min_value=0, required=False)
+
     class Meta:
         model = MarketplaceProduct
         fields = (
             "name",
-            "category",
+            "product_category",
+            "metal_purity",
+            "stock_quantity",
             "gold_weight_grams",
             "making_charge_mode",
             "making_charge_per_gram",
@@ -571,7 +623,8 @@ class JewellerProductWriteSerializer(serializers.ModelSerializer):
             "is_x_redeem",
             "rating",
             "is_published",
-            "same_store_benefit_note",
+            "same_store_making_charge_percent",
+            "same_store_making_charge_per_gram",
         )
 
     def validate(self, attrs):
@@ -600,6 +653,17 @@ class JewellerProductWriteSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(
                     {"making_charge_percent": "Percent cannot exceed 100."}
                 )
+            ss_pct = attrs.get(
+                "same_store_making_charge_percent",
+                getattr(self.instance, "same_store_making_charge_percent", None),
+            )
+            if ss_pct is not None:
+                if ss_pct < Decimal("0") or ss_pct > Decimal("100"):
+                    raise serializers.ValidationError(
+                        {
+                            "same_store_making_charge_percent": "Must be between 0 and 100."
+                        }
+                    )
         else:
             mpg = attrs.get(
                 "making_charge_per_gram",
@@ -608,6 +672,16 @@ class JewellerProductWriteSerializer(serializers.ModelSerializer):
             if mpg is None or mpg < 0:
                 raise serializers.ValidationError(
                     {"making_charge_per_gram": "Making ₹/g must be zero or greater."}
+                )
+            ss_pg = attrs.get(
+                "same_store_making_charge_per_gram",
+                getattr(self.instance, "same_store_making_charge_per_gram", None),
+            )
+            if ss_pg is not None and ss_pg < Decimal("0"):
+                raise serializers.ValidationError(
+                    {
+                        "same_store_making_charge_per_gram": "Must be zero or greater."
+                    }
                 )
         mode = attrs.get("pricing_mode", getattr(self.instance, "pricing_mode", None))
         manual = attrs.get(
@@ -628,6 +702,32 @@ class JewellerProductWriteSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(
                     {"stone_type": "Stone type is required when stone is included."}
                 )
+
+        req = self.context.get("request")
+        if req and getattr(req.user, "is_authenticated", False):
+            profile = jeweller_profile_for(req.user)
+            mp = attrs.get("metal_purity") or (
+                self.instance.metal_purity if self.instance else None
+            )
+            if mp is not None:
+                allowed = allowed_metal_purities_qs(profile)
+                if not allowed.filter(pk=mp.pk).exists():
+                    raise serializers.ValidationError(
+                        {
+                            "metal_purity": (
+                                "This purity is not enabled for your storefront. "
+                                "Select it under Catalogue · Metal purities offered."
+                            )
+                        }
+                    )
+            pc = attrs.get("product_category") or (
+                self.instance.product_category if self.instance else None
+            )
+            if pc is not None and not pc.is_active:
+                raise serializers.ValidationError(
+                    {"product_category": "This category is not available."}
+                )
+
         return attrs
 
 

@@ -265,7 +265,9 @@ class Command(BaseCommand):
     def _upsert_demo_products(self, jeweller, samples: list):
         from decimal import Decimal
 
-        from apps.marketplace.models import MarketplaceProduct
+        from django.utils.text import slugify
+
+        from apps.marketplace.models import MarketplaceProduct, MetalPurity, ProductCategory
 
         base_defaults = {
             "moderation_status": MarketplaceProduct.MOD_APPROVED,
@@ -273,13 +275,50 @@ class Command(BaseCommand):
             "is_x_redeem": True,
             "pricing_mode": MarketplaceProduct.PRICING_SPOT_MARKUP,
         }
+        mp916 = MetalPurity.objects.filter(slug="bis916").first()
+        if mp916 is None:
+            self.stdout.write(
+                self.style.WARNING("  [skip] marketplace MetalPurity bis916 missing — run migrations first.")
+            )
+            return
+
+        def resolve_category(label: str) -> ProductCategory:
+            raw = (label or "").strip() or "Other"
+            slug = slugify(raw)[:80]
+            pc = ProductCategory.objects.filter(slug=slug).first()
+            if pc:
+                return pc
+            pc = ProductCategory.objects.filter(label__iexact=raw).first()
+            if pc:
+                return pc
+            return ProductCategory.objects.create(
+                slug=slug or "misc",
+                label=raw[:120],
+                sort_order=8600,
+                is_active=True,
+            )
+
         for row in samples:
             name = row["name"]
-            payload = {k: v for k, v in row.items() if k != "name"}
+            cat_label = row.get("category", "Other")
+            payload = {
+                k: v
+                for k, v in row.items()
+                if k not in ("name", "category", "stock_quantity")
+            }
+            pc = resolve_category(str(cat_label))
+            sq_raw = row.get("stock_quantity", 12)
+            sq = int(sq_raw) if sq_raw is not None else 12
             MarketplaceProduct.objects.update_or_create(
                 jeweller=jeweller,
                 name=name,
-                defaults={**base_defaults, **payload},
+                defaults={
+                    **base_defaults,
+                    **payload,
+                    "product_category": pc,
+                    "metal_purity": mp916,
+                    "stock_quantity": sq,
+                },
             )
 
     def _ensure_marketplace_demo(self):

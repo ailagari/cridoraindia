@@ -2,25 +2,26 @@ from decimal import Decimal
 
 from django.utils import timezone
 
-from .metal_pricing import jeweller_store_22k_inr, sellback_rate_inr_per_gram
+from .metal_pricing import jeweller_22k_board_follows_live_ticker, jeweller_store_22k_inr, sellback_rate_inr_per_gram
 from .models import JewellerPricingProfile, MarketplaceProduct
 
 
 def jeweller_rate_effective_updated_at(profile: JewellerPricingProfile) -> timezone.datetime:
     """
     Timestamp shown to customers as “rate last updated”.
-    Manual mode: last jeweller pricing profile save.
-    Live-on-Cridora-base mode: later of profile save vs platform ticker resolution update.
+
+    Fixed manual board ₹/g: last jeweller pricing profile save.
+
+    Live / relational pricing (match Cridora, markup on live reference, etc.): last platform ticker update —
+    markups and deductions apply on top of that reference, so freshness follows the feed.
     """
 
     from .models import get_or_create_ticker
 
     ticker = get_or_create_ticker()
-    pu = profile.updated_at
-    tu = ticker.updated_at
-    if profile.gold_rate_source == JewellerPricingProfile.GOLD_RATE_MANUAL:
-        return pu
-    return max(pu, tu)
+    if jeweller_22k_board_follows_live_ticker(profile):
+        return ticker.updated_at
+    return profile.updated_at
 
 
 def markup_for_product(product: MarketplaceProduct, profile: JewellerPricingProfile) -> Decimal:
@@ -52,7 +53,11 @@ def stone_component_inr(product: MarketplaceProduct) -> Decimal:
 
 
 def gold_metal_value_inr(product: MarketplaceProduct, metal_rate: Decimal) -> Decimal:
-    return (product.gold_weight_grams * metal_rate).quantize(Decimal("0.01"))
+    purity = getattr(product, "metal_purity", None)
+    frac = purity.fine_fraction if purity is not None else Decimal("0.916")
+    base = Decimal("0.916")
+    adj = frac / base
+    return (product.gold_weight_grams * metal_rate * adj).quantize(Decimal("0.01"))
 
 
 def reference_metal_rate_inr_per_gram_for_jeweller(

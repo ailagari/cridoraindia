@@ -1,8 +1,13 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { authFetch, authUpload } from '@/lib/api'
+import { useAuth } from '@/context/AuthContext'
 import { LIVE_MARKETPLACE_EDITOR_POLL_MS } from '@/lib/liveDeskIntervals'
 import { MAKING_FIXED_PER_GRAM, MAKING_PERCENT_OF_METAL } from '@/lib/marketplacePricing'
+import {
+  fetchMarketplaceCatalogMeta,
+  type MarketplaceCatalogMetaDTO,
+} from '@/lib/marketplaceApi'
 import { useLivePoll } from '@/lib/useLivePoll'
 import { numOrZero } from '@/features/marketplace/jewellerMarketplaceShared'
 
@@ -11,10 +16,16 @@ const PRODUCT_IMAGE_MAX_BYTES = 4 * 1024 * 1024
 type ProductRow = Record<string, unknown>
 
 export function JewellerMarketplacePanel() {
+  const { user } = useAuth()
   const skuImageInputRef = useRef<HTMLInputElement>(null)
   const catalogImageInputRef = useRef<HTMLInputElement>(null)
+  const catalogDefaultsDoneRef = useRef(false)
 
   const [products, setProducts] = useState<ProductRow[]>([])
+  const [catalogMeta, setCatalogMeta] = useState<MarketplaceCatalogMetaDTO | null>(null)
+  const [profileMetalIds, setProfileMetalIds] = useState<number[]>([])
+  const [purityDraftIds, setPurityDraftIds] = useState<number[]>([])
+  const [purityOfferBusy, setPurityOfferBusy] = useState(false)
   const [loadError, setLoadError] = useState('')
   const [formError, setFormError] = useState('')
   const [successMsg, setSuccessMsg] = useState('')
@@ -24,7 +35,9 @@ export function JewellerMarketplacePanel() {
 
   const [form, setForm] = useState({
     name: '',
-    category: '',
+    product_category_id: '',
+    metal_purity_id: '',
+    stock_quantity: '1',
     gold_weight_grams: '',
     making_charge_mode: MAKING_FIXED_PER_GRAM,
     making_charge_per_gram: '',
@@ -40,7 +53,8 @@ export function JewellerMarketplacePanel() {
     is_x_redeem: true,
     is_published: true,
     rating: '4.5',
-    same_store_benefit_note: '',
+    same_store_making_charge_percent: '',
+    same_store_making_charge_per_gram: '',
   })
 
   const flashSuccess = useCallback((msg: string) => {
@@ -79,6 +93,78 @@ export function JewellerMarketplacePanel() {
   }, [refresh])
 
   useLivePoll(pollProducts, LIVE_MARKETPLACE_EDITOR_POLL_MS, true)
+
+  useEffect(() => {
+    void (async () => {
+      const m = await fetchMarketplaceCatalogMeta()
+      setCatalogMeta(m)
+    })()
+  }, [])
+
+  const refreshPricingProfileMetals = useCallback(async () => {
+    const res = await authFetch('/api/v1/jeweller/marketplace/profile/')
+    if (!res.ok) return
+    const j = (await res.json()) as { metal_purities_offered?: { id: number }[] }
+    const ids = (j.metal_purities_offered ?? []).map((x) => x.id)
+    setProfileMetalIds(ids)
+    const bisId = catalogMeta?.metal_purities.find((x) => x.slug === 'bis916')?.id
+    if (ids.length > 0) {
+      setPurityDraftIds(ids)
+    } else if (bisId != null) {
+      setPurityDraftIds([bisId])
+    }
+  }, [catalogMeta])
+
+  useEffect(() => {
+    void refreshPricingProfileMetals()
+  }, [refreshPricingProfileMetals])
+
+  useEffect(() => {
+    if (!catalogMeta || catalogDefaultsDoneRef.current) return
+    catalogDefaultsDoneRef.current = true
+    const bis = catalogMeta.metal_purities.find((x) => x.slug === 'bis916')
+    const cat0 = catalogMeta.product_categories[0]
+    setForm((f) => ({
+      ...f,
+      product_category_id: cat0 ? String(cat0.id) : '',
+      metal_purity_id: bis ? String(bis.id) : f.metal_purity_id,
+    }))
+  }, [catalogMeta])
+
+  const skuMetalOptions = useMemo(() => {
+    if (!catalogMeta) return []
+    const metals = catalogMeta.metal_purities
+    if (profileMetalIds.length > 0) {
+      const allow = new Set(profileMetalIds)
+      return metals.filter((m) => allow.has(m.id))
+    }
+    return metals.filter((m) => m.slug === 'bis916')
+  }, [catalogMeta, profileMetalIds])
+
+  const saveMetalPuritiesOffered = async () => {
+    setPurityOfferBusy(true)
+    setFormError('')
+    const res = await authFetch('/api/v1/jeweller/marketplace/profile/', {
+      method: 'PATCH',
+      jsonBody: { metal_purity_ids: purityDraftIds },
+    })
+    setPurityOfferBusy(false)
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}))
+      setSuccessMsg('')
+      setFormError(JSON.stringify(j))
+      return
+    }
+    await refreshPricingProfileMetals()
+    flashSuccess('Metal purities saved for your storefront.')
+  }
+
+  const togglePurityDraft = (id: number, checked: boolean) => {
+    setPurityDraftIds((prev) => {
+      if (checked) return [...new Set([...prev, id])].sort((a, b) => a - b)
+      return prev.filter((x) => x !== id)
+    })
+  }
 
   const uploadProductImage = async (file: File, productId?: number) => {
     const allowed = ['image/jpeg', 'image/png', 'image/webp']
@@ -122,16 +208,39 @@ export function JewellerMarketplacePanel() {
     }
     await refresh()
     flashSuccess(
-      productId != null ? 'Product photo saved.' : 'Photo uploaded — confirm SKU fields and submit for review.',
+      productId != null ? 'Product photo saved.' : 'Photo uploaded — finish SKU fields and add to catalogue.',
     )
   }
 
   const addProduct = async () => {
     setBusy(true)
     setFormError('')
+    const pcId = Number.parseInt(form.product_category_id, 10)
+    const mpId = Number.parseInt(form.metal_purity_id, 10)
+    const stockN = Number.parseInt(form.stock_quantity, 10)
+    if (!Number.isFinite(pcId) || pcId < 1) {
+      setBusy(false)
+      setSuccessMsg('')
+      setFormError('Choose a category from the dropdown.')
+      return
+    }
+    if (!Number.isFinite(mpId) || mpId < 1) {
+      setBusy(false)
+      setSuccessMsg('')
+      setFormError('Choose a metal purity.')
+      return
+    }
+    if (!Number.isFinite(stockN) || stockN < 0) {
+      setBusy(false)
+      setSuccessMsg('')
+      setFormError('Stock quantity must be a whole number (0 or more).')
+      return
+    }
     const body: Record<string, unknown> = {
       name: form.name.trim(),
-      category: form.category.trim(),
+      product_category: pcId,
+      metal_purity: mpId,
+      stock_quantity: stockN,
       gold_weight_grams: numOrZero(form.gold_weight_grams),
       making_charge_mode: form.making_charge_mode,
       image_url: form.image_url.trim(),
@@ -141,14 +250,19 @@ export function JewellerMarketplacePanel() {
       rating: numOrZero(form.rating),
       stone_included: form.stone_included,
       stone_type: form.stone_type.trim(),
-      same_store_benefit_note: form.same_store_benefit_note.trim(),
     }
     if (form.making_charge_mode === MAKING_PERCENT_OF_METAL) {
       body.making_charge_percent = numOrZero(form.making_charge_percent)
       body.making_charge_per_gram = '0'
+      const ss = form.same_store_making_charge_percent.trim()
+      body.same_store_making_charge_percent = ss !== '' ? numOrZero(ss) : null
+      body.same_store_making_charge_per_gram = null
     } else {
       body.making_charge_per_gram = numOrZero(form.making_charge_per_gram)
       body.making_charge_percent = null
+      const ss = form.same_store_making_charge_per_gram.trim()
+      body.same_store_making_charge_per_gram = ss !== '' ? numOrZero(ss) : null
+      body.same_store_making_charge_percent = null
     }
     const jmp = form.jeweller_markup_percent.trim()
     if (jmp !== '') {
@@ -182,7 +296,6 @@ export function JewellerMarketplacePanel() {
     setForm((f) => ({
       ...f,
       name: '',
-      category: '',
       gold_weight_grams: '',
       making_charge_mode: MAKING_FIXED_PER_GRAM,
       making_charge_per_gram: '',
@@ -193,10 +306,12 @@ export function JewellerMarketplacePanel() {
       stone_type: '',
       stone_weight_grams: '',
       stone_cost_inr: '',
-      same_store_benefit_note: '',
+      same_store_making_charge_percent: '',
+      same_store_making_charge_per_gram: '',
+      stock_quantity: '1',
     }))
     await refresh()
-    flashSuccess('SKU submitted for admin review.')
+    flashSuccess('SKU added to your catalogue.')
   }
 
   const removeProduct = async (id: number) => {
@@ -219,12 +334,17 @@ export function JewellerMarketplacePanel() {
   return (
     <div className="dash-panel-max jeweller-mkt">
       <p className="dash-panel-lead">
-        Manage product catalogue SKUs. Configure <strong>buy rates, markups, sellback</strong>, vault lock-in, and{' '}
-        <strong>Golden Scheme</strong> under{' '}
-        <Link to="/dashboard/jeweller?section=mkt_policy">Marketplace · Rates &amp; schemes</Link>. Your public shop card
-        (logo and badges) lives under{' '}
+        Verified jewellers publish SKUs directly (no admin product approval). Categories and hallmark purities are maintained in Django admin; tick which purities you stock below, then list SKUs with weight, purity, and stock.
+        Configure <strong>rates &amp; sellback</strong> under{' '}
+        <Link to="/dashboard/jeweller?section=mkt_policy">Marketplace · Rates &amp; schemes</Link>. Shop card under{' '}
         <Link to="/dashboard/jeweller?section=prof_more">Profile · Shop &amp; business</Link>.
       </p>
+
+      {user?.user_type === 'jeweller' && user.kyc_status !== 'verified' ? (
+        <p className="form-error" role="status">
+          KYB must be verified before you can upload catalogue SKUs or photos.
+        </p>
+      ) : null}
 
       {loadError ? <p className="form-error">{loadError}</p> : null}
       {formError ? <p className="form-error">{formError}</p> : null}
@@ -233,6 +353,50 @@ export function JewellerMarketplacePanel() {
           {successMsg}
         </p>
       ) : null}
+
+      <details className="jeweller-mkt-acc card" style={{ marginBottom: '1rem' }} open>
+        <summary>Metal purities offered at your storefront</summary>
+        <div className="jeweller-mkt-acc__body">
+          <p style={{ marginTop: 0, fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: 1.45 }}>
+            Admin defines hallmark options (Django admin → Marketplace → Metal purities). Customers only see purities you enable here.
+            Leave only <strong>BIS 916</strong> checked if you sell 22K only.
+          </p>
+          {!catalogMeta ? (
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Loading purity catalogue…</p>
+          ) : (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.65rem 1rem', alignItems: 'center' }}>
+              {catalogMeta.metal_purities.map((m) => (
+                <label
+                  key={m.id}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.35rem',
+                    fontSize: '0.82rem',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={purityDraftIds.includes(m.id)}
+                    disabled={purityOfferBusy || disableActions}
+                    onChange={(e) => togglePurityDraft(m.id, e.target.checked)}
+                  />
+                  {m.label}
+                </label>
+              ))}
+              <button
+                type="button"
+                className="btn btn-ghost kyb-btn-sm"
+                disabled={purityOfferBusy || disableActions}
+                onClick={() => void saveMetalPuritiesOffered()}
+              >
+                {purityOfferBusy ? 'Saving…' : 'Save purities'}
+              </button>
+            </div>
+          )}
+        </div>
+      </details>
 
       <input
         ref={catalogImageInputRef}
@@ -253,18 +417,9 @@ export function JewellerMarketplacePanel() {
         <summary>Add catalogue SKU</summary>
         <div className="jeweller-mkt-acc__body">
           <p className="dash-coming__text" style={{ marginTop: 0 }}>
-            BIS 916 (22K) only. Making can be fixed ₹/g or percent of gold metal value. Add a product photo (upload or URL)
-            before submitting.
+            Choose category and hallmark purity from the lists admin maintains. Metal quotes still use your storefront&apos;s 22K
+            board ₹/g; lower purity adjusts fine-gold value automatically. Add a photo (upload or URL) before publishing.
           </p>
-          <datalist id="jeweller-mp-categories">
-            <option value="Ornaments" />
-            <option value="Chains" />
-            <option value="Bangles" />
-            <option value="Coins" />
-            <option value="Bridal sets" />
-            <option value="Rings" />
-            <option value="Necklaces" />
-          </datalist>
 
           <table className="admin-user-table jeweller-mkt-sku-table">
             <tbody>
@@ -331,11 +486,56 @@ export function JewellerMarketplacePanel() {
                 <th scope="row">Category</th>
                 <td>
                   <label className="field" style={{ margin: 0 }}>
+                    <select
+                      style={{ width: '100%', maxWidth: '100%' }}
+                      value={form.product_category_id}
+                      onChange={(e) => setForm((f) => ({ ...f, product_category_id: e.target.value }))}
+                      disabled={!catalogMeta}
+                    >
+                      {catalogMeta?.product_categories.map((c) => (
+                        <option key={c.id} value={String(c.id)}>
+                          {c.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">Metal purity</th>
+                <td>
+                  <label className="field" style={{ margin: 0 }}>
+                    <select
+                      style={{ width: '100%', maxWidth: '100%' }}
+                      value={form.metal_purity_id}
+                      onChange={(e) => setForm((f) => ({ ...f, metal_purity_id: e.target.value }))}
+                      disabled={skuMetalOptions.length === 0}
+                    >
+                      {skuMetalOptions.length === 0 ? (
+                        <option value="">Loading purities…</option>
+                      ) : (
+                        skuMetalOptions.map((m) => (
+                          <option key={m.id} value={String(m.id)}>
+                            {m.label}
+                          </option>
+                        ))
+                      )}
+                    </select>
+                  </label>
+                  <p style={{ margin: '0.35rem 0 0', fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>
+                    Enable additional purities in <strong>Metal purities offered</strong> above. Default is BIS 916 when none are selected.
+                  </p>
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">Stock (units)</th>
+                <td>
+                  <label className="field" style={{ margin: 0 }}>
                     <input
-                      list="jeweller-mp-categories"
-                      value={form.category}
-                      onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
-                      placeholder="Ornaments, chains, coins…"
+                      inputMode="numeric"
+                      value={form.stock_quantity}
+                      onChange={(e) => setForm((f) => ({ ...f, stock_quantity: e.target.value }))}
+                      placeholder="e.g. 12"
                     />
                   </label>
                 </td>
@@ -390,22 +590,37 @@ export function JewellerMarketplacePanel() {
                 </td>
               </tr>
               <tr>
-                <th scope="row">Purity</th>
-                <td style={{ fontWeight: 700, color: 'var(--gold-light)' }}>BIS 916 (22K) only</td>
-              </tr>
-              <tr>
-                <th scope="row">Same-store benefit note</th>
+                <th scope="row">
+                  {form.making_charge_mode === MAKING_PERCENT_OF_METAL
+                    ? 'Same-shop making (% metal)'
+                    : 'Same-shop making (₹/g)'}
+                </th>
                 <td>
                   <label className="field" style={{ margin: 0 }}>
-                    <textarea
-                      className="dash-textarea"
-                      rows={2}
-                      value={form.same_store_benefit_note}
-                      onChange={(e) => setForm((f) => ({ ...f, same_store_benefit_note: e.target.value }))}
-                      placeholder="e.g. 0% MC when you redeem ornaments with us"
-                      style={{ width: '100%', maxWidth: '100%', marginTop: '0.35rem' }}
-                    />
+                    {form.making_charge_mode === MAKING_PERCENT_OF_METAL ? (
+                      <input
+                        inputMode="decimal"
+                        value={form.same_store_making_charge_percent}
+                        onChange={(e) =>
+                          setForm((f) => ({ ...f, same_store_making_charge_percent: e.target.value }))
+                        }
+                        placeholder="Leave blank to use cross purchase rate for everyone"
+                      />
+                    ) : (
+                      <input
+                        inputMode="decimal"
+                        value={form.same_store_making_charge_per_gram}
+                        onChange={(e) =>
+                          setForm((f) => ({ ...f, same_store_making_charge_per_gram: e.target.value }))
+                        }
+                        placeholder="Leave blank to use cross purchase rate for everyone"
+                      />
+                    )}
                   </label>
+                  <p style={{ margin: '0.35rem 0 0', fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>
+                    Customers whose default jeweller is you pay this making charge; everyone else pays the cross purchase
+                    rate above.
+                  </p>
                 </td>
               </tr>
               <tr>
@@ -538,7 +753,7 @@ export function JewellerMarketplacePanel() {
             onClick={() => void addProduct()}
             style={{ marginTop: '1rem' }}
           >
-            Submit SKU for review
+            Add SKU to catalogue
           </button>
         </div>
       </details>
@@ -547,15 +762,18 @@ export function JewellerMarketplacePanel() {
         <summary>Your catalogue</summary>
         <div className="jeweller-mkt-acc__body">
           <div className="dash-table-scroll card" style={{ padding: 0 }}>
-            <table className="admin-user-table" style={{ minWidth: 820 }}>
+            <table className="admin-user-table" style={{ minWidth: 1040 }}>
               <thead>
                 <tr>
                   <th scope="col">Photo</th>
                   <th scope="col">Name</th>
                   <th scope="col">Category</th>
+                  <th scope="col">Purity</th>
+                  <th scope="col">Stock</th>
                   <th scope="col">Weight</th>
                   <th scope="col">Making</th>
-                  <th scope="col">Status</th>
+                  <th scope="col">Same-shop MC</th>
+                  <th scope="col">Pub.</th>
                   <th scope="col">Metal ₹/g</th>
                   <th scope="col">Sellback ₹/g</th>
                   <th scope="col" />
@@ -564,8 +782,8 @@ export function JewellerMarketplacePanel() {
               <tbody>
                 {products.length === 0 ? (
                   <tr>
-                    <td colSpan={9} style={{ padding: '1rem', color: 'var(--text-muted)' }}>
-                      No SKUs yet — approved items appear on the public marketplace.
+                    <td colSpan={12} style={{ padding: '1rem', color: 'var(--text-muted)' }}>
+                      No SKUs yet — published listings appear on the public marketplace for verified jewellers.
                     </td>
                   </tr>
                 ) : (
@@ -591,13 +809,32 @@ export function JewellerMarketplacePanel() {
                       </td>
                       <td>{String(row.name ?? '')}</td>
                       <td>{String(row.category ?? '')}</td>
+                      <td style={{ fontSize: '0.72rem', maxWidth: 120 }}>
+                        {String(row.metal_purity_label ?? '').trim() ||
+                          String(row.metal_purity_slug ?? '').trim() ||
+                          '—'}
+                      </td>
+                      <td className="tabular">{String(row.stock_quantity ?? '')}</td>
                       <td className="tabular">{String(row.gold_weight_grams ?? '')}</td>
                       <td className="tabular">
                         {String(row.making_charge_mode ?? MAKING_FIXED_PER_GRAM) === MAKING_PERCENT_OF_METAL
                           ? `${String(row.making_charge_percent ?? '')}% metal`
                           : String(row.making_charge_per_gram ?? '')}
                       </td>
-                      <td>{String(row.moderation_status ?? '')}</td>
+                      <td className="tabular">
+                        {String(row.making_charge_mode ?? MAKING_FIXED_PER_GRAM) === MAKING_PERCENT_OF_METAL ? (
+                          String(row.same_store_making_charge_percent ?? '').trim() !== '' ? (
+                            `${String(row.same_store_making_charge_percent)}% metal`
+                          ) : (
+                            '—'
+                          )
+                        ) : String(row.same_store_making_charge_per_gram ?? '').trim() !== '' ? (
+                          `₹${String(row.same_store_making_charge_per_gram)}/g`
+                        ) : (
+                          '—'
+                        )}
+                      </td>
+                      <td className="tabular">{row.is_published ? 'yes' : 'no'}</td>
                       <td className="tabular">{String(row.metal_rate_inr_per_gram_used ?? '')}</td>
                       <td className="tabular">{String(row.sellback_indicative_inr_per_gram ?? '')}</td>
                       <td>

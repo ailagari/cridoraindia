@@ -22,6 +22,11 @@ export const MAKING_PERCENT_OF_METAL = 'percent_of_metal'
 
 const DISCOUNT_RATE = 0.05
 
+/** When `customerDefaultJewellerId` equals the product listing jeweller, same-store making applies if configured. */
+export type CheckoutPricingContext = {
+  customerDefaultJewellerId?: number | null
+}
+
 type JewellerParts = {
   goldValue: number
   makingCharges: number
@@ -31,48 +36,92 @@ type JewellerParts = {
   jewellerSubtotal: number
 }
 
-function rawMakingChargesInr(p: MarketplaceProductDTO): number {
+function isSameStoreJeweller(p: MarketplaceProductDTO, ctx?: CheckoutPricingContext): boolean {
+  const id = ctx?.customerDefaultJewellerId
+  return id != null && id === p.jeweller_id
+}
+
+function effectiveMakingPercent(p: MarketplaceProductDTO, ctx?: CheckoutPricingContext): number {
+  const cross = Number.parseFloat(p.making_charge_percent || '0')
+  if (!isSameStoreJeweller(p, ctx)) return cross
+  const raw = p.same_store_making_charge_percent
+  if (raw == null || String(raw).trim() === '') return cross
+  const v = Number.parseFloat(String(raw))
+  return Number.isFinite(v) ? v : cross
+}
+
+function effectiveMakingPerGram(p: MarketplaceProductDTO, ctx?: CheckoutPricingContext): number {
+  const cross = Number.parseFloat(p.making_charge_per_gram || '0')
+  if (!isSameStoreJeweller(p, ctx)) return cross
+  const raw = p.same_store_making_charge_per_gram
+  if (raw == null || String(raw).trim() === '') return cross
+  const v = Number.parseFloat(String(raw))
+  return Number.isFinite(v) ? v : cross
+}
+
+function rawMakingChargesInr(p: MarketplaceProductDTO, ctx?: CheckoutPricingContext): number {
   const mode = p.making_charge_mode?.trim() || MAKING_FIXED_PER_GRAM
   const weight = Number.parseFloat(p.gold_weight_grams)
   if (mode === MAKING_PERCENT_OF_METAL) {
-    const pct = Number.parseFloat(p.making_charge_percent || '0')
+    const pct = effectiveMakingPercent(p, ctx)
     const goldMetal = Number.parseFloat(p.gold_metal_value_inr)
     return goldMetal * (pct / 100)
   }
-  const makingPerG = Number.parseFloat(p.making_charge_per_gram)
+  const makingPerG = effectiveMakingPerGram(p, ctx)
   return weight * makingPerG
 }
 
-/** Short text for subtitles and compact UI (e.g. "8.5% of metal" or "₹650/g"). */
+/** Short text for subtitles and compact UI (e.g. cross vs same-shop rates). */
 export function makingChargesShortLabel(p: MarketplaceProductDTO): string {
   const mode = p.making_charge_mode?.trim() || MAKING_FIXED_PER_GRAM
   if (mode === MAKING_PERCENT_OF_METAL) {
-    const pct = Number.parseFloat(p.making_charge_percent || '0')
-    const s = pct.toLocaleString('en-IN', { maximumFractionDigits: 2 })
-    return `${s}% of metal`
+    const cross = Number.parseFloat(p.making_charge_percent || '0')
+    const crossS = cross.toLocaleString('en-IN', { maximumFractionDigits: 2 })
+    const raw = p.same_store_making_charge_percent
+    if (raw != null && String(raw).trim() !== '') {
+      const same = Number.parseFloat(String(raw))
+      if (Number.isFinite(same)) {
+        const sameS = same.toLocaleString('en-IN', { maximumFractionDigits: 2 })
+        return `cross ${crossS}% · same shop ${sameS}% metal`
+      }
+    }
+    return `${crossS}% of metal`
   }
-  const pg = Number.parseFloat(p.making_charge_per_gram)
-  return `₹${pg.toLocaleString('en-IN', { maximumFractionDigits: 0 })}/g`
+  const crossPg = Number.parseFloat(p.making_charge_per_gram || '0')
+  const raw = p.same_store_making_charge_per_gram
+  if (raw != null && String(raw).trim() !== '') {
+    const samePg = Number.parseFloat(String(raw))
+    if (Number.isFinite(samePg)) {
+      const c = crossPg.toLocaleString('en-IN', { maximumFractionDigits: 0 })
+      const s = samePg.toLocaleString('en-IN', { maximumFractionDigits: 0 })
+      return `cross ₹${c}/g · same shop ₹${s}/g`
+    }
+  }
+  const pg = crossPg.toLocaleString('en-IN', { maximumFractionDigits: 0 })
+  return `₹${pg}/g`
 }
 
 /** Longer label for price breakdown rows on product cards. */
-export function makingChargesBreakdownLabel(p: MarketplaceProductDTO): string {
+export function makingChargesBreakdownLabel(p: MarketplaceProductDTO, ctx?: CheckoutPricingContext): string {
   const mode = p.making_charge_mode?.trim() || MAKING_FIXED_PER_GRAM
+  const sameJeweller = isSameStoreJeweller(p, ctx)
   if (mode === MAKING_PERCENT_OF_METAL) {
-    const pct = Number.parseFloat(p.making_charge_percent || '0')
+    const pct = effectiveMakingPercent(p, ctx)
     const s = pct.toLocaleString('en-IN', { maximumFractionDigits: 2 })
-    return `Making (${s}% of gold metal)`
+    const tag = sameJeweller ? 'same-shop rate' : 'cross / other jeweller'
+    return `Making (${s}% of gold metal · ${tag})`
   }
-  const pg = Number.parseFloat(p.making_charge_per_gram)
+  const pg = effectiveMakingPerGram(p, ctx)
   const w = Number.parseFloat(p.gold_weight_grams)
   const pgS = pg.toLocaleString('en-IN', { maximumFractionDigits: 0 })
   const wS = w.toLocaleString('en-IN', { maximumFractionDigits: 3 })
-  return `Making (₹${pgS}/g × ${wS}g)`
+  const tag = sameJeweller ? 'same-shop ₹/g' : 'cross / other jeweller ₹/g'
+  return `Making (₹${pgS}/g × ${wS}g · ${tag})`
 }
 
-function jewellerLineParts(p: MarketplaceProductDTO): JewellerParts {
+function jewellerLineParts(p: MarketplaceProductDTO, ctx?: CheckoutPricingContext): JewellerParts {
   const goldValue = Number.parseFloat(p.gold_plus_stone_inr)
-  const rawMakingCharges = rawMakingChargesInr(p)
+  const rawMakingCharges = rawMakingChargesInr(p, ctx)
   const discountAmount = rawMakingCharges * DISCOUNT_RATE
   const makingCharges = rawMakingCharges - discountAmount
   const gstOnGold = goldValue * 0.03
@@ -89,9 +138,9 @@ function jewellerLineParts(p: MarketplaceProductDTO): JewellerParts {
   }
 }
 
-/** Jeweller invoice subtotal only (no Cridora platform fee). For sorting / catalogue context. */
+/** Jeweller invoice subtotal only (no Cridora platform fee). Uses cross-jeweller making for catalogue sorting. */
 export function jewellerSubtotalInr(p: MarketplaceProductDTO): number {
-  return jewellerLineParts(p).jewellerSubtotal
+  return jewellerLineParts(p, undefined).jewellerSubtotal
 }
 
 /** Cridora cross-network fee; jewellers do not charge this. Shown at checkout only. */
@@ -115,8 +164,9 @@ export function calculateCheckoutPrice(
   p: MarketplaceProductDTO,
   vaultGramsToApply: number,
   vaultBalanceGrams: number,
+  ctx?: CheckoutPricingContext,
 ): PriceBreakdown {
-  const j = jewellerLineParts(p)
+  const j = jewellerLineParts(p, ctx)
   const crossPlatformFee = cridoraCrossPlatformFeeInr(p)
   const finalAmount = j.jewellerSubtotal + crossPlatformFee
   const metalRate = Number.parseFloat(p.metal_rate_inr_per_gram_used)
@@ -138,4 +188,19 @@ export function calculateCheckoutPrice(
     goldFromVault: cappedGrams,
     discountAmount: j.discountAmount,
   }
+}
+
+/** Customer-facing line when numeric same-store making is configured (listing copy). */
+export function sameStoreMakingExplainer(p: MarketplaceProductDTO): string | null {
+  const mode = p.making_charge_mode?.trim() || MAKING_FIXED_PER_GRAM
+  if (mode === MAKING_PERCENT_OF_METAL) {
+    const raw = p.same_store_making_charge_percent
+    if (raw == null || String(raw).trim() === '') return null
+    const cross = (p.making_charge_percent || '').toString().trim() || '—'
+    return `If this jeweller is your default (same shop), making is ${raw}% of gold metal value; otherwise making is ${cross}% (cross purchase).`
+  }
+  const raw = p.same_store_making_charge_per_gram
+  if (raw == null || String(raw).trim() === '') return null
+  const cross = (p.making_charge_per_gram || '').toString().trim() || '—'
+  return `If this jeweller is your default (same shop), making is ₹${raw}/g; otherwise ₹${cross}/g (cross purchase).`
 }

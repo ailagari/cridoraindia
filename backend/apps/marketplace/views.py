@@ -9,7 +9,13 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import MarketplaceProduct, get_or_create_ticker, jeweller_profile_for
+from .models import (
+    MarketplaceProduct,
+    MetalPurity,
+    ProductCategory,
+    get_or_create_ticker,
+    jeweller_profile_for,
+)
 from apps.accounts.services.admin_access import user_is_platform_admin
 
 from .spot_prices import invalidate_spot_price_cache, public_spot_prices_payload
@@ -46,6 +52,18 @@ def _forbid_non_admin(request):
     return None
 
 
+def _require_verified_jeweller_kyb(request):
+    err = _forbid_non_jeweller(request)
+    if err:
+        return err
+    if request.user.kyc_status != User.KYC_VERIFIED:
+        return Response(
+            {"detail": "Jeweller KYB must be verified before managing catalogue SKUs."},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+    return None
+
+
 class MarketplaceGoldTickerPublicView(APIView):
     permission_classes = [AllowAny]
 
@@ -60,14 +78,29 @@ class MarketplaceGoldTickerPublicView(APIView):
         return Response(GoldTickerPublicSerializer(ticker).data)
 
 
+class MarketplaceCatalogMetaView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        metals = MetalPurity.objects.filter(is_active=True).order_by("sort_order", "id")
+        cats = ProductCategory.objects.filter(is_active=True).order_by("sort_order", "id")
+        return Response(
+            {
+                "metal_purities": [{"id": m.id, "slug": m.slug, "label": m.label} for m in metals],
+                "product_categories": [{"id": c.id, "slug": c.slug, "label": c.label} for c in cats],
+            }
+        )
+
+
 class MarketplaceProductsPublicView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
         qs = MarketplaceProduct.objects.filter(
             is_published=True,
-            moderation_status=MarketplaceProduct.MOD_APPROVED,
-        ).select_related("jeweller")
+            jeweller__is_active=True,
+            jeweller__kyc_status=User.KYC_VERIFIED,
+        ).select_related("jeweller", "metal_purity", "product_category")
         jid = request.query_params.get("jeweller")
         if jid and jid.isdigit():
             qs = qs.filter(jeweller_id=int(jid))
@@ -83,10 +116,13 @@ class MarketplaceProductPublicDetailView(APIView):
 
     def get(self, request, pk):
         try:
-            product = MarketplaceProduct.objects.select_related("jeweller").get(
+            product = MarketplaceProduct.objects.select_related(
+                "jeweller", "metal_purity", "product_category"
+            ).get(
                 pk=pk,
                 is_published=True,
-                moderation_status=MarketplaceProduct.MOD_APPROVED,
+                jeweller__is_active=True,
+                jeweller__kyc_status=User.KYC_VERIFIED,
             )
         except MarketplaceProduct.DoesNotExist:
             return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
@@ -201,7 +237,7 @@ class JewellerProductImageUploadView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        err = _forbid_non_jeweller(request)
+        err = _require_verified_jeweller_kyb(request)
         if err:
             return err
         pk_raw = (request.POST.get("product_id") or "").strip()
@@ -253,18 +289,20 @@ class JewellerProductListCreateView(APIView):
         err = _forbid_non_jeweller(request)
         if err:
             return err
-        qs = MarketplaceProduct.objects.filter(jeweller=request.user).select_related("jeweller")
+        qs = MarketplaceProduct.objects.filter(jeweller=request.user).select_related(
+            "jeweller", "metal_purity", "product_category"
+        )
         ser = JewellerProductReadSerializer()
         return Response({"results": [ser.to_representation(p) for p in qs]})
 
     def post(self, request):
-        err = _forbid_non_jeweller(request)
+        err = _require_verified_jeweller_kyb(request)
         if err:
             return err
-        ser = JewellerProductWriteSerializer(data=request.data)
+        ser = JewellerProductWriteSerializer(data=request.data, context={"request": request})
         if not ser.is_valid():
             return Response(ser.errors, status=status.HTTP_400_BAD_REQUEST)
-        product = ser.save(jeweller=request.user, moderation_status=MarketplaceProduct.MOD_PENDING)
+        product = ser.save(jeweller=request.user, moderation_status=MarketplaceProduct.MOD_APPROVED)
         read = JewellerProductReadSerializer()
         return Response(read.to_representation(product), status=status.HTTP_201_CREATED)
 
@@ -277,7 +315,9 @@ class JewellerProductDetailView(APIView):
         if err:
             return err
         try:
-            product = MarketplaceProduct.objects.select_related("jeweller").get(
+            product = MarketplaceProduct.objects.select_related(
+                "jeweller", "metal_purity", "product_category"
+            ).get(
                 pk=pk, jeweller=request.user
             )
         except MarketplaceProduct.DoesNotExist:
@@ -285,25 +325,23 @@ class JewellerProductDetailView(APIView):
         return Response(JewellerProductReadSerializer().to_representation(product))
 
     def patch(self, request, pk):
-        err = _forbid_non_jeweller(request)
+        err = _require_verified_jeweller_kyb(request)
         if err:
             return err
         try:
             product = MarketplaceProduct.objects.get(pk=pk, jeweller=request.user)
         except MarketplaceProduct.DoesNotExist:
             return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
-        ser = JewellerProductWriteSerializer(product, data=request.data, partial=True)
+        ser = JewellerProductWriteSerializer(
+            product, data=request.data, partial=True, context={"request": request}
+        )
         if not ser.is_valid():
             return Response(ser.errors, status=status.HTTP_400_BAD_REQUEST)
         product = ser.save()
-        if product.moderation_status == MarketplaceProduct.MOD_REJECTED:
-            product.moderation_status = MarketplaceProduct.MOD_PENDING
-            product.rejection_reason = ""
-            product.save(update_fields=["moderation_status", "rejection_reason", "updated_at"])
         return Response(JewellerProductReadSerializer().to_representation(product))
 
     def delete(self, request, pk):
-        err = _forbid_non_jeweller(request)
+        err = _require_verified_jeweller_kyb(request)
         if err:
             return err
         try:

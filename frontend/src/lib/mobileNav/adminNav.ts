@@ -27,7 +27,7 @@ export const ADMIN_NAV_GROUPS: DashboardNavGroup[] = [
     shortLabel: 'Market',
     icon: 'globe',
     items: [
-      { sectionKey: 'mkt_products', label: 'Products' },
+      { sectionKey: 'mkt_products', label: 'Catalogue' },
       { sectionKey: 'mkt_programs', label: 'Programs & risk' },
     ],
   },

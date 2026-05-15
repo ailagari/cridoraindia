@@ -20,8 +20,10 @@ import {
   calculateCheckoutPrice,
   makingChargesShortLabel,
   USER_VAULT_BALANCE,
+  type CheckoutPricingContext,
   type PriceBreakdown,
 } from '@/lib/marketplacePricing'
+import { fetchGoldWallet } from '@/lib/goldTransferApi'
 import { mergeJewellerListWithDemos } from '@/lib/jewellerMarketplaceDemos'
 import { LIVE_CATALOG_POLL_MS, LIVE_DIRECTORY_POLL_MS } from '@/lib/liveDeskIntervals'
 import { mergeProductCatalogWithDemos } from '@/lib/productMarketplaceDemos'
@@ -74,10 +76,28 @@ function CheckoutView({
   const maxVaultGrams = Math.min(weight, USER_VAULT_BALANCE)
   const [payMode, setPayMode] = useState<'cash' | 'vault'>('cash')
   const [vaultGrams, setVaultGrams] = useState(0)
+  const [pricingCtx, setPricingCtx] = useState<CheckoutPricingContext | undefined>(undefined)
+
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      const w = await fetchGoldWallet()
+      if (cancelled) return
+      if (!w) {
+        setPricingCtx(undefined)
+        return
+      }
+      setPricingCtx({ customerDefaultJewellerId: w.default_jeweller_id })
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const p: PriceBreakdown = useMemo(
-    () => calculateCheckoutPrice(product, payMode === 'vault' ? vaultGrams : 0, USER_VAULT_BALANCE),
-    [product, payMode, vaultGrams],
+    () =>
+      calculateCheckoutPrice(product, payMode === 'vault' ? vaultGrams : 0, USER_VAULT_BALANCE, pricingCtx),
+    [product, payMode, vaultGrams, pricingCtx],
   )
 
   const payDisplay = Math.max(0, p.payableAmount)
@@ -136,7 +156,9 @@ function CheckoutView({
               <h2 style={{ margin: 0, fontSize: '1.15rem' }}>{product.name}</h2>
               <p style={{ margin: '0.35rem 0 0', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
                 {product.category ? `${product.category} · ` : ''}
-                {product.gold_weight_grams}g · BIS 916 · Making {makingChargesShortLabel(product)}
+                {product.gold_weight_grams}g · {(product.metal_purity_label ?? '').trim() || 'Hallmark'} · Making{' '}
+                {makingChargesShortLabel(product)}
+                {product.stock_quantity != null ? ` · Stock ${product.stock_quantity}` : ''}
               </p>
               {product.stone_included ? (
                 <p style={{ margin: '0.35rem 0 0', color: 'var(--text-muted)', fontSize: '0.78rem' }}>
@@ -968,8 +990,9 @@ export function ProductMarketplacePage() {
             Operational note
           </p>
           <p style={{ margin: 0 }}>
-            Pricing pulls from `/api/v1/marketplace/products/` after jeweller submission and admin approval. Sellback lines are
-            storefront disclosures; settlement rails remain governed by your vault ledger and jeweller agreements.
+            Pricing pulls from `/api/v1/marketplace/products/` for KYB-verified jewellers (no separate product approval queue).
+            Categories and hallmark masters are edited in Django admin; each listing carries purity and stock from the jeweller
+            catalogue. Sellback lines are storefront disclosures; settlement follows vault ledger and showroom agreements.
           </p>
         </aside>
 

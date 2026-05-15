@@ -8,7 +8,7 @@ import { useLivePoll } from '@/lib/useLivePoll'
 import { AdminPortfolioPanel } from '@/features/portfolio/AdminPortfolioPanel'
 import { AdminFractionalOtpPolicyPanel } from '@/features/admin/AdminFractionalOtpPolicyPanel'
 import { AdminFestivalBroadcastPanel } from '@/features/admin/AdminFestivalBroadcastPanel'
-import { AdminGoldTickerPanel, AdminMarketplaceModerationPanel } from '@/features/marketplace/AdminMarketplaceSection'
+import { AdminGoldTickerPanel, AdminMarketplaceCatalogSetupPanel } from '@/features/marketplace/AdminMarketplaceSection'
 
 import { ADMIN_DEFAULT_SECTION, ADMIN_NAV_GROUPS, normalizeAdminSection } from '@/lib/mobileNav/adminNav'
 
@@ -570,7 +570,7 @@ export function AdminDashboardPage() {
 
         {active === 'plat_gold' ? <AdminGoldTickerPanel /> : null}
 
-        {active === 'mkt_products' ? <AdminMarketplaceModerationPanel /> : null}
+        {active === 'mkt_products' ? <AdminMarketplaceCatalogSetupPanel /> : null}
 
         {active === 'mkt_programs' ? (
           <div className="dash-coming dash-coming--payments">

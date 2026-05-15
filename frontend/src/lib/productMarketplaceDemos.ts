@@ -14,7 +14,6 @@ const J = {
     mcPerG: '720',
     gold_note:
       'Vault gold credited to this showroom settles per Cridora ledger (T+1). Indicative sellback uses the rates shown on each listing.',
-    same_note: '0% MC same store on ornament redeem',
   },
   kochi: {
     jeweller_id: -2,
@@ -27,7 +26,6 @@ const J = {
     sellbackFixed: '12.00',
     mcPerG: '680',
     gold_note: 'Dummy Kochi: gold deposit scheme yield shown for UI demo only.',
-    same_note: '50% MC reduction same store',
   },
   mumbai: {
     jeweller_id: -3,
@@ -40,7 +38,6 @@ const J = {
     sellbackFixed: '18.00',
     mcPerG: '920',
     gold_note: 'Dummy Mumbai: locker-linked deposits and loan APRs are illustrative.',
-    same_note: 'Flat ₹499 MC select bridal',
   },
   bengaluru: {
     jeweller_id: -4,
@@ -53,7 +50,6 @@ const J = {
     sellbackFixed: '14.50',
     mcPerG: '790',
     gold_note: 'Dummy Bengaluru: compare with other dummy showrooms on the jeweller marketplace.',
-    same_note: '0% MC · loyalty tier',
   },
 } as const
 
@@ -78,6 +74,10 @@ function demoRow(
     rating?: string
     is_x_redeem?: boolean
     same_store_benefit_note?: string
+    same_store_making_charge_percent?: string
+    same_store_making_charge_per_gram?: string
+    metal_purity_label?: string
+    stock_quantity?: number
     sellback_indicative_inr_per_gram?: string
   },
 ): MarketplaceProductDTO {
@@ -112,8 +112,12 @@ function demoRow(
     stone_type: piece.stone_type ?? '',
     stone_weight_grams: piece.stone_weight_grams ?? '',
     stone_cost_inr: piece.stone_cost_inr ?? '',
-    same_store_benefit_note: piece.same_store_benefit_note ?? shop.same_note,
+    same_store_benefit_note: piece.same_store_benefit_note ?? '',
     cross_platform_fee_inr: '49.00',
+    same_store_making_charge_percent: piece.same_store_making_charge_percent ?? '',
+    same_store_making_charge_per_gram: piece.same_store_making_charge_per_gram ?? '',
+    metal_purity_label: piece.metal_purity_label ?? 'BIS 916 (22K)',
+    stock_quantity: piece.stock_quantity ?? 10,
   }
 }
 
@@ -126,7 +130,7 @@ export const PRODUCT_MARKETPLACE_DEMO_ROWS: MarketplaceProductDTO[] = [
     gold_metal_value_inr: '317212.20',
     gold_plus_stone_inr: '317212.20',
     rating: '4.9',
-    same_store_benefit_note: 'Same-store redemption: headline MC waiver per storefront rules.',
+    same_store_making_charge_per_gram: '450.00',
   }),
   demoRow(-1002, J.hyderabad, {
     name: 'Classic Cuban chain · 22K',
@@ -135,6 +139,7 @@ export const PRODUCT_MARKETPLACE_DEMO_ROWS: MarketplaceProductDTO[] = [
     image_url: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=800&q=80',
     gold_metal_value_inr: '138223.98',
     gold_plus_stone_inr: '138225.98',
+    same_store_making_charge_per_gram: '520.00',
   }),
   demoRow(-1003, J.hyderabad, {
     name: 'Heritage mango mala · ruby accents',
@@ -152,6 +157,7 @@ export const PRODUCT_MARKETPLACE_DEMO_ROWS: MarketplaceProductDTO[] = [
     making_charge_mode: 'percent_of_metal',
     making_charge_per_gram: '0',
     rating: '4.8',
+    same_store_making_charge_percent: '6.0000',
   }),
   demoRow(-1004, J.kochi, {
     name: 'Daily wear rope chain · light',
@@ -204,6 +210,7 @@ export const PRODUCT_MARKETPLACE_DEMO_ROWS: MarketplaceProductDTO[] = [
     making_charge_mode: 'percent_of_metal',
     making_charge_per_gram: '0',
     rating: '4.95',
+    same_store_making_charge_percent: '8.0000',
   }),
   demoRow(-1009, J.mumbai, {
     name: 'Five‑figure sovereign strip · sealed blister',
@@ -212,7 +219,7 @@ export const PRODUCT_MARKETPLACE_DEMO_ROWS: MarketplaceProductDTO[] = [
     image_url: 'https://images.unsplash.com/photo-1610375460909-d82cfa76edc9?w=800&q=80',
     gold_metal_value_inr: '296020.80',
     gold_plus_stone_inr: '296020.80',
-    same_store_benefit_note: 'Bulk coins — locker pickup slots shown at checkout.',
+    same_store_making_charge_per_gram: '650.00',
   }),
   demoRow(-1010, J.bengaluru, {
     name: 'Minimal paperclip bracelet · adjustable',
