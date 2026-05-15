@@ -3545,11 +3545,164 @@ img {
   box-shadow: 0 12px 36px rgba(0, 0, 0, 0.28);
 }
 
-.pf-groww-hero__top {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
+.pf-groww-hero__summary {
+  display: grid;
   gap: 1rem;
+  align-items: start;
+}
+
+.pf-groww-hero__summary--double {
+  grid-template-columns: 1fr auto;
+}
+
+.pf-groww-hero__summary--triple {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 0.95fr);
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .pf-groww-hero__summary--triple {
+    grid-template-columns: 1fr;
+  }
+
+  .pf-groww-hero__summary--triple .pf-groww-hero__col--chart {
+    order: 2;
+    max-width: 100%;
+  }
+
+  .pf-groww-hero__summary--triple .pf-groww-hero__col--value {
+    order: 1;
+  }
+
+  .pf-groww-hero__summary--triple .pf-groww-hero__col--pnl {
+    order: 3;
+  }
+}
+
+@media (max-width: 520px) {
+  .pf-groww-hero__summary--double {
+    grid-template-columns: 1fr;
+  }
+
+  .pf-groww-hero__summary--double .pf-groww-hero__col--pnl,
+  .pf-groww-hero__summary--triple .pf-groww-hero__col--pnl {
+    align-items: flex-start;
+    text-align: left;
+  }
+
+  .pf-groww-hero__summary--double .pf-groww-hero__pnl-head,
+  .pf-groww-hero__summary--triple .pf-groww-hero__pnl-head {
+    justify-content: flex-start;
+  }
+
+  .pf-groww-hero__summary--double .pf-groww-hero__pnl-block,
+  .pf-groww-hero__summary--triple .pf-groww-hero__pnl-block {
+    align-items: flex-start;
+    text-align: left;
+  }
+}
+
+.pf-groww-hero__col--chart {
+  min-width: 0;
+}
+
+.pf-groww-hero__col--chart .pf-groww-pnl-chart {
+  margin-top: 0;
+}
+
+.pf-groww-hero__col--chart .pf-groww-pnl-chart__svg {
+  max-height: 96px;
+}
+
+.pf-groww-hero__col--chart .pf-groww-pnl-chart__legend {
+  margin-top: 0.38rem;
+  font-size: 0.58rem;
+}
+
+.pf-groww-hero__chart-wait {
+  margin: 0;
+  padding: 0.5rem 0;
+  font-size: 0.72rem;
+  line-height: 1.4;
+  color: rgba(148, 163, 184, 0.9);
+  text-align: center;
+}
+
+@media (min-width: 901px) {
+  .pf-groww-hero__chart-wait {
+    min-height: 5.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+.pf-groww-hero__col--pnl {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.pf-groww-hero__pnl-head {
+  display: flex;
+  justify-content: flex-end;
+  width: 100%;
+}
+
+.pf-groww-hero__pnl-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.35rem;
+  width: 100%;
+}
+
+.pf-groww-hero__pnl-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.pf-groww-hero__pnl-val {
+  font-size: clamp(1rem, 2.8vw, 1.35rem);
+  font-weight: 800;
+  line-height: 1.25;
+  color: var(--text-silk);
+}
+
+.pf-groww-hero__pnl-val--up {
+  color: var(--success);
+}
+
+.pf-groww-hero__pnl-val--down {
+  color: var(--danger);
+}
+
+.pf-groww-hero__cost-inline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.35rem 0.85rem;
+  margin-top: 0.85rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed rgba(71, 85, 105, 0.45);
+}
+
+.pf-groww-hero__cost-inline-label {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+
+.pf-groww-hero__cost-inline-val {
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: var(--text-silk);
 }
 
 .pf-groww-hero__eyebrow {
@@ -3589,11 +3742,6 @@ img {
   line-height: 1.35;
 }
 
-.pf-groww-hero__actions {
-  display: flex;
-  gap: 0.45rem;
-}
-
 .pf-groww-icon-btn {
   width: 40px;
   height: 40px;
@@ -3612,90 +3760,8 @@ img {
   transform: scale(0.96);
 }
 
-.pf-groww-hero__divider {
-  margin-top: 1.15rem;
-  padding-top: 1rem;
-  border-top: 1px dashed rgba(71, 85, 105, 0.55);
-}
-
-.pf-groww-hero__stats {
-  display: flex;
-  flex-direction: column;
-  gap: 0.65rem;
-}
-
-.pf-groww-hero__stat {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 1rem;
-}
-
-.pf-groww-hero__stat-label {
-  font-size: 0.78rem;
-  color: var(--text-muted);
-}
-
-.pf-groww-hero__stat-val {
-  font-size: 0.88rem;
-  font-weight: 800;
-  color: var(--text-silk);
-}
-
-.pf-groww-hero__stat-val--up {
-  color: var(--success);
-}
-
-.pf-groww-hero__stat-val--down {
-  color: var(--danger);
-}
-
 .pf-groww-holdings {
   margin-top: 0.95rem;
-}
-
-.pf-groww-holdings--merged {
-  border-radius: 16px;
-  padding: 0.95rem 1.1rem 1rem;
-  border: 1px solid rgba(51, 65, 85, 0.55);
-  background: linear-gradient(155deg, rgba(15, 23, 42, 0.88), rgba(3, 7, 18, 0.62));
-  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.24);
-}
-
-.pf-groww-holdings__merged-head {
-  margin-bottom: 0.55rem;
-}
-
-.pf-groww-holdings__merged-title {
-  margin: 0;
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-}
-
-.pf-groww-holdings__merged-meta {
-  margin: 0.35rem 0 0;
-  font-size: 0.72rem;
-  line-height: 1.4;
-  color: rgba(148, 163, 184, 0.92);
-}
-
-.pf-groww-holdings__profit-slot .pf-groww-pnl-chart {
-  margin-top: 0.15rem;
-}
-
-.pf-groww-holdings__section-rule {
-  margin: 0.95rem 0 0.75rem;
-  border-top: 1px dashed rgba(71, 85, 105, 0.55);
-}
-
-.pf-groww-holdings__chart-waiting {
-  margin: 0;
-  padding: 0.25rem 0 0.15rem;
-  font-size: 0.72rem;
-  color: rgba(148, 163, 184, 0.9);
 }
 
 .pf-groww-holdings__bar {

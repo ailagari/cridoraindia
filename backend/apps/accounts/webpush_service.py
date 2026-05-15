@@ -87,6 +87,13 @@ def send_push_broadcast(payload: dict[str, Any]) -> int:
                     status,
                     exc,
                 )
+        except Exception as exc:
+            logger.warning(
+                "Web Push broadcast unexpected error for user_id=%s endpoint_prefix=%s error=%s",
+                sub.user_id,
+                (sub.endpoint[:64] + "…") if len(sub.endpoint) > 64 else sub.endpoint,
+                exc,
+            )
     return n
 
 

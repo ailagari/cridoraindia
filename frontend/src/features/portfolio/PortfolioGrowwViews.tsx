@@ -113,6 +113,7 @@ export function PortfolioGrowwHero({
   pnlPct,
   masked,
   onToggleMask,
+  summaryChartSlot,
 }: {
   activeVaultCount: number
   totalGrams: number
@@ -122,6 +123,8 @@ export function PortfolioGrowwHero({
   pnlPct: number | null
   masked: boolean
   onToggleMask: () => void
+  /** Live value vs cost spark; when omitted, summary is two columns (value + cost | P&amp;L). */
+  summaryChartSlot?: ReactNode
 }) {
 
   const mainVal = `₹${fmtInr2(marketValueInr)}`
@@ -132,11 +135,14 @@ export function PortfolioGrowwHero({
       : `${pnlInr >= 0 ? '+' : '−'}₹${fmtInr2(Math.abs(pnlInr))}`
 
   const disp = (s: string) => (masked ? maskInr(s) : s)
+  const triple = summaryChartSlot != null
 
   return (
     <section className="pf-groww-hero" aria-label="Portfolio summary">
-      <div className="pf-groww-hero__top">
-        <div>
+      <div
+        className={`pf-groww-hero__summary${triple ? ' pf-groww-hero__summary--triple' : ' pf-groww-hero__summary--double'}`}
+      >
+        <div className="pf-groww-hero__col pf-groww-hero__col--value">
           <div className="pf-groww-hero__eyebrow">
             <span>Vault holdings ({activeVaultCount})</span>
             <SvgIconChevronDown />
@@ -144,34 +150,36 @@ export function PortfolioGrowwHero({
           <p className="pf-groww-hero__grams tabular">{`${totalGrams.toFixed(6)} g`} total gold</p>
           <p className="pf-groww-hero__big tabular">{disp(mainVal)}</p>
           <p className="pf-groww-hero__sub">Live vault mark‑to‑market (jeweller ₹/g)</p>
+          <div className="pf-groww-hero__cost-inline">
+            <span className="pf-groww-hero__cost-inline-label">Metal cost basis</span>
+            <span className="pf-groww-hero__cost-inline-val tabular">{disp(investVal)}</span>
+          </div>
         </div>
-        <div className="pf-groww-hero__actions">
-          <button
-            type="button"
-            className="pf-groww-icon-btn"
-            aria-pressed={masked}
-            aria-label={masked ? 'Show amounts' : 'Hide amounts'}
-            onClick={() => onToggleMask()}
-          >
-            <SvgIconEye />
-          </button>
-        </div>
-      </div>
 
-      <div className="pf-groww-hero__divider" />
+        {triple ? (
+          <div className="pf-groww-hero__col pf-groww-hero__col--chart">{summaryChartSlot}</div>
+        ) : null}
 
-      <div className="pf-groww-hero__stats">
-        <div className="pf-groww-hero__stat">
-          <span className="pf-groww-hero__stat-label">Metal cost basis</span>
-          <span className="pf-groww-hero__stat-val tabular">{disp(investVal)}</span>
-        </div>
-        <div className="pf-groww-hero__stat">
-          <span className="pf-groww-hero__stat-label">Unrealized return</span>
-          <span
-            className={`pf-groww-hero__stat-val tabular ${pnlInr >= 0 ? 'pf-groww-hero__stat-val--up' : 'pf-groww-hero__stat-val--down'}`}
-          >
-            {masked ? maskInr(retTxt) : retTxt}
-          </span>
+        <div className="pf-groww-hero__col pf-groww-hero__col--pnl">
+          <div className="pf-groww-hero__pnl-head">
+            <button
+              type="button"
+              className="pf-groww-icon-btn"
+              aria-pressed={masked}
+              aria-label={masked ? 'Show amounts' : 'Hide amounts'}
+              onClick={() => onToggleMask()}
+            >
+              <SvgIconEye />
+            </button>
+          </div>
+          <div className="pf-groww-hero__pnl-block">
+            <span className="pf-groww-hero__pnl-label">Unrealized return</span>
+            <span
+              className={`pf-groww-hero__pnl-val tabular ${pnlInr >= 0 ? 'pf-groww-hero__pnl-val--up' : 'pf-groww-hero__pnl-val--down'}`}
+            >
+              {masked ? maskInr(retTxt) : retTxt}
+            </span>
+          </div>
         </div>
       </div>
     </section>
@@ -193,16 +201,12 @@ export function PortfolioVaultHoldingsList({
   allocatedCost,
   totalHeldGrams,
   masked,
-  liveProfitBlock,
 }: {
   vaults: VaultRowDTO[]
   allocatedCost: number
   totalHeldGrams: number
   masked: boolean
-  /** When set (e.g. user has holdings), chart + headings share one card with the list below. */
-  liveProfitBlock?: ReactNode
 }) {
-  const merged = liveProfitBlock != null
   const [sortBy, setSortBy] = useState<'value' | 'name'>('value')
 
   const rows = useMemo(() => {
@@ -246,23 +250,7 @@ export function PortfolioVaultHoldingsList({
   const disp = (s: string) => (masked ? maskInr(s) : s)
 
   return (
-    <section
-      className={`pf-groww-holdings${merged ? ' pf-groww-holdings--merged' : ''}`}
-      aria-label={merged ? 'Vault holdings and live value versus invested metal cost' : 'Holdings by vault'}
-    >
-      {merged ? (
-        <header className="pf-groww-holdings__merged-head">
-          <h3 className="pf-groww-holdings__merged-title">Vault holdings · live profit view</h3>
-          <p className="pf-groww-holdings__merged-meta">
-            Session chart compares live vault value to your metal cost basis (dotted line); jeweller rows show allocated
-            cost share and today&apos;s marks.
-          </p>
-        </header>
-      ) : null}
-
-      {merged ? <div className="pf-groww-holdings__profit-slot">{liveProfitBlock}</div> : null}
-      {merged ? <div className="pf-groww-holdings__section-rule" aria-hidden /> : null}
-
+    <section className="pf-groww-holdings" aria-label="Holdings by vault">
       <div className="pf-groww-holdings__bar">
         <button
           type="button"
@@ -311,9 +299,6 @@ export function PortfolioVaultHoldingsList({
       <p className="pf-groww-holdings__fineprint">
         Cost share splits your total metal basis by grams per vault (estimate). Sparklines are illustrative, not historical
         prices.
-        {merged
-          ? ' The session chart updates on each vault mark refresh; above the dotted line is profit vs your invested metal cost.'
-          : ''}
       </p>
     </section>
   )

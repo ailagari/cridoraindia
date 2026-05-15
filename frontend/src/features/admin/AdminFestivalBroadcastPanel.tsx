@@ -202,6 +202,7 @@ export function AdminFestivalBroadcastPanel() {
               <th>Preview</th>
               <th>Status</th>
               <th>Devices</th>
+              <th>Details</th>
               <th>By</th>
               <th />
             </tr>
@@ -209,7 +210,7 @@ export function AdminFestivalBroadcastPanel() {
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={7} style={{ color: 'var(--text-muted)', padding: '1.25rem' }}>
+                <td colSpan={8} style={{ color: 'var(--text-muted)', padding: '1.25rem' }}>
                   No broadcasts yet.
                 </td>
               </tr>
@@ -231,6 +232,20 @@ export function AdminFestivalBroadcastPanel() {
                   </td>
                   <td className="tabular">
                     {r.push_recipient_count != null ? r.push_recipient_count : '—'}
+                  </td>
+                  <td
+                    style={{
+                      maxWidth: 260,
+                      fontSize: '0.85rem',
+                      whiteSpace: 'pre-wrap',
+                      wordBreak: 'break-word',
+                      color: r.status === 'failed' && r.error_message ? 'var(--danger, #c0392b)' : undefined,
+                    }}
+                    title={r.error_message || undefined}
+                  >
+                    {r.status === 'failed' && r.error_message.trim()
+                      ? r.error_message.trim()
+                      : '—'}
                   </td>
                   <td style={{ fontSize: '0.85rem' }}>{r.created_by_email}</td>
                   <td>

@@ -218,6 +218,23 @@ export function CustomerPortfolioPanel() {
               pnlPct={Number.isFinite(pnlPct) ? pnlPct : null}
               masked={privacyMasked}
               onToggleMask={() => setPrivacyMasked((m) => !m)}
+              summaryChartSlot={
+                heldGramsSum > 0 ? (
+                  sessionValueSamples.length === 0 ? (
+                    <p className="pf-groww-hero__chart-wait">Sampling live valuation…</p>
+                  ) : (
+                    <PortfolioLiveValueVsCostChart
+                      samples={sessionValueSamples}
+                      investedInr={allocatedCost}
+                      formatInrAxis={(n) =>
+                        privacyMasked
+                          ? '••••'
+                          : `₹${n.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`
+                      }
+                    />
+                  )
+                ) : undefined
+              }
             />
 
             <PortfolioVaultHoldingsList
@@ -225,25 +242,6 @@ export function CustomerPortfolioPanel() {
               allocatedCost={allocatedCost}
               totalHeldGrams={heldGramsSum}
               masked={privacyMasked}
-              liveProfitBlock={
-                heldGramsSum > 0 ? (
-                  <>
-                    {sessionValueSamples.length === 0 ? (
-                      <p className="pf-groww-holdings__chart-waiting">Sampling live valuation…</p>
-                    ) : (
-                      <PortfolioLiveValueVsCostChart
-                        samples={sessionValueSamples}
-                        investedInr={allocatedCost}
-                        formatInrAxis={(n) =>
-                          privacyMasked
-                            ? '••••'
-                            : `₹${n.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`
-                        }
-                      />
-                    )}
-                  </>
-                ) : undefined
-              }
             />
 
             {unrealized?.basis_note ? (

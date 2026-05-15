@@ -35,17 +35,25 @@ def process_due_festival_broadcasts(*, limit: int = 50) -> int:
             if row is None:
                 break
             try:
-                sub_total = WebPushSubscription.objects.count()
-                by_role = {
-                    r["user__user_type"]: r["c"]
-                    for r in WebPushSubscription.objects.values("user__user_type").annotate(c=Count("id"))
-                }
-                logger.info(
-                    "festival_broadcast id=%s sending web_push to all subscriptions total=%s by_user_type=%s",
-                    row.pk,
-                    sub_total,
-                    by_role,
-                )
+                try:
+                    sub_total = WebPushSubscription.objects.count()
+                    by_role = {
+                        r["user__user_type"]: r["c"]
+                        for r in WebPushSubscription.objects.values("user__user_type").annotate(
+                            c=Count("id")
+                        )
+                    }
+                    logger.info(
+                        "festival_broadcast id=%s sending web_push to all subscriptions total=%s by_user_type=%s",
+                        row.pk,
+                        sub_total,
+                        by_role,
+                    )
+                except Exception:
+                    logger.exception(
+                        "festival_broadcast id=%s subscription stats log failed; continuing send",
+                        row.pk,
+                    )
                 n = send_push_broadcast(
                     {
                         "title": row.title.strip() or "Cridora",
