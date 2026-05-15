@@ -268,18 +268,6 @@ class AdminGoldTickerView(APIView):
         ticker = get_or_create_ticker()
         return Response(GoldTickerReadSerializer(ticker).data)
 
-
-class AdminSpotPricesView(APIView):
-    """Full spot payload including international raw ladder — admin-only."""
-
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request):
-        err = _forbid_non_admin(request)
-        if err:
-            return err
-        return Response(public_spot_prices_payload(include_live_raw=True))
-
     def patch(self, request):
         err = _forbid_non_admin(request)
         if err:
@@ -298,6 +286,18 @@ class AdminSpotPricesView(APIView):
         except Exception:
             logger.exception("Gold rate alert check failed after ticker save")
         return Response(GoldTickerReadSerializer(ticker).data)
+
+
+class AdminSpotPricesView(APIView):
+    """Full spot payload including international raw ladder — admin-only."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        err = _forbid_non_admin(request)
+        if err:
+            return err
+        return Response(public_spot_prices_payload(include_live_raw=True))
 
 
 class AdminMarketplaceProductListView(APIView):
