@@ -96,6 +96,10 @@ def noop_reverse(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
+    # PostgreSQL: bulk RunPython updates on MarketplaceProduct defer trigger handling until
+    # transaction end; ALTER FK/not-null in the same txn raises "pending trigger events".
+    atomic = False
+
     dependencies = [
         ("marketplace", "0018_product_same_store_making_numeric"),
     ]
