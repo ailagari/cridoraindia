@@ -23,7 +23,6 @@ export function JewellerMarketplacePanel() {
     credibility_score: '',
     minimum_redeemable_grams: '',
     same_store_mc_benefit: '',
-    cross_redemption_fee_note: '',
     metric_active_users: '0',
     metric_total_redeemed_gold_grams: '0',
     metric_years_active: '0',
@@ -32,7 +31,6 @@ export function JewellerMarketplacePanel() {
     feat_loan_available: false,
     feat_goldnest_available: false,
     feat_emergency_funds: false,
-    feat_cross_redemption: true,
   })
 
   const [form, setForm] = useState({
@@ -85,7 +83,6 @@ export function JewellerMarketplacePanel() {
           ? String(pJson.minimum_redeemable_grams)
           : '',
       same_store_mc_benefit: String(pJson.same_store_mc_benefit ?? ''),
-      cross_redemption_fee_note: String(pJson.cross_redemption_fee_note ?? ''),
       metric_active_users: String(pJson.metric_active_users ?? '0'),
       metric_total_redeemed_gold_grams: String(pJson.metric_total_redeemed_gold_grams ?? '0'),
       metric_years_active: String(pJson.metric_years_active ?? '0'),
@@ -94,7 +91,6 @@ export function JewellerMarketplacePanel() {
       feat_loan_available: Boolean(pJson.feat_loan_available),
       feat_goldnest_available: Boolean(pJson.feat_goldnest_available),
       feat_emergency_funds: Boolean(pJson.feat_emergency_funds),
-      feat_cross_redemption: pJson.feat_cross_redemption !== false,
     })
     setProducts(lJson.results ?? [])
   }, [])
@@ -161,7 +157,6 @@ export function JewellerMarketplacePanel() {
             ? null
             : numOrZero(cardDraft.minimum_redeemable_grams),
         same_store_mc_benefit: cardDraft.same_store_mc_benefit.trim(),
-        cross_redemption_fee_note: cardDraft.cross_redemption_fee_note.trim(),
         metric_active_users: Math.max(0, Math.floor(parseN(cardDraft.metric_active_users))),
         metric_total_redeemed_gold_grams: numOrZero(cardDraft.metric_total_redeemed_gold_grams),
         metric_years_active: numOrZero(cardDraft.metric_years_active),
@@ -170,7 +165,6 @@ export function JewellerMarketplacePanel() {
         feat_loan_available: cardDraft.feat_loan_available,
         feat_goldnest_available: cardDraft.feat_goldnest_available,
         feat_emergency_funds: cardDraft.feat_emergency_funds,
-        feat_cross_redemption: cardDraft.feat_cross_redemption,
       },
     })
     setBusy(false)
@@ -264,7 +258,7 @@ export function JewellerMarketplacePanel() {
     <div className="dash-panel-max jeweller-mkt">
       <p className="dash-panel-lead">
         Manage public jeweller card fields and product catalogue. Configure{' '}
-        <strong>buy rates, markups, sellback, cross-redemption wording</strong>, vault lock-in, and{' '}
+        <strong>buy rates, markups, sellback</strong>, vault lock-in, and{' '}
         <strong>Golden Scheme</strong> disclosures under{' '}
         <Link to="/dashboard/jeweller?section=mkt_policy">Marketplace · Rates &amp; schemes</Link> (MVP §14).
       </p>
@@ -274,11 +268,11 @@ export function JewellerMarketplacePanel() {
 
       <section className="card" style={{ padding: '1.25rem', marginBottom: '1.25rem', borderRadius: 18 }}>
         <h2 className="dash-coming__title" style={{ marginTop: 0 }}>
-          Jeweller marketplace card &amp; redemption details
+          Marketplace card &amp; catalogue
         </h2>
         <p className="dash-coming__text" style={{ marginBottom: '1rem' }}>
-          Logo (upload), minimum redeemable grams, same-store MC line, cross-redemption disclosure, optional metrics, and
-          feature chips — shown on your directory card after KYB approval. Vault / fractional lock-in is edited under{' '}
+          Logo (upload), minimum redeemable grams, same-store MC line, optional metrics, and marketplace feature tags —
+          shown on your directory card after KYB approval. Vault / fractional lock-in is edited under{' '}
           <Link to="/dashboard/jeweller?section=mkt_policy">Rates &amp; schemes</Link> (Deposit section).
         </p>
         <div
@@ -392,87 +386,71 @@ export function JewellerMarketplacePanel() {
             />
           </label>
         </div>
-        <fieldset
-          style={{
-            marginTop: '1rem',
-            border: '1px solid var(--border-soft)',
-            borderRadius: 14,
-            padding: '0.85rem 1rem',
-          }}
-        >
-          <legend style={{ fontSize: '0.75rem', fontWeight: 800, padding: '0 0.35rem' }}>Cross redemption</legend>
-          <label className="field" style={{ gridColumn: '1 / -1', marginBottom: '0.65rem' }}>
-            <span>Fees, making charge, or policy wording</span>
-            <textarea
-              className="dash-textarea"
-              rows={4}
-              value={cardDraft.cross_redemption_fee_note}
-              onChange={(e) => setCardDraft((p) => ({ ...p, cross_redemption_fee_note: e.target.value }))}
-              placeholder="Describe cross-jeweller redemption fees or deductions buyers should expect."
-              style={{ width: '100%', maxWidth: '100%', marginTop: '0.35rem' }}
-            />
-          </label>
-          <label className="field" style={{ flexDirection: 'row', alignItems: 'center', gap: '0.45rem', margin: 0 }}>
-            <input
-              type="checkbox"
-              checked={cardDraft.feat_cross_redemption}
-              onChange={(e) => setCardDraft((p) => ({ ...p, feat_cross_redemption: e.target.checked }))}
-            />
-            <span>Show cross redemption on marketplace card</span>
-          </label>
-        </fieldset>
-        <fieldset
-          style={{
-            marginTop: '1rem',
-            border: '1px solid var(--border-soft)',
-            borderRadius: 14,
-            padding: '0.85rem 1rem',
-          }}
-        >
-          <legend style={{ fontSize: '0.75rem', fontWeight: 800, padding: '0 0.35rem' }}>Feature tags (marketplace)</legend>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem 1.25rem' }}>
-            <label className="field" style={{ flexDirection: 'row', alignItems: 'center', gap: '0.45rem', margin: 0 }}>
+        <div className="jeweller-mkt-feature-tags">
+          <div className="jeweller-mkt-feature-tags__head">
+            <h3 className="jeweller-mkt-feature-tags__title">Marketplace highlights</h3>
+            <p className="jeweller-mkt-feature-tags__hint">
+              Toggle the badges shoppers see on your card. Only enable what you actively offer — accuracy builds trust.
+            </p>
+          </div>
+          <div className="jeweller-mkt-feature-tags__grid" role="group" aria-label="Marketplace feature tags">
+            <label className="jeweller-mkt-feature-tag">
               <input
                 type="checkbox"
                 checked={cardDraft.feat_instant_redemption}
                 onChange={(e) => setCardDraft((p) => ({ ...p, feat_instant_redemption: e.target.checked }))}
               />
-              <span>Instant redemption</span>
+              <span>
+                Instant redemption
+                <small>Fast redemption pathway where your process supports it.</small>
+              </span>
             </label>
-            <label className="field" style={{ flexDirection: 'row', alignItems: 'center', gap: '0.45rem', margin: 0 }}>
+            <label className="jeweller-mkt-feature-tag">
               <input
                 type="checkbox"
                 checked={cardDraft.feat_zero_mc_same_store}
                 onChange={(e) => setCardDraft((p) => ({ ...p, feat_zero_mc_same_store: e.target.checked }))}
               />
-              <span>0% MC (same store)</span>
+              <span>
+                0% MC (same store)
+                <small>No making charge when customers redeem with you in-store.</small>
+              </span>
             </label>
-            <label className="field" style={{ flexDirection: 'row', alignItems: 'center', gap: '0.45rem', margin: 0 }}>
+            <label className="jeweller-mkt-feature-tag">
               <input
                 type="checkbox"
                 checked={cardDraft.feat_loan_available}
                 onChange={(e) => setCardDraft((p) => ({ ...p, feat_loan_available: e.target.checked }))}
               />
-              <span>Loan available</span>
+              <span>
+                Loan available
+                <small>Gold-backed or partner lending you make available to customers.</small>
+              </span>
             </label>
-            <label className="field" style={{ flexDirection: 'row', alignItems: 'center', gap: '0.45rem', margin: 0 }}>
+            <label className="jeweller-mkt-feature-tag">
               <input
                 type="checkbox"
                 checked={cardDraft.feat_goldnest_available}
                 onChange={(e) => setCardDraft((p) => ({ ...p, feat_goldnest_available: e.target.checked }))}
               />
-              <span>GoldNest</span>
+              <span>
+                GoldNest
+                <small>Vault / fractional savings programme you participate in.</small>
+              </span>
             </label>
-            <label className="field" style={{ flexDirection: 'row', alignItems: 'center', gap: '0.45rem', margin: 0 }}>
+            <label className="jeweller-mkt-feature-tag">
               <input
                 type="checkbox"
                 checked={cardDraft.feat_emergency_funds}
                 onChange={(e) => setCardDraft((p) => ({ ...p, feat_emergency_funds: e.target.checked }))}
               />
-              <span>Emergency funds</span>
+              <span>
+                Emergency funds
+                <small>Liquidity or advance options you disclose to verified customers.</small>
+              </span>
             </label>
           </div>
-        </fieldset>
+        </div>
         <button
           type="button"
           className="btn btn-primary"

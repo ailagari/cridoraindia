@@ -21,31 +21,19 @@ export function PublicLayout() {
 
   return (
     <div className="app-shell">
-      <div
-        style={{
-          position: 'sticky',
-          top: 0,
-          zIndex: 20,
-          background: 'var(--veil-88)',
-          backdropFilter: 'blur(16px)',
-        }}
-      >
-        <header
-          style={{
-            borderBottom: '1px solid var(--border-soft)',
-          }}
-        >
-        <div
-          className="container"
-          style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '0.85rem 0',
-            gap: '1rem',
-          }}
-        >
+      <div className="public-sticky-stack">
+        <header className="public-sticky-stack__header">
+          <div
+            className="container public-sticky-stack__header-inner"
+            style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '0.85rem 0',
+              gap: '1rem',
+            }}
+          >
           <Link to="/" style={{ textDecoration: 'none', color: 'inherit' }}>
             <CridoraLogo size="sm" />
           </Link>
@@ -96,8 +84,8 @@ export function PublicLayout() {
               )}
             </nav>
           </div>
-        </div>
-      </header>
+          </div>
+        </header>
         <GoldTickerStrip variant="public" />
       </div>
       <PublicMobileChrome />
