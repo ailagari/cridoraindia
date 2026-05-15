@@ -1,6 +1,8 @@
 import { type CSSProperties } from 'react'
 import { Link } from 'react-router-dom'
 import { HeroArabesqueBackground } from '@/components/HeroArabesqueBackground'
+import { useAuth } from '@/context/AuthContext'
+import { dashboardLandingPath } from '@/lib/routes'
 import { IMAGES } from '@/content/images'
 
 const POSITIONING_LINE =
@@ -50,6 +52,10 @@ function sd(index: number): CSSProperties {
 }
 
 export function HomePage() {
+  const { user } = useAuth()
+  const primaryHref = user ? dashboardLandingPath(user) : '/signup'
+  const primaryLabel = user ? 'Dashboard' : 'Open account'
+
   let r = 0
   const d = () => r++
   return (
@@ -118,8 +124,8 @@ export function HomePage() {
                   ...sd(d()),
                 }}
               >
-                <Link to="/signup" className="btn btn-primary">
-                  Open account
+                <Link to={primaryHref} className="btn btn-primary">
+                  {primaryLabel}
                 </Link>
                 <Link to="/how-it-works" className="btn btn-ghost">
                   How it works

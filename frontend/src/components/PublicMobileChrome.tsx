@@ -146,9 +146,9 @@ export function PublicMobileChrome() {
           {() => (
             <>
               <span className="mobile-tab-ico">
-                <PublicTabIcon tab="account" active={accountActive} />
+                <PublicTabIcon tab={user ? 'dashboard' : 'account'} active={accountActive} />
               </span>
-              <span className="mobile-tab-label">{user ? 'App' : 'Account'}</span>
+              <span className="mobile-tab-label">{user ? 'Dashboard' : 'Account'}</span>
             </>
           )}
         </NavLink>

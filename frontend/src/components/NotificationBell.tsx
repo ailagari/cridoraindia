@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { MOCK_NOTIFICATIONS, type AppNotification } from '@/lib/mockNotifications'
+import { MOCK_NOTIFICATIONS, hydrateMockNotificationsForAccount, persistAllMockNotificationsRead, type AppNotification } from '@/lib/mockNotifications'
 import { useAuth } from '@/context/AuthContext'
 import { authFetch } from '@/lib/api'
 import {
@@ -158,6 +158,11 @@ export function NotificationBell({ compact = false, role = 'customer' }: Props) 
     void loadAdminFeed()
   }, [open, useAdminFeed, loadAdminFeed])
 
+  useEffect(() => {
+    if (useAdminFeed || user?.id == null) return
+    setMockItems(hydrateMockNotificationsForAccount(user.id))
+  }, [useAdminFeed, user?.id])
+
   const enablePush = useCallback(async () => {
     if (!user) return
     setPushBusy(true)
@@ -223,34 +228,40 @@ export function NotificationBell({ compact = false, role = 'customer' }: Props) 
         jsonBody: { all: true },
       })
       if (!res.ok) {
-        void res.json().catch(() => undefined)
+        const body = (await res.json().catch(() => ({}))) as { detail?: string }
+        setAdminFeedError(body.detail ?? `Could not mark read (${res.status}).`)
         return
       }
-      setAdminItems((prev) => prev.map((i) => ({ ...i, read: true })))
+      await loadAdminFeed()
       return
     }
-    setMockItems((prev) => prev.map((i) => ({ ...i, read: true })))
-  }, [useAdminFeed])
+    if (user?.id == null) return
+    persistAllMockNotificationsRead(user.id)
+    setMockItems(hydrateMockNotificationsForAccount(user.id))
+  }, [useAdminFeed, loadAdminFeed, user?.id])
 
   const onItemActivate = useCallback(
     async (n: AppNotification) => {
       if (!useAdminFeed) return
       const nid = Number.parseInt(n.id, 10)
       if (!Number.isNaN(nid)) {
-        await authFetch('/api/v1/admin/notifications/mark-read/', {
+        const res = await authFetch('/api/v1/admin/notifications/mark-read/', {
           method: 'POST',
           jsonBody: { notification_ids: [nid] },
         })
-        setAdminItems((prev) =>
-          prev.map((row) => (row.id === n.id ? { ...row, read: true } : row)),
-        )
+        if (res.ok) {
+          await loadAdminFeed()
+        } else {
+          const body = (await res.json().catch(() => ({}))) as { detail?: string }
+          setAdminFeedError(body.detail ?? `Could not mark read (${res.status}).`)
+        }
       }
       if (n.link_path) {
         navigate(n.link_path)
         setOpen(false)
       }
     },
-    [navigate, useAdminFeed],
+    [navigate, useAdminFeed, loadAdminFeed],
   )
 
   return (

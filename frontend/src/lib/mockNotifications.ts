@@ -43,3 +43,38 @@ export const MOCK_NOTIFICATIONS: AppNotification[] = [
     kind: 'promo',
   },
 ]
+
+function readIdsStorageKey(accountId: number): string {
+  return `cridora_mock_notification_read_ids_v1:${accountId}`
+}
+
+function loadReadIdSet(accountId: number): Set<string> {
+  try {
+    const raw = localStorage.getItem(readIdsStorageKey(accountId))
+    if (!raw) return new Set()
+    const parsed = JSON.parse(raw) as unknown
+    if (!Array.isArray(parsed)) return new Set()
+    return new Set(parsed.filter((x): x is string => typeof x === 'string'))
+  } catch {
+    return new Set()
+  }
+}
+
+/** Merge demo rows with “mark read” choices persisted for this signed-in account (sample bell feed). */
+export function hydrateMockNotificationsForAccount(accountId: number): AppNotification[] {
+  const readIds = loadReadIdSet(accountId)
+  return MOCK_NOTIFICATIONS.map((n) => ({
+    ...n,
+    read: n.read || readIds.has(n.id),
+  }))
+}
+
+/** Persist that every demo notification id is read for this account. */
+export function persistAllMockNotificationsRead(accountId: number): void {
+  try {
+    const ids = MOCK_NOTIFICATIONS.map((n) => n.id)
+    localStorage.setItem(readIdsStorageKey(accountId), JSON.stringify(ids))
+  } catch {
+    /* quota / private mode */
+  }
+}
