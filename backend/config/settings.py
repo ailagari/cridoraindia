@@ -157,7 +157,12 @@ STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 WHITENOISE_ROOT = FRONTEND_DIST
 MEDIA_URL = "/media/"
-MEDIA_ROOT = BASE_DIR / "media"
+_media_root_env = (os.environ.get("DJANGO_MEDIA_ROOT") or "").strip()
+MEDIA_ROOT = (
+    Path(_media_root_env).resolve()
+    if _media_root_env
+    else (BASE_DIR / "media")
+)
 
 if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
