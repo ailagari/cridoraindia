@@ -129,8 +129,8 @@ export function CustomerPortfolioPanel() {
   return (
     <div className="dash-panel-max pf-scope">
       <p className="dash-panel-lead pf-lead-intro">
-        Live vault balances, estimated mark-to-market from jewellers&apos; quoted ₹/g, and unrealized profit or loss vs the
-        purchase cost allocated from your completed fractional buys.
+        Live vault balances, estimated mark-to-market from jewellers&apos; quoted ₹/g, and unrealized profit or loss vs your
+        allocated <strong>metal purchase cost</strong> (gold value before GST; invoice totals incl. GST appear in the ledger).
       </p>
 
       {loadErr ? <p className="form-error">{loadErr}</p> : null}
@@ -153,7 +153,7 @@ export function CustomerPortfolioPanel() {
         <div className="pf-kpi pf-kpi--shimmer pf-kpi--iris">
           <span className="pf-kpi__eyebrow">Allocated cost</span>
           <p className="pf-kpi__value tabular">₹{fmtInrWhole(allocatedCost)}</p>
-          <span className="pf-kpi__hint">Purchase basis matched to current holdings</span>
+          <span className="pf-kpi__hint">Gold cost at purchase (excl. GST), scaled to current holdings</span>
         </div>
         <div
           className={`pf-kpi pf-kpi--pulse ${pnlInr >= 0 ? 'pf-kpi--mint' : 'pf-kpi--rose'}`}
@@ -171,7 +171,7 @@ export function CustomerPortfolioPanel() {
           <span className="pf-kpi__hint">
             {Number.isFinite(pnlPct) && allocatedCost > 0 ? (
               <>
-                <span className="tabular">{pnlPct >= 0 ? '+' : ''}{pnlPct.toFixed(2)}%</span> on allocated cost ·{' '}
+                <span className="tabular">{pnlPct >= 0 ? '+' : ''}{pnlPct.toFixed(2)}%</span> on metal cost (excl. GST) ·{' '}
               </>
             ) : null}
             {ledger.length} completed purchase{ledger.length === 1 ? '' : 's'}
@@ -196,7 +196,7 @@ export function CustomerPortfolioPanel() {
           <header className="pf-card__head">
             <h3 className="pf-card__title">Cost vs market (INR)</h3>
             <p className="pf-card__meta">
-              Allocated purchase basis vs estimated vault value from jeweller ₹/g marks (not historical NAV)
+              Allocated metal cost (pre‑GST) vs estimated vault value from jeweller ₹/g marks (not historical NAV)
             </p>
           </header>
           <div className="pf-card__viz">
@@ -252,7 +252,9 @@ export function CustomerPortfolioPanel() {
         <header className="pf-card__head pf-ledger-head">
           <div>
             <h3 className="pf-card__title">Ledger — fractional purchases</h3>
-            <p className="pf-card__meta">Completed orders credited to your vault (counter / legacy UPI).</p>
+            <p className="pf-card__meta">
+              Completed orders: metal ₹ before GST vs invoice total (incl. GST); allocation uses metal ₹ for P&amp;L above.
+            </p>
           </div>
         </header>
         {ledgerDisplay.length === 0 ? (
@@ -267,7 +269,8 @@ export function CustomerPortfolioPanel() {
                   <th>Reference</th>
                   <th>Jeweller</th>
                   <th className="tabular">Grams</th>
-                  <th className="tabular">Paid</th>
+                  <th className="tabular">Metal (pre‑GST)</th>
+                  <th className="tabular">Total (incl. GST)</th>
                   <th className="tabular">Gold bal.</th>
                 </tr>
               </thead>
@@ -281,6 +284,11 @@ export function CustomerPortfolioPanel() {
                     <td className="tabular">{row.reference}</td>
                     <td>{row.jeweller_name}</td>
                     <td className="tabular pf-ledger-grams">+{parseG(row.grams).toFixed(6)} g</td>
+                    <td className="tabular pf-ledger-inr">
+                      {row.gold_value_inr_pre_gst != null && String(row.gold_value_inr_pre_gst).trim() !== ''
+                        ? `₹${fmtInrPlain(row.gold_value_inr_pre_gst)}`
+                        : '—'}
+                    </td>
                     <td className="tabular pf-ledger-inr pf-ledger-inr--out">₹{fmtInrPlain(row.total_inr)}</td>
                     <td className="tabular pf-ledger-bal">{row.balanceG}</td>
                   </tr>

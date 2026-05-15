@@ -16,8 +16,8 @@ def customer_portfolio_unrealized_summary(
     customer: User, balance_grams: Decimal, vaults: list[dict]
 ) -> dict | None:
     """
-    Estimated unrealized P&L: vault mark-to-market INR minus cost allocated from completed
-    fractional purchases (proportional to min(current balance, lifetime purchased grams)).
+    Estimated unrealized P&L: vault mark-to-market INR minus allocated gold purchase cost
+    from completed fractional orders using metal value before GST (excludes gst_inr / fees).
     """
     if customer.user_type != User.CUSTOMER:
         return None
@@ -29,11 +29,14 @@ def customer_portfolio_unrealized_summary(
     agg = FractionalGoldPurchase.objects.filter(
         customer=customer,
         status=FractionalGoldPurchase.COMPLETED,
-    ).aggregate(inr=Sum("total_inr"), grams=Sum("grams"))
-    pur_inr = agg["inr"] or Decimal("0")
+    ).aggregate(
+        gold_pre_gst=Sum("gold_value_inr_pre_gst"),
+        grams=Sum("grams"),
+    )
+    pur_cost_inr = agg["gold_pre_gst"] or Decimal("0")
     pur_g = agg["grams"] or Decimal("0")
 
-    if pur_g <= 0 or pur_inr <= 0:
+    if pur_g <= 0 or pur_cost_inr <= 0:
         return {
             "market_value_inr": str(market_q),
             "allocated_cost_inr": "0.00",
@@ -43,15 +46,15 @@ def customer_portfolio_unrealized_summary(
             "purchase_basis_grams_total": "0",
             "grams_allocated_for_cost": "0",
             "basis_note": (
-                "Estimated vault value with no recorded fractional purchase cost — "
-                "add holdings via Buy gold or transfers may apply."
+                "Estimated vault value with no recorded fractional gold purchase cost (pre‑GST) — "
+                "holdings from transfers or legacy balances may apply."
             ),
         }
 
     grams_costed = balance_grams if balance_grams <= pur_g else pur_g
     if grams_costed < 0:
         grams_costed = Decimal("0")
-    allocated = (grams_costed / pur_g * pur_inr).quantize(Decimal("0.01"))
+    allocated = (grams_costed / pur_g * pur_cost_inr).quantize(Decimal("0.01"))
     pnl = (market_q - allocated).quantize(Decimal("0.01"))
     pct_s = ""
     if allocated > 0:
@@ -59,7 +62,7 @@ def customer_portfolio_unrealized_summary(
         pct_s = str(pct)
 
     return {
-        "purchase_basis_inr_total": str(pur_inr.quantize(Decimal("0.01"))),
+        "purchase_basis_inr_total": str(pur_cost_inr.quantize(Decimal("0.01"))),
         "purchase_basis_grams_total": str(pur_g),
         "grams_allocated_for_cost": str(grams_costed),
         "allocated_cost_inr": str(allocated),
@@ -67,9 +70,9 @@ def customer_portfolio_unrealized_summary(
         "unrealized_pnl_inr": str(pnl),
         "unrealized_pnl_percent": pct_s,
         "basis_note": (
-            "Unrealized P&L compares live vault marks to purchase cost allocated from your "
-            "completed fractional buys (holdings × average buy price). Received transfers or "
-            "legacy balances can skew this estimate."
+            "Unrealized P&L compares live vault marks (estimated metal value) to gold purchase cost "
+            "allocated from your completed fractional buys — metal ₹ excluding GST and fees (GST/taxes "
+            "shown separately on receipts). Transfers or legacy balances can skew this estimate."
         ),
     }
 
@@ -93,6 +96,7 @@ def customer_completed_fractional_ledger(customer: User) -> list[dict]:
                 "created_at": p.created_at.isoformat(),
                 "jeweller_name": p.jeweller.business_name or p.jeweller.email or "",
                 "grams": str(p.grams),
+                "gold_value_inr_pre_gst": str(p.gold_value_inr_pre_gst),
                 "total_inr": str(p.total_inr),
                 "payment_method": p.payment_method,
             }

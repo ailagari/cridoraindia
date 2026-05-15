@@ -15,6 +15,8 @@ export type FractionalLedgerRowDTO = {
   created_at: string
   jeweller_name: string
   grams: string
+  /** Metal value before GST (matches portfolio allocated-cost basis). */
+  gold_value_inr_pre_gst?: string
   total_inr: string
   payment_method: string
 }
@@ -27,6 +29,7 @@ export type LiabilityCreditRowDTO = {
   purchase_reference: string
 }
 
+/** purchase_basis_inr_total / allocated_cost_inr use metal ₹ before GST (not invoice total). */
 export type PortfolioUnrealizedDTO = {
   market_value_inr: string
   allocated_cost_inr: string
