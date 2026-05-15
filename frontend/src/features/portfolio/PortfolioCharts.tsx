@@ -152,6 +152,31 @@ export function PortfolioDonut({ segments, ariaLabel }: { segments: DonutSeg[]; 
   )
 }
 
+/** Decorative sparkline (Groww-style); not historical market data. */
+export function VaultTrendSparkline({ trend }: { trend: 'up' | 'down' | 'neutral' }) {
+  const points =
+    trend === 'up'
+      ? '0,18 8,15 16,17 24,8 32,10 40,5'
+      : trend === 'down'
+        ? '0,5 8,12 16,10 24,18 32,15 40,20'
+        : '0,12 10,11 20,13 30,12 40,12'
+  const stroke = trend === 'up' ? '#34d399' : trend === 'down' ? '#fb7185' : '#94a3b8'
+
+  return (
+    <svg className="pf-vault-spark" width={50} height={22} viewBox="0 0 40 25" aria-hidden>
+      <line x1="0" y1="12.5" x2="40" y2="12.5" stroke="rgba(148,163,184,0.25)" strokeWidth={0.6} strokeDasharray="2 3" />
+      <polyline
+        fill="none"
+        stroke={stroke}
+        strokeWidth={1.5}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        points={points}
+      />
+    </svg>
+  )
+}
+
 export function PortfolioSparkRow({ points, stroke }: { points: number[]; stroke: string }) {
   const pts = normalizeSeries(points)
   const height = 28
