@@ -36,7 +36,8 @@ type AdminTickerPayload = {
   ticker_manual_24k_inr_per_gram?: string | null
   gold_deposit_yield_apr_percent?: string
   gold_loan_interest_apr_percent?: string
-  gold_loan_processing_fee_inr?: string
+  gold_loan_processing_fee_percent?: string
+  cross_platform_fee_inr?: string
   platform_base_inr_per_gram_22k: string
   cridora_base_source?: string
   updated_at: string
@@ -297,6 +298,7 @@ export function AdminGoldTickerPanel() {
   const [depositYieldDraft, setDepositYieldDraft] = useState('0')
   const [loanAprDraft, setLoanAprDraft] = useState('0')
   const [loanFeeDraft, setLoanFeeDraft] = useState('0')
+  const [crossPlatformFeeDraft, setCrossPlatformFeeDraft] = useState('49')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
 
@@ -317,7 +319,8 @@ export function AdminGoldTickerPanel() {
     setManual24Draft(j.ticker_manual_24k_inr_per_gram ?? '')
     setDepositYieldDraft(j.gold_deposit_yield_apr_percent ?? '0')
     setLoanAprDraft(j.gold_loan_interest_apr_percent ?? '0')
-    setLoanFeeDraft(j.gold_loan_processing_fee_inr ?? '0')
+    setLoanFeeDraft(j.gold_loan_processing_fee_percent ?? '0')
+    setCrossPlatformFeeDraft(j.cross_platform_fee_inr ?? '49')
   }, [])
 
   useEffect(() => {
@@ -368,7 +371,8 @@ export function AdminGoldTickerPanel() {
         ticker_manual_24k_inr_per_gram: manual24Draft.trim() ? manual24Draft.trim() : null,
         gold_deposit_yield_apr_percent: depositYieldDraft.trim(),
         gold_loan_interest_apr_percent: loanAprDraft.trim(),
-        gold_loan_processing_fee_inr: loanFeeDraft.trim(),
+        gold_loan_processing_fee_percent: loanFeeDraft.trim(),
+        cross_platform_fee_inr: crossPlatformFeeDraft.trim(),
       },
     })
     setBusy(false)
@@ -383,11 +387,12 @@ export function AdminGoldTickerPanel() {
   return (
     <section className="card" style={{ padding: '1.25rem', borderRadius: 18 }}>
       <h2 className="dash-coming__title" style={{ marginTop: 0 }}>
-        Gold ticker
+        Ticker &amp; fees
       </h2>
       <p className="dash-coming__text" style={{ marginBottom: '0.65rem', fontSize: '0.82rem' }}>
-        <strong>Live:</strong> markup on international raw spot, then deduction — jewellers and customers see the published live market column.{' '}
-        <strong>Manual:</strong> fixed 22K/24K gold only (no row rules).{' '}
+        Configure live metal rates, alerts, and <strong>all platform fees and storefront disclosures</strong> here.{' '}
+        <strong>Live:</strong> markup on international raw spot, then deduction — jewellers and customers see the published
+        live market column. <strong>Manual:</strong> fixed 22K/24K gold only (no row rules).{' '}
         <strong>Alerts:</strong> 22K vs baseline; <strong>0</strong> disables.
       </p>
       {error ? <p className="form-error">{error}</p> : null}
@@ -413,7 +418,7 @@ export function AdminGoldTickerPanel() {
         </div>
         <div
           role="group"
-          aria-label="Gold ticker price source"
+          aria-label="Ticker metal price source"
           style={{
             display: 'flex',
             gap: '0.45rem',
@@ -654,9 +659,21 @@ export function AdminGoldTickerPanel() {
         }}
       >
         <p style={{ margin: '0 0 0.55rem', fontWeight: 700, fontSize: '0.82rem' }}>
-          Storefront headlines (deposit / loan / fee)
+          Platform fees &amp; storefront disclosures
         </p>
         <div style={{ display: 'grid', gap: '0.85rem', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
+          <label className="field">
+            <span>Cross-network platform fee (₹ per order)</span>
+            <input
+              value={crossPlatformFeeDraft}
+              onChange={(e) => setCrossPlatformFeeDraft(e.target.value)}
+              inputMode="decimal"
+            />
+            <span className="dash-footnote" style={{ display: 'block', marginTop: '0.25rem', fontSize: '0.68rem' }}>
+              Checkout: <strong className="tabular">₹{formatMaybeStrInr(crossPlatformFeeDraft, 2)}</strong> on X-redeem
+              listings only (not charged by jewellers).
+            </span>
+          </label>
           <label className="field">
             <span>Gold deposit yield (% APR)</span>
             <input
@@ -676,10 +693,10 @@ export function AdminGoldTickerPanel() {
             </span>
           </label>
           <label className="field">
-            <span>Gold loan processing fee (₹)</span>
+            <span>Gold loan processing fee (% of principal)</span>
             <input value={loanFeeDraft} onChange={(e) => setLoanFeeDraft(e.target.value)} inputMode="decimal" />
             <span className="dash-footnote" style={{ display: 'block', marginTop: '0.25rem', fontSize: '0.68rem' }}>
-              Fee: <strong className="tabular">₹{formatMaybeStrInr(loanFeeDraft, 2)}</strong>
+              Headline: <strong className="tabular">{formatMaybeStrInr(loanFeeDraft, 3)}%</strong> of loan principal
             </span>
           </label>
         </div>
@@ -691,7 +708,7 @@ export function AdminGoldTickerPanel() {
         disabled={busy || (manualOn && !manual22Draft.trim())}
         onClick={() => void save()}
       >
-        Save ticker
+        Save ticker &amp; fees
       </button>
       {manualOn && !manual22Draft.trim() ? (
         <p className="dash-footnote" style={{ marginTop: '0.5rem' }}>
@@ -792,7 +809,7 @@ export function AdminMarketplaceModerationPanel() {
       </h2>
       <p className="dash-coming__text">
         BIS 916 ornaments and related SKUs stay private until approved. Configure the live 22K benchmark under
-        Control → Gold ticker.
+        Control → Ticker &amp; fees.
       </p>
       <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
         <button

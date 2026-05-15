@@ -61,7 +61,8 @@ class GoldTickerReadSerializer(serializers.ModelSerializer):
             "ticker_manual_24k_inr_per_gram",
             "gold_deposit_yield_apr_percent",
             "gold_loan_interest_apr_percent",
-            "gold_loan_processing_fee_inr",
+            "gold_loan_processing_fee_percent",
+            "cross_platform_fee_inr",
             "platform_base_inr_per_gram_22k",
             "cridora_base_source",
             "updated_at",
@@ -126,7 +127,7 @@ class GoldTickerReadSerializer(serializers.ModelSerializer):
 
 
 class GoldTickerPublicSerializer(serializers.ModelSerializer):
-    """Public storefront: resolved reference only — no admin deduction table."""
+    """Public storefront: resolved metal base plus checkout/platform fees surfaced here."""
 
     platform_base_inr_per_gram_22k = serializers.SerializerMethodField()
     cridora_base_source = serializers.SerializerMethodField()
@@ -136,6 +137,7 @@ class GoldTickerPublicSerializer(serializers.ModelSerializer):
         fields = (
             "platform_base_inr_per_gram_22k",
             "cridora_base_source",
+            "cross_platform_fee_inr",
             "updated_at",
         )
         read_only_fields = fields
@@ -160,7 +162,8 @@ class GoldTickerAdminSerializer(serializers.ModelSerializer):
             "ticker_manual_24k_inr_per_gram",
             "gold_deposit_yield_apr_percent",
             "gold_loan_interest_apr_percent",
-            "gold_loan_processing_fee_inr",
+            "gold_loan_processing_fee_percent",
+            "cross_platform_fee_inr",
         )
 
     def validate_live_metal_adjustments_json(self, value):
@@ -205,12 +208,24 @@ class GoldTickerAdminSerializer(serializers.ModelSerializer):
             )
         return attrs
 
+    def validate_gold_loan_processing_fee_percent(self, value):
+        if value < Decimal("0"):
+            raise serializers.ValidationError("Must be zero or greater.")
+        if value > Decimal("100"):
+            raise serializers.ValidationError("Must not exceed 100%.")
+        return value
+
+    def validate_cross_platform_fee_inr(self, value):
+        if value < Decimal("0"):
+            raise serializers.ValidationError("Must be zero or greater.")
+        return value
+
 
 class JewellerPricingProfileSerializer(serializers.ModelSerializer):
     jeweller_metal_rate_effective_updated_at = serializers.SerializerMethodField()
     gold_deposit_yield_apr_percent = serializers.SerializerMethodField()
     gold_loan_interest_apr_percent = serializers.SerializerMethodField()
-    gold_loan_processing_fee_inr = serializers.SerializerMethodField()
+    gold_loan_processing_fee_percent = serializers.SerializerMethodField()
     metal_rate_preview = serializers.SerializerMethodField()
     admin_buyback_reference_preview = serializers.SerializerMethodField()
 
@@ -233,7 +248,7 @@ class JewellerPricingProfileSerializer(serializers.ModelSerializer):
             "buyback_headline_inr_per_gram",
             "gold_deposit_yield_apr_percent",
             "gold_loan_interest_apr_percent",
-            "gold_loan_processing_fee_inr",
+            "gold_loan_processing_fee_percent",
             "logo_url",
             "credibility_score",
             "lock_in_summary",
@@ -272,7 +287,7 @@ class JewellerPricingProfileSerializer(serializers.ModelSerializer):
             "sellback_fixed_inr_per_gram",
             "gold_deposit_yield_apr_percent",
             "gold_loan_interest_apr_percent",
-            "gold_loan_processing_fee_inr",
+            "gold_loan_processing_fee_percent",
             "metal_rate_preview",
             "admin_buyback_reference_preview",
         )
@@ -288,9 +303,9 @@ class JewellerPricingProfileSerializer(serializers.ModelSerializer):
         t = get_or_create_ticker()
         return str(t.gold_loan_interest_apr_percent)
 
-    def get_gold_loan_processing_fee_inr(self, obj: JewellerPricingProfile) -> str:
+    def get_gold_loan_processing_fee_percent(self, obj: JewellerPricingProfile) -> str:
         t = get_or_create_ticker()
-        return str(t.gold_loan_processing_fee_inr)
+        return str(t.gold_loan_processing_fee_percent)
 
     def get_metal_rate_preview(self, obj: JewellerPricingProfile) -> dict[str, dict[str, str]]:
         spot = public_spot_prices_payload()
@@ -362,6 +377,7 @@ def _annotate_product_public(
     product: MarketplaceProduct, *, expose_platform_base: bool = False
 ) -> dict:
     profile = jeweller_profile_for(product.jeweller)
+    ticker = get_or_create_ticker()
     cridora_base, base_source = resolve_cridora_base_22k_inr()
     metal_rate = gold_rate_inr_per_gram(product, profile, cridora_base)
     stone = stone_component_inr(product)
@@ -415,6 +431,7 @@ def _annotate_product_public(
             str(product.stone_cost_inr) if product.stone_cost_inr is not None else ""
         ),
         "same_store_benefit_note": product.same_store_benefit_note or "",
+        "cross_platform_fee_inr": str(ticker.cross_platform_fee_inr),
     }
     if expose_platform_base:
         row["platform_base_inr_per_gram_22k"] = str(cridora_base)
@@ -477,7 +494,7 @@ def public_jeweller_storefront(user) -> dict:
         "reference_metal_inr_per_gram": str(ref_metal),
         "gold_deposit_yield_apr_percent": str(ticker.gold_deposit_yield_apr_percent),
         "gold_loan_interest_apr_percent": str(ticker.gold_loan_interest_apr_percent),
-        "gold_loan_processing_fee_inr": str(ticker.gold_loan_processing_fee_inr),
+        "gold_loan_processing_fee_percent": str(ticker.gold_loan_processing_fee_percent),
         "gold_loan_jeweller_deduction_inr_per_gram": str(
             profile.gold_loan_jeweller_deduction_inr_per_gram
         ),

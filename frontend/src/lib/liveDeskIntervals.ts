@@ -13,7 +13,7 @@ export const LIVE_CATALOG_POLL_MS = 7000
 /** Storefront jeweller grid refresh */
 export const LIVE_STOREFRONT_GRID_POLL_MS = 8000
 
-/** Admin gold ticker panel snapshot while idle */
+/** Admin ticker & fees panel snapshot while idle */
 export const LIVE_ADMIN_TICKER_POLL_MS = 4000
 
 /** Admin overview & moderation lists */

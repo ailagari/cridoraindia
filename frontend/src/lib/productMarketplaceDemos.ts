@@ -113,6 +113,7 @@ function demoRow(
     stone_weight_grams: piece.stone_weight_grams ?? '',
     stone_cost_inr: piece.stone_cost_inr ?? '',
     same_store_benefit_note: piece.same_store_benefit_note ?? shop.same_note,
+    cross_platform_fee_inr: '49.00',
   }
 }
 

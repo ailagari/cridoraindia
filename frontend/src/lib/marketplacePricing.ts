@@ -15,7 +15,8 @@ export type PriceBreakdown = {
 }
 
 export const USER_VAULT_BALANCE = 12.45
-export const CROSS_PLATFORM_FEE = 49
+/** Fallback when API omits `cross_platform_fee_inr` (legacy clients). */
+export const DEFAULT_CROSS_PLATFORM_FEE_INR = 49
 export const MAKING_FIXED_PER_GRAM = 'fixed_per_gram'
 export const MAKING_PERCENT_OF_METAL = 'percent_of_metal'
 
@@ -95,7 +96,13 @@ export function jewellerSubtotalInr(p: MarketplaceProductDTO): number {
 
 /** Cridora cross-network fee; jewellers do not charge this. Shown at checkout only. */
 export function cridoraCrossPlatformFeeInr(p: MarketplaceProductDTO): number {
-  return p.is_x_redeem ? CROSS_PLATFORM_FEE : 0
+  if (!p.is_x_redeem) return 0
+  const raw = p.cross_platform_fee_inr
+  if (raw != null && raw !== '') {
+    const n = Number.parseFloat(raw)
+    if (Number.isFinite(n) && n >= 0) return n
+  }
+  return DEFAULT_CROSS_PLATFORM_FEE_INR
 }
 
 /** Demo vault balance is enough to apply vault grams equal to the piece’s gold weight. */

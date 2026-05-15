@@ -129,7 +129,7 @@ export function JewellerRatesSchemesPanel() {
   const [platformDisclosures, setPlatformDisclosures] = useState({
     gold_deposit_yield_apr_percent: '0',
     gold_loan_interest_apr_percent: '0',
-    gold_loan_processing_fee_inr: '0',
+    gold_loan_processing_fee_percent: '0',
   })
 
   const toggleSection = useCallback((key: SectionKey) => {
@@ -197,7 +197,7 @@ export function JewellerRatesSchemesPanel() {
     setPlatformDisclosures({
       gold_deposit_yield_apr_percent: String(pJson.gold_deposit_yield_apr_percent ?? '0'),
       gold_loan_interest_apr_percent: String(pJson.gold_loan_interest_apr_percent ?? '0'),
-      gold_loan_processing_fee_inr: String(pJson.gold_loan_processing_fee_inr ?? '0'),
+      gold_loan_processing_fee_percent: String(pJson.gold_loan_processing_fee_percent ?? '0'),
     })
   }, [])
 
@@ -337,7 +337,7 @@ export function JewellerRatesSchemesPanel() {
 
   const ornamentsSummary = `Listing metal ₹${formatInr(referenceMetalInr, 2)}/g · Buy ₹${formatInr(indicativeBuybackGoldDisplay, 2)}/g`
 
-  const depositSummary = `Deposit ${formatInr(parseN(platformDisclosures.gold_deposit_yield_apr_percent), 2)}% APR · Loan ${formatInr(parseN(platformDisclosures.gold_loan_interest_apr_percent), 2)}%`
+  const depositSummary = `Deposit ${formatInr(parseN(platformDisclosures.gold_deposit_yield_apr_percent), 2)}% APR · Loan ${formatInr(parseN(platformDisclosures.gold_loan_interest_apr_percent), 2)}% · Proc. ${formatInr(parseN(platformDisclosures.gold_loan_processing_fee_percent), 3)}%`
 
   const goldenSummary = ratesDraft.golden_scheme_enabled ? 'Offer enabled — edit terms' : 'Disabled'
 
@@ -866,10 +866,10 @@ export function JewellerRatesSchemesPanel() {
                       </div>
                       <div className="card" style={{ padding: '0.85rem', borderRadius: 12, margin: 0 }}>
                         <p style={{ margin: 0, fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-faint)' }}>
-                          PROCESSING (₹)
+                          LOAN PROCESSING (%)
                         </p>
                         <p style={{ margin: '0.35rem 0 0', fontWeight: 800 }} className="tabular">
-                          ₹{formatInr(parseN(platformDisclosures.gold_loan_processing_fee_inr), 0)}
+                          {formatInr(parseN(platformDisclosures.gold_loan_processing_fee_percent), 3)}%
                         </p>
                       </div>
                     </div>

@@ -3,6 +3,7 @@ import { apiFetch } from '@/lib/api'
 export type GoldTickerPayload = {
   platform_base_inr_per_gram_22k: string
   cridora_base_source?: string
+  cross_platform_fee_inr?: string
   updated_at: string
 }
 
@@ -68,6 +69,8 @@ export type MarketplaceProductDTO = {
   stone_weight_grams: string
   stone_cost_inr: string
   same_store_benefit_note: string
+  /** Cridora cross-jeweller checkout fee (₹) when `is_x_redeem`; from platform ticker config. */
+  cross_platform_fee_inr: string
 }
 
 export type JewellerStorefrontDTO = {
@@ -114,7 +117,7 @@ export type JewellerStorefrontDTO = {
   golden_scheme_lock_in_note?: string
   golden_scheme_benefits?: string
   golden_scheme_rate_application_note?: string
-  gold_loan_processing_fee_inr?: string
+  gold_loan_processing_fee_percent?: string
   gold_loan_jeweller_deduction_inr_per_gram?: string
 }
 

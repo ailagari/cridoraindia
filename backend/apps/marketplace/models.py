@@ -6,7 +6,7 @@ from django.db import models
 
 class GoldTickerConfig(models.Model):
     """
-    Platform Cridora reference for metals (₹ per gram).
+    Live metal ticker plus platform fees and storefront disclosures (admin: Ticker & fees).
 
     Manual mode: admin 22K (optional 24K) is the reference for gold ticker rows.
 
@@ -68,11 +68,17 @@ class GoldTickerConfig(models.Model):
         default=Decimal("0"),
         help_text="Platform-disclosed gold-backed loan interest (% APR).",
     )
-    gold_loan_processing_fee_inr = models.DecimalField(
+    gold_loan_processing_fee_percent = models.DecimalField(
+        max_digits=8,
+        decimal_places=3,
+        default=Decimal("0"),
+        help_text="Platform-disclosed gold loan processing fee (% of loan principal).",
+    )
+    cross_platform_fee_inr = models.DecimalField(
         max_digits=12,
         decimal_places=2,
-        default=Decimal("0"),
-        help_text="Platform-disclosed one-time processing fee (₹) for gold loans.",
+        default=Decimal("49.00"),
+        help_text="Cridora cross-jeweller platform fee (₹) at checkout for X-redeem listings.",
     )
     manual_ticker_enabled = models.BooleanField(
         default=False,
@@ -95,7 +101,7 @@ class GoldTickerConfig(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        verbose_name = "Gold ticker configuration"
+        verbose_name = "Ticker and fees configuration"
 
     def __str__(self):
         return "GoldTickerConfig"
