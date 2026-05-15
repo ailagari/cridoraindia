@@ -532,6 +532,8 @@ class WebPushSubscription(models.Model):
 
     user = models.ForeignKey(
         User,
+        null=True,
+        blank=True,
         on_delete=models.CASCADE,
         related_name="web_push_subscriptions",
     )
@@ -545,7 +547,7 @@ class WebPushSubscription(models.Model):
         ordering = ["-created_at"]
 
     def __str__(self):
-        return f"WebPushSubscription(user={self.user_id})"
+        return "WebPushSubscription(anonymous)" if self.user_id is None else f"WebPushSubscription(user={self.user_id})"
 
 
 class AdminNotification(models.Model):

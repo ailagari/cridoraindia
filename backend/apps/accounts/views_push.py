@@ -29,7 +29,9 @@ class WebPushVapidPublicKeyView(APIView):
 
 
 class WebPushSubscribeView(APIView):
-    permission_classes = [IsAuthenticated]
+    """Persist Push subscription for logged-in user or anonymous PWA visitor."""
+
+    permission_classes = [AllowAny]
 
     def post(self, request):
         if not webpush_configured():
@@ -48,10 +50,11 @@ class WebPushSubscribeView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
         ua = (request.META.get("HTTP_USER_AGENT") or "")[:512]
+        owner = request.user if request.user.is_authenticated else None
         WebPushSubscription.objects.update_or_create(
             endpoint=str(endpoint),
             defaults={
-                "user": request.user,
+                "user": owner,
                 "p256dh": str(p256dh),
                 "auth": str(auth),
                 "user_agent": ua,
@@ -61,7 +64,7 @@ class WebPushSubscribeView(APIView):
 
 
 class WebPushUnsubscribeView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def post(self, request):
         endpoint = request.data.get("endpoint")
@@ -70,9 +73,7 @@ class WebPushUnsubscribeView(APIView):
                 {"detail": "endpoint is required."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        WebPushSubscription.objects.filter(
-            user=request.user, endpoint=str(endpoint)
-        ).delete()
+        WebPushSubscription.objects.filter(endpoint=str(endpoint)).delete()
         return Response({"ok": True}, status=status.HTTP_200_OK)
 
 

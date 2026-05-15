@@ -138,9 +138,10 @@ export function AdminFestivalBroadcastPanel() {
     <div className="dash-panel-max">
       <h2 className="dash-table-title">Festival & broadcast pushes</h2>
       <p className="dash-footnote" style={{ marginBottom: '1rem', maxWidth: 640 }}>
-        Schedule a message for a future time. At that time the backend sends a{' '}
-        <strong>Web Push to every subscribed device</strong> (customers, jewellers, and admins who enabled alerts). Users who
-        never tapped &quot;Enable&quot; in the notification bell will not receive it. Production needs VAPID keys. Opening this page
+        Schedule a message for a future time. At that time the backend sends one{' '}
+        <strong>Web Push per subscribed browser</strong> to <strong>every role</strong> (customer, jeweller, admin) — there is
+        no role filter. Extra browser tabs do not count as extra devices; each profile needs &quot;Enable&quot; in the bell once.
+        Users who never enable alerts will not receive it. Production needs VAPID keys. Opening this page
         or the notification bell runs the sender for due schedules. For reliability when no admin is online, run a cron such as{' '}
         <code className="tabular">process_festival_broadcasts</code> every few minutes.
       </p>

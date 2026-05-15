@@ -13,6 +13,7 @@ import {
   getStoredAccess,
   storeTokens,
 } from '@/lib/api'
+import { claimPushSubscriptionForLoggedInUser } from '@/lib/webPushApi'
 
 export type UserType = 'customer' | 'jeweller' | 'admin'
 
@@ -79,6 +80,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     setLoading(false)
   }, [])
+
+  useEffect(() => {
+    if (loading) return
+    if (!user || !getStoredAccess()) return
+    void claimPushSubscriptionForLoggedInUser()
+  }, [loading, user])
 
   const persistSession = useCallback((data: Record<string, unknown>) => {
     const access = String(data.access ?? '')

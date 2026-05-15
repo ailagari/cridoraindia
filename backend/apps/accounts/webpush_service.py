@@ -62,7 +62,12 @@ def send_push_to_user(user, payload: dict[str, Any]) -> int:
 
 
 def send_push_broadcast(payload: dict[str, Any]) -> int:
-    """Send to every stored device subscription (e.g. gold rate alerts)."""
+    """Send to every stored Push subscription row (no filter by user role).
+
+    Covers customer, jeweller, and admin accounts equally — anyone who tapped Enable
+    and has a row in ``WebPushSubscription``. Each browser/profile yields at most one
+    subscription (extra tabs do not create separate endpoints).
+    """
     if not webpush_configured():
         return 0
     n = 0

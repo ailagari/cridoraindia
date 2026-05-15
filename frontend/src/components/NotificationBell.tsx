@@ -107,7 +107,7 @@ export function NotificationBell({ compact = false, role = 'customer' }: Props) 
   }, [useAdminFeed])
 
   const refreshPushState = useCallback(async () => {
-    if (!user || !pushNotificationsSupported()) {
+    if (!pushNotificationsSupported()) {
       setPushActive(false)
       return
     }
@@ -118,15 +118,15 @@ export function NotificationBell({ compact = false, role = 'customer' }: Props) 
     } catch {
       setPushActive(false)
     }
-  }, [user])
+  }, [])
 
   useEffect(() => {
-    if (!open || !user) return
+    if (!open) return
     void refreshPushState()
-  }, [open, user, refreshPushState])
+  }, [open, refreshPushState])
 
   useEffect(() => {
-    if (!open || !user) return
+    if (!open) return
     let cancelled = false
     setPushServerReady(null)
     void fetchWebPushServerStatus().then((s) => {
@@ -135,7 +135,7 @@ export function NotificationBell({ compact = false, role = 'customer' }: Props) 
     return () => {
       cancelled = true
     }
-  }, [open, user])
+  }, [open])
 
   useEffect(() => {
     if (!open) return
@@ -163,12 +163,15 @@ export function NotificationBell({ compact = false, role = 'customer' }: Props) 
   }, [open, useAdminFeed, loadAdminFeed])
 
   useEffect(() => {
-    if (useAdminFeed || user?.id == null) return
-    setMockItems(hydrateMockNotificationsForAccount(user.id))
+    if (useAdminFeed) return
+    if (user?.id != null) {
+      setMockItems(hydrateMockNotificationsForAccount(user.id))
+    } else {
+      setMockItems([...MOCK_NOTIFICATIONS])
+    }
   }, [useAdminFeed, user?.id])
 
   const enablePush = useCallback(async () => {
-    if (!user) return
     setPushBusy(true)
     setPushError('')
     try {
@@ -179,7 +182,7 @@ export function NotificationBell({ compact = false, role = 'customer' }: Props) 
     } finally {
       setPushBusy(false)
     }
-  }, [user])
+  }, [])
 
   const disablePush = useCallback(async () => {
     setPushBusy(true)
@@ -290,11 +293,13 @@ export function NotificationBell({ compact = false, role = 'customer' }: Props) 
         <div className="notif-panel card" role="dialog" aria-label="Notifications">
           <div className="notif-panel-head">
             <h2 className="notif-panel-title">Alerts</h2>
-            <button type="button" className="btn btn-ghost notif-panel-clear" onClick={() => void markAllRead()}>
-              Mark read
-            </button>
+            {useAdminFeed || user?.id != null ? (
+              <button type="button" className="btn btn-ghost notif-panel-clear" onClick={() => void markAllRead()}>
+                Mark read
+              </button>
+            ) : null}
           </div>
-          {user && setupHint ? (
+          {setupHint ? (
             <p className="notif-panel-hint" style={{ marginTop: '-0.35rem', color: 'var(--gold-light)' }}>
               {setupHint}
             </p>
@@ -310,7 +315,7 @@ export function NotificationBell({ compact = false, role = 'customer' }: Props) 
                     vars). Enable still appears once keys are set.
                   </span>
                 ) : (
-                  ' Enable device notifications to get pushes on this phone or desktop.'
+                  ' Enable device notifications for festival and platform broadcasts — delivery is the same for every account role.'
                 )}
               </>
             ) : pushServerReady === false ? (
@@ -320,59 +325,53 @@ export function NotificationBell({ compact = false, role = 'customer' }: Props) 
                 here for UI preview — they are not live notifications.
               </>
             ) : (
-              'In-app alerts below are samples. Turn on browser notifications to get real alerts on this device (HTTPS or localhost; install the PWA on iOS 16.4+ for Web Push).'
+              'In-app alerts below are samples. Turn on browser notifications for festival and platform broadcasts on this device (HTTPS or localhost; iPhone/iPad: install the PWA from Safari for Web Push 16.4+). Same broadcast goes to every role — one subscription per browser.'
             )}
           </p>
           {adminFeedError ? <p className="form-error notif-panel-hint">{adminFeedError}</p> : null}
-          {user ? (
-            <div className="notif-push-row">
-              <div className="notif-push-copy">
-                <span className="notif-push-label">Device notifications</span>
-                {!pushSupported ? (
-                  <span className="notif-push-status">Not supported in this browser or context.</span>
-                ) : Notification.permission === 'denied' ? (
-                  <span className="notif-push-status">Blocked in browser settings — allow notifications for this site.</span>
-                ) : pushActive ? (
-                  <span className="notif-push-status notif-push-status--on">On for this device</span>
-                ) : pushServerReady === false ? (
-                  <>
-                    <span className="notif-push-status">Unavailable on this deployment</span>
-                    <span className="notif-push-detail">See the note above — VAPID env vars are missing on the server.</span>
-                  </>
-                ) : pushServerReady === null ? (
-                  <span className="notif-push-status">Checking server setup…</span>
-                ) : (
-                  <span className="notif-push-status">Off</span>
-                )}
-                {pushError ? <span className="notif-push-err">{pushError}</span> : null}
-              </div>
-              {pushSupported && Notification.permission !== 'denied' ? (
-                pushActive ? (
-                  <button
-                    type="button"
-                    className="btn btn-ghost notif-push-btn"
-                    disabled={pushBusy}
-                    onClick={() => void disablePush()}
-                  >
-                    Turn off
-                  </button>
-                ) : pushServerReady === true ? (
-                  <button
-                    type="button"
-                    className="btn btn-primary notif-push-btn"
-                    disabled={pushBusy}
-                    onClick={() => void enablePush()}
-                  >
-                    Enable
-                  </button>
-                ) : null
-              ) : null}
+          <div className="notif-push-row">
+            <div className="notif-push-copy">
+              <span className="notif-push-label">Device notifications</span>
+              {!pushSupported ? (
+                <span className="notif-push-status">Not supported in this browser or context.</span>
+              ) : Notification.permission === 'denied' ? (
+                <span className="notif-push-status">Blocked in browser settings — allow notifications for this site.</span>
+              ) : pushActive ? (
+                <span className="notif-push-status notif-push-status--on">On for this device</span>
+              ) : pushServerReady === false ? (
+                <>
+                  <span className="notif-push-status">Unavailable on this deployment</span>
+                  <span className="notif-push-detail">See the note above — VAPID env vars are missing on the server.</span>
+                </>
+              ) : pushServerReady === null ? (
+                <span className="notif-push-status">Checking server setup…</span>
+              ) : (
+                <span className="notif-push-status">Off</span>
+              )}
+              {pushError ? <span className="notif-push-err">{pushError}</span> : null}
             </div>
-          ) : (
-            <p className="notif-panel-hint" style={{ marginTop: '-0.35rem' }}>
-              Sign in to enable device notifications.
-            </p>
-          )}
+            {pushSupported && Notification.permission !== 'denied' ? (
+              pushActive ? (
+                <button
+                  type="button"
+                  className="btn btn-ghost notif-push-btn"
+                  disabled={pushBusy}
+                  onClick={() => void disablePush()}
+                >
+                  Turn off
+                </button>
+              ) : pushServerReady === true ? (
+                <button
+                  type="button"
+                  className="btn btn-primary notif-push-btn"
+                  disabled={pushBusy}
+                  onClick={() => void enablePush()}
+                >
+                  Enable
+                </button>
+              ) : null
+            ) : null}
+          </div>
           {useAdminFeed && user && pushActive && pushServerReady === true ? (
             <div className="notif-push-row" style={{ marginTop: '0.5rem', flexWrap: 'wrap' }}>
               <button

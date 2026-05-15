@@ -1,4 +1,19 @@
-import { apiFetch, authFetch } from '@/lib/api'
+import { apiFetch, authFetch, getStoredAccess } from '@/lib/api'
+
+async function postPushSubscribe(jsonBody: Record<string, unknown>): Promise<Response> {
+  if (getStoredAccess()) {
+    return authFetch('/api/v1/push/subscribe/', { method: 'POST', jsonBody })
+  }
+  return apiFetch('/api/v1/push/subscribe/', { method: 'POST', jsonBody })
+}
+
+async function postPushUnsubscribe(endpoint: string): Promise<Response> {
+  const jsonBody = { endpoint }
+  if (getStoredAccess()) {
+    return authFetch('/api/v1/push/unsubscribe/', { method: 'POST', jsonBody })
+  }
+  return apiFetch('/api/v1/push/unsubscribe/', { method: 'POST', jsonBody })
+}
 
 export function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
@@ -103,10 +118,7 @@ export async function registerWebPushSubscription(): Promise<void> {
     applicationServerKey: urlBase64ToUint8Array(pub),
   })
   const json = sub.toJSON()
-  const res = await authFetch('/api/v1/push/subscribe/', {
-    method: 'POST',
-    jsonBody: json as Record<string, unknown>,
-  })
+  const res = await postPushSubscribe(json as Record<string, unknown>)
   if (!res.ok) {
     const err = (await res.json().catch(() => ({}))) as { detail?: string }
     throw new Error(err.detail ?? `Subscribe failed (${res.status})`)
@@ -118,15 +130,25 @@ export async function unregisterWebPushSubscription(): Promise<void> {
   const sub = await reg.pushManager.getSubscription()
   if (!sub) return
   const endpoint = sub.endpoint
-  const res = await authFetch('/api/v1/push/unsubscribe/', {
-    method: 'POST',
-    jsonBody: { endpoint },
-  })
+  const res = await postPushUnsubscribe(endpoint)
   if (!res.ok) {
     const err = (await res.json().catch(() => ({}))) as { detail?: string }
     throw new Error(err.detail ?? `Unsubscribe failed (${res.status})`)
   }
   await sub.unsubscribe()
+}
+
+/** Associate the current browser Push subscription with the logged-in account (after sign-in). */
+export async function claimPushSubscriptionForLoggedInUser(): Promise<void> {
+  if (!getStoredAccess()) return
+  if (!pushNotificationsSupported()) return
+  if (Notification.permission !== 'granted') return
+  const reg = await navigator.serviceWorker.ready
+  const sub = await reg.pushManager.getSubscription()
+  if (!sub) return
+  const json = sub.toJSON() as Record<string, unknown>
+  const res = await authFetch('/api/v1/push/subscribe/', { method: 'POST', jsonBody: json })
+  if (!res.ok) return
 }
 
 export async function getBrowserPushActive(): Promise<boolean> {

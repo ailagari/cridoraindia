@@ -163,8 +163,9 @@ export function PublicMobileChrome() {
 }
 
 export function PublicHeaderActions() {
-  const { user } = useAuth()
   return (
-    <div className="public-header-actions">{user ? <NotificationBell compact /> : null}</div>
+    <div className="public-header-actions">
+      <NotificationBell compact />
+    </div>
   )
 }

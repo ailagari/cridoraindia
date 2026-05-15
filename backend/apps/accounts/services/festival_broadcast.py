@@ -1,10 +1,15 @@
 """Process scheduled festival / broadcast Web Push notifications."""
 
+import logging
+
 from django.db import transaction
+from django.db.models import Count
 from django.utils import timezone
 
-from apps.accounts.models import AdminNotification, FestivalBroadcastNotification
+from apps.accounts.models import AdminNotification, FestivalBroadcastNotification, WebPushSubscription
 from apps.accounts.webpush_service import send_push_broadcast
+
+logger = logging.getLogger(__name__)
 
 
 def process_due_festival_broadcasts(*, limit: int = 50) -> int:
@@ -30,6 +35,17 @@ def process_due_festival_broadcasts(*, limit: int = 50) -> int:
             if row is None:
                 break
             try:
+                sub_total = WebPushSubscription.objects.count()
+                by_role = {
+                    r["user__user_type"]: r["c"]
+                    for r in WebPushSubscription.objects.values("user__user_type").annotate(c=Count("id"))
+                }
+                logger.info(
+                    "festival_broadcast id=%s sending web_push to all subscriptions total=%s by_user_type=%s",
+                    row.pk,
+                    sub_total,
+                    by_role,
+                )
                 n = send_push_broadcast(
                     {
                         "title": row.title.strip() or "Cridora",
