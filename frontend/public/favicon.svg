@@ -1,5 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" fill="none" aria-hidden="true">
-  <!-- Transparent background; mark only: gold ring + arcs -->
+  <!-- Explicit transparent canvas (no fill behind the mark) -->
+  <rect width="40" height="40" fill="none" />
   <circle cx="20" cy="20" r="18" stroke="url(#cridoraGoldLine)" stroke-width="2.5" />
   <path
     d="M14 20C14 16.6863 16.6863 14 20 14"

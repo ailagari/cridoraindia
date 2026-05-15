@@ -9,7 +9,11 @@ const svgPath = join(pub, 'favicon.svg')
 const svg = await readFile(svgPath)
 
 async function out(name, size) {
-  await sharp(svg, { density: 300 }).resize(size, size).png().toFile(join(pub, name))
+  await sharp(svg, { density: 300 })
+    .resize(size, size)
+    .ensureAlpha()
+    .png()
+    .toFile(join(pub, name))
 }
 
 await out('icon-192.png', 192)
