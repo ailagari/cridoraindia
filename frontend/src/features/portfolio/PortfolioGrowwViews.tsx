@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import type { ReactNode } from 'react'
 import type { GoldTickerPayload, SpotPricesPayload } from '@/lib/marketplaceApi'
 import type { VaultRowDTO } from '@/lib/goldTransferApi'
 import { VaultTrendSparkline } from './PortfolioCharts'
@@ -192,12 +193,16 @@ export function PortfolioVaultHoldingsList({
   allocatedCost,
   totalHeldGrams,
   masked,
+  liveProfitBlock,
 }: {
   vaults: VaultRowDTO[]
   allocatedCost: number
   totalHeldGrams: number
   masked: boolean
+  /** When set (e.g. user has holdings), chart + headings share one card with the list below. */
+  liveProfitBlock?: ReactNode
 }) {
+  const merged = liveProfitBlock != null
   const [sortBy, setSortBy] = useState<'value' | 'name'>('value')
 
   const rows = useMemo(() => {
@@ -241,7 +246,23 @@ export function PortfolioVaultHoldingsList({
   const disp = (s: string) => (masked ? maskInr(s) : s)
 
   return (
-    <section className="pf-groww-holdings" aria-label="Holdings by vault">
+    <section
+      className={`pf-groww-holdings${merged ? ' pf-groww-holdings--merged' : ''}`}
+      aria-label={merged ? 'Vault holdings and live value versus invested metal cost' : 'Holdings by vault'}
+    >
+      {merged ? (
+        <header className="pf-groww-holdings__merged-head">
+          <h3 className="pf-groww-holdings__merged-title">Vault holdings · live profit view</h3>
+          <p className="pf-groww-holdings__merged-meta">
+            Session chart compares live vault value to your metal cost basis (dotted line); jeweller rows show allocated
+            cost share and today&apos;s marks.
+          </p>
+        </header>
+      ) : null}
+
+      {merged ? <div className="pf-groww-holdings__profit-slot">{liveProfitBlock}</div> : null}
+      {merged ? <div className="pf-groww-holdings__section-rule" aria-hidden /> : null}
+
       <div className="pf-groww-holdings__bar">
         <button
           type="button"
@@ -290,6 +311,9 @@ export function PortfolioVaultHoldingsList({
       <p className="pf-groww-holdings__fineprint">
         Cost share splits your total metal basis by grams per vault (estimate). Sparklines are illustrative, not historical
         prices.
+        {merged
+          ? ' The session chart updates on each vault mark refresh; above the dotted line is profit vs your invested metal cost.'
+          : ''}
       </p>
     </section>
   )

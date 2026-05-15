@@ -3650,6 +3650,54 @@ img {
   color: var(--danger);
 }
 
+.pf-groww-holdings {
+  margin-top: 0.95rem;
+}
+
+.pf-groww-holdings--merged {
+  border-radius: 16px;
+  padding: 0.95rem 1.1rem 1rem;
+  border: 1px solid rgba(51, 65, 85, 0.55);
+  background: linear-gradient(155deg, rgba(15, 23, 42, 0.88), rgba(3, 7, 18, 0.62));
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.24);
+}
+
+.pf-groww-holdings__merged-head {
+  margin-bottom: 0.55rem;
+}
+
+.pf-groww-holdings__merged-title {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.pf-groww-holdings__merged-meta {
+  margin: 0.35rem 0 0;
+  font-size: 0.72rem;
+  line-height: 1.4;
+  color: rgba(148, 163, 184, 0.92);
+}
+
+.pf-groww-holdings__profit-slot .pf-groww-pnl-chart {
+  margin-top: 0.15rem;
+}
+
+.pf-groww-holdings__section-rule {
+  margin: 0.95rem 0 0.75rem;
+  border-top: 1px dashed rgba(71, 85, 105, 0.55);
+}
+
+.pf-groww-holdings__chart-waiting {
+  margin: 0;
+  padding: 0.25rem 0 0.15rem;
+  font-size: 0.72rem;
+  color: rgba(148, 163, 184, 0.9);
+}
+
 .pf-groww-holdings__bar {
   display: flex;
   flex-wrap: wrap;
@@ -3764,42 +3812,6 @@ img {
   font-size: 0.65rem;
   line-height: 1.45;
   color: rgba(148, 163, 184, 0.88);
-}
-
-.pf-groww-pnl-shell {
-  margin-top: 0.95rem;
-  border-radius: 16px;
-  padding: 0.95rem 1.1rem 1rem;
-  border: 1px solid rgba(51, 65, 85, 0.55);
-  background: linear-gradient(155deg, rgba(15, 23, 42, 0.88), rgba(3, 7, 18, 0.62));
-  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.24);
-}
-
-.pf-groww-pnl-shell__head {
-  margin-bottom: 0.65rem;
-}
-
-.pf-groww-pnl-shell__title {
-  margin: 0;
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-}
-
-.pf-groww-pnl-shell__meta {
-  margin: 0.35rem 0 0;
-  font-size: 0.72rem;
-  line-height: 1.4;
-  color: rgba(148, 163, 184, 0.92);
-}
-
-.pf-groww-pnl-shell__waiting {
-  margin: 0;
-  padding: 1rem 0;
-  font-size: 0.72rem;
-  color: rgba(148, 163, 184, 0.9);
 }
 
 .pf-groww-pnl-chart {

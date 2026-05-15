@@ -220,36 +220,30 @@ export function CustomerPortfolioPanel() {
               onToggleMask={() => setPrivacyMasked((m) => !m)}
             />
 
-            {heldGramsSum > 0 ? (
-              <section className="pf-groww-pnl-shell" aria-label="Live portfolio value versus invested metal cost">
-                <header className="pf-groww-pnl-shell__head">
-                  <h3 className="pf-groww-pnl-shell__title">Live value vs invested</h3>
-                  <p className="pf-groww-pnl-shell__meta">
-                    Dotted horizontal line shows your metal cost basis. Points add on each vault mark refresh — curve above it
-                    is profit territory while you&apos;re here.
-                  </p>
-                </header>
-                {sessionValueSamples.length === 0 ? (
-                  <p className="pf-groww-pnl-shell__waiting">Sampling live valuation…</p>
-                ) : (
-                  <PortfolioLiveValueVsCostChart
-                    samples={sessionValueSamples}
-                    investedInr={allocatedCost}
-                    formatInrAxis={(n) =>
-                      privacyMasked
-                        ? '••••'
-                        : `₹${n.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`
-                    }
-                  />
-                )}
-              </section>
-            ) : null}
-
             <PortfolioVaultHoldingsList
               vaults={vaults}
               allocatedCost={allocatedCost}
               totalHeldGrams={heldGramsSum}
               masked={privacyMasked}
+              liveProfitBlock={
+                heldGramsSum > 0 ? (
+                  <>
+                    {sessionValueSamples.length === 0 ? (
+                      <p className="pf-groww-holdings__chart-waiting">Sampling live valuation…</p>
+                    ) : (
+                      <PortfolioLiveValueVsCostChart
+                        samples={sessionValueSamples}
+                        investedInr={allocatedCost}
+                        formatInrAxis={(n) =>
+                          privacyMasked
+                            ? '••••'
+                            : `₹${n.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`
+                        }
+                      />
+                    )}
+                  </>
+                ) : undefined
+              }
             />
 
             {unrealized?.basis_note ? (
