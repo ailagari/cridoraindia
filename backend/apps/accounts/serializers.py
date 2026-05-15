@@ -10,7 +10,13 @@ from .wallet_extras import (
     customer_portfolio_unrealized_summary,
     jeweller_recent_liability_credits,
 )
-from .models import AdminNotification, AdminNotificationRead, BankAccount, KYDocument
+from .models import (
+    AdminNotification,
+    AdminNotificationRead,
+    BankAccount,
+    FestivalBroadcastNotification,
+    KYDocument,
+)
 from .vault_service import sync_customer_aggregate_balance, wallet_vault_payload
 
 User = get_user_model()
@@ -403,6 +409,46 @@ class AdminNotificationSerializer(serializers.ModelSerializer):
         return not AdminNotificationRead.objects.filter(
             notification=obj, user=request.user
         ).exists()
+
+
+class FestivalBroadcastNotificationSerializer(serializers.ModelSerializer):
+    created_by_email = serializers.EmailField(source="created_by.email", read_only=True)
+
+    class Meta:
+        model = FestivalBroadcastNotification
+        fields = (
+            "id",
+            "title",
+            "body",
+            "scheduled_at",
+            "status",
+            "sent_at",
+            "push_recipient_count",
+            "error_message",
+            "created_by_email",
+            "created_at",
+        )
+        read_only_fields = fields
+
+
+class FestivalBroadcastNotificationCreateSerializer(serializers.Serializer):
+    title = serializers.CharField(
+        max_length=120, required=False, allow_blank=True, default=""
+    )
+    body = serializers.CharField(max_length=2000, min_length=1)
+    scheduled_at = serializers.DateTimeField()
+
+    def create(self, validated_data):
+        request = self.context["request"]
+        title = (validated_data.get("title") or "").strip() or "Cridora"
+        body = validated_data["body"].strip()
+        scheduled_at = validated_data["scheduled_at"]
+        return FestivalBroadcastNotification.objects.create(
+            title=title,
+            body=body,
+            scheduled_at=scheduled_at,
+            created_by=request.user,
+        )
 
 
 def user_auth_payload(user):

@@ -591,3 +591,54 @@ class AdminNotificationRead(models.Model):
                 fields=["user", "notification"], name="uniq_admin_notification_read"
             ),
         ]
+
+
+class FestivalBroadcastNotification(models.Model):
+    """Admin-scheduled Web Push broadcast (e.g. festival message) to all subscribed devices."""
+
+    STATUS_PENDING = "pending"
+    STATUS_SENT = "sent"
+    STATUS_CANCELLED = "cancelled"
+    STATUS_FAILED = "failed"
+    STATUS_CHOICES = [
+        (STATUS_PENDING, "Pending"),
+        (STATUS_SENT, "Sent"),
+        (STATUS_CANCELLED, "Cancelled"),
+        (STATUS_FAILED, "Failed"),
+    ]
+
+    title = models.CharField(
+        max_length=120,
+        default="Cridora",
+        help_text="Notification title shown on the device.",
+    )
+    body = models.TextField(help_text="Main message body.")
+    scheduled_at = models.DateTimeField(
+        db_index=True,
+        help_text="When to send (UTC in DB; use aware datetimes from the API).",
+    )
+    status = models.CharField(
+        max_length=16,
+        choices=STATUS_CHOICES,
+        default=STATUS_PENDING,
+        db_index=True,
+    )
+    sent_at = models.DateTimeField(null=True, blank=True)
+    push_recipient_count = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="Number of push endpoints successfully targeted when sent.",
+    )
+    error_message = models.TextField(blank=True, default="")
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name="festival_broadcasts_created",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"FestivalBroadcast({self.scheduled_at}, {self.status})"

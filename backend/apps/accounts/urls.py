@@ -43,6 +43,10 @@ from .fractional_views import (
     JewellerFractionalPendingView,
     JewellerFractionalVerifyView,
 )
+from .views_festival_broadcast import (
+    AdminFestivalBroadcastCancelView,
+    AdminFestivalBroadcastListCreateView,
+)
 from .views_push import (
     WebPushAdminSelfTestView,
     WebPushSubscribeView,
@@ -50,6 +54,11 @@ from .views_push import (
     WebPushVapidPublicKeyView,
 )
 urlpatterns = [
+    path("admin/festival-broadcasts/", AdminFestivalBroadcastListCreateView.as_view()),
+    path(
+        "admin/festival-broadcasts/<int:pk>/cancel/",
+        AdminFestivalBroadcastCancelView.as_view(),
+    ),
     path("push/vapid-public-key/", WebPushVapidPublicKeyView.as_view()),
     path("push/subscribe/", WebPushSubscribeView.as_view()),
     path("push/unsubscribe/", WebPushUnsubscribeView.as_view()),

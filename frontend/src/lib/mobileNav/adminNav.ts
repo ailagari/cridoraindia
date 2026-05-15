@@ -45,6 +45,7 @@ export const ADMIN_NAV_GROUPS: DashboardNavGroup[] = [
     icon: 'building',
     items: [
       { sectionKey: 'people_users', label: 'Users' },
+      { sectionKey: 'plat_festival', label: 'Festival pushes' },
       { sectionKey: 'plat_gold', label: 'Ticker & fees' },
       { sectionKey: 'plat_control', label: 'Controls' },
     ],

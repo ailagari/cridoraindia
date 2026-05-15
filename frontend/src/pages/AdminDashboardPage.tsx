@@ -7,6 +7,7 @@ import { LIVE_ADMIN_POLL_MS } from '@/lib/liveDeskIntervals'
 import { useLivePoll } from '@/lib/useLivePoll'
 import { AdminPortfolioPanel } from '@/features/portfolio/AdminPortfolioPanel'
 import { AdminFractionalOtpPolicyPanel } from '@/features/admin/AdminFractionalOtpPolicyPanel'
+import { AdminFestivalBroadcastPanel } from '@/features/admin/AdminFestivalBroadcastPanel'
 import { AdminGoldTickerPanel, AdminMarketplaceModerationPanel } from '@/features/marketplace/AdminMarketplaceSection'
 
 import { ADMIN_DEFAULT_SECTION, ADMIN_NAV_GROUPS, normalizeAdminSection } from '@/lib/mobileNav/adminNav'
@@ -579,6 +580,8 @@ export function AdminDashboardPage() {
             </p>
           </div>
         ) : null}
+
+        {active === 'plat_festival' ? <AdminFestivalBroadcastPanel /> : null}
 
         {active === 'plat_control' ? (
           <>
