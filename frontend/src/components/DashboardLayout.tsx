@@ -4,7 +4,7 @@ import { CridoraLogo } from '@/components/CridoraLogo'
 import { NavHubIcon } from '@/components/NavHubIcon'
 import { GoldTickerStrip } from '@/components/GoldTickerStrip'
 import { NotificationBell } from '@/components/NotificationBell'
-import { useAuth } from '@/context/AuthContext'
+import { useAuth, type AuthUser } from '@/context/AuthContext'
 import type { DashboardNavGroup } from '@/lib/mobileNav/types'
 
 export type { DashboardNavItem, DashboardNavGroup } from '@/lib/mobileNav/types'
@@ -16,6 +16,25 @@ const ROLE_META: Record<
   customer: { badge: 'Saver', accentVar: 'var(--dash-copper)' },
   jeweller: { badge: 'Jeweller', accentVar: 'var(--dash-silver-tone)' },
   admin: { badge: 'Cridora admin', accentVar: 'var(--gold-light)' },
+}
+
+function jewellerSidebarDisplayName(user: AuthUser): string {
+  const biz = user.business_name.trim()
+  if (biz) return biz
+  const personal = `${user.first_name} ${user.last_name}`.trim()
+  if (personal) return personal
+  return user.email
+}
+
+function sidebarAvatarLetter(user: AuthUser, role: 'customer' | 'jeweller' | 'admin'): string {
+  if (role === 'jeweller') {
+    const biz = user.business_name.trim()
+    const src = biz || `${user.first_name} ${user.last_name}`.trim() || user.email
+    const ch = src.trim()[0]
+    return ch ? ch.toUpperCase() : 'U'
+  }
+  const ch = user.first_name?.trim()[0] ?? user.email?.trim()[0]
+  return ch ? ch.toUpperCase() : 'U'
 }
 
 type Props = {
@@ -160,7 +179,7 @@ export function DashboardLayout({
     [accordionOpen, activeSection, meta.accentVar, pickSection, role, toggleAccordion],
   )
 
-  const initial = user?.first_name?.[0] ?? user?.email?.[0] ?? 'U'
+  const initial = user != null ? sidebarAvatarLetter(user, role) : 'U'
 
   return (
     <div className={`dash-shell dash-shell--${role}`}>
@@ -191,7 +210,11 @@ export function DashboardLayout({
           </div>
           <div className="dash-user-text">
             <div className="dash-user-name">
-              {user?.first_name} {user?.last_name}
+              {!user ? null : role === 'jeweller' ? jewellerSidebarDisplayName(user) : (
+                <>
+                  {user.first_name} {user.last_name}
+                </>
+              )}
             </div>
             <div className="dash-user-role" style={{ color: meta.accentVar }}>
               {meta.badge}

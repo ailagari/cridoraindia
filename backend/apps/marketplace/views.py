@@ -100,6 +100,7 @@ class MarketplaceJewellersPublicView(APIView):
         qs = User.objects.filter(
             user_type=User.JEWELLER,
             kyc_status=User.KYC_VERIFIED,
+            is_active=True,
         ).order_by("business_name", "email")
         city = (request.query_params.get("city") or "").strip()
         if city:
@@ -117,6 +118,7 @@ class MarketplaceJewellerDetailPublicView(APIView):
                 pk=pk,
                 user_type=User.JEWELLER,
                 kyc_status=User.KYC_VERIFIED,
+                is_active=True,
             )
         except User.DoesNotExist:
             return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)

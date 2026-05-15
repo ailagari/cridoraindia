@@ -380,6 +380,7 @@ def user_auth_payload(user):
             "last_name": user.last_name,
             "user_type": user.user_type,
             "kyc_status": user.kyc_status,
+            "business_name": user.business_name,
         }
     )
     return tokens

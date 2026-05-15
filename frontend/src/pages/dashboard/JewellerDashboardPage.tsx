@@ -136,7 +136,9 @@ function JewellerOverview() {
         <div className={`dash-spot dash-spot--${tone}`}>
           <span className="dash-spot__eyebrow">KYB status</span>
           <p className="dash-spot__value">{user?.kyc_status}</p>
-          <p className="dash-spot__sub">Verified jewellers join the live network; listings remain private until approval.</p>
+          <p className="dash-spot__sub">
+            After KYB approval, your shop appears on public jeweller directory pages; SKU listings still follow admin review.
+          </p>
         </div>
         <div className="dash-spot dash-spot--gold">
           <span className="dash-spot__eyebrow">Business profile</span>

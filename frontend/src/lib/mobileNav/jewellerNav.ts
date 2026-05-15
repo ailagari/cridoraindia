@@ -46,7 +46,7 @@ export const JEWELLER_NAV_GROUPS: DashboardNavGroup[] = [
     icon: 'profile',
     items: [
       { sectionKey: 'prof_kyb', label: 'KYB' },
-      { sectionKey: 'prof_more', label: 'Business' },
+      { sectionKey: 'prof_more', label: 'Shop & business' },
     ],
   },
 ]

@@ -23,6 +23,7 @@ export type AuthUser = {
   last_name: string
   user_type: UserType
   kyc_status: string
+  business_name: string
 }
 
 type AuthContextValue = {
@@ -52,7 +53,11 @@ function readStoredUser(): AuthUser | null {
   const raw = localStorage.getItem('cridora_user')
   if (!raw) return null
   try {
-    return JSON.parse(raw) as AuthUser
+    const u = JSON.parse(raw) as AuthUser
+    return {
+      ...u,
+      business_name: typeof u.business_name === 'string' ? u.business_name : '',
+    }
   } catch {
     return null
   }
@@ -86,6 +91,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       last_name: String(data.last_name ?? ''),
       user_type: data.user_type as UserType,
       kyc_status: String(data.kyc_status ?? 'pending'),
+      business_name: typeof data.business_name === 'string' ? data.business_name : '',
     }
     saveUser(u)
     setUser(u)
@@ -173,6 +179,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       last_name: String(data.last_name ?? ''),
       user_type: data.user_type as UserType,
       kyc_status: String(data.kyc_status ?? 'pending'),
+      business_name: typeof data.business_name === 'string' ? data.business_name : '',
     }
     saveUser(u)
     setUser(u)
