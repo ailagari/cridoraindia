@@ -29,6 +29,7 @@ from .serializers import GoldTransferNotifySerializer, GoldWalletSerializer
 from .vault_service import (
     credit_customer_fractional,
     debit_customer_fractional,
+    jeweller_custody_vault_payload,
     legacy_credit_jeweller_balance,
     legacy_debit_jeweller_balance,
     migrate_customer_legacy_balance_if_needed,
@@ -132,6 +133,30 @@ class GoldWalletView(APIView):
             user=request.user, defaults={"balance_grams": Decimal("0")}
         )
         return Response(_wallet_payload(request.user))
+
+
+class JewellerCustodyVaultsView(APIView):
+    """Customer fractional vault balances custodied by this jeweller (non-zero only)."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        if user.user_type != User.JEWELLER:
+            return Response(
+                {"detail": "Jewellers only."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        rows = jeweller_custody_vault_payload(user)
+        total_g = sum(Decimal(r["fractional_grams"]) for r in rows)
+        est_inr_total = sum(Decimal(r["estimated_fractional_value_inr"] or "0") for r in rows)
+        return Response(
+            {
+                "results": rows,
+                "custodian_fractional_grams_total": str(total_g),
+                "custodian_estimated_value_inr_total": str(est_inr_total.quantize(Decimal("0.01"))),
+            }
+        )
 
 
 class GoldUPIResolveView(APIView):

@@ -4,6 +4,7 @@ import { DashboardLayout } from '@/components/DashboardLayout'
 import { JewellerBusinessProfilePanel } from '@/features/jeweller/JewellerBusinessProfilePanel'
 import { JewellerKybWorkflow } from '@/features/jeweller/JewellerKybWorkflow'
 import { JewellerPortfolioPanel } from '@/features/portfolio/JewellerPortfolioPanel'
+import { JewellerCustomerVaultsPanel } from '@/features/portfolio/JewellerCustomerVaultsPanel'
 import { GoldTransferPanel } from '@/features/gold/GoldTransferPanel'
 import { JewellerMarketplacePanel } from '@/features/marketplace/JewellerMarketplacePanel'
 import { JewellerRatesSchemesPanel } from '@/features/marketplace/JewellerRatesSchemesPanel'
@@ -85,9 +86,7 @@ export function JewellerDashboardPage() {
           <JewellerPortfolioPanel />
         </>
       ) : null}
-      {active === 'cust_hub' ? (
-        <Coming title="Customer vaults" body="Roster, holdings, and liabilities surface here when jeweller-scoped APIs connect." />
-      ) : null}
+      {active === 'cust_hub' ? <JewellerCustomerVaultsPanel /> : null}
       {active === 'mkt_products' ? <JewellerMarketplacePanel /> : null}
       {active === 'mkt_policy' ? (
         <div className="dash-panel-max">

@@ -61,6 +61,24 @@ export type GoldWalletDTO = {
   portfolio_unrealized?: PortfolioUnrealizedDTO | null
 }
 
+export type JewellerCustodyVaultRowDTO = {
+  vault_public_id: string
+  customer_id: number
+  customer_member_id: string
+  customer_label: string
+  customer_email: string
+  fractional_grams: string
+  jeweller_metal_rate_inr_per_gram?: string
+  estimated_fractional_value_inr?: string
+  jeweller_metal_rate_last_updated_at?: string
+}
+
+export type JewellerCustodyVaultsPayloadDTO = {
+  results: JewellerCustodyVaultRowDTO[]
+  custodian_fractional_grams_total: string
+  custodian_estimated_value_inr_total: string
+}
+
 export type GoldResolveRecipient = {
   gold_upi: string
   display_name: string
@@ -73,6 +91,12 @@ export async function fetchGoldWallet(): Promise<GoldWalletDTO | null> {
   const res = await authFetch('/api/v1/gold/wallet/')
   if (!res.ok) return null
   return (await res.json()) as GoldWalletDTO
+}
+
+export async function fetchJewellerCustodyVaults(): Promise<JewellerCustodyVaultsPayloadDTO | null> {
+  const res = await authFetch('/api/v1/jeweller/custody-vaults/')
+  if (!res.ok) return null
+  return (await res.json()) as JewellerCustodyVaultsPayloadDTO
 }
 
 export async function resolveGoldUPI(gold_upi: string): Promise<{

@@ -181,3 +181,58 @@ def wallet_vault_payload(customer: User) -> list[dict]:
             }
         )
     return rows
+
+
+def jeweller_custody_vault_payload(jeweller: User) -> list[dict]:
+    """Customer fractional vaults custodied by this jeweller (non-zero balances), with reference ₹/g marks."""
+    if jeweller.user_type != User.JEWELLER:
+        return []
+    from django.db.models import Prefetch
+
+    from apps.marketplace.models import jeweller_profile_for
+    from apps.marketplace.pricing import (
+        jeweller_rate_effective_updated_at,
+        reference_metal_rate_inr_per_gram_for_jeweller,
+    )
+    from apps.marketplace.spot_prices import resolve_cridora_base_22k_inr
+
+    profile = jeweller_profile_for(jeweller)
+    cridora_base, _ = resolve_cridora_base_22k_inr()
+    metal_rate = reference_metal_rate_inr_per_gram_for_jeweller(profile, cridora_base)
+    rate_as_of = jeweller_rate_effective_updated_at(profile)
+    rate_iso = rate_as_of.isoformat()
+
+    frac_holdings = Prefetch(
+        "holdings",
+        queryset=VaultHolding.objects.filter(holding_type=VaultHolding.FRACTIONAL),
+    )
+    qs = (
+        GoldVault.objects.filter(custodian=jeweller)
+        .select_related("owner")
+        .prefetch_related(frac_holdings)
+        .order_by("owner_id")
+    )
+    rows: list[dict] = []
+    for v in qs:
+        holding = next(iter(v.holdings.all()), None)
+        g = holding.balance_grams if holding else Decimal("0")
+        if g <= 0:
+            continue
+        owner = v.owner
+        est_inr = (g * metal_rate).quantize(Decimal("0.01"))
+        label = f"{owner.first_name} {owner.last_name}".strip() or (owner.email or "")
+        rows.append(
+            {
+                "vault_public_id": v.vault_public_id or "",
+                "customer_id": owner.id,
+                "customer_member_id": owner.cridora_member_id or "",
+                "customer_label": label,
+                "customer_email": owner.email or "",
+                "fractional_grams": str(g),
+                "jeweller_metal_rate_inr_per_gram": str(metal_rate),
+                "estimated_fractional_value_inr": str(est_inr),
+                "jeweller_metal_rate_last_updated_at": rate_iso,
+            }
+        )
+    rows.sort(key=lambda r: Decimal(r["fractional_grams"]), reverse=True)
+    return rows
