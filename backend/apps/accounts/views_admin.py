@@ -16,6 +16,7 @@ from .models import (
     FractionalGoldPurchase,
     JewellerLiabilityBalance,
     KYDocument,
+    PlatformOperationalSettings,
     VaultHolding,
 )
 from .serializers import (
@@ -27,6 +28,10 @@ from .serializers import (
 )
 from .services.admin_access import user_is_platform_admin
 from .services.kyc_review import customer_in_review_queue, jeweller_in_review_queue
+from .services.platform_operational import (
+    fractional_counter_otp_ttl_seconds_int,
+    set_fractional_counter_otp_ttl_seconds,
+)
 
 User = get_user_model()
 
@@ -462,4 +467,36 @@ class AdminFreezeUserView(APIView):
                 "detail": "User updated.",
                 "is_active": user.is_active,
             }
+        )
+
+
+class AdminFractionalCounterOtpPolicyView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        err = _require_admin(request)
+        if err:
+            return err
+        row = PlatformOperationalSettings.objects.filter(pk=1).first()
+        secs = row.fractional_counter_otp_ttl_seconds if row else 900
+        return Response({"fractional_counter_otp_ttl_seconds": secs})
+
+    def patch(self, request):
+        err = _require_admin(request)
+        if err:
+            return err
+        raw = request.data.get("fractional_counter_otp_ttl_seconds")
+        try:
+            val = int(raw)
+        except (TypeError, ValueError):
+            return Response(
+                {"detail": "fractional_counter_otp_ttl_seconds must be an integer."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            set_fractional_counter_otp_ttl_seconds(val)
+        except ValueError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"fractional_counter_otp_ttl_seconds": fractional_counter_otp_ttl_seconds_int()}
         )

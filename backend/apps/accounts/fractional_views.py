@@ -2,6 +2,7 @@ from decimal import Decimal
 
 from django.contrib.auth import get_user_model
 from django.db import transaction
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -16,7 +17,7 @@ from .fractional_service import (
     jeweller_metal_rate_inr_per_gram,
     validate_minimums,
 )
-from .models import FractionalGoldPurchase
+from .models import FractionalCounterOtp, FractionalGoldPurchase
 from apps.marketplace.models import jeweller_profile_for
 from apps.marketplace.pricing import jeweller_rate_effective_updated_at
 
@@ -233,7 +234,21 @@ class FractionalCounterOtpIssueView(APIView):
         payload = _ser_purchase(purchase)
         payload["otp"] = code
         payload["otp_expires_at"] = expires_at.isoformat()
+        payload["otp_ttl_seconds"] = max(
+            0, int((expires_at - timezone.now()).total_seconds())
+        )
         return Response(payload)
+
+
+class FractionalCounterOtpPolicyView(APIView):
+    """Current counter OTP validity window (seconds); any authenticated user may read."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from .services.platform_operational import fractional_counter_otp_ttl_seconds_int
+
+        return Response({"otp_ttl_seconds": fractional_counter_otp_ttl_seconds_int()})
 
 
 class FractionalOrderConfirmUpiView(APIView):
@@ -278,7 +293,7 @@ class JewellerFractionalPendingView(APIView):
         qs = FractionalGoldPurchase.objects.filter(
             jeweller=request.user,
             status=FractionalGoldPurchase.AWAITING_COUNTER,
-        ).select_related("customer")[:100]
+        ).select_related("customer", "counter_otp")[:100]
         out = []
         for p in qs:
             row = _ser_purchase(p)
@@ -287,6 +302,10 @@ class JewellerFractionalPendingView(APIView):
                 "name": f"{p.customer.first_name} {p.customer.last_name}".strip(),
                 "cridora_member_id": p.customer.cridora_member_id or "",
             }
+            try:
+                row["otp_expires_at"] = p.counter_otp.expires_at.isoformat()
+            except FractionalCounterOtp.DoesNotExist:
+                row["otp_expires_at"] = None
             out.append(row)
         return Response({"results": out})
 

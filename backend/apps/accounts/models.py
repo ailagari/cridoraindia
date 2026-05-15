@@ -1,4 +1,5 @@
 from django.contrib.auth.models import AbstractUser
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.dispatch import receiver
 from django.db.models.signals import post_save
@@ -444,6 +445,36 @@ class FractionalCounterOtp(models.Model):
 
     def __str__(self):
         return f"FractionalCounterOtp(purchase={self.purchase_id})"
+
+
+class PlatformOperationalSettings(models.Model):
+    """Singleton (pk=1): runtime operational limits configurable without redeploy."""
+
+    fractional_counter_otp_ttl_seconds = models.PositiveIntegerField(
+        default=900,
+        validators=[MinValueValidator(60), MaxValueValidator(86400)],
+        help_text="Counter fractional OTP validity window (60–86400 seconds).",
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Platform operational settings"
+        verbose_name_plural = "Platform operational settings"
+
+    def save(self, *args, **kwargs):
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        return None
+
+    def __str__(self):
+        return "Platform operational settings"
+
+    @classmethod
+    def load(cls):
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj
 
 
 class JewellerLiabilityBalance(models.Model):

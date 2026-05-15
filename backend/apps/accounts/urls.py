@@ -25,6 +25,7 @@ from .views_admin import (
     AdminCustomerKYCActionView,
     AdminDocumentRequestReuploadView,
     AdminFreezeUserView,
+    AdminFractionalCounterOtpPolicyView,
     AdminJewellerKYBActionView,
     AdminNotificationsListView,
     AdminNotificationsMarkReadView,
@@ -34,6 +35,7 @@ from .views_admin import (
 )
 from .fractional_views import (
     FractionalCounterOtpIssueView,
+    FractionalCounterOtpPolicyView,
     FractionalOrderConfirmUpiView,
     FractionalOrdersView,
     FractionalQuoteView,
@@ -70,6 +72,10 @@ urlpatterns = [
         FractionalCounterOtpIssueView.as_view(),
     ),
     path(
+        "fractional/counter-otp-policy/",
+        FractionalCounterOtpPolicyView.as_view(),
+    ),
+    path(
         "fractional/orders/<int:pk>/confirm-upi/",
         FractionalOrderConfirmUpiView.as_view(),
     ),
@@ -84,6 +90,10 @@ urlpatterns = [
     path("kyc/documents/", KYDocumentListView.as_view()),
     path("kyc/documents/upload/", KYDocumentUploadView.as_view()),
     path("admin/overview/", AdminOverviewView.as_view()),
+    path(
+        "admin/fractional-counter-otp-policy/",
+        AdminFractionalCounterOtpPolicyView.as_view(),
+    ),
     path("admin/notifications/", AdminNotificationsListView.as_view()),
     path("admin/notifications/mark-read/", AdminNotificationsMarkReadView.as_view()),
     path(

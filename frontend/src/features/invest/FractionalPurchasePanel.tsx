@@ -6,9 +6,11 @@ import {
   fractionalIssueCounterOtp,
   fractionalListOrders,
   fractionalQuote,
+  fetchFractionalCounterOtpPolicy,
   type FractionalPurchaseDTO,
   type FractionalQuoteDTO,
 } from '@/lib/fractionalPurchaseApi'
+import { useCounterOtpCountdown } from '@/features/invest/useCounterOtpCountdown'
 import { fetchGoldWallet } from '@/lib/goldTransferApi'
 import { LIVE_BALANCE_POLL_MS } from '@/lib/liveDeskIntervals'
 import { useLivePoll } from '@/lib/useLivePoll'
@@ -44,6 +46,9 @@ export function FractionalPurchasePanel() {
   const [lastOrder, setLastOrder] = useState<FractionalPurchaseDTO | null>(null)
   const [balanceHint, setBalanceHint] = useState('')
   const [otpReveal, setOtpReveal] = useState<{ orderId: number; otp: string; expiresAt: string } | null>(null)
+  const [otpPolicySeconds, setOtpPolicySeconds] = useState<number | null>(null)
+
+  const otpCountdown = useCounterOtpCountdown(otpReveal?.expiresAt ?? null)
 
   const refreshOrders = useCallback(async () => {
     setOrders(await fractionalListOrders())
@@ -73,6 +78,19 @@ export function FractionalPurchasePanel() {
   useEffect(() => {
     void refreshOrders()
   }, [refreshOrders])
+
+  useEffect(() => {
+    void fetchFractionalCounterOtpPolicy().then((r) => {
+      if (r.ok) setOtpPolicySeconds(r.otp_ttl_seconds)
+    })
+  }, [])
+
+  useEffect(() => {
+    const oid = otpReveal?.orderId
+    if (oid == null) return
+    const row = orders.find((x) => x.id === oid)
+    if (row && row.status !== 'awaiting_counter') setOtpReveal(null)
+  }, [orders, otpReveal?.orderId])
 
   useLivePoll(refreshOrders, LIVE_BALANCE_POLL_MS, !busy)
   useLivePoll(refreshWalletHint, LIVE_BALANCE_POLL_MS, !busy)
@@ -157,6 +175,9 @@ export function FractionalPurchasePanel() {
         otp: out.data.otp,
         expiresAt: out.data.otp_expires_at,
       })
+      if (typeof out.data.otp_ttl_seconds === 'number' && Number.isFinite(out.data.otp_ttl_seconds)) {
+        setOtpPolicySeconds(out.data.otp_ttl_seconds)
+      }
     } finally {
       setBusy(false)
       await refreshOrders()
@@ -175,6 +196,13 @@ export function FractionalPurchasePanel() {
         Quotes always use <strong>your jeweller&apos;s rate</strong>, not a generic platform headline. Use <strong>Show live
         quote</strong> to refresh ₹/g and see when that rate was last updated.
       </p>
+
+      {otpPolicySeconds != null ? (
+        <p style={{ margin: '0 0 1rem', fontSize: '0.82rem', color: 'var(--text-muted)' }} aria-live="polite">
+          Counter OTP codes stay valid for about <strong className="tabular">{Math.round(otpPolicySeconds / 60)}</strong>{' '}
+          minutes ({otpPolicySeconds}s); platform admins set this window.
+        </p>
+      ) : null}
 
       <div className="card" style={{ marginBottom: '1.25rem', maxWidth: 560 }}>
         <div className="dash-form-stack">
@@ -326,10 +354,14 @@ export function FractionalPurchasePanel() {
               <button
                 type="button"
                 className="btn btn-primary btn--block"
-                disabled={busy}
+                disabled={busy || (otpReveal?.orderId === lastOrder.id && !otpCountdown.expired)}
                 onClick={() => void issueOtp(lastOrder.id)}
               >
-                Generate verification OTP
+                {otpReveal?.orderId === lastOrder.id && otpCountdown.expired
+                  ? 'Generate new verification OTP'
+                  : otpReveal?.orderId === lastOrder.id && !otpCountdown.expired
+                    ? 'OTP active — use timer below'
+                    : 'Generate verification OTP'}
               </button>
             </div>
           ) : null}
@@ -342,6 +374,7 @@ export function FractionalPurchasePanel() {
                 borderRadius: 12,
                 border: '1px solid var(--gold-muted, #b8860b)',
                 background: 'var(--veil-35)',
+                opacity: otpCountdown.expired ? 0.65 : 1,
               }}
               role="status"
               aria-live="polite"
@@ -361,9 +394,20 @@ export function FractionalPurchasePanel() {
               >
                 {otpReveal.otp}
               </p>
-              <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                Expires {formatExpiry(otpReveal.expiresAt)} · Regenerate if needed before expiry.
+              <p style={{ margin: '0 0 0.35rem', fontSize: '0.82rem', color: otpCountdown.expired ? 'var(--danger)' : 'var(--text-muted)', fontWeight: 700 }}>
+                {otpCountdown.expired
+                  ? 'This OTP has expired.'
+                  : `Time remaining ${otpCountdown.labelMmSs} · expires ${formatExpiry(otpReveal.expiresAt)}`}
               </p>
+              <button
+                type="button"
+                className="btn btn-primary btn--block"
+                style={{ marginTop: '0.65rem' }}
+                disabled={busy || !otpCountdown.expired}
+                onClick={() => void issueOtp(otpReveal.orderId)}
+              >
+                {otpCountdown.expired ? 'Generate new OTP' : 'Regenerate OTP after expiry'}
+              </button>
             </div>
           ) : null}
 
@@ -412,10 +456,14 @@ export function FractionalPurchasePanel() {
                     type="button"
                     className="btn btn-ghost btn--block"
                     style={{ marginTop: '0.25rem' }}
-                    disabled={busy}
+                    disabled={busy || (otpReveal?.orderId === o.id && !otpCountdown.expired)}
                     onClick={() => void issueOtp(o.id)}
                   >
-                    Generate OTP
+                    {otpReveal?.orderId === o.id && otpCountdown.expired
+                      ? 'Generate new OTP'
+                      : otpReveal?.orderId === o.id && !otpCountdown.expired
+                        ? 'OTP active'
+                        : 'Generate OTP'}
                   </button>
                 ) : null}
               </li>

@@ -4,15 +4,15 @@ from __future__ import annotations
 
 import hashlib
 import secrets
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from django.conf import settings
 from django.utils import timezone
 
 from .models import FractionalCounterOtp, FractionalGoldPurchase
+from .services.platform_operational import fractional_counter_otp_ttl_timedelta
 
 OTP_DIGITS = 6
-OTP_TTL = timedelta(minutes=15)
 MAX_FAILED_ATTEMPTS = 5
 
 
@@ -32,7 +32,7 @@ def issue_counter_otp(purchase: FractionalGoldPurchase) -> tuple[str, datetime]:
     if purchase.status != FractionalGoldPurchase.AWAITING_COUNTER:
         raise ValueError("Order is not awaiting counter verification.")
     code = _generate_numeric_code()
-    expires_at = timezone.now() + OTP_TTL
+    expires_at = timezone.now() + fractional_counter_otp_ttl_timedelta()
     digest = _hash_otp(purchase.pk, code)
     FractionalCounterOtp.objects.update_or_create(
         purchase=purchase,

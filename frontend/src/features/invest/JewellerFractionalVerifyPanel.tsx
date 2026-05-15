@@ -4,6 +4,7 @@ import {
   jewellerFractionalVerify,
   type JewellerFractionalPendingRow,
 } from '@/lib/fractionalPurchaseApi'
+import { useCounterOtpCountdown } from '@/features/invest/useCounterOtpCountdown'
 import { LIVE_BALANCE_POLL_MS } from '@/lib/liveDeskIntervals'
 import { useLivePoll } from '@/lib/useLivePoll'
 
@@ -21,6 +22,37 @@ type VerifiedReceipt = {
 }
 
 const OTP_LEN = 6
+
+function formatExpiryShort(iso: string): string {
+  const t = Date.parse(iso)
+  if (Number.isNaN(t)) return iso
+  return new Date(t).toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' })
+}
+
+function CustomerOtpExpiryHint({ expiresAt }: { expiresAt?: string | null }) {
+  const { expired, labelMmSs } = useCounterOtpCountdown(expiresAt ?? null)
+  if (expiresAt == null || expiresAt === '') {
+    return (
+      <p style={{ margin: '0.35rem 0 0', fontSize: '0.72rem', color: 'var(--text-faint)' }}>
+        No OTP issued yet — customer taps Generate OTP after paying.
+      </p>
+    )
+  }
+  return (
+    <p
+      style={{
+        margin: '0.35rem 0 0',
+        fontSize: '0.72rem',
+        color: expired ? 'var(--danger)' : 'var(--text-muted)',
+        fontWeight: expired ? 700 : 400,
+      }}
+    >
+      {expired
+        ? 'OTP expired — customer must generate a new code.'
+        : `OTP valid ${labelMmSs} remaining · ends ${formatExpiryShort(expiresAt)}`}
+    </p>
+  )
+}
 
 export function JewellerFractionalVerifyPanel() {
   const [rows, setRows] = useState<JewellerFractionalPendingRow[]>([])
@@ -266,6 +298,7 @@ export function JewellerFractionalVerifyPanel() {
                   <p id={`otp-hint-${r.id}`} style={{ margin: '0.45rem 0 0', fontSize: '0.72rem', color: 'var(--text-faint)' }}>
                     {otp.length}/{OTP_LEN} digits
                   </p>
+                  <CustomerOtpExpiryHint expiresAt={r.otp_expires_at} />
                   <button
                     type="button"
                     className="btn btn-primary btn--block"

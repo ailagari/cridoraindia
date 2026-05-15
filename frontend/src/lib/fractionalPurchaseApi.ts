@@ -31,6 +31,7 @@ export type FractionalPurchaseDTO = {
 export type FractionalCounterOtpResponseDTO = FractionalPurchaseDTO & {
   otp: string
   otp_expires_at: string
+  otp_ttl_seconds?: number
 }
 
 export async function fractionalQuote(body: {
@@ -90,6 +91,15 @@ export async function fractionalIssueCounterOtp(
   return { ok: true, data: data as FractionalCounterOtpResponseDTO }
 }
 
+export async function fetchFractionalCounterOtpPolicy(): Promise<{ ok: true; otp_ttl_seconds: number } | { ok: false }> {
+  const res = await authFetch('/api/v1/fractional/counter-otp-policy/')
+  const data = (await res.json().catch(() => ({}))) as { otp_ttl_seconds?: number }
+  if (!res.ok || typeof data.otp_ttl_seconds !== 'number' || !Number.isFinite(data.otp_ttl_seconds)) {
+    return { ok: false }
+  }
+  return { ok: true, otp_ttl_seconds: data.otp_ttl_seconds }
+}
+
 /** Legacy UPI self-confirm — backend accepts only if an old UPI order exists. */
 export async function fractionalConfirmUpi(
   orderId: number,
@@ -107,6 +117,7 @@ export async function fractionalConfirmUpi(
 
 export type JewellerFractionalPendingRow = FractionalPurchaseDTO & {
   customer: { email: string; name: string; cridora_member_id: string }
+  otp_expires_at?: string | null
 }
 
 export async function jewellerFractionalPending(): Promise<JewellerFractionalPendingRow[]> {

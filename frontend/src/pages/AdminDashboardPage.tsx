@@ -6,6 +6,7 @@ import { authFetch } from '@/lib/api'
 import { LIVE_ADMIN_POLL_MS } from '@/lib/liveDeskIntervals'
 import { useLivePoll } from '@/lib/useLivePoll'
 import { AdminPortfolioPanel } from '@/features/portfolio/AdminPortfolioPanel'
+import { AdminFractionalOtpPolicyPanel } from '@/features/admin/AdminFractionalOtpPolicyPanel'
 import { AdminGoldTickerPanel, AdminMarketplaceModerationPanel } from '@/features/marketplace/AdminMarketplaceSection'
 
 import { ADMIN_DEFAULT_SECTION, ADMIN_NAV_GROUPS, normalizeAdminSection } from '@/lib/mobileNav/adminNav'
@@ -580,12 +581,15 @@ export function AdminDashboardPage() {
         ) : null}
 
         {active === 'plat_control' ? (
-          <div className="dash-coming dash-coming--ledger">
-            <h2 className="dash-coming__title">Platform controls</h2>
-            <p className="dash-coming__text">
-              Emergency liquidity oversight, fee templates, and integration posture — Django admin remains authoritative until exposed here.
-            </p>
-          </div>
+          <>
+            <AdminFractionalOtpPolicyPanel />
+            <div className="dash-coming dash-coming--ledger" style={{ marginTop: '1.5rem', maxWidth: 560 }}>
+              <h2 className="dash-coming__title">Other controls</h2>
+              <p className="dash-coming__text">
+                Emergency liquidity oversight, fee templates, and integration posture — Django admin remains authoritative until exposed here.
+              </p>
+            </div>
+          </>
         ) : null}
       </div>
 
