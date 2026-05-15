@@ -80,12 +80,6 @@ export function JewellerCustomerVaultsPanel() {
                   <h3 style={{ margin: 0, fontSize: '1.05rem' }}>{v.customer_label || 'Customer'}</h3>
                   <p style={{ margin: '0.35rem 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                     Member ID <span className="tabular">{v.customer_member_id?.trim() ? v.customer_member_id : '—'}</span>
-                    {v.customer_email ? (
-                      <>
-                        {' '}
-                        · <span style={{ wordBreak: 'break-all' }}>{v.customer_email}</span>
-                      </>
-                    ) : null}
                   </p>
                 </div>
                 <div style={{ textAlign: 'right' }}>
@@ -108,12 +102,6 @@ export function JewellerCustomerVaultsPanel() {
                   gap: '0.35rem',
                 }}
               >
-                <p style={{ margin: 0 }}>
-                  Vault ID{' '}
-                  <strong style={{ color: 'var(--text)', wordBreak: 'break-all' }}>
-                    {v.vault_public_id?.trim() ? v.vault_public_id : '—'}
-                  </strong>
-                </p>
                 <p style={{ margin: 0 }}>
                   Est. value{' '}
                   <strong className="tabular" style={{ color: 'var(--gold-light)' }}>

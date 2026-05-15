@@ -220,14 +220,12 @@ def jeweller_custody_vault_payload(jeweller: User) -> list[dict]:
             continue
         owner = v.owner
         est_inr = (g * metal_rate).quantize(Decimal("0.01"))
-        label = f"{owner.first_name} {owner.last_name}".strip() or (owner.email or "")
+        label = f"{owner.first_name} {owner.last_name}".strip() or "Customer"
         rows.append(
             {
-                "vault_public_id": v.vault_public_id or "",
                 "customer_id": owner.id,
                 "customer_member_id": owner.cridora_member_id or "",
                 "customer_label": label,
-                "customer_email": owner.email or "",
                 "fractional_grams": str(g),
                 "jeweller_metal_rate_inr_per_gram": str(metal_rate),
                 "estimated_fractional_value_inr": str(est_inr),

@@ -65,11 +65,9 @@ export type GoldWalletDTO = {
 }
 
 export type JewellerCustodyVaultRowDTO = {
-  vault_public_id: string
   customer_id: number
   customer_member_id: string
   customer_label: string
-  customer_email: string
   fractional_grams: string
   jeweller_metal_rate_inr_per_gram?: string
   estimated_fractional_value_inr?: string
