@@ -156,6 +156,58 @@ function formatMaybeStrInr(s: unknown, fractionDigits = 2): string {
   })
 }
 
+function useTimedSuccessMessage(durationMs = 3400) {
+  const [message, setMessage] = useState<string | null>(null)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current != null) window.clearTimeout(timerRef.current)
+    }
+  }, [])
+
+  const show = useCallback(
+    (text: string) => {
+      setMessage(text)
+      if (timerRef.current != null) window.clearTimeout(timerRef.current)
+      timerRef.current = window.setTimeout(() => {
+        setMessage(null)
+        timerRef.current = null
+      }, durationMs)
+    },
+    [durationMs],
+  )
+
+  const clear = useCallback(() => {
+    setMessage(null)
+    if (timerRef.current != null) {
+      window.clearTimeout(timerRef.current)
+      timerRef.current = null
+    }
+  }, [])
+
+  return { message, show, clear }
+}
+
+function AdminFormSuccessBanner({
+  message,
+  layout = 'flex',
+}: {
+  message: string | null
+  layout?: 'flex' | 'block'
+}) {
+  if (!message) return null
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className={`admin-dash-form-success${layout === 'block' ? ' admin-dash-form-success--block' : ''}`}
+    >
+      {message}
+    </div>
+  )
+}
+
 /** Matches backend _manual_ticker_spot_payload karat ladder. */
 function manualTickerGoldLadder(manual22: string, manual24: string): Record<string, number> | null {
   const k22 = Number.parseFloat(manual22)
@@ -301,27 +353,7 @@ export function AdminGoldTickerPanel() {
   const [crossPlatformFeeDraft, setCrossPlatformFeeDraft] = useState('49')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
-  const [saveAck, setSaveAck] = useState(false)
-  const saveAckTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  useEffect(() => {
-    return () => {
-      if (saveAckTimerRef.current != null) {
-        window.clearTimeout(saveAckTimerRef.current)
-      }
-    }
-  }, [])
-
-  const flashSaveSuccess = () => {
-    setSaveAck(true)
-    if (saveAckTimerRef.current != null) {
-      window.clearTimeout(saveAckTimerRef.current)
-    }
-    saveAckTimerRef.current = window.setTimeout(() => {
-      setSaveAck(false)
-      saveAckTimerRef.current = null
-    }, 3200)
-  }
+  const { message: saveSuccessMsg, show: showSaveSuccess, clear: clearSaveSuccess } = useTimedSuccessMessage()
 
   const load = useCallback(async () => {
     setError('')
@@ -382,7 +414,7 @@ export function AdminGoldTickerPanel() {
   const save = async () => {
     setBusy(true)
     setError('')
-    setSaveAck(false)
+    clearSaveSuccess()
     const res = await authFetch('/api/v1/admin/gold-ticker/', {
       method: 'PATCH',
       jsonBody: {
@@ -404,72 +436,59 @@ export function AdminGoldTickerPanel() {
       return
     }
     await load()
-    flashSaveSuccess()
+    showSaveSuccess('Saved — ticker & fees are updated and live.')
   }
 
   return (
-    <section className="card" style={{ padding: '1.25rem', borderRadius: 18 }}>
-      <style>{`
-        @keyframes adminTickerSaveAckIn {
-          from {
-            opacity: 0;
-            transform: translateY(10px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        .admin-ticker-save-ack {
-          margin-top: 0.85rem;
-          padding: 0.65rem 0.9rem;
-          border-radius: 12px;
-          border: 1px solid rgba(34, 197, 94, 0.45);
-          background: rgba(34, 197, 94, 0.12);
-          color: var(--success);
-          font-weight: 700;
-          font-size: 0.88rem;
-          animation: adminTickerSaveAckIn 0.38s ease-out;
-        }
-      `}</style>
-      <h2 className="dash-coming__title" style={{ marginTop: 0 }}>
-        Ticker &amp; fees
-      </h2>
-      <p className="dash-coming__text" style={{ marginBottom: '0.65rem', fontSize: '0.82rem' }}>
-        Configure live metal rates, alerts, and <strong>all platform fees and storefront disclosures</strong> here.{' '}
-        <strong>Live:</strong> markup on international raw spot, then deduction — jewellers and customers see the published
-        live market column. <strong>Manual:</strong> fixed 22K/24K gold only (no row rules).{' '}
-        <strong>Alerts:</strong> 22K vs baseline; <strong>0</strong> disables.
-      </p>
-      {error ? <p className="form-error">{error}</p> : null}
-      {data ? (
-        <p className="dash-footnote" style={{ marginBottom: '0.65rem', fontSize: '0.76rem' }}>
-          22K <strong className="tabular">{data.platform_base_inr_per_gram_22k}</strong>
-          {data.cridora_base_source ? <> · {data.cridora_base_source.replace(/_/g, ' ')}</> : null} · baseline{' '}
-          <strong className="tabular">{data.rate_alert_baseline_inr_per_gram_22k ?? '—'}</strong> · saved{' '}
-          {data.updated_at}
+    <section className="card admin-ticker-panel" style={{ padding: 0, borderRadius: 18, overflow: 'hidden' }}>
+      <header className="admin-ticker-panel__head">
+        <h2 className="dash-coming__title" style={{ marginTop: 0 }}>
+          Ticker &amp; fees
+        </h2>
+        <p className="dash-coming__text" style={{ marginBottom: 0, fontSize: '0.82rem', maxWidth: '52rem' }}>
+          Configure live metal rates, alerts, and <strong>all platform fees and storefront disclosures</strong> here.{' '}
+          <strong>Live:</strong> markup on international raw spot, then deduction — jewellers and customers see the published
+          live market column. <strong>Manual:</strong> fixed 22K/24K gold only (no row rules).{' '}
+          <strong>Alerts:</strong> 22K vs baseline; <strong>0</strong> disables.
         </p>
-      ) : null}
-      <div
-        className="card"
-        style={{
-          padding: '1rem',
-          borderRadius: 12,
-          border: '1px solid var(--border-soft)',
-          marginBottom: '1rem',
-        }}
-      >
-        <div className="field" style={{ marginBottom: '0.45rem' }}>
-          <span style={{ fontWeight: 600, fontSize: '0.76rem', color: 'var(--text-muted)' }}>Source</span>
-        </div>
+        {data ? (
+          <ul className="admin-ticker-panel__meta" aria-label="Current ticker snapshot">
+            <li>
+              <span className="admin-ticker-panel__meta-k">Live 22K</span>
+              <strong className="tabular">
+                ₹{formatMaybeStrInr(data.platform_base_inr_per_gram_22k)}
+              </strong>
+              <span style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>/g</span>
+            </li>
+            <li>
+              <span className="admin-ticker-panel__meta-k">Feed</span>
+              <span>{data.cridora_base_source ? data.cridora_base_source.replace(/_/g, ' ') : '—'}</span>
+            </li>
+            <li>
+              <span className="admin-ticker-panel__meta-k">Alert baseline</span>
+              <strong className="tabular">{data.rate_alert_baseline_inr_per_gram_22k ?? '—'}</strong>
+            </li>
+            <li>
+              <span className="admin-ticker-panel__meta-k">Last saved</span>
+              <span className="tabular" style={{ fontWeight: 600 }}>
+                {data.updated_at}
+              </span>
+            </li>
+          </ul>
+        ) : null}
+      </header>
+      <div className="admin-ticker-panel__body">
+      {error ? <p className="form-error">{error}</p> : null}
+      <p className="admin-ticker-panel__section-title">Price source</p>
+      <div className="admin-ticker-panel__card">
         <div
           role="group"
           aria-label="Ticker metal price source"
           style={{
             display: 'flex',
-            gap: '0.45rem',
+            gap: '0.5rem',
             flexWrap: 'wrap',
-            marginBottom: '0.85rem',
+            marginBottom: manualOn ? '0.85rem' : 0,
           }}
         >
           <button
@@ -522,31 +541,53 @@ export function AdminGoldTickerPanel() {
       </div>
 
       {data ? (
-        <AdminPublishedRatesSummary
-          manualOn={manualOn}
-          previewRows={data.live_spot_raw_preview?.rows}
-          manual22Draft={manual22Draft}
-          manual24Draft={manual24Draft}
-          rawPreviewSource={data.live_spot_raw_preview?.source}
-        />
+        <>
+          <p className="admin-ticker-panel__section-title">Published preview</p>
+          <AdminPublishedRatesSummary
+            manualOn={manualOn}
+            previewRows={data.live_spot_raw_preview?.rows}
+            manual22Draft={manual22Draft}
+            manual24Draft={manual24Draft}
+            rawPreviewSource={data.live_spot_raw_preview?.source}
+          />
+        </>
       ) : null}
 
       {!manualOn ? (
-        <div className="dash-table-scroll card" style={{ marginBottom: '1rem', borderRadius: 12 }}>
-          <p style={{ padding: '0.45rem 0.65rem', margin: 0, borderBottom: '1px solid var(--border-soft)', fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-            Raw: <strong>{data?.live_spot_raw_preview?.source?.replace(/_/g, ' ') || '—'}</strong> · table = draft until Save
+        <>
+          <p className="admin-ticker-panel__section-title">Live markup rules (draft)</p>
+        <div className="admin-ticker-adj-table-wrap">
+          <p className="admin-ticker-panel__draft-banner">
+            <strong>Live ladder (draft)</strong> — raw feed{' '}
+            <strong>{data?.live_spot_raw_preview?.source?.replace(/_/g, ' ') || '—'}</strong>. Edits apply after{' '}
+            <strong>Save</strong>.
           </p>
-          <table className="admin-user-table" style={{ fontSize: '0.82rem' }}>
+          <div className="dash-table-scroll">
+          <table className="admin-user-table" style={{ fontSize: '0.8rem' }}>
             <thead>
               <tr>
-                <th>Metal</th>
-                <th className="tabular">Raw</th>
-                <th>Mk</th>
-                <th className="tabular">Mk val</th>
-                <th className="tabular">+Mk</th>
-                <th>De</th>
-                <th className="tabular">De val</th>
-                <th className="tabular">Final</th>
+                <th scope="col">Metal</th>
+                <th className="tabular" scope="col" title="International raw reference">
+                  Raw ₹/g
+                </th>
+                <th scope="col" title="Markup: percent or fixed ₹ on raw">
+                  Markup
+                </th>
+                <th className="tabular" scope="col" title="Markup amount">
+                  Value
+                </th>
+                <th className="tabular" scope="col" title="Price after markup">
+                  Post-mk
+                </th>
+                <th scope="col" title="Deduction from post-markup reference">
+                  Deduction
+                </th>
+                <th className="tabular" scope="col" title="Deduction amount">
+                  Value
+                </th>
+                <th className="tabular" scope="col" title="Published live market">
+                  Published
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -671,14 +712,19 @@ export function AdminGoldTickerPanel() {
               })}
             </tbody>
           </table>
+          </div>
         </div>
+        </>
       ) : (
-        <p className="dash-footnote" style={{ marginBottom: '0.65rem' }}>
-          Manual: 22K/24K only — switch to Live for row rules.
+        <p className="dash-footnote" style={{ marginBottom: '0.85rem' }}>
+          Manual mode uses only the board rates above. Switch to <strong>Live spot (API)</strong> to edit per-metal markup
+          rules.
         </p>
       )}
 
-      <label className="field" style={{ maxWidth: 380 }}>
+      <p className="admin-ticker-panel__section-title">Rate move alerts</p>
+      <div className="admin-ticker-panel__card">
+      <label className="field" style={{ maxWidth: 420, marginBottom: 0 }}>
         <span>22K alert (₹ move vs baseline, 0 = off)</span>
         <input
           type="text"
@@ -694,19 +740,10 @@ export function AdminGoldTickerPanel() {
           </span>
         ) : null}
       </label>
+      </div>
 
-      <div
-        style={{
-          marginTop: '1rem',
-          padding: '0.75rem 0.85rem',
-          borderRadius: 12,
-          border: '1px solid var(--border-soft)',
-          background: 'var(--veil-35)',
-        }}
-      >
-        <p style={{ margin: '0 0 0.55rem', fontWeight: 700, fontSize: '0.82rem' }}>
-          Platform fees &amp; storefront disclosures
-        </p>
+      <p className="admin-ticker-panel__section-title">Platform fees &amp; storefront disclosures</p>
+      <div className="admin-ticker-panel__card" style={{ marginBottom: 0 }}>
         <div style={{ display: 'grid', gap: '0.85rem', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
           <label className="field">
             <span>Cross-network platform fee (₹ per order)</span>
@@ -747,25 +784,24 @@ export function AdminGoldTickerPanel() {
           </label>
         </div>
       </div>
-      <button
-        type="button"
-        className="btn btn-primary"
-        style={{ marginTop: '1rem' }}
-        disabled={busy || (manualOn && !manual22Draft.trim())}
-        onClick={() => void save()}
-      >
-        Save ticker &amp; fees
-      </button>
-      {saveAck ? (
-        <div role="status" aria-live="polite" className="admin-ticker-save-ack">
-          Saved — ticker &amp; fees are updated and live.
-        </div>
-      ) : null}
+      <div className="admin-ticker-panel__footer">
+        <button
+          type="button"
+          className="btn btn-primary"
+          style={{ minWidth: '11rem' }}
+          disabled={busy || (manualOn && !manual22Draft.trim())}
+          onClick={() => void save()}
+        >
+          {busy ? 'Saving…' : 'Save ticker &amp; fees'}
+        </button>
+        <AdminFormSuccessBanner message={saveSuccessMsg} />
+      </div>
       {manualOn && !manual22Draft.trim() ? (
-        <p className="dash-footnote" style={{ marginTop: '0.5rem' }}>
+        <p className="dash-footnote" style={{ marginTop: '0.5rem', marginBottom: 0 }}>
           Enter a 22K ₹/g value before saving in manual mode.
         </p>
       ) : null}
+      </div>
     </section>
   )
 }
@@ -809,6 +845,7 @@ export function AdminMarketplaceModerationPanel() {
   const [error, setError] = useState('')
   const [busyId, setBusyId] = useState<number | null>(null)
   const [rejectReason, setRejectReason] = useState('')
+  const { message: modSuccessMsg, show: showModSuccess, clear: clearModSuccess } = useTimedSuccessMessage()
 
   const load = useCallback(async () => {
     setError('')
@@ -829,13 +866,14 @@ export function AdminMarketplaceModerationPanel() {
 
   useLivePoll(load, LIVE_ADMIN_POLL_MS, true)
 
-  const moderate = async (id: number, action: 'approve' | 'reject') => {
+  const moderate = async (id: number, action: 'approve' | 'reject', skuLabel: string) => {
     if (action === 'reject' && !rejectReason.trim()) {
       setError('Add a rejection reason.')
       return
     }
     setBusyId(id)
     setError('')
+    clearModSuccess()
     const res = await authFetch(`/api/v1/admin/marketplace/products/${id}/moderate/`, {
       method: 'POST',
       jsonBody:
@@ -851,6 +889,8 @@ export function AdminMarketplaceModerationPanel() {
     }
     setRejectReason('')
     await load()
+    const label = skuLabel.trim() || 'SKU'
+    showModSuccess(action === 'approve' ? `Approved “${label}”.` : `Rejected “${label}”.`)
   }
 
   return (
@@ -890,6 +930,7 @@ export function AdminMarketplaceModerationPanel() {
         </button>
       </div>
       {error ? <p className="form-error">{error}</p> : null}
+      <AdminFormSuccessBanner message={modSuccessMsg} layout="block" />
       <label className="field">
         <span>Rejection reason (required to reject)</span>
         <textarea className="dash-textarea" rows={2} value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} />
@@ -915,9 +956,10 @@ export function AdminMarketplaceModerationPanel() {
             ) : (
               rows.map((row) => {
                 const id = Number(row.id)
+                const skuName = String(row.name ?? '')
                 return (
                   <tr key={id}>
-                    <td>{String(row.name ?? '')}</td>
+                    <td>{skuName}</td>
                     <td>{String(row.jeweller_name ?? row.jeweller_email ?? '')}</td>
                     <td>{String(row.moderation_status ?? '')}</td>
                     <AdminModerationPricingCell row={row} />
@@ -927,7 +969,7 @@ export function AdminMarketplaceModerationPanel() {
                           type="button"
                           className="btn btn-primary kyb-btn-sm"
                           disabled={busyId === id || row.moderation_status === 'approved'}
-                          onClick={() => void moderate(id, 'approve')}
+                          onClick={() => void moderate(id, 'approve', skuName)}
                         >
                           Approve
                         </button>
@@ -936,7 +978,7 @@ export function AdminMarketplaceModerationPanel() {
                           className="btn btn-ghost kyb-btn-sm"
                           disabled={busyId === id}
                           style={{ borderColor: 'rgba(217,83,79,0.45)', color: '#f0a8a5' }}
-                          onClick={() => void moderate(id, 'reject')}
+                          onClick={() => void moderate(id, 'reject', skuName)}
                         >
                           Reject
                         </button>
