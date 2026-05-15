@@ -85,7 +85,7 @@ def process_due_festival_broadcasts(*, limit: int = 50) -> int:
                     kind=AdminNotification.KIND_FESTIVAL_BROADCAST_SENT,
                     title=row.title.strip() or "Festival broadcast sent",
                     body=body_feed,
-                    link_path="/dashboard/admin?section=plat_festival",
+                    link_path="/",
                     actor=row.created_by,
                 )
             except Exception as exc:

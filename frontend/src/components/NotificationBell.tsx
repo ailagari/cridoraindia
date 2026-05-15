@@ -11,6 +11,11 @@ import {
   registerWebPushSubscription,
   unregisterWebPushSubscription,
 } from '@/lib/webPushApi'
+import { CRIDORA_PUSH_REFRESH_MESSAGE_TYPE } from '@/lib/cridoraSwMessages'
+
+/** Faster poll while panel open so badges/lists stay fresh without reloading the page. */
+const FEED_POLL_MS_PANEL_OPEN = 4000
+const FEED_POLL_MS_BACKGROUND = 15000
 
 type ApiAdminNotification = {
   id: number
@@ -68,11 +73,16 @@ export function NotificationBell({ compact = false, role = 'customer' }: Props) 
   const { user } = useAuth()
   const navigate = useNavigate()
   const useAdminFeed = role === 'admin' && user?.user_type === 'admin'
+  const usePlatformFeed = Boolean(user && !useAdminFeed)
+  const useLiveFeed = useAdminFeed || usePlatformFeed
 
   const [open, setOpen] = useState(false)
+  const [showHistory, setShowHistory] = useState(false)
   const [mockItems, setMockItems] = useState<AppNotification[]>(() => [...MOCK_NOTIFICATIONS])
   const [adminItems, setAdminItems] = useState<AppNotification[]>([])
+  const [platformItems, setPlatformItems] = useState<AppNotification[]>([])
   const [adminFeedError, setAdminFeedError] = useState('')
+  const [platformFeedError, setPlatformFeedError] = useState('')
   const [pushActive, setPushActive] = useState(false)
   const [pushBusy, setPushBusy] = useState(false)
   const [pushError, setPushError] = useState('')
@@ -83,12 +93,18 @@ export function NotificationBell({ compact = false, role = 'customer' }: Props) 
 
   const setupHint = pushSetupHint()
 
-  const items = useMemo(
-    () => (useAdminFeed ? adminItems : mockItems),
-    [useAdminFeed, adminItems, mockItems],
-  )
+  const items = useMemo(() => {
+    if (useAdminFeed) return adminItems
+    if (usePlatformFeed) return platformItems
+    return mockItems
+  }, [useAdminFeed, usePlatformFeed, adminItems, platformItems, mockItems])
 
   const unread = useMemo(() => items.filter((i) => !i.read).length, [items])
+  const readCount = useMemo(() => items.filter((i) => i.read).length, [items])
+  const displayItems = useMemo(
+    () => (showHistory ? items : items.filter((i) => !i.read)),
+    [showHistory, items],
+  )
 
   const loadAdminFeed = useCallback(async () => {
     if (!useAdminFeed) return
@@ -105,6 +121,22 @@ export function NotificationBell({ compact = false, role = 'customer' }: Props) 
     const rows = Array.isArray(body.results) ? body.results.map(mapAdminApiRow) : []
     setAdminItems(rows)
   }, [useAdminFeed])
+
+  const loadPlatformFeed = useCallback(async () => {
+    if (!usePlatformFeed) return
+    setPlatformFeedError('')
+    const res = await authFetch('/api/v1/notifications/?limit=40')
+    const body = (await res.json().catch(() => ({}))) as {
+      detail?: string
+      results?: ApiAdminNotification[]
+    }
+    if (!res.ok) {
+      setPlatformFeedError(body.detail ?? 'Could not load alerts.')
+      return
+    }
+    const rows = Array.isArray(body.results) ? body.results.map(mapAdminApiRow) : []
+    setPlatformItems(rows)
+  }, [usePlatformFeed])
 
   const refreshPushState = useCallback(async () => {
     if (!pushNotificationsSupported()) {
@@ -126,7 +158,10 @@ export function NotificationBell({ compact = false, role = 'customer' }: Props) 
   }, [open, refreshPushState])
 
   useEffect(() => {
-    if (!open) return
+    if (!open) {
+      setShowHistory(false)
+      return
+    }
     let cancelled = false
     setPushServerReady(null)
     void fetchWebPushServerStatus().then((s) => {
@@ -147,15 +182,53 @@ export function NotificationBell({ compact = false, role = 'customer' }: Props) 
   }, [open])
 
   useEffect(() => {
-    if (!useAdminFeed) return
+    if (!useAdminFeed || !user) return
     void loadAdminFeed()
-  }, [useAdminFeed, loadAdminFeed])
+  }, [useAdminFeed, user, loadAdminFeed])
 
   useEffect(() => {
-    if (!useAdminFeed || !user) return
-    const t = window.setInterval(() => void loadAdminFeed(), 120000)
-    return () => window.clearInterval(t)
-  }, [useAdminFeed, user, loadAdminFeed])
+    if (!usePlatformFeed || !user) return
+    void loadPlatformFeed()
+  }, [usePlatformFeed, user, loadPlatformFeed])
+
+  useEffect(() => {
+    if (!useLiveFeed || !user) return
+    const periodMs = open ? FEED_POLL_MS_PANEL_OPEN : FEED_POLL_MS_BACKGROUND
+    const id = window.setInterval(() => {
+      void loadAdminFeed()
+      void loadPlatformFeed()
+    }, periodMs)
+    return () => window.clearInterval(id)
+  }, [useLiveFeed, user, open, loadAdminFeed, loadPlatformFeed])
+
+  useEffect(() => {
+    if (!useLiveFeed || !user) return
+    const refreshVisible = () => {
+      if (document.visibilityState !== 'visible') return
+      void loadAdminFeed()
+      void loadPlatformFeed()
+    }
+    document.addEventListener('visibilitychange', refreshVisible)
+    window.addEventListener('focus', refreshVisible)
+    return () => {
+      document.removeEventListener('visibilitychange', refreshVisible)
+      window.removeEventListener('focus', refreshVisible)
+    }
+  }, [useLiveFeed, user, loadAdminFeed, loadPlatformFeed])
+
+  useEffect(() => {
+    if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return
+    const onMessage = (ev: MessageEvent) => {
+      const t =
+        ev.data && typeof ev.data === 'object' ? (ev.data as { type?: string }).type : null
+      if (t !== CRIDORA_PUSH_REFRESH_MESSAGE_TYPE) return
+      void refreshPushState()
+      void loadAdminFeed()
+      void loadPlatformFeed()
+    }
+    navigator.serviceWorker.addEventListener('message', onMessage)
+    return () => navigator.serviceWorker.removeEventListener('message', onMessage)
+  }, [refreshPushState, loadAdminFeed, loadPlatformFeed])
 
   useEffect(() => {
     if (!open || !useAdminFeed) return
@@ -163,13 +236,18 @@ export function NotificationBell({ compact = false, role = 'customer' }: Props) 
   }, [open, useAdminFeed, loadAdminFeed])
 
   useEffect(() => {
-    if (useAdminFeed) return
+    if (!open || !usePlatformFeed) return
+    void loadPlatformFeed()
+  }, [open, usePlatformFeed, loadPlatformFeed])
+
+  useEffect(() => {
+    if (useAdminFeed || usePlatformFeed) return
     if (user?.id != null) {
       setMockItems(hydrateMockNotificationsForAccount(user.id))
     } else {
       setMockItems([...MOCK_NOTIFICATIONS])
     }
-  }, [useAdminFeed, user?.id])
+  }, [useAdminFeed, usePlatformFeed, user?.id])
 
   const enablePush = useCallback(async () => {
     setPushBusy(true)
@@ -230,6 +308,7 @@ export function NotificationBell({ compact = false, role = 'customer' }: Props) 
 
   const markAllRead = useCallback(async () => {
     if (useAdminFeed) {
+      setAdminItems((prev) => prev.map((x) => ({ ...x, read: true })))
       const res = await authFetch('/api/v1/admin/notifications/mark-read/', {
         method: 'POST',
         jsonBody: { all: true },
@@ -237,30 +316,55 @@ export function NotificationBell({ compact = false, role = 'customer' }: Props) 
       if (!res.ok) {
         const body = (await res.json().catch(() => ({}))) as { detail?: string }
         setAdminFeedError(body.detail ?? `Could not mark read (${res.status}).`)
+        await loadAdminFeed()
         return
       }
+      setShowHistory(false)
       await loadAdminFeed()
+      return
+    }
+    if (usePlatformFeed) {
+      setPlatformItems((prev) => prev.map((x) => ({ ...x, read: true })))
+      const res = await authFetch('/api/v1/notifications/mark-read/', {
+        method: 'POST',
+        jsonBody: { all: true },
+      })
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as { detail?: string }
+        setPlatformFeedError(body.detail ?? `Could not mark read (${res.status}).`)
+        await loadPlatformFeed()
+        return
+      }
+      setShowHistory(false)
+      await loadPlatformFeed()
       return
     }
     if (user?.id == null) return
     persistAllMockNotificationsRead(user.id)
     setMockItems(hydrateMockNotificationsForAccount(user.id))
-  }, [useAdminFeed, loadAdminFeed, user?.id])
+    setShowHistory(false)
+  }, [useAdminFeed, usePlatformFeed, loadAdminFeed, loadPlatformFeed, user?.id])
 
-  const onItemActivate = useCallback(
+  const onFeedItemActivate = useCallback(
     async (n: AppNotification) => {
-      if (!useAdminFeed) return
+      if (!useLiveFeed) return
       const nid = Number.parseInt(n.id, 10)
       if (!Number.isNaN(nid)) {
-        const res = await authFetch('/api/v1/admin/notifications/mark-read/', {
+        const url = useAdminFeed
+          ? '/api/v1/admin/notifications/mark-read/'
+          : '/api/v1/notifications/mark-read/'
+        const res = await authFetch(url, {
           method: 'POST',
           jsonBody: { notification_ids: [nid] },
         })
         if (res.ok) {
-          await loadAdminFeed()
+          if (useAdminFeed) await loadAdminFeed()
+          else await loadPlatformFeed()
         } else {
           const body = (await res.json().catch(() => ({}))) as { detail?: string }
-          setAdminFeedError(body.detail ?? `Could not mark read (${res.status}).`)
+          const msg = body.detail ?? `Could not mark read (${res.status}).`
+          if (useAdminFeed) setAdminFeedError(msg)
+          else setPlatformFeedError(msg)
         }
       }
       if (n.link_path) {
@@ -268,8 +372,49 @@ export function NotificationBell({ compact = false, role = 'customer' }: Props) 
         setOpen(false)
       }
     },
-    [navigate, useAdminFeed, loadAdminFeed],
+    [navigate, useLiveFeed, useAdminFeed, loadAdminFeed, loadPlatformFeed],
   )
+
+  const hintPrimary = useAdminFeed ? (
+    <>
+      Uploads awaiting KYC or KYB review appear here.
+      {pushServerReady === false ? (
+        <span>
+          {' '}
+          <strong>Unavailable on this deployment:</strong> Web Push needs VAPID keys on the server (hosting env vars). Enable
+          still appears once keys are set.
+        </span>
+      ) : (
+        ' Enable device notifications for festival and platform broadcasts — delivery is the same for every account role.'
+      )}
+    </>
+  ) : usePlatformFeed ? (
+    <>
+      Festival and platform broadcasts you receive also appear here after they are sent (same entries admins see under promo).
+      {pushServerReady === false ? (
+        <span>
+          {' '}
+          <strong>Unavailable on this deployment:</strong> Web Push needs VAPID keys on the server.
+        </span>
+      ) : (
+        ' Turn on device notifications below so alerts reach this phone or browser even when Cridora is closed.'
+      )}
+    </>
+  ) : pushServerReady === false ? (
+    <>
+      <strong>Unavailable on this deployment.</strong> Web Push needs VAPID keys on the server (hosting env vars:
+      WEB_PUSH_VAPID_PUBLIC_KEY, WEB_PUSH_VAPID_PRIVATE_KEY, WEB_PUSH_VAPID_CONTACT). Sample alerts below still appear here for
+      UI preview — they are not live notifications.
+    </>
+  ) : (
+    <>
+      Signed-out visitors see sample alerts below. Sign in on customer or jeweller dashboard for real broadcast history in this
+      bell. Turn on browser notifications for festival and platform broadcasts (HTTPS; Android: Chrome or Edge from the home-screen
+      PWA helps reliability).
+    </>
+  )
+
+  const feedError = adminFeedError || platformFeedError
 
   return (
     <div className="notif-bell-wrap" ref={rootRef}>
@@ -293,7 +438,7 @@ export function NotificationBell({ compact = false, role = 'customer' }: Props) 
         <div className="notif-panel card" role="dialog" aria-label="Notifications">
           <div className="notif-panel-head">
             <h2 className="notif-panel-title">Alerts</h2>
-            {useAdminFeed || user?.id != null ? (
+            {(useLiveFeed || user?.id != null) && unread > 0 ? (
               <button type="button" className="btn btn-ghost notif-panel-clear" onClick={() => void markAllRead()}>
                 Mark read
               </button>
@@ -304,31 +449,8 @@ export function NotificationBell({ compact = false, role = 'customer' }: Props) 
               {setupHint}
             </p>
           ) : null}
-          <p className="notif-panel-hint">
-            {useAdminFeed ? (
-              <>
-                Uploads awaiting KYC or KYB review appear here.
-                {pushServerReady === false ? (
-                  <span>
-                    {' '}
-                    <strong>Unavailable on this deployment:</strong> Web Push needs VAPID keys on the server (hosting env
-                    vars). Enable still appears once keys are set.
-                  </span>
-                ) : (
-                  ' Enable device notifications for festival and platform broadcasts — delivery is the same for every account role.'
-                )}
-              </>
-            ) : pushServerReady === false ? (
-              <>
-                <strong>Unavailable on this deployment.</strong> Web Push needs VAPID keys on the server (hosting env vars:
-                WEB_PUSH_VAPID_PUBLIC_KEY, WEB_PUSH_VAPID_PRIVATE_KEY, WEB_PUSH_VAPID_CONTACT). Sample alerts below still appear
-                here for UI preview — they are not live notifications.
-              </>
-            ) : (
-              'In-app alerts below are samples. Turn on browser notifications for festival and platform broadcasts on this device (HTTPS or localhost; iPhone/iPad: install the PWA from Safari for Web Push 16.4+). Same broadcast goes to every role — one subscription per browser.'
-            )}
-          </p>
-          {adminFeedError ? <p className="form-error notif-panel-hint">{adminFeedError}</p> : null}
+          <p className="notif-panel-hint">{hintPrimary}</p>
+          {feedError ? <p className="form-error notif-panel-hint">{feedError}</p> : null}
           <div className="notif-push-row">
             <div className="notif-push-copy">
               <span className="notif-push-label">Device notifications</span>
@@ -389,16 +511,31 @@ export function NotificationBell({ compact = false, role = 'customer' }: Props) 
               ) : null}
             </div>
           ) : null}
+          {displayItems.length === 0 ? (
+            <p className="notif-panel-hint" style={{ marginTop: '0.75rem' }}>
+              {items.length === 0
+                ? usePlatformFeed
+                  ? 'No broadcasts yet. After an admin sends one, it will show here.'
+                  : 'No alerts yet.'
+                : showHistory
+                  ? 'No alerts match this view.'
+                  : "You're all caught up — nothing unread."}
+            </p>
+          ) : null}
           <ul className="notif-list">
-            {items.map((n) =>
-              useAdminFeed ? (
+            {displayItems.map((n) =>
+              useLiveFeed ? (
                 <li key={n.id}>
-                  <button type="button" className={`notif-item-btn${n.read ? '' : ' notif-item-btn--unread'}`} onClick={() => void onItemActivate(n)}>
+                  <button
+                    type="button"
+                    className={`notif-item-btn${n.read ? '' : ' notif-item-btn--unread'}`}
+                    onClick={() => void onFeedItemActivate(n)}
+                  >
                     <span className={kindClass(n.kind)}>{n.kind}</span>
                     <p className="notif-item-title">{n.title}</p>
                     <p className="notif-item-body">{n.body}</p>
                     <p className="notif-item-time">{n.time}</p>
-                    {n.link_path ? <span className="notif-item-open-hint">Tap to open in dashboard</span> : null}
+                    {n.link_path ? <span className="notif-item-open-hint">Tap to open</span> : null}
                   </button>
                 </li>
               ) : (
@@ -411,6 +548,13 @@ export function NotificationBell({ compact = false, role = 'customer' }: Props) 
               ),
             )}
           </ul>
+          {readCount > 0 ? (
+            <div className="notif-panel-hint" style={{ marginTop: '0.5rem' }}>
+              <button type="button" className="btn btn-ghost notif-panel-clear" onClick={() => setShowHistory((h) => !h)}>
+                {showHistory ? 'Show unread only' : `Past alerts (${readCount})`}
+              </button>
+            </div>
+          ) : null}
         </div>
       ) : null}
     </div>

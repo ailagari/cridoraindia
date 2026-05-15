@@ -1,6 +1,8 @@
 /// <reference lib="webworker" />
 import { cleanupOutdatedCaches, precacheAndRoute } from 'workbox-precaching'
 
+import { CRIDORA_PUSH_REFRESH_MESSAGE_TYPE } from './lib/cridoraSwMessages'
+
 declare const self: ServiceWorkerGlobalScope & { __WB_MANIFEST: unknown }
 
 cleanupOutdatedCaches()
@@ -48,14 +50,28 @@ self.addEventListener('push', (event: PushEvent) => {
   const bodyRaw = typeof data.body === 'string' ? data.body.trim() : ''
   const body = bodyRaw.length > 0 ? bodyRaw : 'Open Cridora for details.'
   const targetUrl = new URL(data.url || '/', self.location.origin).href
+  const iconHref = new URL('/favicon.svg', self.location.origin).href
+  const notifyOpts = {
+    body,
+    icon: iconHref,
+    badge: iconHref,
+    vibrate: [180, 80, 120],
+    data: { url: targetUrl },
+    tag: data.tag || fallback.tag,
+  } as NotificationOptions
   event.waitUntil(
-    self.registration.showNotification(title, {
-      body,
-      icon: '/favicon.svg',
-      badge: '/favicon.svg',
-      data: { url: targetUrl },
-      tag: data.tag || fallback.tag,
-    }),
+    (async () => {
+      await self.registration.showNotification(title, notifyOpts)
+      const clientList = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+      const payload = { type: CRIDORA_PUSH_REFRESH_MESSAGE_TYPE }
+      for (const c of clientList) {
+        try {
+          c.postMessage(payload)
+        } catch {
+          /* ignore */
+        }
+      }
+    })(),
   )
 })
 
@@ -65,6 +81,14 @@ self.addEventListener('notificationclick', (event: NotificationEvent) => {
   const targetUrl = new URL(raw || '/', self.location.origin).href
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      const payload = { type: CRIDORA_PUSH_REFRESH_MESSAGE_TYPE }
+      for (const c of clientList) {
+        try {
+          c.postMessage(payload)
+        } catch {
+          /* ignore */
+        }
+      }
       for (const c of clientList) {
         if (c.url.startsWith(self.location.origin) && 'focus' in c) {
           const wc = c as WindowClient & { navigate?: (u: string) => Promise<unknown> }

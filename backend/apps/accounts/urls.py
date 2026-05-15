@@ -47,6 +47,10 @@ from .views_festival_broadcast import (
     AdminFestivalBroadcastCancelView,
     AdminFestivalBroadcastListCreateView,
 )
+from .views_platform_notifications import (
+    PlatformNotificationsListView,
+    PlatformNotificationsMarkReadView,
+)
 from .views_push import (
     WebPushAdminSelfTestView,
     WebPushSubscribeView,
@@ -62,6 +66,8 @@ urlpatterns = [
     path("push/vapid-public-key/", WebPushVapidPublicKeyView.as_view()),
     path("push/subscribe/", WebPushSubscribeView.as_view()),
     path("push/unsubscribe/", WebPushUnsubscribeView.as_view()),
+    path("notifications/", PlatformNotificationsListView.as_view()),
+    path("notifications/mark-read/", PlatformNotificationsMarkReadView.as_view()),
     path("admin/push/test/", WebPushAdminSelfTestView.as_view()),
     path("health/", HealthView.as_view()),
     path("auth/login/", LoginView.as_view()),
