@@ -42,6 +42,21 @@ function ledgerRowsWithRunningBal(rows: FractionalLedgerRowDTO[]): Array<Fractio
   return out.reverse()
 }
 
+function fmtInrWhole(n: number): string {
+  return n.toLocaleString('en-IN', { maximumFractionDigits: 0 })
+}
+
+function fmtSignedInr(n: number): string {
+  const sign = n >= 0 ? '+' : '-'
+  const v = Math.abs(n)
+  return `${sign}₹${fmtInrWhole(v)}`
+}
+
+function parseInrNum(s: string): number {
+  const n = Number.parseFloat(s)
+  return Number.isFinite(n) ? n : 0
+}
+
 export function CustomerPortfolioPanel() {
   const [wallet, setWallet] = useState<Awaited<ReturnType<typeof fetchGoldWallet>>>(null)
   const [loadErr, setLoadErr] = useState('')
@@ -69,6 +84,11 @@ export function CustomerPortfolioPanel() {
   const totalGrams = parseG(totalGramsStr)
   const estInr = fmtInrSum(vaults)
 
+  const activeVaultCount = useMemo(
+    () => vaults.filter((v) => parseG(v.fractional_grams) > 0).length,
+    [vaults],
+  )
+
   const donutSegs = useMemo(() => {
     if (vaults.length === 0) {
       return [{ pct: 1, color: '#475569', label: 'No vault holdings yet' }]
@@ -92,18 +112,25 @@ export function CustomerPortfolioPanel() {
     [vaults],
   )
 
+  const unrealized = wallet?.portfolio_unrealized
+  const pnlInr = unrealized ? parseInrNum(unrealized.unrealized_pnl_inr) : 0
+  const allocatedCost = unrealized ? parseInrNum(unrealized.allocated_cost_inr) : 0
+  const pnlPctStr = unrealized?.unrealized_pnl_percent?.trim() ?? ''
+  const pnlPct = pnlPctStr !== '' ? Number.parseFloat(pnlPctStr) : NaN
+
   const inrTrendMini = useMemo(() => {
-    if (estInr <= 0) return [0, 0]
+    if (estInr <= 0 && allocatedCost <= 0) return [0, 0]
+    if (allocatedCost > 0) return [Math.round(allocatedCost), Math.round(estInr)]
     return [Math.round(estInr * 0.94), Math.round(estInr)]
-  }, [estInr])
+  }, [estInr, allocatedCost])
 
   const ledgerDisplay = useMemo(() => ledgerRowsWithRunningBal(ledger), [ledger])
 
   return (
     <div className="dash-panel-max pf-scope">
       <p className="dash-panel-lead pf-lead-intro">
-        Live vault balances and completed fractional purchases. Estimated INR sums jewellers&apos; quoted rates on your
-        holdings; profit/loss history requires time-series data not yet exposed.
+        Live vault balances, estimated mark-to-market from jewellers&apos; quoted ₹/g, and unrealized profit or loss vs the
+        purchase cost allocated from your completed fractional buys.
       </p>
 
       {loadErr ? <p className="form-error">{loadErr}</p> : null}
@@ -112,26 +139,51 @@ export function CustomerPortfolioPanel() {
         <div className="pf-kpi pf-kpi--shimmer pf-kpi--gold">
           <span className="pf-kpi__eyebrow">Total gold</span>
           <p className="pf-kpi__value">{`${totalGrams.toFixed(6)} g`}</p>
-          <span className="pf-kpi__hint">Fractional vault total (synced)</span>
+          <span className="pf-kpi__hint">
+            {activeVaultCount} jeweller vault{activeVaultCount === 1 ? '' : 's'} · synced
+          </span>
         </div>
         <div className="pf-kpi pf-kpi--pulse pf-kpi--ocean">
           <span className="pf-kpi__eyebrow">Estimated value</span>
           <p className="pf-kpi__value">
             ₹{estInr.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
           </p>
-          <span className="pf-kpi__hint">Sum of vault mark-to-market estimates</span>
+          <span className="pf-kpi__hint">Vault mark-to-market (today&apos;s jeweller rates)</span>
         </div>
-        <div className="pf-kpi pf-kpi--pulse pf-kpi--iris">
-          <span className="pf-kpi__eyebrow">Vaults</span>
-          <p className="pf-kpi__value">{vaults.filter((v) => parseG(v.fractional_grams) > 0).length}</p>
-          <span className="pf-kpi__hint">Jewellers with fractional balance</span>
+        <div className="pf-kpi pf-kpi--shimmer pf-kpi--iris">
+          <span className="pf-kpi__eyebrow">Allocated cost</span>
+          <p className="pf-kpi__value tabular">₹{fmtInrWhole(allocatedCost)}</p>
+          <span className="pf-kpi__hint">Purchase basis matched to current holdings</span>
         </div>
-        <div className="pf-kpi pf-kpi--shimmer pf-kpi--mint">
-          <span className="pf-kpi__eyebrow">Purchases on record</span>
-          <p className="pf-kpi__value">{ledger.length}</p>
-          <span className="pf-kpi__hint">Completed fractional orders (shown below)</span>
+        <div
+          className={`pf-kpi pf-kpi--pulse ${pnlInr >= 0 ? 'pf-kpi--mint' : 'pf-kpi--rose'}`}
+          style={{
+            borderColor: pnlInr >= 0 ? 'rgba(52, 211, 153, 0.35)' : 'rgba(244, 114, 182, 0.35)',
+          }}
+        >
+          <span className="pf-kpi__eyebrow">Unrealized P&amp;L</span>
+          <p
+            className="pf-kpi__value tabular"
+            style={{ color: pnlInr >= 0 ? 'var(--success)' : 'var(--danger)' }}
+          >
+            {fmtSignedInr(pnlInr)}
+          </p>
+          <span className="pf-kpi__hint">
+            {Number.isFinite(pnlPct) && allocatedCost > 0 ? (
+              <>
+                <span className="tabular">{pnlPct >= 0 ? '+' : ''}{pnlPct.toFixed(2)}%</span> on allocated cost ·{' '}
+              </>
+            ) : null}
+            {ledger.length} completed purchase{ledger.length === 1 ? '' : 's'}
+          </span>
         </div>
       </div>
+
+      {unrealized?.basis_note ? (
+        <p style={{ margin: '0 0 1rem', fontSize: '0.82rem', color: 'var(--text-muted)', lineHeight: 1.45 }}>
+          {unrealized.basis_note}
+        </p>
+      ) : null}
 
       {wallet?.cridora_member_id ? (
         <p style={{ margin: '0 0 1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
@@ -142,15 +194,17 @@ export function CustomerPortfolioPanel() {
       <div className="pf-grid pf-grid--charts pf-stagger">
         <article className="pf-card pf-card--lift">
           <header className="pf-card__head">
-            <h3 className="pf-card__title">Estimated INR snapshot</h3>
-            <p className="pf-card__meta">Two-point pulse from current vault marks (not historical NAV)</p>
+            <h3 className="pf-card__title">Cost vs market (INR)</h3>
+            <p className="pf-card__meta">
+              Allocated purchase basis vs estimated vault value from jeweller ₹/g marks (not historical NAV)
+            </p>
           </header>
           <div className="pf-card__viz">
             <PortfolioTrendChart
               values={inrTrendMini}
               stroke="#fcd34d"
               fillId="customer-area-portfolio-live"
-              ariaLabel="Minimal trend from estimated portfolio INR"
+              ariaLabel="Trend from allocated cost to estimated vault INR value"
             />
           </div>
         </article>

@@ -27,6 +27,17 @@ export type LiabilityCreditRowDTO = {
   purchase_reference: string
 }
 
+export type PortfolioUnrealizedDTO = {
+  market_value_inr: string
+  allocated_cost_inr: string
+  unrealized_pnl_inr: string
+  unrealized_pnl_percent: string
+  purchase_basis_inr_total?: string
+  purchase_basis_grams_total?: string
+  grams_allocated_for_cost?: string
+  basis_note: string
+}
+
 export type GoldWalletDTO = {
   cridora_member_id: string
   cridora_global_id?: string
@@ -46,6 +57,8 @@ export type GoldWalletDTO = {
   fractional_ledger?: FractionalLedgerRowDTO[]
   /** Recent custodial liability credits (jeweller accounts). */
   recent_liability_credits?: LiabilityCreditRowDTO[]
+  /** Customer unrealized P&L snapshot vs allocated fractional purchase cost. */
+  portfolio_unrealized?: PortfolioUnrealizedDTO | null
 }
 
 export type GoldResolveRecipient = {

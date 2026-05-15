@@ -5,7 +5,11 @@ from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .jeweller_liability_service import jeweller_liability_grams
-from .wallet_extras import customer_completed_fractional_ledger, jeweller_recent_liability_credits
+from .wallet_extras import (
+    customer_completed_fractional_ledger,
+    customer_portfolio_unrealized_summary,
+    jeweller_recent_liability_credits,
+)
 from .models import AdminNotification, AdminNotificationRead, BankAccount, KYDocument
 from .vault_service import sync_customer_aggregate_balance, wallet_vault_payload
 
@@ -302,6 +306,12 @@ class UserMeSerializer(serializers.ModelSerializer):
         liability_s = ""
         if obj.user_type == User.JEWELLER:
             liability_s = str(jeweller_liability_grams(obj))
+        vaults_list = wallet_vault_payload(obj) if obj.user_type == User.CUSTOMER else []
+        pnl_block = (
+            customer_portfolio_unrealized_summary(obj, grams, vaults_list)
+            if obj.user_type == User.CUSTOMER
+            else None
+        )
         data = {
             "cridora_member_id": obj.cridora_member_id or "",
             "cridora_global_id": f"{handle}@cridora" if handle else "",
@@ -314,7 +324,7 @@ class UserMeSerializer(serializers.ModelSerializer):
             "jeweller_pref_ornament_id": obj.jeweller_pref_ornament_id,
             "jeweller_pref_redemption_id": obj.jeweller_pref_redemption_id,
             "balance_grams": str(grams),
-            "vaults": wallet_vault_payload(obj) if obj.user_type == User.CUSTOMER else [],
+            "vaults": vaults_list,
             "custodial_liability_grams": liability_s,
             "fractional_ledger": customer_completed_fractional_ledger(obj)
             if obj.user_type == User.CUSTOMER
@@ -322,6 +332,7 @@ class UserMeSerializer(serializers.ModelSerializer):
             "recent_liability_credits": jeweller_recent_liability_credits(obj)
             if obj.user_type == User.JEWELLER
             else [],
+            "portfolio_unrealized": pnl_block,
         }
         return GoldWalletSerializer(instance=data).data
 
@@ -363,6 +374,9 @@ class GoldWalletSerializer(serializers.Serializer):
     )
     recent_liability_credits = serializers.ListField(
         child=serializers.DictField(), required=False, default=list
+    )
+    portfolio_unrealized = serializers.DictField(
+        required=False, allow_null=True, default=None
     )
 
 
