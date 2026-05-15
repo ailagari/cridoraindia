@@ -2356,6 +2356,212 @@ img {
   padding: 0 !important;
 }
 
+/* Jeweller dashboard — fractional purchases queue: fits narrow viewports without horizontal scroll */
+.jeweller-purchases-wrap {
+  width: 100%;
+  max-width: 100%;
+  margin-top: 0.35rem;
+  overflow-x: hidden;
+}
+
+.jeweller-purchases-table {
+  width: 100%;
+  max-width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+  table-layout: fixed;
+}
+
+.jeweller-purchases-table th,
+.jeweller-purchases-table td {
+  padding: 0.65rem 0.55rem;
+  border-bottom: 1px solid var(--border-soft);
+  vertical-align: top;
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+}
+
+.jeweller-purchases-table th {
+  text-align: left;
+  font-size: 0.58rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  background: rgba(165, 180, 252, 0.06);
+}
+
+.jeweller-purchases-table th:nth-child(1) {
+  width: 24%;
+}
+
+.jeweller-purchases-table th:nth-child(2) {
+  width: 18%;
+}
+
+.jeweller-purchases-table th:nth-child(3) {
+  width: 22%;
+}
+
+.jeweller-purchases-table th:nth-child(4) {
+  width: 36%;
+}
+
+.jeweller-purchases-customer-stack,
+.jeweller-purchases-metal-stack,
+.jeweller-purchases-order-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+  min-width: 0;
+}
+
+.jeweller-purchases-customer-name {
+  font-size: 0.98rem;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.jeweller-purchases-customer-email,
+.jeweller-purchases-member {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.jeweller-purchases-metal-stack {
+  font-size: 0.84rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.jeweller-purchases-metal-stack strong {
+  color: var(--text);
+}
+
+.jeweller-purchases-order-stack {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.jeweller-purchases-order-ref {
+  font-size: 0.82rem;
+  color: var(--text);
+}
+
+.jeweller-purchases-note {
+  font-size: 0.76rem;
+  color: var(--text);
+}
+
+.jeweller-purchases-otp-cell {
+  background: var(--veil-35);
+}
+
+.jeweller-purchases-otp-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  align-items: stretch;
+  min-width: 0;
+}
+
+.jeweller-purchases-otp-lead {
+  margin: 0;
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.jeweller-purchases-otp-input {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  padding: 0.6rem 0.75rem;
+  font-size: clamp(1rem, 4vw, 1.28rem);
+  letter-spacing: 0.22em;
+  font-weight: 800;
+  text-align: center;
+  border-radius: 12px;
+  background: var(--veil);
+  color: var(--text);
+  font-family: var(--font);
+  transition: border-color 0.15s ease;
+}
+
+.jeweller-purchases-otp-count {
+  margin: 0;
+  font-size: 0.72rem;
+  color: var(--text-faint);
+}
+
+.jeweller-purchases-verify-btn {
+  margin-top: 0.25rem;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 767px) {
+  .jeweller-purchases-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .jeweller-purchases-table tbody tr {
+    display: block;
+    padding: 0.85rem 0;
+    border-bottom: 1px solid var(--border-soft);
+  }
+
+  .jeweller-purchases-table tbody td {
+    display: block;
+    padding: 0.35rem 0;
+    border: none;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    background: transparent;
+  }
+
+  .jeweller-purchases-table tbody td::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 0.28rem;
+    font-size: 0.58rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+  }
+
+  .jeweller-purchases-table tbody td.jeweller-purchases-otp-cell {
+    padding-top: 0.65rem;
+    margin-top: 0.35rem;
+    border-radius: 14px;
+    background: var(--veil-35);
+    padding-inline: 0.65rem;
+    padding-bottom: 0.65rem;
+    border: 1px solid var(--border-soft);
+  }
+
+  .jeweller-purchases-table tbody td.jeweller-purchases-otp-cell::before {
+    margin-bottom: 0.45rem;
+  }
+
+  .jeweller-purchases-table tbody tr > td:last-child {
+    margin-bottom: 0;
+  }
+}
+
 .admin-user-table {
   width: 100%;
   min-width: 640px;
@@ -5032,31 +5238,49 @@ img {
 
 .pwa-update-bar {
   position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  top: auto;
-  width: 100%;
-  max-width: 100vw;
-  box-sizing: border-box;
-  margin: 0;
+  inset: 0;
   z-index: 99999;
+  margin: 0;
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 1rem;
+  padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right))
+    max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+  background: rgba(0, 8, 20, 0.62);
+  backdrop-filter: blur(10px);
+}
+
+.pwa-update-bar-inner {
+  display: flex;
   flex-wrap: wrap;
-  padding: 0.85rem 1rem calc(0.85rem + env(safe-area-inset-bottom, 0));
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  max-width: min(440px, calc(100vw - 2rem));
+  width: 100%;
+  box-sizing: border-box;
+  padding: 1.15rem 1.35rem;
+  border-radius: 16px;
+  border: 1px solid rgba(212, 168, 92, 0.38);
   background: var(--pwa-bar-bg);
-  border-top: 1px solid rgba(212, 168, 92, 0.35);
   box-shadow: var(--pwa-bar-shadow);
   font-size: 0.85rem;
   color: var(--text-silk);
 }
 
+@media (max-width: 380px) {
+  .pwa-update-bar-inner {
+    flex-direction: column;
+    text-align: center;
+  }
+}
+
 .pwa-update-bar-text {
+  flex: 1 1 12rem;
   text-align: center;
   line-height: 1.35;
+  min-width: min(100%, 16rem);
 }
 
 .pwa-update-bar-btn {
@@ -5270,9 +5494,14 @@ img {
 }
 
 [data-theme="light"] .pwa-update-bar {
+  background: rgba(15, 23, 42, 0.38);
+  backdrop-filter: blur(12px);
+}
+
+[data-theme="light"] .pwa-update-bar-inner {
   color: var(--text);
   backdrop-filter: blur(12px);
-  border-top-color: rgba(201, 160, 71, 0.28);
+  border-color: rgba(201, 160, 71, 0.28);
 }
 
 [data-theme="light"] .notif-bell-btn {

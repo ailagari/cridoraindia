@@ -190,128 +190,109 @@ export function JewellerFractionalVerifyPanel() {
       {rows.length === 0 ? (
         <p style={{ color: 'var(--text-muted)' }}>No counter payments awaiting OTP verification.</p>
       ) : (
-        <div style={{ display: 'grid', gap: '1.15rem', maxWidth: 520 }}>
-          {rows.map((r) => {
-            const otp = otpByOrderId[r.id] ?? ''
-            const otpComplete = otp.length === OTP_LEN
-            return (
-              <div
-                key={r.id}
-                className="card"
-                style={{
-                  padding: 0,
-                  overflow: 'hidden',
-                  borderRadius: 20,
-                  border: '1px solid var(--border-soft)',
-                }}
-              >
-                <div style={{ padding: '1rem 1.15rem 0.85rem' }}>
-                  <p style={{ margin: '0 0 0.35rem', fontWeight: 800, fontSize: '1.05rem' }}>
-                    {r.customer.name || r.customer.email}
-                  </p>
-                  <p style={{ margin: '0 0 0.65rem', fontSize: '0.82rem', color: 'var(--text-muted)', lineHeight: 1.45 }}>
-                    {r.customer.email}
-                  </p>
-                  {r.customer.cridora_member_id ? (
-                    <p style={{ margin: '0 0 0.65rem', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                      Member ID <strong className="tabular">{r.customer.cridora_member_id}</strong>
-                    </p>
-                  ) : null}
-                  <p style={{ margin: '0 0 0.35rem', fontSize: '0.88rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
-                    <span className="tabular" style={{ color: 'var(--text)', fontWeight: 700 }}>
-                      {r.grams} g
-                    </span>
-                    <span aria-hidden="true"> · </span>
-                    <span className="tabular" style={{ color: 'var(--text)', fontWeight: 700 }}>
-                      ₹{formatInr(r.total_inr)}
-                    </span>
-                    <span> total (incl. GST)</span>
-                  </p>
-                  <p style={{ margin: '0 0 0.35rem', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                    Order <strong>{r.reference}</strong> · rate ₹{formatInr(r.metal_rate_inr_per_gram)}/g (22K metal)
-                  </p>
-                  {r.customer_note ? (
-                    <p style={{ margin: '0.5rem 0 0', fontSize: '0.78rem', color: 'var(--text)' }}>Note: {r.customer_note}</p>
-                  ) : null}
-                </div>
-
-                <div
-                  style={{
-                    padding: '1rem 1.15rem',
-                    background: 'var(--veil-35)',
-                    borderTop: '1px solid var(--border-soft)',
-                  }}
-                >
-                  <p
-                    style={{
-                      margin: '0 0 0.5rem',
-                      fontSize: '0.62rem',
-                      fontWeight: 800,
-                      letterSpacing: '0.12em',
-                      textTransform: 'uppercase',
-                      color: 'var(--text-faint)',
-                    }}
-                  >
-                    Customer OTP
-                  </p>
-                  <p style={{ margin: '0 0 0.65rem', fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: 1.45 }}>
-                    Ask them to open <strong>Buy gold</strong> and tap <strong>Generate OTP</strong> after payment. Enter the{' '}
-                    {OTP_LEN}-digit code exactly as shown.
-                  </p>
-                  <label htmlFor={`otp-${r.id}`} className="sr-only">
-                    6-digit OTP for order {r.reference}
-                  </label>
-                  <input
-                    id={`otp-${r.id}`}
-                    type="text"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    autoComplete="one-time-code"
-                    maxLength={OTP_LEN}
-                    className="tabular"
-                    style={{
-                      width: '100%',
-                      maxWidth: 280,
-                      padding: '0.65rem 1rem',
-                      fontSize: '1.35rem',
-                      letterSpacing: '0.35em',
-                      fontWeight: 800,
-                      textAlign: 'center',
-                      borderRadius: 14,
-                      border: otpComplete ? '2px solid var(--success)' : '1px solid var(--border-soft)',
-                      background: 'var(--veil)',
-                      color: 'var(--text)',
-                      fontFamily: 'var(--font)',
-                      transition: 'border-color 0.15s ease',
-                    }}
-                    value={otp}
-                    onChange={(e) => {
-                      setErr('')
-                      setOtpByOrderId((m) => ({
-                        ...m,
-                        [r.id]: e.target.value.replace(/\D/g, '').slice(0, OTP_LEN),
-                      }))
-                    }}
-                    placeholder="······"
-                    aria-describedby={`otp-hint-${r.id}`}
-                  />
-                  <p id={`otp-hint-${r.id}`} style={{ margin: '0.45rem 0 0', fontSize: '0.72rem', color: 'var(--text-faint)' }}>
-                    {otp.length}/{OTP_LEN} digits
-                  </p>
-                  <CustomerOtpExpiryHint expiresAt={r.otp_expires_at} />
-                  <button
-                    type="button"
-                    className="btn btn-primary btn--block"
-                    style={{ marginTop: '0.85rem', maxWidth: 280 }}
-                    disabled={busyId != null || !otpComplete}
-                    onClick={() => void verify(r.id)}
-                  >
-                    {busyId === r.id ? 'Verifying…' : 'Verify OTP & credit gold'}
-                  </button>
-                </div>
-              </div>
-            )
-          })}
+        <div className="jeweller-purchases-wrap">
+          <table className="jeweller-purchases-table">
+            <thead>
+              <tr>
+                <th scope="col">Customer</th>
+                <th scope="col">Metal &amp; total</th>
+                <th scope="col">Order</th>
+                <th scope="col">Verify OTP</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r) => {
+                const otp = otpByOrderId[r.id] ?? ''
+                const otpComplete = otp.length === OTP_LEN
+                return (
+                  <tr key={r.id}>
+                    <td data-label="Customer">
+                      <div className="jeweller-purchases-customer-stack">
+                        <strong className="jeweller-purchases-customer-name">
+                          {r.customer.name || r.customer.email}
+                        </strong>
+                        <span className="jeweller-purchases-customer-email">{r.customer.email}</span>
+                        {r.customer.cridora_member_id ? (
+                          <span className="jeweller-purchases-member">
+                            Member ID{' '}
+                            <strong className="tabular">{r.customer.cridora_member_id}</strong>
+                          </span>
+                        ) : null}
+                      </div>
+                    </td>
+                    <td data-label="Metal & total">
+                      <div className="jeweller-purchases-metal-stack">
+                        <span>
+                          <strong className="tabular">{r.grams} g</strong>
+                        </span>
+                        <span>
+                          <strong className="tabular">₹{formatInr(r.total_inr)}</strong> total (incl. GST)
+                        </span>
+                      </div>
+                    </td>
+                    <td data-label="Order">
+                      <div className="jeweller-purchases-order-stack">
+                        <span className="jeweller-purchases-order-ref">
+                          <strong className="tabular">{r.reference}</strong>
+                        </span>
+                        <span className="jeweller-purchases-order-rate">
+                          rate ₹{formatInr(r.metal_rate_inr_per_gram)}/g (22K metal)
+                        </span>
+                        {r.customer_note ? (
+                          <span className="jeweller-purchases-note">Note: {r.customer_note}</span>
+                        ) : null}
+                      </div>
+                    </td>
+                    <td data-label="Verify OTP" className="jeweller-purchases-otp-cell">
+                      <div className="jeweller-purchases-otp-stack">
+                        <p className="jeweller-purchases-otp-lead">
+                          Ask them to open <strong>Buy gold</strong> and tap <strong>Generate OTP</strong> after payment.
+                          Enter the {OTP_LEN}-digit code exactly as shown.
+                        </p>
+                        <label htmlFor={`otp-${r.id}`} className="sr-only">
+                          6-digit OTP for order {r.reference}
+                        </label>
+                        <input
+                          id={`otp-${r.id}`}
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          autoComplete="one-time-code"
+                          maxLength={OTP_LEN}
+                          className="tabular jeweller-purchases-otp-input"
+                          style={{
+                            border: otpComplete ? '2px solid var(--success)' : '1px solid var(--border-soft)',
+                          }}
+                          value={otp}
+                          onChange={(e) => {
+                            setErr('')
+                            setOtpByOrderId((m) => ({
+                              ...m,
+                              [r.id]: e.target.value.replace(/\D/g, '').slice(0, OTP_LEN),
+                            }))
+                          }}
+                          placeholder="······"
+                          aria-describedby={`otp-hint-${r.id}`}
+                        />
+                        <p id={`otp-hint-${r.id}`} className="jeweller-purchases-otp-count">
+                          {otp.length}/{OTP_LEN} digits
+                        </p>
+                        <CustomerOtpExpiryHint expiresAt={r.otp_expires_at} />
+                        <button
+                          type="button"
+                          className="btn btn-primary jeweller-purchases-verify-btn"
+                          disabled={busyId != null || !otpComplete}
+                          onClick={() => void verify(r.id)}
+                        >
+                          {busyId === r.id ? 'Verifying…' : 'Verify OTP & credit gold'}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
         </div>
       )}
     </div>

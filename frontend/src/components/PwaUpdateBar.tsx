@@ -12,17 +12,19 @@ export function PwaUpdateBar() {
   if (!visible || typeof document === 'undefined') return null
 
   return createPortal(
-    <div className="pwa-update-bar" role="status" aria-live="polite">
-      <span className="pwa-update-bar-text">A new version of Cridora is ready.</span>
-      <button
-        type="button"
-        className="btn btn-primary pwa-update-bar-btn"
-        onClick={() => {
-          void applyPwaUpdate(true)
-        }}
-      >
-        Refresh
-      </button>
+    <div className="pwa-update-bar" role="presentation">
+      <div className="pwa-update-bar-inner" role="status" aria-live="polite">
+        <span className="pwa-update-bar-text">A new version of Cridora is ready.</span>
+        <button
+          type="button"
+          className="btn btn-primary pwa-update-bar-btn"
+          onClick={() => {
+            void applyPwaUpdate(true)
+          }}
+        >
+          Refresh
+        </button>
+      </div>
     </div>,
     document.body,
   )
