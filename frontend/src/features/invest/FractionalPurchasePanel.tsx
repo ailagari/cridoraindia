@@ -261,7 +261,7 @@ export function FractionalPurchasePanel() {
               </p>
               <div className="fractional-buy-quote-stack">
                 <p className="fractional-buy-quote-row" style={{ color: 'var(--text-muted)' }}>
-                  Jeweller metal rate (22K reference incl. their default markup):{' '}
+                  Jeweller metal rate (22K live market incl. their default markup):{' '}
                   <strong className="tabular">₹{formatInr(quote.metal_rate_inr_per_gram)}/g</strong>
                 </p>
                 <p className="fractional-buy-quote-row" style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>

@@ -9,7 +9,7 @@ from rest_framework.views import APIView
 from .models import MarketplaceProduct, get_or_create_ticker, jeweller_profile_for
 from apps.accounts.services.admin_access import user_is_platform_admin
 
-from .spot_prices import invalidate_spot_price_cache
+from .spot_prices import invalidate_spot_price_cache, public_spot_prices_payload
 from .serializers import (
     AdminProductModerationSerializer,
     AdminProductRowSerializer,
@@ -219,6 +219,18 @@ class AdminGoldTickerView(APIView):
             return err
         ticker = get_or_create_ticker()
         return Response(GoldTickerReadSerializer(ticker).data)
+
+
+class AdminSpotPricesView(APIView):
+    """Full spot payload including international raw ladder — admin-only."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        err = _forbid_non_admin(request)
+        if err:
+            return err
+        return Response(public_spot_prices_payload(include_live_raw=True))
 
     def patch(self, request):
         err = _forbid_non_admin(request)

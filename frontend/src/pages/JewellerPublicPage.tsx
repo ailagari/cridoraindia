@@ -107,14 +107,13 @@ export function JewellerPublicPage() {
         >
           <div className="card" style={{ padding: '1rem', borderRadius: 20 }}>
             <p style={{ margin: 0, fontSize: '0.6rem', color: 'var(--text-faint)', fontWeight: 800 }}>
-              Cridora reference 22K
+              Live market 22K
             </p>
             <p style={{ margin: '0.35rem 0 0', fontSize: '1.2rem', fontWeight: 800, color: 'var(--success)' }} className="tabular">
               ₹{liveBase?.platformBaseInrPerGram22k ? formatInr(parseNum(liveBase.platformBaseInrPerGram22k), 2) : '—'}/g
             </p>
             <p style={{ margin: '0.35rem 0 0', fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-              {liveBase?.source ? liveBase.source.replace(/_/g, ' ') : '—'} · jeweller reference ₹
-              {formatInr(parseNum(row.reference_metal_inr_per_gram), 2)}/g
+              Listing metal (default markup) ₹{formatInr(parseNum(row.reference_metal_inr_per_gram), 2)}/g
             </p>
           </div>
           <div className="card" style={{ padding: '1rem', borderRadius: 20 }}>
@@ -129,7 +128,7 @@ export function JewellerPublicPage() {
               ₹{formatInr(parseNum(row.buyback_indicative_inr_per_gram), 2)}/g
             </p>
             <p style={{ margin: '0.35rem 0 0', fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-              Reference metal (default markup) ₹{formatInr(parseNum(row.reference_metal_inr_per_gram), 2)}/g · deductions{' '}
+              Listing metal (default markup) ₹{formatInr(parseNum(row.reference_metal_inr_per_gram), 2)}/g · deductions{' '}
               {formatInr(parseNum(row.sellback_deduction_percent), 2)}% + ₹
               {formatInr(parseNum(row.sellback_fixed_inr_per_gram), 2)}/g
             </p>
@@ -148,7 +147,7 @@ export function JewellerPublicPage() {
             <p style={{ margin: '0.35rem 0 0', fontSize: '0.72rem', color: 'var(--text-muted)' }}>
               Processing ₹{formatInr(parseNum(row.gold_loan_processing_fee_inr ?? '0'), 0)}
               {parseNum(row.gold_loan_jeweller_deduction_inr_per_gram ?? '0') > 0
-                ? ` · jeweller notes ₹${formatInr(parseNum(row.gold_loan_jeweller_deduction_inr_per_gram ?? '0'), 2)}/g vs live reference`
+                ? ` · jeweller notes ₹${formatInr(parseNum(row.gold_loan_jeweller_deduction_inr_per_gram ?? '0'), 2)}/g vs live market`
                 : null}
             </p>
           </div>

@@ -224,7 +224,8 @@ export function DashboardLayout({
             <h1 className="dash-topbar-title">{title}</h1>
           </div>
           <div className="dash-topbar-right" style={{ alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-            {(role === 'jeweller' || role === 'admin') ? <GoldTickerStrip variant="dash" /> : null}
+            {role === 'jeweller' ? <GoldTickerStrip variant="jeweller" /> : null}
+            {role === 'admin' ? <GoldTickerStrip variant="admin" /> : null}
             <NotificationBell compact role={role} />
             <Link to="/" className="dash-public-link">
               Public site

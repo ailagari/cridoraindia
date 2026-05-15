@@ -147,7 +147,7 @@ export function MarketplaceProductDetailPage() {
 
             <h2 style={{ margin: '0 0 0.65rem', fontSize: '1.05rem' }}>Rates, taxes &amp; vault estimate</h2>
             <p style={{ margin: '0 0 0.85rem', fontSize: '0.82rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
-              Metal ₹/g is this jeweller&apos;s live listing rate (their manual rate or Cridora benchmark plus their markups — customers only see this showroom rate).
+              Metal ₹/g is this jeweller&apos;s live listing rate (their manual rate or live market benchmark plus their markups — customers only see this showroom rate).
               {jewellerRateAsOf ? (
                 <>
                   {' '}

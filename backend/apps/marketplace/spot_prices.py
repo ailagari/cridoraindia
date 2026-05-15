@@ -218,30 +218,33 @@ def resolve_cridora_base_22k_inr() -> tuple[Decimal, str]:
     return ticker.platform_base_inr_per_gram(), "admin_fallback"
 
 
-def _finalize_public_spot_payload(payload: dict) -> dict:
-    """Attach international (unadjusted) spot snapshot + canonical 22K base key for storefront ticker."""
-    raw = get_raw_spot_payload_for_admin_preview()
-    gold_raw = raw.get("gold") if isinstance(raw.get("gold"), dict) else None
-    if gold_raw and gold_raw.get("22K") is not None:
-        silver_raw = raw.get("silver") if isinstance(raw.get("silver"), dict) else {}
-        entry: dict = {
-            "currency": str(raw.get("currency") or "INR"),
-            "unit": str(raw.get("unit") or "per_gram"),
-            "source": str(raw.get("source") or ""),
-            "gold": dict(gold_raw),
-            "silver": dict(silver_raw),
-        }
-        note = str(raw.get("note") or "").strip()
-        if note:
-            entry["note"] = note
-        if raw.get("usd_to_inr") is not None:
-            try:
-                entry["usd_to_inr"] = float(raw["usd_to_inr"])
-            except (TypeError, ValueError):
-                pass
-        if raw.get("usd_to_inr_source"):
-            entry["usd_to_inr_source"] = str(raw["usd_to_inr_source"])
-        payload["live_raw_spot"] = entry
+def _finalize_spot_payload(payload: dict, *, include_live_raw: bool) -> dict:
+    """Attach optional international raw snapshot (admin-only) + canonical 22K base for ticker APIs."""
+    if include_live_raw:
+        raw = get_raw_spot_payload_for_admin_preview()
+        gold_raw = raw.get("gold") if isinstance(raw.get("gold"), dict) else None
+        if gold_raw and gold_raw.get("22K") is not None:
+            silver_raw = raw.get("silver") if isinstance(raw.get("silver"), dict) else {}
+            entry: dict = {
+                "currency": str(raw.get("currency") or "INR"),
+                "unit": str(raw.get("unit") or "per_gram"),
+                "source": str(raw.get("source") or ""),
+                "gold": dict(gold_raw),
+                "silver": dict(silver_raw),
+            }
+            note = str(raw.get("note") or "").strip()
+            if note:
+                entry["note"] = note
+            if raw.get("usd_to_inr") is not None:
+                try:
+                    entry["usd_to_inr"] = float(raw["usd_to_inr"])
+                except (TypeError, ValueError):
+                    pass
+            if raw.get("usd_to_inr_source"):
+                entry["usd_to_inr_source"] = str(raw["usd_to_inr_source"])
+            payload["live_raw_spot"] = entry
+        else:
+            payload["live_raw_spot"] = None
     else:
         payload["live_raw_spot"] = None
 
@@ -314,19 +317,24 @@ def _platform_ticker_fallback_inr() -> dict:
     return apply_live_adjustments_to_spot_payload(raw_payload, t)
 
 
-def public_spot_prices_payload() -> dict:
-    """Same JSON shape as MarketplaceSpotPricesView (AllowAny)."""
+def public_spot_prices_payload(*, include_live_raw: bool = False) -> dict:
+    """Spot ladder + platform 22K base. International raw ladder only when include_live_raw=True (admin)."""
     ticker = get_or_create_ticker()
     if (
         ticker.manual_ticker_enabled
         and ticker.ticker_manual_22k_inr_per_gram is not None
         and ticker.ticker_manual_22k_inr_per_gram > 0
     ):
-        return _finalize_public_spot_payload(_manual_ticker_spot_payload(ticker))
+        return _finalize_spot_payload(
+            _manual_ticker_spot_payload(ticker), include_live_raw=include_live_raw
+        )
 
     cached = cache.get(_CACHE_KEY_INR)
     if cached is not None:
-        return _finalize_public_spot_payload(apply_live_adjustments_to_spot_payload(cached, ticker))
+        return _finalize_spot_payload(
+            apply_live_adjustments_to_spot_payload(cached, ticker),
+            include_live_raw=include_live_raw,
+        )
 
     data = _build_spot_inr_from_feed()
     if data is None:
@@ -337,8 +345,13 @@ def public_spot_prices_payload() -> dict:
                 "source": "stale_cache",
                 "note": "Last successful spot conversion — feed temporarily unavailable.",
             }
-            return _finalize_public_spot_payload(apply_live_adjustments_to_spot_payload(merged, ticker))
-        return _finalize_public_spot_payload(_platform_ticker_fallback_inr())
+            return _finalize_spot_payload(
+                apply_live_adjustments_to_spot_payload(merged, ticker),
+                include_live_raw=include_live_raw,
+            )
+        return _finalize_spot_payload(
+            _platform_ticker_fallback_inr(), include_live_raw=include_live_raw
+        )
 
     persist_last_good_live_raw_snapshot(data)
     cache.set(_CACHE_KEY_INR, data, timeout=_CACHE_TTL)
@@ -350,11 +363,11 @@ def public_spot_prices_payload() -> dict:
         maybe_notify_gold_rate_move()
     except Exception:
         logger.exception("Gold rate alert check failed after spot refresh")
-    return _finalize_public_spot_payload(payload_out)
+    return _finalize_spot_payload(payload_out, include_live_raw=include_live_raw)
 
 
 class MarketplaceSpotPricesView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
-        return Response(public_spot_prices_payload())
+        return Response(public_spot_prices_payload(include_live_raw=False))

@@ -1,4 +1,4 @@
-"""Detect large moves in Cridora reference 22K ₹/g and broadcast Web Push."""
+"""Detect large moves in live market 22K ₹/g and broadcast Web Push."""
 
 from __future__ import annotations
 
@@ -26,7 +26,7 @@ def _fmt_rupees(d: Decimal) -> str:
 
 def maybe_notify_gold_rate_move(*, force: bool = False) -> None:
     """
-    If Cridora reference 22K ₹/g moved by ≥ threshold vs previous reference, advance baseline and broadcast push.
+    If live market 22K ₹/g moved by ≥ threshold vs previous baseline, advance baseline and broadcast push.
     Uses a short cache lock unless force=True (e.g. after admin ticker save).
     """
     if not webpush_configured():
@@ -38,7 +38,7 @@ def maybe_notify_gold_rate_move(*, force: bool = False) -> None:
     current = current.quantize(Decimal("0.01"))
     ticker_pk = get_or_create_ticker().pk
 
-    title = "Cridora reference alert"
+    title = "Live market alert"
     body: str | None = None
     with transaction.atomic():
         t = GoldTickerConfig.objects.select_for_update().get(pk=ticker_pk)
@@ -63,7 +63,7 @@ def maybe_notify_gold_rate_move(*, force: bool = False) -> None:
 
         direction_label = "up" if delta > 0 else "down"
         body = (
-            f"Cridora 22K reference moved {direction_label} by ₹{_fmt_rupees(swing)}/g from the previous reference "
+            f"Live market 22K moved {direction_label} by ₹{_fmt_rupees(swing)}/g from the previous baseline "
             f"(now ₹{_fmt_rupees(current)}/g)."
         )
         GoldTickerConfig.objects.filter(pk=t.pk).update(

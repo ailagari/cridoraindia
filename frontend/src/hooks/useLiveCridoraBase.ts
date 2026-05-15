@@ -10,7 +10,7 @@ export type LiveCridoraBase = {
 }
 
 /**
- * Resolved Cridora 22K ₹/g from the gold-ticker API (HTTP polling while tab visible).
+ * Resolved live-market 22K ₹/g from the gold-ticker API (HTTP polling while tab visible).
  */
 export function useLiveCridoraBase(pollMs: number = LIVE_PRICE_POLL_MS) {
   const [data, setData] = useState<LiveCridoraBase | null>(null)

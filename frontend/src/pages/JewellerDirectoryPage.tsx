@@ -37,7 +37,7 @@ export function JewellerDirectoryPage() {
             Jeweller marketplace
           </h1>
           <p style={{ margin: 0, maxWidth: '46ch', color: 'var(--text-muted)', lineHeight: 1.55 }}>
-            Compare live references, sellback posture, and trust signals—one row per showroom.
+            Compare live market rates, sellback posture, and trust signals—one row per showroom.
           </p>
         </div>
       </section>

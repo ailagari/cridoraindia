@@ -35,8 +35,8 @@ type ProfileApi = Record<string, unknown>
 type SectionKey = 'metals' | 'ornaments' | 'deposit' | 'golden'
 
 const modeOptions: { value: MetalPricingMode; label: string }[] = [
-  { value: 'match_cridora', label: 'Match Cridora reference' },
-  { value: 'markup_on_cridora', label: 'Cridora + markup (% / ₹g)' },
+  { value: 'match_cridora', label: 'Match live market' },
+  { value: 'markup_on_cridora', label: 'Live market + markup (% / ₹g)' },
   { value: 'manual_board_inr', label: 'Fixed board ₹/g' },
   { value: 'external_api', label: 'External rate feed (URL)' },
 ]
@@ -332,10 +332,10 @@ export function JewellerRatesSchemesPanel() {
 
   const metalsSummary =
     ticker != null
-      ? `Cridora 22K ₹${formatInr(platformBaseInr, 2)}/g · ${JEWELLER_METAL_ROWS.length} purities`
-      : 'Loading reference…'
+      ? `Live market 22K ₹${formatInr(platformBaseInr, 2)}/g · ${JEWELLER_METAL_ROWS.length} purities`
+      : 'Loading live market…'
 
-  const ornamentsSummary = `Ref metal ₹${formatInr(referenceMetalInr, 2)}/g · Buy ₹${formatInr(indicativeBuybackGoldDisplay, 2)}/g`
+  const ornamentsSummary = `Listing metal ₹${formatInr(referenceMetalInr, 2)}/g · Buy ₹${formatInr(indicativeBuybackGoldDisplay, 2)}/g`
 
   const depositSummary = `Deposit ${formatInr(parseN(platformDisclosures.gold_deposit_yield_apr_percent), 2)}% APR · Loan ${formatInr(parseN(platformDisclosures.gold_loan_interest_apr_percent), 2)}%`
 
@@ -354,7 +354,7 @@ export function JewellerRatesSchemesPanel() {
         .jeweller-rates-unified tbody tr.jeweller-metal-row.is-picked { background: rgba(212, 175, 55, 0.06); }
       `}</style>
       <p className="dash-panel-lead">
-        Every metal tracks the <strong>Cridora reference</strong> admins publish. Use the table below —{' '}
+        Every metal tracks the <strong>live market</strong> admins publish. Use the table below —{' '}
         <strong>one section open at a time</strong>; inside Metals, <strong>one purity row open at a time</strong>. Ornament
         SKUs:{' '}
         <Link to="/dashboard/jeweller?section=mkt_products">Marketplace · Listings</Link>.
@@ -404,7 +404,7 @@ export function JewellerRatesSchemesPanel() {
                     role="presentation"
                   >
                     <p style={{ margin: '0 0 0.75rem', fontSize: '0.82rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
-                      One platform reference (effective 22K ₹/g). Other purities scale from it.
+                      One live market ladder (effective 22K ₹/g). Other purities scale from it.
                       {jewellerRatePolicyAsOf.trim() !== '' ? (
                         <>
                           {' '}
@@ -437,7 +437,7 @@ export function JewellerRatesSchemesPanel() {
                           color: 'var(--text-faint)',
                         }}
                       >
-                        Cridora reference 22K (admin-published)
+                        Live market 22K (admin-published)
                       </p>
                       {ticker ? (
                         <strong className="tabular" style={{ color: 'var(--gold-light)', fontSize: '1.1rem' }}>
@@ -462,7 +462,7 @@ export function JewellerRatesSchemesPanel() {
                         <thead>
                           <tr>
                             <th style={{ ...thHead, borderRadius: '8px 0 0 0' }}>Metal</th>
-                            <th style={{ ...thHead, textAlign: 'right' }}>Ref ₹/g</th>
+                            <th style={{ ...thHead, textAlign: 'right' }}>Live ₹/g</th>
                             <th style={{ ...thHead, textAlign: 'right' }}>Board ₹/g</th>
                             <th style={{ ...thHead, textAlign: 'right' }}>Buy ₹/g</th>
                             <th style={{ ...thHead, textAlign: 'right' }}>Ded ₹/g</th>
@@ -522,7 +522,7 @@ export function JewellerRatesSchemesPanel() {
                                         </p>
                                         <div style={{ display: 'grid', gap: '0.65rem' }}>
                                           <label className="field" style={{ margin: 0 }}>
-                                            <span style={{ fontSize: '0.78rem' }}>Pricing vs Cridora reference</span>
+                                            <span style={{ fontSize: '0.78rem' }}>Pricing vs live market</span>
                                             <select
                                               style={{ ...inp, maxWidth: '100%' }}
                                               value={pr.mode}
@@ -557,8 +557,8 @@ export function JewellerRatesSchemesPanel() {
                                                     })
                                                   }
                                                 >
-                                                  <option value="percent">Percent on reference</option>
-                                                  <option value="fixed_inr">Fixed ₹/g on reference</option>
+                                                  <option value="percent">Percent on live market</option>
+                                                  <option value="fixed_inr">Fixed ₹/g on live market</option>
                                                 </select>
                                               </label>
                                               {pr.markup_apply === 'percent' ? (
@@ -654,7 +654,7 @@ export function JewellerRatesSchemesPanel() {
                                                   }
                                                 >
                                                   <option value="custom">Custom off your board ₹/g</option>
-                                                  <option value="admin_reference">Cridora admin buyback rule</option>
+                                                  <option value="admin_reference">Platform admin buyback rule</option>
                                                 </select>
                                               </label>
                                               {bb.deduction_source === 'admin_reference' ? (
@@ -667,7 +667,7 @@ export function JewellerRatesSchemesPanel() {
                                                     lineHeight: 1.45,
                                                   }}
                                                 >
-                                                  Applies the same % or ₹/g deduction admins set on the live ticker for{' '}
+                                                  Applies the same % or ₹/g deduction admins set on the published ticker for{' '}
                                                   {label}. Then your extra ₹/g (below) subtracts from that result.
                                                   Current rule:{' '}
                                                   <strong style={{ color: 'var(--gold-light)' }}>
@@ -779,7 +779,7 @@ export function JewellerRatesSchemesPanel() {
                       </label>
                       <div className="card" style={{ padding: '0.75rem', borderRadius: 12, margin: 0 }}>
                         <p style={{ margin: 0, fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-faint)' }}>
-                          REFERENCE METAL
+                          LISTING METAL
                         </p>
                         <p style={{ margin: '0.35rem 0 0', fontWeight: 800 }} className="tabular">
                           ₹{formatInr(referenceMetalInr, 2)}/g
@@ -794,7 +794,7 @@ export function JewellerRatesSchemesPanel() {
                         </p>
                         {ornamentTotalDeductionPerGram != null ? (
                           <p style={{ margin: '0.45rem 0 0', fontSize: '0.78rem', fontWeight: 700 }} className="tabular">
-                            Total deductions vs ref metal: ₹{formatInr(ornamentTotalDeductionPerGram, 2)}/g
+                            Total deductions vs listing metal: ₹{formatInr(ornamentTotalDeductionPerGram, 2)}/g
                           </p>
                         ) : (
                           <p style={{ margin: '0.45rem 0 0', fontSize: '0.75rem', color: 'var(--text-muted)' }}>

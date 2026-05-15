@@ -401,7 +401,7 @@ export function JewellerMarketplacePanel() {
           Add catalogue SKU
         </h2>
         <p className="dash-coming__text" style={{ marginBottom: '0.85rem' }}>
-          Making can be fixed ₹/gram or percent of gold metal value. Default metal reference comes from Rates &amp; schemes;
+          Making can be fixed ₹/gram or percent of gold metal value. Default listing metal comes from Rates &amp; schemes;
           per-SKU markup override or manual ₹/g optional below.
         </p>
         <datalist id="jeweller-mp-categories">

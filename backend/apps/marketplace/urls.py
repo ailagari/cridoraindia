@@ -3,6 +3,7 @@ from django.urls import path
 from .spot_prices import MarketplaceSpotPricesView
 from .views import (
     AdminGoldTickerView,
+    AdminSpotPricesView,
     AdminMarketplaceProductListView,
     AdminMarketplaceProductModerateView,
     JewellerPricingProfileView,
@@ -26,6 +27,7 @@ urlpatterns = [
     path("jeweller/marketplace/products/", JewellerProductListCreateView.as_view()),
     path("jeweller/marketplace/products/<int:pk>/", JewellerProductDetailView.as_view()),
     path("admin/gold-ticker/", AdminGoldTickerView.as_view()),
+    path("admin/spot-prices/", AdminSpotPricesView.as_view()),
     path("admin/marketplace/products/", AdminMarketplaceProductListView.as_view()),
     path(
         "admin/marketplace/products/<int:pk>/moderate/",

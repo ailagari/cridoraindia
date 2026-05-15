@@ -249,7 +249,7 @@ function AdminPublishedRatesSummary(props: {
           <thead>
             <tr>
               <th>Metal</th>
-              <th className="tabular">Intl live</th>
+              <th className="tabular">International (reference)</th>
               <th className="tabular">+Markup</th>
               <th className="tabular">Published</th>
             </tr>
@@ -386,7 +386,7 @@ export function AdminGoldTickerPanel() {
         Gold ticker
       </h2>
       <p className="dash-coming__text" style={{ marginBottom: '0.65rem', fontSize: '0.82rem' }}>
-        <strong>Live:</strong> markup on raw, then deduction — jewellers see the published column.{' '}
+        <strong>Live:</strong> markup on international raw spot, then deduction — jewellers and customers see the published live market column.{' '}
         <strong>Manual:</strong> fixed 22K/24K gold only (no row rules).{' '}
         <strong>Alerts:</strong> 22K vs baseline; <strong>0</strong> disables.
       </p>
@@ -724,7 +724,7 @@ function AdminModerationPricingCell({ row }: { row: ProductAdminRow }) {
   const gv = formatMaybeStrInr(row.gold_metal_value_inr)
   return (
     <td style={{ fontSize: '0.76rem', lineHeight: 1.45, verticalAlign: 'top', maxWidth: 220 }}>
-      {perG('Cridora 22K', row.platform_base_inr_per_gram_22k)}
+      {perG('Live market 22K', row.platform_base_inr_per_gram_22k)}
       {perG('Board', row.metal_rate_inr_per_gram_used)}
       <div className="tabular">
         <span style={{ color: 'var(--text-muted)' }}>Gold value </span>

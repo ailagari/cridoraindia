@@ -27,9 +27,9 @@ export type SpotPricesPayload = {
   gold: Record<string, number>
   silver?: Record<string, number>
   ticker_items?: Array<{ label: string; value?: number; text?: string }>
-  /** Unadjusted global-spot INR/g (same ladder keys as `gold`) when cache/snapshot exists. */
+  /** Unadjusted international INR/g ladder — present only on admin spot-prices endpoint. */
   live_raw_spot?: LiveRawSpotPayload | null
-  /** Canonical 22K ₹/g; matches resolved Cridora reference. */
+  /** Canonical 22K ₹/g (published live market base). */
   platform_base_inr_per_gram_22k?: string
   cridora_base_source?: string
 }
