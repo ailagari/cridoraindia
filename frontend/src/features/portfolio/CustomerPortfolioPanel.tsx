@@ -4,12 +4,7 @@ import { fetchGoldTicker, fetchSpotPrices, type GoldTickerPayload, type SpotPric
 import { LIVE_BALANCE_POLL_MS } from '@/lib/liveDeskIntervals'
 import { useLivePoll } from '@/lib/useLivePoll'
 import { PortfolioBarChart, PortfolioCostVsMarketBoard, PortfolioDonut } from './PortfolioCharts'
-import {
-  PortfolioGrowwHeaderBar,
-  PortfolioGrowwHero,
-  PortfolioSpotPillsRow,
-  PortfolioVaultHoldingsList,
-} from './PortfolioGrowwViews'
+import { PortfolioGrowwHero, PortfolioSpotPillsRow, PortfolioVaultHoldingsList } from './PortfolioGrowwViews'
 
 const DONUT_COLORS = ['#fbbf24', '#d4a85c', '#67e8f9', '#a78bfa', '#34d399', '#f472b6', '#38bdf8']
 
@@ -163,16 +158,9 @@ export function CustomerPortfolioPanel() {
 
   return (
     <div className="dash-panel-max pf-scope">
-      <p className="dash-panel-lead pf-lead-intro">
-        Live vault balances, estimated mark-to-market from jewellers&apos; quoted ₹/g, and unrealized profit or loss vs your
-        allocated <strong>metal purchase cost</strong> (gold value before GST; invoice totals incl. GST appear in the ledger).
-      </p>
-
       {loadErr ? <p className="form-error">{loadErr}</p> : null}
 
       <div className="pf-groww-shell pf-stagger">
-        <PortfolioGrowwHeaderBar />
-
         <PortfolioSpotPillsRow spot={spotPayload} tickerFallback={goldTickerFallback} />
 
         <nav className="pf-groww-tabs" aria-label="Portfolio sections">

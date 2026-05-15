@@ -22,33 +22,12 @@ function numFromGold(block: Record<string, number> | undefined, key: string): nu
   return typeof v === 'number' && Number.isFinite(v) ? v : null
 }
 
-function SvgIconSearch(props: { size?: number }) {
-  const s = props.size ?? 20
-  return (
-    <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden>
-      <circle cx="11" cy="11" r="7" />
-      <path d="M20 20l-4.2-4.2" strokeLinecap="round" />
-    </svg>
-  )
-}
-
 function SvgIconEye(props: { size?: number }) {
   const s = props.size ?? 18
   return (
     <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
       <path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z" />
       <circle cx="12" cy="12" r="3" />
-    </svg>
-  )
-}
-
-function SvgIconDots(props: { size?: number }) {
-  const s = props.size ?? 18
-  return (
-    <svg width={s} height={s} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-      <circle cx="12" cy="5" r="1.8" />
-      <circle cx="12" cy="12" r="1.8" />
-      <circle cx="12" cy="19" r="1.8" />
     </svg>
   )
 }
@@ -174,9 +153,6 @@ export function PortfolioGrowwHero({
             onClick={() => onToggleMask()}
           >
             <SvgIconEye />
-          </button>
-          <button type="button" className="pf-groww-icon-btn" aria-label="More options (display only)">
-            <SvgIconDots />
           </button>
         </div>
       </div>
@@ -316,26 +292,5 @@ export function PortfolioVaultHoldingsList({
         prices.
       </p>
     </section>
-  )
-}
-
-export function PortfolioGrowwHeaderBar() {
-  return (
-    <header className="pf-groww-topbar">
-      <div className="pf-groww-topbar__brand">
-        <div className="pf-groww-topbar__orb" aria-hidden>
-          <span className="pf-groww-topbar__orb-dot" />
-        </div>
-        <div>
-          <h2 className="pf-groww-topbar__title">Portfolio</h2>
-          <p className="pf-groww-topbar__sub">Gold · vaults · live marks</p>
-        </div>
-      </div>
-      <div className="pf-groww-topbar__tools">
-        <span className="pf-groww-topbar__ico" aria-hidden>
-          <SvgIconSearch />
-        </span>
-      </div>
-    </header>
   )
 }
