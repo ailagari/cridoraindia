@@ -56,6 +56,9 @@ class GoldTickerReadSerializer(serializers.ModelSerializer):
             "live_spot_raw_preview",
             "rate_move_alert_threshold_inr",
             "rate_alert_baseline_inr_per_gram_22k",
+            "hourly_gold_push_enabled",
+            "hourly_gold_push_baseline_inr_per_gram_22k",
+            "hourly_gold_push_baseline_recorded_at",
             "manual_ticker_enabled",
             "ticker_manual_22k_inr_per_gram",
             "ticker_manual_24k_inr_per_gram",
@@ -157,6 +160,7 @@ class GoldTickerAdminSerializer(serializers.ModelSerializer):
         fields = (
             "live_metal_adjustments_json",
             "rate_move_alert_threshold_inr",
+            "hourly_gold_push_enabled",
             "manual_ticker_enabled",
             "ticker_manual_22k_inr_per_gram",
             "ticker_manual_24k_inr_per_gram",

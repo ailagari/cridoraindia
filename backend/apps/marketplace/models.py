@@ -56,6 +56,22 @@ class GoldTickerConfig(models.Model):
         blank=True,
         help_text="Previous Cridora reference 22K ₹/g used for alert comparisons (internal).",
     )
+    hourly_gold_push_enabled = models.BooleanField(
+        default=True,
+        help_text="When on, hourly cron may broadcast Web Push comparing 22K reference vs prior hourly snapshot.",
+    )
+    hourly_gold_push_baseline_inr_per_gram_22k = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Last hourly snapshot of Cridora 22K ₹/g for digest pushes (internal).",
+    )
+    hourly_gold_push_baseline_recorded_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When hourly snapshot baseline was recorded (internal).",
+    )
     gold_deposit_yield_apr_percent = models.DecimalField(
         max_digits=8,
         decimal_places=3,
