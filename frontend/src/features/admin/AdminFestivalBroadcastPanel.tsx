@@ -58,6 +58,11 @@ export function AdminFestivalBroadcastPanel() {
   }, [load])
 
   useEffect(() => {
+    const t = window.setInterval(() => void load(), 60000)
+    return () => window.clearInterval(t)
+  }, [load])
+
+  useEffect(() => {
     if (!scheduledLocal) {
       const d = new Date()
       d.setMinutes(d.getMinutes() + 5)
@@ -135,9 +140,9 @@ export function AdminFestivalBroadcastPanel() {
       <p className="dash-footnote" style={{ marginBottom: '1rem', maxWidth: 640 }}>
         Schedule a message for a future time. At that time the backend sends a{' '}
         <strong>Web Push to every subscribed device</strong> (customers, jewellers, and admins who enabled alerts). Users who
-        never tapped &quot;Enable&quot; in the notification bell will not receive it. Production also needs VAPID keys and a cron
-        job running <code className="tabular">process_festival_broadcasts</code> every few minutes so late-night sends still
-        fire when no admin is logged in.
+        never tapped &quot;Enable&quot; in the notification bell will not receive it. Production needs VAPID keys. Opening this page
+        or the notification bell runs the sender for due schedules. For reliability when no admin is online, run a cron such as{' '}
+        <code className="tabular">process_festival_broadcasts</code> every few minutes.
       </p>
 
       <div className="card" style={{ maxWidth: 560, padding: '1.25rem', marginBottom: '1.5rem' }}>

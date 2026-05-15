@@ -553,9 +553,11 @@ class AdminNotification(models.Model):
 
     KIND_KYC_UPLOAD = "kyc_upload"
     KIND_KYB_UPLOAD = "kyb_upload"
+    KIND_FESTIVAL_BROADCAST_SENT = "festival_broadcast_sent"
     KIND_CHOICES = [
         (KIND_KYC_UPLOAD, "Customer KYC upload"),
         (KIND_KYB_UPLOAD, "Jeweller KYB upload"),
+        (KIND_FESTIVAL_BROADCAST_SENT, "Festival broadcast sent"),
     ]
 
     kind = models.CharField(max_length=32, choices=KIND_CHOICES)

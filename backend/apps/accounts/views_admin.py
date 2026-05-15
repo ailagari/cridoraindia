@@ -27,6 +27,7 @@ from .serializers import (
     UserMeSerializer,
 )
 from .services.admin_access import user_is_platform_admin
+from .services.festival_broadcast import process_due_festival_broadcasts
 from .services.kyc_review import customer_in_review_queue, jeweller_in_review_queue
 from .services.platform_operational import (
     fractional_counter_otp_ttl_seconds_int,
@@ -399,6 +400,8 @@ class AdminNotificationsListView(APIView):
         except ValueError:
             limit = 40
         limit = max(1, min(limit, 100))
+
+        process_due_festival_broadcasts()
 
         rows = list(AdminNotification.objects.all()[:limit])
         ids = [n.id for n in rows]

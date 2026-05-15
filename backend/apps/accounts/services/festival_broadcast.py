@@ -3,7 +3,7 @@
 from django.db import transaction
 from django.utils import timezone
 
-from apps.accounts.models import FestivalBroadcastNotification
+from apps.accounts.models import AdminNotification, FestivalBroadcastNotification
 from apps.accounts.webpush_service import send_push_broadcast
 
 
@@ -47,6 +47,22 @@ def process_due_festival_broadcasts(*, limit: int = 50) -> int:
                         "sent_at",
                         "push_recipient_count",
                     ]
+                )
+                preview = row.body.strip()
+                if len(preview) > 400:
+                    preview = preview[:397] + "…"
+                device_note = (
+                    f"Sent to {n} subscribed device(s)."
+                    if n
+                    else "Sent to 0 devices — check VAPID env vars and user subscriptions."
+                )
+                body_feed = f"{preview}\n\n{device_note}" if preview else device_note
+                AdminNotification.objects.create(
+                    kind=AdminNotification.KIND_FESTIVAL_BROADCAST_SENT,
+                    title=row.title.strip() or "Festival broadcast sent",
+                    body=body_feed,
+                    link_path="/dashboard/admin?section=plat_festival",
+                    actor=row.created_by,
                 )
             except Exception as exc:
                 row.status = FestivalBroadcastNotification.STATUS_FAILED

@@ -20,6 +20,7 @@ class AdminFestivalBroadcastListCreateView(APIView):
         err = _require_admin(request)
         if err:
             return err
+        process_due_festival_broadcasts()
         qs = (
             FestivalBroadcastNotification.objects.select_related("created_by")
             .order_by("-created_at")[:100]

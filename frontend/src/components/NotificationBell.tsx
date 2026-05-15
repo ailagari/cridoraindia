@@ -43,7 +43,11 @@ function formatNotifyTime(iso: string): string {
 
 function mapAdminApiRow(r: ApiAdminNotification): AppNotification {
   const kind: AppNotification['kind'] =
-    r.kind === 'kyb_upload' || r.kind === 'kyc_upload' ? 'kyc' : 'alert'
+    r.kind === 'kyb_upload' || r.kind === 'kyc_upload'
+      ? 'kyc'
+      : r.kind === 'festival_broadcast_sent'
+        ? 'promo'
+        : 'alert'
   return {
     id: String(r.id),
     title: r.title,
