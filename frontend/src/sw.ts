@@ -50,7 +50,7 @@ self.addEventListener('push', (event: PushEvent) => {
   const bodyRaw = typeof data.body === 'string' ? data.body.trim() : ''
   const body = bodyRaw.length > 0 ? bodyRaw : 'Open Cridora for details.'
   const targetUrl = new URL(data.url || '/', self.location.origin).href
-  const iconHref = new URL('/favicon.svg', self.location.origin).href
+  const iconHref = new URL('/push-icon-192.png', self.location.origin).href
   const notifyOpts = {
     body,
     icon: iconHref,

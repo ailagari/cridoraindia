@@ -12,7 +12,7 @@ export default defineConfig({
       filename: 'sw.ts',
       registerType: 'prompt',
       injectRegister: null,
-      includeAssets: ['favicon.svg'],
+      includeAssets: ['favicon.svg', 'push-icon-192.png'],
       manifest: {
         name: 'Cridora India',
         short_name: 'Cridora',

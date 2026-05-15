@@ -14,8 +14,8 @@ import {
 import { CRIDORA_PUSH_REFRESH_MESSAGE_TYPE } from '@/lib/cridoraSwMessages'
 
 /** Faster poll while panel open so badges/lists stay fresh without reloading the page. */
-const FEED_POLL_MS_PANEL_OPEN = 4000
-const FEED_POLL_MS_BACKGROUND = 15000
+const FEED_POLL_MS_PANEL_OPEN = 2000
+const FEED_POLL_MS_BACKGROUND = 8000
 
 type ApiAdminNotification = {
   id: number
@@ -67,14 +67,17 @@ function mapAdminApiRow(r: ApiAdminNotification): AppNotification {
 type Props = {
   compact?: boolean
   role?: 'customer' | 'jeweller' | 'admin'
+  /** Customer/jeweller dashboards: omit push controls in the bell (Enable stays on public chrome). */
+  suppressPushRow?: boolean
 }
 
-export function NotificationBell({ compact = false, role = 'customer' }: Props) {
+export function NotificationBell({ compact = false, role = 'customer', suppressPushRow = false }: Props) {
   const { user } = useAuth()
   const navigate = useNavigate()
   const useAdminFeed = role === 'admin' && user?.user_type === 'admin'
   const usePlatformFeed = Boolean(user && !useAdminFeed)
   const useLiveFeed = useAdminFeed || usePlatformFeed
+  const hidePushRowInBell = usePlatformFeed && suppressPushRow
 
   const [open, setOpen] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
@@ -109,7 +112,7 @@ export function NotificationBell({ compact = false, role = 'customer' }: Props) 
   const loadAdminFeed = useCallback(async () => {
     if (!useAdminFeed) return
     setAdminFeedError('')
-    const res = await authFetch('/api/v1/admin/notifications/?limit=40')
+    const res = await authFetch('/api/v1/admin/notifications/?limit=40', { cache: 'no-store' })
     const body = (await res.json().catch(() => ({}))) as {
       detail?: string
       results?: ApiAdminNotification[]
@@ -125,7 +128,7 @@ export function NotificationBell({ compact = false, role = 'customer' }: Props) 
   const loadPlatformFeed = useCallback(async () => {
     if (!usePlatformFeed) return
     setPlatformFeedError('')
-    const res = await authFetch('/api/v1/notifications/?limit=40')
+    const res = await authFetch('/api/v1/notifications/?limit=40', { cache: 'no-store' })
     const body = (await res.json().catch(() => ({}))) as {
       detail?: string
       results?: ApiAdminNotification[]
@@ -375,32 +378,21 @@ export function NotificationBell({ compact = false, role = 'customer' }: Props) 
     [navigate, useLiveFeed, useAdminFeed, loadAdminFeed, loadPlatformFeed],
   )
 
-  const hintPrimary = useAdminFeed ? (
-    <>
-      Uploads awaiting KYC or KYB review appear here.
-      {pushServerReady === false ? (
-        <span>
-          {' '}
-          <strong>Unavailable on this deployment:</strong> Web Push needs VAPID keys on the server (hosting env vars). Enable
-          still appears once keys are set.
-        </span>
-      ) : (
-        ' Enable device notifications for festival and platform broadcasts — delivery is the same for every account role.'
-      )}
-    </>
-  ) : usePlatformFeed ? (
-    <>
-      Festival and platform broadcasts you receive also appear here after they are sent (same entries admins see under promo).
-      {pushServerReady === false ? (
-        <span>
-          {' '}
-          <strong>Unavailable on this deployment:</strong> Web Push needs VAPID keys on the server.
-        </span>
-      ) : (
-        ' Turn on device notifications below so alerts reach this phone or browser even when Cridora is closed.'
-      )}
-    </>
-  ) : pushServerReady === false ? (
+  const hintPrimary =
+    useAdminFeed ? (
+      <>
+        Uploads awaiting KYC or KYB review appear here.
+        {pushServerReady === false ? (
+          <span>
+            {' '}
+            <strong>Unavailable on this deployment:</strong> Web Push needs VAPID keys on the server (hosting env vars). Enable
+            still appears once keys are set.
+          </span>
+        ) : (
+          ' Enable device notifications for festival and platform broadcasts — delivery is the same for every account role.'
+        )}
+      </>
+    ) : usePlatformFeed ? null : pushServerReady === false ? (
     <>
       <strong>Unavailable on this deployment.</strong> Web Push needs VAPID keys on the server (hosting env vars:
       WEB_PUSH_VAPID_PUBLIC_KEY, WEB_PUSH_VAPID_PRIVATE_KEY, WEB_PUSH_VAPID_CONTACT). Sample alerts below still appear here for
@@ -449,51 +441,53 @@ export function NotificationBell({ compact = false, role = 'customer' }: Props) 
               {setupHint}
             </p>
           ) : null}
-          <p className="notif-panel-hint">{hintPrimary}</p>
+          {hintPrimary ? <p className="notif-panel-hint">{hintPrimary}</p> : null}
           {feedError ? <p className="form-error notif-panel-hint">{feedError}</p> : null}
-          <div className="notif-push-row">
-            <div className="notif-push-copy">
-              <span className="notif-push-label">Device notifications</span>
-              {!pushSupported ? (
-                <span className="notif-push-status">Not supported in this browser or context.</span>
-              ) : Notification.permission === 'denied' ? (
-                <span className="notif-push-status">Blocked in browser settings — allow notifications for this site.</span>
-              ) : pushActive ? (
-                <span className="notif-push-status notif-push-status--on">On for this device</span>
-              ) : pushServerReady === false ? (
-                <>
-                  <span className="notif-push-status">Unavailable on this deployment</span>
-                  <span className="notif-push-detail">See the note above — VAPID env vars are missing on the server.</span>
-                </>
-              ) : pushServerReady === null ? (
-                <span className="notif-push-status">Checking server setup…</span>
-              ) : (
-                <span className="notif-push-status">Off</span>
-              )}
-              {pushError ? <span className="notif-push-err">{pushError}</span> : null}
+          {!hidePushRowInBell ? (
+            <div className="notif-push-row">
+              <div className="notif-push-copy">
+                <span className="notif-push-label">Device notifications</span>
+                {!pushSupported ? (
+                  <span className="notif-push-status">Not supported in this browser or context.</span>
+                ) : Notification.permission === 'denied' ? (
+                  <span className="notif-push-status">Blocked in browser settings — allow notifications for this site.</span>
+                ) : pushActive ? (
+                  <span className="notif-push-status notif-push-status--on">On for this device</span>
+                ) : pushServerReady === false ? (
+                  <>
+                    <span className="notif-push-status">Unavailable on this deployment</span>
+                    <span className="notif-push-detail">See the note above — VAPID env vars are missing on the server.</span>
+                  </>
+                ) : pushServerReady === null ? (
+                  <span className="notif-push-status">Checking server setup…</span>
+                ) : (
+                  <span className="notif-push-status">Off</span>
+                )}
+                {pushError ? <span className="notif-push-err">{pushError}</span> : null}
+              </div>
+              {pushSupported && Notification.permission !== 'denied' ? (
+                pushActive ? (
+                  <button
+                    type="button"
+                    className="btn btn-ghost notif-push-btn"
+                    disabled={pushBusy}
+                    onClick={() => void disablePush()}
+                  >
+                    Turn off
+                  </button>
+                ) : pushServerReady === true ? (
+                  <button
+                    type="button"
+                    className="btn btn-primary notif-push-btn"
+                    disabled={pushBusy}
+                    onClick={() => void enablePush()}
+                  >
+                    Enable
+                  </button>
+                ) : null
+              ) : null}
             </div>
-            {pushSupported && Notification.permission !== 'denied' ? (
-              pushActive ? (
-                <button
-                  type="button"
-                  className="btn btn-ghost notif-push-btn"
-                  disabled={pushBusy}
-                  onClick={() => void disablePush()}
-                >
-                  Turn off
-                </button>
-              ) : pushServerReady === true ? (
-                <button
-                  type="button"
-                  className="btn btn-primary notif-push-btn"
-                  disabled={pushBusy}
-                  onClick={() => void enablePush()}
-                >
-                  Enable
-                </button>
-              ) : null
-            ) : null}
-          </div>
+          ) : null}
           {useAdminFeed && user && pushActive && pushServerReady === true ? (
             <div className="notif-push-row" style={{ marginTop: '0.5rem', flexWrap: 'wrap' }}>
               <button

@@ -32,7 +32,7 @@ export type WebPushServerStatus = {
 }
 
 export async function fetchWebPushServerStatus(): Promise<WebPushServerStatus> {
-  const res = await apiFetch('/api/v1/push/vapid-public-key/')
+  const res = await apiFetch('/api/v1/push/vapid-public-key/', { cache: 'no-store' })
   const data = (await res.json().catch(() => ({}))) as {
     public_key?: string | null
     configured?: boolean
