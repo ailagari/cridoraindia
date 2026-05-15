@@ -67,17 +67,24 @@ function mapAdminApiRow(r: ApiAdminNotification): AppNotification {
 type Props = {
   compact?: boolean
   role?: 'customer' | 'jeweller' | 'admin'
-  /** Customer/jeweller dashboards: omit push controls in the bell (Enable stays on public chrome). */
+  /** Customer/jeweller dashboards: omit push controls in the bell. */
   suppressPushRow?: boolean
+  /** Marketing / public chrome: never show Enable/Turn off in the bell. */
+  hidePushControls?: boolean
 }
 
-export function NotificationBell({ compact = false, role = 'customer', suppressPushRow = false }: Props) {
+export function NotificationBell({
+  compact = false,
+  role = 'customer',
+  suppressPushRow = false,
+  hidePushControls = false,
+}: Props) {
   const { user } = useAuth()
   const navigate = useNavigate()
   const useAdminFeed = role === 'admin' && user?.user_type === 'admin'
   const usePlatformFeed = Boolean(user && !useAdminFeed)
   const useLiveFeed = useAdminFeed || usePlatformFeed
-  const hidePushRowInBell = usePlatformFeed && suppressPushRow
+  const hidePushRowInBell = Boolean(hidePushControls) || (usePlatformFeed && suppressPushRow)
 
   const [open, setOpen] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
