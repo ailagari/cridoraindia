@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState, type CSSProperties } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { authFetch } from '@/lib/api'
+import { authFetch, authUpload } from '@/lib/api'
 import { LIVE_MARKETPLACE_EDITOR_POLL_MS } from '@/lib/liveDeskIntervals'
 import { MAKING_FIXED_PER_GRAM, MAKING_PERCENT_OF_METAL } from '@/lib/marketplacePricing'
 import { useLivePoll } from '@/lib/useLivePoll'
@@ -11,15 +11,16 @@ type ProductRow = Record<string, unknown>
 type ProfileApi = Record<string, unknown>
 
 export function JewellerMarketplacePanel() {
+  const logoInputRef = useRef<HTMLInputElement>(null)
   const [products, setProducts] = useState<ProductRow[]>([])
   const [loadError, setLoadError] = useState('')
   const [formError, setFormError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [logoBusy, setLogoBusy] = useState(false)
 
   const [cardDraft, setCardDraft] = useState({
     logo_url: '',
     credibility_score: '',
-    lock_in_summary: '',
     minimum_redeemable_grams: '',
     same_store_mc_benefit: '',
     cross_redemption_fee_note: '',
@@ -79,7 +80,6 @@ export function JewellerMarketplacePanel() {
         pJson.credibility_score != null && String(pJson.credibility_score) !== ''
           ? String(pJson.credibility_score)
           : '',
-      lock_in_summary: String(pJson.lock_in_summary ?? ''),
       minimum_redeemable_grams:
         pJson.minimum_redeemable_grams != null && String(pJson.minimum_redeemable_grams) !== ''
           ? String(pJson.minimum_redeemable_grams)
@@ -113,6 +113,42 @@ export function JewellerMarketplacePanel() {
 
   useLivePoll(pollProducts, LIVE_MARKETPLACE_EDITOR_POLL_MS, true)
 
+  const uploadLogo = async (file: File) => {
+    const allowed = ['image/jpeg', 'image/png', 'image/webp']
+    if (!allowed.includes(file.type)) {
+      setFormError('Logo must be JPEG, PNG, or WebP.')
+      return
+    }
+    const maxBytes = 2 * 1024 * 1024
+    if (file.size > maxBytes) {
+      setFormError('Logo must be 2 MB or smaller.')
+      return
+    }
+    setLogoBusy(true)
+    setFormError('')
+    const fd = new FormData()
+    fd.append('file', file)
+    let res: Response
+    try {
+      res = await authUpload('/api/v1/jeweller/marketplace/logo/', fd)
+    } catch {
+      setFormError('Not signed in or upload failed to start.')
+      setLogoBusy(false)
+      return
+    }
+    setLogoBusy(false)
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}))
+      setFormError(JSON.stringify(j))
+      return
+    }
+    const body = (await res.json()) as { logo_url?: string }
+    if (body.logo_url) {
+      setCardDraft((p) => ({ ...p, logo_url: body.logo_url ?? p.logo_url }))
+    }
+    await refresh()
+  }
+
   const saveMarketplaceCard = async () => {
     setBusy(true)
     setFormError('')
@@ -120,9 +156,6 @@ export function JewellerMarketplacePanel() {
       method: 'PATCH',
       jsonBody: {
         logo_url: cardDraft.logo_url.trim(),
-        credibility_score:
-          cardDraft.credibility_score.trim() === '' ? null : numOrZero(cardDraft.credibility_score),
-        lock_in_summary: cardDraft.lock_in_summary.trim(),
         minimum_redeemable_grams:
           cardDraft.minimum_redeemable_grams.trim() === ''
             ? null
@@ -227,13 +260,11 @@ export function JewellerMarketplacePanel() {
     await refresh()
   }
 
-  const filterBarGap: CSSProperties = { display: 'grid', gap: '0.85rem' }
-
   return (
     <div className="dash-panel-max jeweller-mkt">
       <p className="dash-panel-lead">
         Manage public jeweller card fields and product catalogue. Configure{' '}
-        <strong>buy rates, markups, sellback, cross-redemption wording</strong>, and{' '}
+        <strong>buy rates, markups, sellback, cross-redemption wording</strong>, vault lock-in, and{' '}
         <strong>Golden Scheme</strong> disclosures under{' '}
         <Link to="/dashboard/jeweller?section=mkt_policy">Marketplace · Rates &amp; schemes</Link> (MVP §14).
       </p>
@@ -246,35 +277,79 @@ export function JewellerMarketplacePanel() {
           Jeweller marketplace card &amp; redemption details
         </h2>
         <p className="dash-coming__text" style={{ marginBottom: '1rem' }}>
-          Logo, trust score, lock-in, minimum redeemable grams, same-store MC line, cross-redemption disclosure, optional
-          metrics, and feature chips — shown on your directory card after KYB approval.
+          Logo (upload), minimum redeemable grams, same-store MC line, cross-redemption disclosure, optional metrics, and
+          feature chips — shown on your directory card after KYB approval. Vault / fractional lock-in is edited under{' '}
+          <Link to="/dashboard/jeweller?section=mkt_policy">Rates &amp; schemes</Link> (Deposit section).
         </p>
-        <div style={{ ...filterBarGap, gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' }}>
+        <div
+          style={{
+            display: 'grid',
+            gap: '1rem',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+            alignItems: 'start',
+            marginBottom: '1rem',
+          }}
+        >
+          <div className="field" style={{ margin: 0 }}>
+            <span>Logo</span>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', alignItems: 'center', marginTop: '0.35rem' }}>
+              {cardDraft.logo_url.trim() !== '' ? (
+                <img
+                  src={cardDraft.logo_url.trim()}
+                  alt=""
+                  style={{
+                    width: 96,
+                    height: 96,
+                    objectFit: 'contain',
+                    borderRadius: 12,
+                    border: '1px solid var(--border-soft)',
+                    background: 'var(--veil)',
+                  }}
+                />
+              ) : (
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>No logo yet</span>
+              )}
+              <input
+                ref={logoInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                disabled={busy || logoBusy}
+                style={{ display: 'none' }}
+                onChange={(e) => {
+                  const f = e.target.files?.[0]
+                  e.target.value = ''
+                  if (f) void uploadLogo(f)
+                }}
+              />
+              <button
+                type="button"
+                className="btn btn-ghost"
+                disabled={busy || logoBusy}
+                onClick={() => logoInputRef.current?.click()}
+              >
+                {logoBusy ? 'Uploading…' : 'Upload image'}
+              </button>
+            </div>
+            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block', marginTop: '0.35rem' }}>
+              JPEG, PNG, or WebP · max 2 MB. You can still paste a hosted URL below if needed.
+            </span>
+          </div>
           <label className="field">
-            <span>Logo URL</span>
+            <span>Logo URL (optional)</span>
             <input
               value={cardDraft.logo_url}
               onChange={(e) => setCardDraft((p) => ({ ...p, logo_url: e.target.value }))}
-              placeholder="https://…"
+              placeholder="Set automatically after upload, or paste https://…"
             />
           </label>
-          <label className="field">
-            <span>Credibility score (0–100)</span>
-            <input
-              inputMode="decimal"
-              value={cardDraft.credibility_score}
-              onChange={(e) => setCardDraft((p) => ({ ...p, credibility_score: e.target.value }))}
-              placeholder="Optional"
-            />
-          </label>
-          <label className="field">
-            <span>Lock-in summary</span>
-            <input
-              value={cardDraft.lock_in_summary}
-              onChange={(e) => setCardDraft((p) => ({ ...p, lock_in_summary: e.target.value }))}
-              placeholder="e.g. 30 / 90 days · none optional"
-            />
-          </label>
+          <div className="field" style={{ margin: 0 }}>
+            <span>Credibility score</span>
+            <p style={{ margin: '0.35rem 0 0', fontWeight: 700 }}>
+              {cardDraft.credibility_score.trim() === ''
+                ? 'Not set — assigned by Cridora admin'
+                : `${cardDraft.credibility_score.trim()} / 100 (admin only)`}
+            </p>
+          </div>
           <label className="field">
             <span>Minimum redeemable (g)</span>
             <input
@@ -290,14 +365,6 @@ export function JewellerMarketplacePanel() {
               value={cardDraft.same_store_mc_benefit}
               onChange={(e) => setCardDraft((p) => ({ ...p, same_store_mc_benefit: e.target.value }))}
               placeholder="e.g. 0% MC same store"
-            />
-          </label>
-          <label className="field">
-            <span>Cross-redemption fee note</span>
-            <input
-              value={cardDraft.cross_redemption_fee_note}
-              onChange={(e) => setCardDraft((p) => ({ ...p, cross_redemption_fee_note: e.target.value }))}
-              placeholder="Platform / MC disclosure"
             />
           </label>
           <label className="field">
@@ -325,6 +392,35 @@ export function JewellerMarketplacePanel() {
             />
           </label>
         </div>
+        <fieldset
+          style={{
+            marginTop: '1rem',
+            border: '1px solid var(--border-soft)',
+            borderRadius: 14,
+            padding: '0.85rem 1rem',
+          }}
+        >
+          <legend style={{ fontSize: '0.75rem', fontWeight: 800, padding: '0 0.35rem' }}>Cross redemption</legend>
+          <label className="field" style={{ gridColumn: '1 / -1', marginBottom: '0.65rem' }}>
+            <span>Fees, making charge, or policy wording</span>
+            <textarea
+              className="dash-textarea"
+              rows={4}
+              value={cardDraft.cross_redemption_fee_note}
+              onChange={(e) => setCardDraft((p) => ({ ...p, cross_redemption_fee_note: e.target.value }))}
+              placeholder="Describe cross-jeweller redemption fees or deductions buyers should expect."
+              style={{ width: '100%', maxWidth: '100%', marginTop: '0.35rem' }}
+            />
+          </label>
+          <label className="field" style={{ flexDirection: 'row', alignItems: 'center', gap: '0.45rem', margin: 0 }}>
+            <input
+              type="checkbox"
+              checked={cardDraft.feat_cross_redemption}
+              onChange={(e) => setCardDraft((p) => ({ ...p, feat_cross_redemption: e.target.checked }))}
+            />
+            <span>Show cross redemption on marketplace card</span>
+          </label>
+        </fieldset>
         <fieldset
           style={{
             marginTop: '1rem',
@@ -374,14 +470,6 @@ export function JewellerMarketplacePanel() {
                 onChange={(e) => setCardDraft((p) => ({ ...p, feat_emergency_funds: e.target.checked }))}
               />
               <span>Emergency funds</span>
-            </label>
-            <label className="field" style={{ flexDirection: 'row', alignItems: 'center', gap: '0.45rem', margin: 0 }}>
-              <input
-                type="checkbox"
-                checked={cardDraft.feat_cross_redemption}
-                onChange={(e) => setCardDraft((p) => ({ ...p, feat_cross_redemption: e.target.checked }))}
-              />
-              <span>Cross redemption</span>
             </label>
           </div>
         </fieldset>

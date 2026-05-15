@@ -115,6 +115,7 @@ export function JewellerRatesSchemesPanel() {
   const [ratesDraft, setRatesDraft] = useState({
     default_gold_markup_percent: '',
     gold_deposit_note: '',
+    lock_in_summary: '',
     representative_making_charge_inr_per_gram: '',
     buyback_headline_inr_per_gram: '',
     gold_loan_jeweller_deduction_inr_per_gram: '',
@@ -171,6 +172,7 @@ export function JewellerRatesSchemesPanel() {
     setRatesDraft({
       default_gold_markup_percent: String(pJson.default_gold_markup_percent ?? ''),
       gold_deposit_note: String(pJson.gold_deposit_note ?? ''),
+      lock_in_summary: String(pJson.lock_in_summary ?? ''),
       representative_making_charge_inr_per_gram: String(
         pJson.representative_making_charge_inr_per_gram ?? '0',
       ),
@@ -286,6 +288,7 @@ export function JewellerRatesSchemesPanel() {
         ),
         default_gold_markup_percent: numOrZero(ratesDraft.default_gold_markup_percent),
         gold_deposit_note: ratesDraft.gold_deposit_note.trim(),
+        lock_in_summary: ratesDraft.lock_in_summary.trim(),
         representative_making_charge_inr_per_gram: numOrZero(
           ratesDraft.representative_making_charge_inr_per_gram,
         ),
@@ -337,7 +340,13 @@ export function JewellerRatesSchemesPanel() {
 
   const ornamentsSummary = `Listing metal ₹${formatInr(referenceMetalInr, 2)}/g · Buy ₹${formatInr(indicativeBuybackGoldDisplay, 2)}/g`
 
-  const depositSummary = `Deposit ${formatInr(parseN(platformDisclosures.gold_deposit_yield_apr_percent), 2)}% APR · Loan ${formatInr(parseN(platformDisclosures.gold_loan_interest_apr_percent), 2)}% · Proc. ${formatInr(parseN(platformDisclosures.gold_loan_processing_fee_percent), 3)}%`
+  const depositSummary = useMemo(() => {
+    const base = `Deposit ${formatInr(parseN(platformDisclosures.gold_deposit_yield_apr_percent), 2)}% APR · Loan ${formatInr(parseN(platformDisclosures.gold_loan_interest_apr_percent), 2)}% · Proc. ${formatInr(parseN(platformDisclosures.gold_loan_processing_fee_percent), 3)}%`
+    const li = ratesDraft.lock_in_summary.trim()
+    if (!li) return base
+    const short = li.length > 42 ? `${li.slice(0, 42)}…` : li
+    return `${base} · Vault lock-in: ${short}`
+  }, [platformDisclosures, ratesDraft.lock_in_summary])
 
   const goldenSummary = ratesDraft.golden_scheme_enabled ? 'Offer enabled — edit terms' : 'Disabled'
 
@@ -837,7 +846,7 @@ export function JewellerRatesSchemesPanel() {
               style={{ cursor: 'pointer' }}
               onClick={() => toggleSection('deposit')}
             >
-              <td style={{ ...tdCell, fontWeight: 800 }}>Deposit &amp; loan disclosures</td>
+              <td style={{ ...tdCell, fontWeight: 800 }}>Fractional vault, loan &amp; lock-in</td>
               <td style={{ ...tdCell, color: 'var(--text-muted)', fontSize: '0.82rem' }}>{depositSummary}</td>
               <td style={{ ...tdCell, textAlign: 'center' }}>
                 <Chevron open={openSection === 'deposit'} />
@@ -885,6 +894,18 @@ export function JewellerRatesSchemesPanel() {
                           }))
                         }
                       />
+                    </label>
+                    <label className="field" style={{ marginTop: '0.85rem' }}>
+                      <span>Vault / fractional gold lock-in summary</span>
+                      <input
+                        value={ratesDraft.lock_in_summary}
+                        onChange={(e) => setRatesDraft((p) => ({ ...p, lock_in_summary: e.target.value }))}
+                        placeholder="e.g. 30 / 90 days · partial withdrawals after 15 days"
+                        style={{ width: '100%', marginTop: '0.35rem' }}
+                      />
+                      <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block', marginTop: '0.25rem' }}>
+                        Shown on your marketplace card as lock-in for vault / fractional deposits (not Golden Scheme — use Golden section for scheme tenure).
+                      </span>
                     </label>
                     <label className="field" style={{ marginTop: '0.85rem' }}>
                       <span>Gold deposit / vault note</span>

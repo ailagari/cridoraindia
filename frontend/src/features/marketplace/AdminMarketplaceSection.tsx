@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type CSSProperties } from 'react'
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
 import { authFetch } from '@/lib/api'
 import { LIVE_ADMIN_TICKER_POLL_MS, LIVE_ADMIN_POLL_MS } from '@/lib/liveDeskIntervals'
 import { useLivePoll } from '@/lib/useLivePoll'
@@ -301,6 +301,27 @@ export function AdminGoldTickerPanel() {
   const [crossPlatformFeeDraft, setCrossPlatformFeeDraft] = useState('49')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [saveAck, setSaveAck] = useState(false)
+  const saveAckTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (saveAckTimerRef.current != null) {
+        window.clearTimeout(saveAckTimerRef.current)
+      }
+    }
+  }, [])
+
+  const flashSaveSuccess = () => {
+    setSaveAck(true)
+    if (saveAckTimerRef.current != null) {
+      window.clearTimeout(saveAckTimerRef.current)
+    }
+    saveAckTimerRef.current = window.setTimeout(() => {
+      setSaveAck(false)
+      saveAckTimerRef.current = null
+    }, 3200)
+  }
 
   const load = useCallback(async () => {
     setError('')
@@ -361,6 +382,7 @@ export function AdminGoldTickerPanel() {
   const save = async () => {
     setBusy(true)
     setError('')
+    setSaveAck(false)
     const res = await authFetch('/api/v1/admin/gold-ticker/', {
       method: 'PATCH',
       jsonBody: {
@@ -382,10 +404,34 @@ export function AdminGoldTickerPanel() {
       return
     }
     await load()
+    flashSaveSuccess()
   }
 
   return (
     <section className="card" style={{ padding: '1.25rem', borderRadius: 18 }}>
+      <style>{`
+        @keyframes adminTickerSaveAckIn {
+          from {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        .admin-ticker-save-ack {
+          margin-top: 0.85rem;
+          padding: 0.65rem 0.9rem;
+          border-radius: 12px;
+          border: 1px solid rgba(34, 197, 94, 0.45);
+          background: rgba(34, 197, 94, 0.12);
+          color: var(--success);
+          font-weight: 700;
+          font-size: 0.88rem;
+          animation: adminTickerSaveAckIn 0.38s ease-out;
+        }
+      `}</style>
       <h2 className="dash-coming__title" style={{ marginTop: 0 }}>
         Ticker &amp; fees
       </h2>
@@ -710,6 +756,11 @@ export function AdminGoldTickerPanel() {
       >
         Save ticker &amp; fees
       </button>
+      {saveAck ? (
+        <div role="status" aria-live="polite" className="admin-ticker-save-ack">
+          Saved — ticker &amp; fees are updated and live.
+        </div>
+      ) : null}
       {manualOn && !manual22Draft.trim() ? (
         <p className="dash-footnote" style={{ marginTop: '0.5rem' }}>
           Enter a 22K ₹/g value before saving in manual mode.

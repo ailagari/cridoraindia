@@ -288,6 +288,7 @@ class JewellerPricingProfileSerializer(serializers.ModelSerializer):
             "gold_deposit_yield_apr_percent",
             "gold_loan_interest_apr_percent",
             "gold_loan_processing_fee_percent",
+            "credibility_score",
             "metal_rate_preview",
             "admin_buyback_reference_preview",
         )

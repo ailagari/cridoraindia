@@ -1,6 +1,9 @@
 import logging
+import uuid
 
 from django.contrib.auth import get_user_model
+from django.core.files.base import ContentFile
+from django.core.files.storage import default_storage
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -140,6 +143,51 @@ class JewellerPricingProfileView(APIView):
             return Response(ser.errors, status=status.HTTP_400_BAD_REQUEST)
         ser.save()
         return Response(JewellerPricingProfileSerializer(profile).data)
+
+
+_LOGO_CT_ALLOWED = frozenset({"image/jpeg", "image/png", "image/webp"})
+_LOGO_CT_EXT = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp"}
+_MAX_LOGO_BYTES = 2 * 1024 * 1024
+
+
+class JewellerMarketplaceLogoUploadView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        err = _forbid_non_jeweller(request)
+        if err:
+            return err
+        upload = request.FILES.get("file")
+        if not upload:
+            return Response(
+                {"detail": "file is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        ct = (getattr(upload, "content_type", None) or "").split(";")[0].strip().lower()
+        if ct not in _LOGO_CT_ALLOWED:
+            return Response(
+                {"detail": "Logo must be JPEG, PNG, or WebP."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        size = int(getattr(upload, "size", 0) or 0)
+        if size > _MAX_LOGO_BYTES:
+            return Response(
+                {"detail": "Logo must be 2 MB or smaller."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        ext = _LOGO_CT_EXT[ct]
+        rel = f"jeweller_logos/{request.user.pk}/{uuid.uuid4().hex}{ext}"
+        saved_name = default_storage.save(rel, ContentFile(upload.read()))
+        media_url = default_storage.url(saved_name)
+        absolute = (
+            media_url
+            if isinstance(media_url, str) and media_url.startswith("http")
+            else request.build_absolute_uri(media_url)
+        )
+        profile = jeweller_profile_for(request.user)
+        profile.logo_url = absolute[:512]
+        profile.save(update_fields=["logo_url", "updated_at"])
+        return Response({"logo_url": profile.logo_url})
 
 
 class JewellerProductListCreateView(APIView):
