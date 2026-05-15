@@ -162,3 +162,232 @@ export function PortfolioSparkRow({ points, stroke }: { points: number[]; stroke
     </svg>
   )
 }
+
+function fmtInrBoard(n: number): string {
+  return `₹${n.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`
+}
+
+function fmtSignedBoard(n: number): string {
+  const sign = n >= 0 ? '+' : '−'
+  const abs = Math.abs(Math.round(n))
+  return `${sign}₹${abs.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`
+}
+
+function buildCostStepGeometry(
+  cumInr: number[],
+  ymax: number,
+  svgW: number,
+  svgH: number,
+): {
+  lineD: string
+  areaD: string
+  xs: number[]
+  gridYs: number[]
+  mapY: (v: number) => number
+  baselineY: number
+  pl: number
+  cw: number
+} {
+  const pl = 46
+  const pr = 10
+  const pt = 10
+  const pbPad = 14
+  const cw = svgW - pl - pr
+  const ch = svgH - pt - pbPad
+  const baselineY = pt + ch
+  const mapY = (v: number) => pt + ch - (ymax <= 0 ? 0 : (v / ymax) * ch)
+  const n = cumInr.length
+  const xs =
+    n <= 1 ? [pl, pl + cw] : cumInr.map((_, i) => pl + (i / Math.max(n - 1, 1)) * cw)
+
+  const gridYs = [0.25, 0.5, 0.75].map((t) => pt + ch * (1 - t))
+
+  if (n === 0) {
+    return { lineD: '', areaD: '', xs, gridYs, mapY, baselineY, pl, cw }
+  }
+
+  let lineD = `M ${xs[0]} ${baselineY} L ${xs[0]} ${mapY(cumInr[0])}`
+  for (let i = 0; i < n - 1; i++) {
+    lineD += ` L ${xs[i + 1]} ${mapY(cumInr[i])} L ${xs[i + 1]} ${mapY(cumInr[i + 1])}`
+  }
+  lineD += ` L ${pl + cw} ${mapY(cumInr[n - 1])}`
+  const areaD = `${lineD} L ${pl + cw} ${baselineY} L ${xs[0]} ${baselineY} Z`
+
+  return { lineD, areaD, xs, gridYs, mapY, baselineY, pl, cw }
+}
+
+/** Dashboard-style cost vs market snapshot + optional cumulative invested staircase from ledger. */
+export function PortfolioCostVsMarketBoard({
+  allocatedCost,
+  marketValue,
+  pnlInr,
+  pnlPct,
+  cumulativeMetalCostSteps,
+}: {
+  allocatedCost: number
+  marketValue: number
+  pnlInr: number
+  pnlPct: number | null
+  cumulativeMetalCostSteps: number[]
+}) {
+  const maxBar = useMemo(
+    () => Math.max(allocatedCost, marketValue, 1),
+    [allocatedCost, marketValue],
+  )
+
+  const ymaxChart = useMemo(() => {
+    const peakSteps =
+      cumulativeMetalCostSteps.length > 0 ? Math.max(...cumulativeMetalCostSteps) : 0
+    return Math.max(allocatedCost, marketValue, peakSteps, 1)
+  }, [allocatedCost, marketValue, cumulativeMetalCostSteps])
+
+  const geo = useMemo(
+    () => buildCostStepGeometry(cumulativeMetalCostSteps, ymaxChart, 340, 112),
+    [cumulativeMetalCostSteps, ymaxChart],
+  )
+
+  const mvY = geo.mapY(marketValue)
+  const showBuildup =
+    cumulativeMetalCostSteps.length > 0 && cumulativeMetalCostSteps.some((v) => v > 0)
+
+  const pctLabel =
+    pnlPct != null && Number.isFinite(pnlPct) && allocatedCost > 0
+      ? `${pnlPct >= 0 ? '+' : ''}${pnlPct.toFixed(2)}% vs cost`
+      : null
+
+  const ariaParts = [
+    `Metal cost basis ${fmtInrBoard(allocatedCost)}.`,
+    `Live portfolio value ${fmtInrBoard(marketValue)}.`,
+    `Unrealized ${fmtSignedBoard(pnlInr)}.`,
+  ]
+  if (pctLabel) ariaParts.push(`${pctLabel}.`)
+  const ariaSummary = ariaParts.join(' ')
+
+  const costPct = Math.min(100, (allocatedCost / maxBar) * 100)
+  const marketPct = Math.min(100, (marketValue / maxBar) * 100)
+
+  return (
+    <div className="pf-mkt-board" role="region" aria-label={ariaSummary}>
+      <div className="pf-mkt-board__ticker">
+        <div className="pf-mkt-board__quote pf-mkt-board__quote--basis">
+          <span className="pf-mkt-board__sym">Metal cost basis</span>
+          <span className="pf-mkt-board__px tabular">{fmtInrBoard(allocatedCost)}</span>
+          <span className="pf-mkt-board__hint">Pre‑GST allocation · scaled to holdings</span>
+        </div>
+        <div className="pf-mkt-board__quote pf-mkt-board__quote--live">
+          <span className="pf-mkt-board__sym">Portfolio value · live</span>
+          <div className="pf-mkt-board__live-row">
+            <span className="pf-mkt-board__last tabular">{fmtInrBoard(marketValue)}</span>
+            <span
+              className={`pf-mkt-board__chg tabular ${pnlInr >= 0 ? 'pf-mkt-board__chg--up' : 'pf-mkt-board__chg--down'}`}
+            >
+              {fmtSignedBoard(pnlInr)}
+              {pctLabel ? <span className="pf-mkt-board__chg-pct"> · {pctLabel}</span> : null}
+            </span>
+          </div>
+          <span className="pf-mkt-board__hint">Jeweller ₹/g marks on vault holdings · not historical NAV</span>
+        </div>
+      </div>
+
+      <div className="pf-mkt-board__bars" aria-hidden="true">
+        <div className="pf-mkt-board__bar-track">
+          <span className="pf-mkt-board__bar-label">Cost</span>
+          <div className="pf-mkt-board__bar-rail">
+            <div
+              className="pf-mkt-board__bar-fill pf-mkt-board__bar-fill--cost"
+              style={{ width: `${costPct}%` }}
+            />
+          </div>
+          <span className="pf-mkt-board__bar-num tabular">{fmtInrBoard(allocatedCost)}</span>
+        </div>
+        <div className="pf-mkt-board__bar-track">
+          <span className="pf-mkt-board__bar-label">Market</span>
+          <div className="pf-mkt-board__bar-rail">
+            <div
+              className="pf-mkt-board__bar-fill pf-mkt-board__bar-fill--mkt"
+              style={{ width: `${marketPct}%` }}
+            />
+          </div>
+          <span className="pf-mkt-board__bar-num tabular">{fmtInrBoard(marketValue)}</span>
+        </div>
+      </div>
+
+      {showBuildup ? (
+        <div className="pf-mkt-board__chart-wrap">
+          <div className="pf-mkt-board__chart-head">
+            <span className="pf-mkt-board__chart-title">Invested vs valuation</span>
+            <span className="pf-mkt-board__chart-caption">
+              Step curve · cumulative metal ₹ after each purchase · dashed · live vault mark
+            </span>
+          </div>
+          <svg
+            className="pf-mkt-board__svg"
+            viewBox="0 0 340 112"
+            preserveAspectRatio="xMidYMid meet"
+            role="img"
+            aria-label="Step chart of cumulative purchase cost with reference line at current market value"
+          >
+            <title>{ariaSummary}</title>
+            <defs>
+              <linearGradient id="pf-mkt-step-fill" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#818cf8" stopOpacity="0.35" />
+                <stop offset="100%" stopColor="#818cf8" stopOpacity="0.02" />
+              </linearGradient>
+            </defs>
+            {geo.gridYs.map((gy, i) => (
+              <line
+                key={`g-${String(i)}`}
+                x1={geo.pl}
+                y1={gy}
+                x2={geo.pl + geo.cw}
+                y2={gy}
+                stroke="rgba(148, 163, 184, 0.14)"
+                strokeWidth={1}
+                strokeDasharray="3 5"
+              />
+            ))}
+            <text x="4" y="22" className="pf-mkt-board__axis-label" fontSize="9">
+              {fmtInrBoard(ymaxChart)}
+            </text>
+            <text x="4" y={geo.baselineY - 4} className="pf-mkt-board__axis-label" fontSize="9">
+              ₹0
+            </text>
+            {geo.areaD ? (
+              <path d={geo.areaD} fill="url(#pf-mkt-step-fill)" className="pf-mkt-board__area" />
+            ) : null}
+            {geo.lineD ? (
+              <path
+                d={geo.lineD}
+                fill="none"
+                stroke="#a5b4fc"
+                strokeWidth={2}
+                strokeLinecap="square"
+                strokeLinejoin="round"
+                className="pf-line-draw"
+              />
+            ) : null}
+            <line
+              x1={geo.pl}
+              y1={mvY}
+              x2={geo.pl + geo.cw}
+              y2={mvY}
+              stroke="#fcd34d"
+              strokeWidth={1.5}
+              strokeDasharray="5 4"
+              opacity={0.95}
+            />
+            <circle cx={geo.pl + geo.cw} cy={mvY} r={3.5} fill="#fcd34d" opacity={0.95} />
+          </svg>
+          <div className="pf-mkt-board__legend">
+            <span className="pf-mkt-board__lg">
+              <span aria-hidden className="pf-mkt-board__lg-i pf-mkt-board__lg-i--step" /> Cumulative metal cost (ledger)
+            </span>
+            <span className="pf-mkt-board__lg">
+              <span aria-hidden className="pf-mkt-board__lg-i pf-mkt-board__lg-i--mv" /> Live portfolio value
+            </span>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  )
+}

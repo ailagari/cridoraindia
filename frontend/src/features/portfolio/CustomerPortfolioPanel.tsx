@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { fetchGoldWallet, type FractionalLedgerRowDTO, type VaultRowDTO } from '@/lib/goldTransferApi'
 import { LIVE_BALANCE_POLL_MS } from '@/lib/liveDeskIntervals'
 import { useLivePoll } from '@/lib/useLivePoll'
-import { PortfolioBarChart, PortfolioDonut, PortfolioTrendChart } from './PortfolioCharts'
+import { PortfolioBarChart, PortfolioCostVsMarketBoard, PortfolioDonut } from './PortfolioCharts'
 
 const DONUT_COLORS = ['#fbbf24', '#d4a85c', '#67e8f9', '#a78bfa', '#34d399', '#f472b6', '#38bdf8']
 
@@ -118,11 +118,26 @@ export function CustomerPortfolioPanel() {
   const pnlPctStr = unrealized?.unrealized_pnl_percent?.trim() ?? ''
   const pnlPct = pnlPctStr !== '' ? Number.parseFloat(pnlPctStr) : NaN
 
-  const inrTrendMini = useMemo(() => {
-    if (estInr <= 0 && allocatedCost <= 0) return [0, 0]
-    if (allocatedCost > 0) return [Math.round(allocatedCost), Math.round(estInr)]
-    return [Math.round(estInr * 0.94), Math.round(estInr)]
-  }, [estInr, allocatedCost])
+  const marketValueInr = useMemo(() => {
+    const raw = unrealized?.market_value_inr?.trim()
+    if (raw) {
+      const n = Number.parseFloat(raw)
+      if (Number.isFinite(n)) return n
+    }
+    return estInr
+  }, [unrealized?.market_value_inr, estInr])
+
+  const cumulativeMetalCostSteps = useMemo(() => {
+    const sorted = [...ledger].sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at))
+    const steps: number[] = []
+    let cum = 0
+    for (const r of sorted) {
+      const raw = r.gold_value_inr_pre_gst?.trim()
+      cum += raw ? Number.parseFloat(raw) : 0
+      steps.push(cum)
+    }
+    return steps
+  }, [ledger])
 
   const ledgerDisplay = useMemo(() => ledgerRowsWithRunningBal(ledger), [ledger])
 
@@ -192,19 +207,21 @@ export function CustomerPortfolioPanel() {
       ) : null}
 
       <div className="pf-grid pf-grid--charts pf-stagger">
-        <article className="pf-card pf-card--lift">
+        <article className="pf-card pf-card--lift pf-card--wide">
           <header className="pf-card__head">
-            <h3 className="pf-card__title">Cost vs market (INR)</h3>
+            <h3 className="pf-card__title">Portfolio performance · INR</h3>
             <p className="pf-card__meta">
-              Allocated metal cost (pre‑GST) vs estimated vault value from jeweller ₹/g marks (not historical NAV)
+              Snapshot like a quote board: metal cost basis vs live vault mark‑to‑market from jeweller ₹/g (no historical price
+              chart).
             </p>
           </header>
-          <div className="pf-card__viz">
-            <PortfolioTrendChart
-              values={inrTrendMini}
-              stroke="#fcd34d"
-              fillId="customer-area-portfolio-live"
-              ariaLabel="Trend from allocated cost to estimated vault INR value"
+          <div className="pf-card__viz pf-card__viz--mkt-board">
+            <PortfolioCostVsMarketBoard
+              allocatedCost={allocatedCost}
+              marketValue={marketValueInr}
+              pnlInr={pnlInr}
+              pnlPct={Number.isFinite(pnlPct) ? pnlPct : null}
+              cumulativeMetalCostSteps={cumulativeMetalCostSteps}
             />
           </div>
         </article>
