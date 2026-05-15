@@ -24,7 +24,7 @@ export const JEWELLER_NAV_GROUPS: DashboardNavGroup[] = [
     shortLabel: 'Market',
     icon: 'shop',
     items: [
-      { sectionKey: 'mkt_products', label: 'Listings' },
+      { sectionKey: 'mkt_products', label: 'Catalogue SKU' },
       { sectionKey: 'mkt_policy', label: 'Rates & schemes' },
     ],
   },

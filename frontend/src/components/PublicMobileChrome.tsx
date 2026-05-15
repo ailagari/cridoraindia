@@ -2,7 +2,7 @@ import { NavLink, useLocation } from 'react-router-dom'
 import { NotificationBell } from '@/components/NotificationBell'
 import { PublicTabIcon } from '@/components/PublicTabIcon'
 import { useAuth } from '@/context/AuthContext'
-import { dashboardLandingPath } from '@/lib/routes'
+import { dashboardLandingPath, isDashboardPath } from '@/lib/routes'
 
 function topForPath(pathname: string): { to: string; label: string }[] {
   if (pathname === '/') {
@@ -55,6 +55,7 @@ export function PublicMobileChrome() {
 
   const isShopPath = pathname.startsWith('/marketplace') || pathname.startsWith('/jewellers')
   const isJoinPath = pathname.startsWith('/signup') || pathname.startsWith('/jeweller/apply')
+  const joinTabActive = user ? isDashboardPath(pathname) : isJoinPath
   const discoverActive =
     pathname.startsWith('/why-cridora') ||
     pathname.startsWith('/features') ||
@@ -126,15 +127,15 @@ export function PublicMobileChrome() {
           )}
         </NavLink>
         <NavLink
-          to="/signup"
-          className={() => `public-bottom-item${isJoinPath ? ' public-bottom-item--active' : ''}`}
+          to={user ? dashboardHref : '/signup'}
+          className={() => `public-bottom-item${joinTabActive ? ' public-bottom-item--active' : ''}`}
         >
           {() => (
             <>
               <span className="mobile-tab-ico">
-                <PublicTabIcon tab="join" active={isJoinPath} />
+                <PublicTabIcon tab={user ? 'dashboard' : 'join'} active={joinTabActive} />
               </span>
-              <span className="mobile-tab-label">Join</span>
+              <span className="mobile-tab-label">{user ? 'Dashboard' : 'Join'}</span>
             </>
           )}
         </NavLink>

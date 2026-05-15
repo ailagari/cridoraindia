@@ -2246,6 +2246,104 @@ img {
   }
 }
 
+.jeweller-mkt-acc.card {
+  padding: 0;
+}
+
+.jeweller-mkt-acc > summary {
+  padding: 1rem 1.25rem;
+  cursor: pointer;
+  font-weight: 800;
+  font-size: 1rem;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border-bottom: 1px solid transparent;
+  color: var(--text-silk);
+}
+
+.jeweller-mkt-acc > summary::-webkit-details-marker {
+  display: none;
+}
+
+.jeweller-mkt-acc > summary::after {
+  content: '▼';
+  font-size: 0.55rem;
+  opacity: 0.65;
+  display: inline-block;
+  transition: transform 0.2s ease;
+}
+
+.jeweller-mkt-acc[open] > summary::after {
+  transform: rotate(-180deg);
+}
+
+.jeweller-mkt-acc[open] > summary {
+  border-bottom-color: var(--border-soft);
+}
+
+.jeweller-mkt-acc__body {
+  padding: 1.25rem;
+}
+
+.jeweller-mkt-subacc {
+  margin-top: 1rem;
+  border-radius: 14px;
+  border: 1px dashed var(--border-soft);
+  overflow: hidden;
+}
+
+.jeweller-mkt-subacc > summary {
+  padding: 0.65rem 1rem;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 0.88rem;
+  list-style: none;
+  background: var(--veil);
+  color: var(--text-muted);
+}
+
+.jeweller-mkt-subacc > summary::-webkit-details-marker {
+  display: none;
+}
+
+.jeweller-mkt-subacc__body {
+  padding: 1rem;
+}
+
+.jeweller-mkt-card-table th {
+  width: 34%;
+  font-weight: 700;
+  font-size: 0.78rem;
+  text-align: left;
+  vertical-align: top;
+  color: var(--text-muted);
+}
+
+.jeweller-mkt-card-table td {
+  vertical-align: top;
+}
+
+.jeweller-mkt-sku-table th {
+  font-weight: 700;
+  font-size: 0.78rem;
+  text-align: left;
+  color: var(--text-muted);
+  vertical-align: middle;
+}
+
+.jeweller-mkt-sku-table td {
+  vertical-align: middle;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .jeweller-mkt-acc > summary::after {
+    transition: none;
+  }
+}
+
 .dash-table-title {
   font-size: 1.05rem;
   margin: 0 0 0.85rem;

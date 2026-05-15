@@ -86,6 +86,7 @@ function Chevron({ open }: { open: boolean }) {
 export function JewellerRatesSchemesPanel() {
   const [loadError, setLoadError] = useState('')
   const [formError, setFormError] = useState('')
+  const [successMsg, setSuccessMsg] = useState('')
   const [busy, setBusy] = useState(false)
   const [jewellerRatePolicyAsOf, setJewellerRatePolicyAsOf] = useState('')
   const [ticker, setTicker] = useState<GoldTickerPayload | null>(null)
@@ -306,12 +307,21 @@ export function JewellerRatesSchemesPanel() {
     })
     setBusy(false)
     if (!res.ok) {
+      setSuccessMsg('')
       const j = await res.json().catch(() => ({}))
       setFormError(JSON.stringify(j))
       return
     }
     await refresh()
+    setFormError('')
+    setSuccessMsg('Rates & schemes saved.')
   }
+
+  useEffect(() => {
+    if (!successMsg) return
+    const t = window.setTimeout(() => setSuccessMsg(''), 6000)
+    return () => window.clearTimeout(t)
+  }, [successMsg])
 
   const inp: CSSProperties = {
     width: '100%',
@@ -366,11 +376,16 @@ export function JewellerRatesSchemesPanel() {
         Every metal tracks the <strong>live market</strong> admins publish. Use the table below —{' '}
         <strong>one section open at a time</strong>; inside Metals, <strong>one purity row open at a time</strong>. Ornament
         SKUs:{' '}
-        <Link to="/dashboard/jeweller?section=mkt_products">Marketplace · Listings</Link>.
+        <Link to="/dashboard/jeweller?section=mkt_products">Marketplace · Catalogue SKU</Link>.
       </p>
 
       {loadError ? <p className="form-error">{loadError}</p> : null}
       {formError ? <p className="form-error">{formError}</p> : null}
+      {successMsg ? (
+        <p className="admin-dash-form-success admin-dash-form-success--block" role="status">
+          {successMsg}
+        </p>
+      ) : null}
 
       <div
         className="card jeweller-rates-unified"

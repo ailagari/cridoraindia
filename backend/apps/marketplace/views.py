@@ -190,6 +190,60 @@ class JewellerMarketplaceLogoUploadView(APIView):
         return Response({"logo_url": profile.logo_url})
 
 
+_PRODUCT_CT_ALLOWED = frozenset({"image/jpeg", "image/png", "image/webp"})
+_PRODUCT_CT_EXT = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp"}
+_MAX_PRODUCT_IMAGE_BYTES = 4 * 1024 * 1024
+
+
+class JewellerProductImageUploadView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        err = _forbid_non_jeweller(request)
+        if err:
+            return err
+        pk_raw = (request.POST.get("product_id") or "").strip()
+        product = None
+        if pk_raw.isdigit():
+            try:
+                product = MarketplaceProduct.objects.get(pk=int(pk_raw), jeweller=request.user)
+            except MarketplaceProduct.DoesNotExist:
+                return Response({"detail": "Product not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        upload = request.FILES.get("file")
+        if not upload:
+            return Response(
+                {"detail": "file is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        ct = (getattr(upload, "content_type", None) or "").split(";")[0].strip().lower()
+        if ct not in _PRODUCT_CT_ALLOWED:
+            return Response(
+                {"detail": "Image must be JPEG, PNG, or WebP."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        size = int(getattr(upload, "size", 0) or 0)
+        if size > _MAX_PRODUCT_IMAGE_BYTES:
+            return Response(
+                {"detail": "Image must be 4 MB or smaller."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        ext = _PRODUCT_CT_EXT[ct]
+        rel = f"jeweller_product_images/{request.user.pk}/{uuid.uuid4().hex}{ext}"
+        saved_name = default_storage.save(rel, ContentFile(upload.read()))
+        media_url = default_storage.url(saved_name)
+        absolute = (
+            media_url
+            if isinstance(media_url, str) and media_url.startswith("http")
+            else request.build_absolute_uri(media_url)
+        )
+        url_stored = absolute[:512]
+        if product:
+            product.image_url = url_stored
+            product.save(update_fields=["image_url", "updated_at"])
+        return Response({"image_url": url_stored})
+
+
 class JewellerProductListCreateView(APIView):
     permission_classes = [IsAuthenticated]
 
