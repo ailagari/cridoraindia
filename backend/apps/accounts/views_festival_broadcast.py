@@ -9,7 +9,10 @@ from .serializers import (
     FestivalBroadcastNotificationCreateSerializer,
     FestivalBroadcastNotificationSerializer,
 )
-from .services.festival_broadcast import process_due_festival_broadcasts
+from .services.festival_broadcast import (
+    process_due_festival_broadcasts,
+    prune_festival_broadcast_history,
+)
 from .views_admin import _require_admin
 
 
@@ -69,4 +72,5 @@ class AdminFestivalBroadcastCancelView(APIView):
                 )
             row.status = FestivalBroadcastNotification.STATUS_CANCELLED
             row.save(update_fields=["status"])
+        prune_festival_broadcast_history()
         return Response(FestivalBroadcastNotificationSerializer(row).data)

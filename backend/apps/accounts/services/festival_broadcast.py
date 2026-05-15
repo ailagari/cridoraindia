@@ -11,6 +11,56 @@ from apps.accounts.webpush_service import send_push_broadcast
 
 logger = logging.getLogger(__name__)
 
+MAX_RETAINED_FESTIVAL_SCHEDULES = 3
+MAX_RETAINED_FESTIVAL_FEED_ROWS = 3
+
+
+def prune_festival_broadcast_feed_notifications(*, max_rows: int = MAX_RETAINED_FESTIVAL_FEED_ROWS) -> int:
+    """Keep only the newest ``max_rows`` in-app festival receipts; return deleted row count."""
+    base = AdminNotification.objects.filter(kind=AdminNotification.KIND_FESTIVAL_BROADCAST_SENT).order_by(
+        "-created_at", "-id"
+    )
+    keep_ids = list(base.values_list("pk", flat=True)[:max_rows])
+    remove = AdminNotification.objects.filter(kind=AdminNotification.KIND_FESTIVAL_BROADCAST_SENT)
+    if keep_ids:
+        remove = remove.exclude(pk__in=keep_ids)
+    deleted, _ = remove.delete()
+    return deleted
+
+
+def prune_festival_completed_schedules(*, max_rows: int = MAX_RETAINED_FESTIVAL_SCHEDULES) -> int:
+    """
+    Keep only the newest ``max_rows`` completed festival schedule rows (sent / failed / cancelled).
+    Pending schedules are never deleted.
+    """
+    terminal = (
+        FestivalBroadcastNotification.STATUS_SENT,
+        FestivalBroadcastNotification.STATUS_FAILED,
+        FestivalBroadcastNotification.STATUS_CANCELLED,
+    )
+    completed = FestivalBroadcastNotification.objects.filter(status__in=terminal).order_by(
+        "-created_at", "-id"
+    )
+    keep_ids = list(completed.values_list("pk", flat=True)[:max_rows])
+    remove = FestivalBroadcastNotification.objects.filter(status__in=terminal)
+    if keep_ids:
+        remove = remove.exclude(pk__in=keep_ids)
+    deleted, _ = remove.delete()
+    return deleted
+
+
+def prune_festival_broadcast_history() -> tuple[int, int]:
+    """Trim stored festival schedule history and in-app feed rows to policy limits."""
+    n_sched = prune_festival_completed_schedules()
+    n_feed = prune_festival_broadcast_feed_notifications()
+    if n_sched or n_feed:
+        logger.info(
+            "festival_broadcast retention pruned schedules=%s feed_notifications=%s",
+            n_sched,
+            n_feed,
+        )
+    return n_sched, n_feed
+
 
 def process_due_festival_broadcasts(*, limit: int = 50) -> int:
     """
@@ -93,4 +143,5 @@ def process_due_festival_broadcasts(*, limit: int = 50) -> int:
                 row.error_message = str(exc)[:2000]
                 row.save(update_fields=["status", "error_message"])
         finalized += 1
+    prune_festival_broadcast_history()
     return finalized

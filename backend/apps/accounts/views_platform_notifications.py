@@ -7,6 +7,7 @@ from rest_framework.views import APIView
 
 from apps.accounts.models import AdminNotification, AdminNotificationRead
 from apps.accounts.serializers import AdminNotificationSerializer
+from apps.accounts.services.festival_broadcast import prune_festival_broadcast_feed_notifications
 
 
 class PlatformNotificationsListView(APIView):
@@ -20,6 +21,8 @@ class PlatformNotificationsListView(APIView):
         except ValueError:
             limit = 40
         limit = max(1, min(limit, 100))
+
+        prune_festival_broadcast_feed_notifications()
 
         qs = AdminNotification.objects.filter(
             kind=AdminNotification.KIND_FESTIVAL_BROADCAST_SENT,

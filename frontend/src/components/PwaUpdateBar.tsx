@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { applyPwaUpdate, onPwaNeedRefresh } from '@/lib/pwaRegister'
 
 export function PwaUpdateBar() {
@@ -8,14 +9,10 @@ export function PwaUpdateBar() {
     return onPwaNeedRefresh(() => setVisible(true))
   }, [])
 
-  if (!visible) return null
+  if (!visible || typeof document === 'undefined') return null
 
-  return (
-    <div
-      className="pwa-update-bar"
-      role="status"
-      aria-live="polite"
-    >
+  return createPortal(
+    <div className="pwa-update-bar" role="status" aria-live="polite">
       <span className="pwa-update-bar-text">A new version of Cridora is ready.</span>
       <button
         type="button"
@@ -26,6 +23,7 @@ export function PwaUpdateBar() {
       >
         Refresh
       </button>
-    </div>
+    </div>,
+    document.body,
   )
 }
