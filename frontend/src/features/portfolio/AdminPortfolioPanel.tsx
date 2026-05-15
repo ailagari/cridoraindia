@@ -2,13 +2,19 @@ import { useMemo } from 'react'
 import { buildPlatformUserTrend, type AdminPortfolioStats } from './series'
 import { PortfolioBarChart, PortfolioDonut, PortfolioTrendChart } from './PortfolioCharts'
 
+function parseStatGrams(s: string | undefined): number {
+  if (!s?.trim()) return 0
+  const n = Number.parseFloat(s)
+  return Number.isFinite(n) ? n : 0
+}
+
 export function AdminPortfolioPanel({ stats }: { stats: AdminPortfolioStats }) {
   const trend = useMemo(() => buildPlatformUserTrend(stats.total_users), [stats.total_users])
   const barValues = [
     stats.total_customers || 1,
     stats.total_jewellers || (stats.total_users > 0 ? 1 : 0),
-    stats.kyc_review_queue_count + 4,
-    stats.kyb_review_queue_count + 2,
+    stats.kyc_review_queue_count,
+    stats.kyb_review_queue_count,
   ]
   const donutSegs = useMemo(() => {
     const t = Math.max(stats.total_users, 1)
@@ -28,11 +34,27 @@ export function AdminPortfolioPanel({ stats }: { stats: AdminPortfolioStats }) {
     ]
   }, [stats])
 
+  const ledgerDonutSegs = useMemo(() => {
+    const cust = parseStatGrams(stats.customer_fractional_grams_total)
+    const liab = parseStatGrams(stats.jeweller_custodial_liability_grams_total)
+    const sum = cust + liab
+    if (sum <= 0) {
+      return [{ pct: 1, color: '#475569', label: 'No fractional balances recorded' }]
+    }
+    return [
+      { pct: cust / sum, color: '#fbbf24', label: 'Customer vault fractional' },
+      { pct: liab / sum, color: '#f472b6', label: 'Jeweller custodial liability' },
+    ]
+  }, [stats.customer_fractional_grams_total, stats.jeweller_custodial_liability_grams_total])
+
+  const fracPending = stats.fractional_orders_pending_counter ?? 0
+  const fracDone = stats.fractional_orders_completed ?? 0
+
   return (
     <div className="dash-panel-max pf-scope">
       <p className="dash-panel-lead pf-lead-intro">
-        Network cohort view — KYC/KYB queues, verified users, and jewellers on the live gold savings and
-        redemption platform. Series are illustrative until ledger endpoints connect.
+        Network cohort view — live fractional totals sit alongside KYC/KYB queues and user momentum charts (user trend is
+        scaled from headcount; bars use live queue counts).
       </p>
 
       <div className="pf-grid pf-grid--kpis pf-stagger">
@@ -58,7 +80,51 @@ export function AdminPortfolioPanel({ stats }: { stats: AdminPortfolioStats }) {
         </div>
       </div>
 
+      <div className="pf-grid pf-grid--kpis pf-stagger" style={{ marginTop: '0.35rem' }}>
+        <div className="pf-kpi pf-kpi--pulse pf-kpi--gold">
+          <span className="pf-kpi__eyebrow">Customer vault grams</span>
+          <p className="pf-kpi__value">{parseStatGrams(stats.customer_fractional_grams_total).toFixed(6)}</p>
+          <span className="pf-kpi__hint">Fractional gold across customer vaults</span>
+        </div>
+        <div className="pf-kpi pf-kpi--pulse pf-kpi--rose">
+          <span className="pf-kpi__eyebrow">Jeweller liability grams</span>
+          <p className="pf-kpi__value">{parseStatGrams(stats.jeweller_custodial_liability_grams_total).toFixed(6)}</p>
+          <span className="pf-kpi__hint">Custodial obligations on jeweller books</span>
+        </div>
+        <div className="pf-kpi pf-kpi--pulse pf-kpi--iris">
+          <span className="pf-kpi__eyebrow">Counter orders pending</span>
+          <p className="pf-kpi__value">{fracPending}</p>
+          <span className="pf-kpi__hint">Awaiting jeweller OTP</span>
+        </div>
+        <div className="pf-kpi pf-kpi--pulse pf-kpi--mint">
+          <span className="pf-kpi__eyebrow">Fractional completed</span>
+          <p className="pf-kpi__value">{fracDone}</p>
+          <span className="pf-kpi__hint">Fully verified purchases</span>
+        </div>
+      </div>
+
+      {stats.ledger_note ? <p className="dash-footnote">{stats.ledger_note}</p> : null}
+
       <div className="pf-grid pf-grid--charts pf-stagger">
+        <article className="pf-card pf-card--lift pf-card--wide">
+          <header className="pf-card__head">
+            <h3 className="pf-card__title">Fractional grams alignment</h3>
+            <p className="pf-card__meta">Vault holdings vs custodial liability (platform totals)</p>
+          </header>
+          <div className="pf-donut-wrap">
+            <PortfolioDonut segments={ledgerDonutSegs} ariaLabel="Donut of customer vault grams versus jeweller liability" />
+            <ul className="pf-donut-legend">
+              {ledgerDonutSegs.map((s) => (
+                <li key={s.label} className="pf-donut-legend__row">
+                  <span className="pf-swatch" style={{ background: s.color }} />
+                  <span>{s.label}</span>
+                  <strong>{Math.round(s.pct * 100)}%</strong>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </article>
+
         <article className="pf-card pf-card--lift">
           <header className="pf-card__head">
             <h3 className="pf-card__title">User momentum</h3>

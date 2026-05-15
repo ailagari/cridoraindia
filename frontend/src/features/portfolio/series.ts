@@ -6,6 +6,11 @@ export type AdminPortfolioStats = {
   pending_kyb_identity: number
   kyc_review_queue_count: number
   kyb_review_queue_count: number
+  customer_fractional_grams_total?: string
+  jeweller_custodial_liability_grams_total?: string
+  fractional_orders_pending_counter?: number
+  fractional_orders_completed?: number
+  ledger_note?: string
 }
 
 export function buildPlatformUserTrend(totalUsers: number): number[] {

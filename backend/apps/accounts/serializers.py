@@ -5,6 +5,7 @@ from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .jeweller_liability_service import jeweller_liability_grams
+from .wallet_extras import customer_completed_fractional_ledger, jeweller_recent_liability_credits
 from .models import AdminNotification, AdminNotificationRead, BankAccount, KYDocument
 from .vault_service import sync_customer_aggregate_balance, wallet_vault_payload
 
@@ -315,6 +316,12 @@ class UserMeSerializer(serializers.ModelSerializer):
             "balance_grams": str(grams),
             "vaults": wallet_vault_payload(obj) if obj.user_type == User.CUSTOMER else [],
             "custodial_liability_grams": liability_s,
+            "fractional_ledger": customer_completed_fractional_ledger(obj)
+            if obj.user_type == User.CUSTOMER
+            else [],
+            "recent_liability_credits": jeweller_recent_liability_credits(obj)
+            if obj.user_type == User.JEWELLER
+            else [],
         }
         return GoldWalletSerializer(instance=data).data
 
@@ -350,6 +357,12 @@ class GoldWalletSerializer(serializers.Serializer):
     vaults = VaultRowSerializer(many=True)
     custodial_liability_grams = serializers.CharField(
         required=False, allow_blank=True, default=""
+    )
+    fractional_ledger = serializers.ListField(
+        child=serializers.DictField(), required=False, default=list
+    )
+    recent_liability_credits = serializers.ListField(
+        child=serializers.DictField(), required=False, default=list
     )
 
 

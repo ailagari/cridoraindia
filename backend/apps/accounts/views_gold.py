@@ -8,6 +8,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .jeweller_liability_service import jeweller_liability_grams
+from .wallet_extras import customer_completed_fractional_ledger, jeweller_recent_liability_credits
 from .gold_identity import (
     compute_gold_upi,
     effective_custodian,
@@ -48,6 +49,16 @@ def _wallet_payload(user: User) -> dict:
     liability_s = ""
     if user.user_type == User.JEWELLER:
         liability_s = str(jeweller_liability_grams(user))
+    frac_ledger = (
+        customer_completed_fractional_ledger(user)
+        if user.user_type == User.CUSTOMER
+        else []
+    )
+    liab_credits = (
+        jeweller_recent_liability_credits(user)
+        if user.user_type == User.JEWELLER
+        else []
+    )
     return GoldWalletSerializer(
         {
             "cridora_member_id": user.cridora_member_id or "",
@@ -63,6 +74,8 @@ def _wallet_payload(user: User) -> dict:
             "balance_grams": str(grams),
             "vaults": vaults,
             "custodial_liability_grams": liability_s,
+            "fractional_ledger": frac_ledger,
+            "recent_liability_credits": liab_credits,
         }
     ).data
 

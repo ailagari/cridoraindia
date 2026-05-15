@@ -1,3 +1,6 @@
+from decimal import Decimal
+
+from django.db.models import Sum
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
@@ -6,7 +9,15 @@ from rest_framework.views import APIView
 
 from django.contrib.auth import get_user_model
 
-from .models import AdminNotification, AdminNotificationRead, BankAccount, KYDocument
+from .models import (
+    AdminNotification,
+    AdminNotificationRead,
+    BankAccount,
+    FractionalGoldPurchase,
+    JewellerLiabilityBalance,
+    KYDocument,
+    VaultHolding,
+)
 from .serializers import (
     AdminNotificationSerializer,
     AdminUserInspectProfileSerializer,
@@ -109,6 +120,21 @@ class AdminOverviewView(APIView):
         payments = []
         transactions = []
 
+        cust_hold_agg = VaultHolding.objects.filter(holding_type=VaultHolding.FRACTIONAL).aggregate(
+            t=Sum("balance_grams")
+        )["t"]
+        customer_fractional_grams_total = str(cust_hold_agg or Decimal("0"))
+
+        liab_agg = JewellerLiabilityBalance.objects.aggregate(t=Sum("liability_grams"))["t"]
+        jeweller_custodial_liability_grams_total = str(liab_agg or Decimal("0"))
+
+        fractional_orders_pending_counter = FractionalGoldPurchase.objects.filter(
+            status=FractionalGoldPurchase.AWAITING_COUNTER,
+        ).count()
+        fractional_orders_completed = FractionalGoldPurchase.objects.filter(
+            status=FractionalGoldPurchase.COMPLETED,
+        ).count()
+
         return Response(
             {
                 "stats": {
@@ -120,7 +146,14 @@ class AdminOverviewView(APIView):
                     "kyc_review_queue_count": len(kyc_queue),
                     "kyb_review_queue_count": len(kyb_queue),
                     "payments_tracked_inr": None,
-                    "ledger_note": "Payments and ledger APIs will attach here when buy/sell models land.",
+                    "customer_fractional_grams_total": customer_fractional_grams_total,
+                    "jeweller_custodial_liability_grams_total": jeweller_custodial_liability_grams_total,
+                    "fractional_orders_pending_counter": fractional_orders_pending_counter,
+                    "fractional_orders_completed": fractional_orders_completed,
+                    "ledger_note": (
+                        "Vault fractional holdings and jeweller custodial liability aggregates reflect "
+                        "completed fractional flows (counter OTP / legacy UPI confirm)."
+                    ),
                 },
                 "kyc_queue": kyc_queue,
                 "kyb_queue": kyb_queue,

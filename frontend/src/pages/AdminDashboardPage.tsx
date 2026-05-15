@@ -45,6 +45,10 @@ type OverviewPayload = {
     pending_kyb_identity: number
     kyc_review_queue_count: number
     kyb_review_queue_count: number
+    customer_fractional_grams_total?: string
+    jeweller_custodial_liability_grams_total?: string
+    fractional_orders_pending_counter?: number
+    fractional_orders_completed?: number
     ledger_note?: string
   }
   kyc_queue: QueueUser[]
@@ -84,6 +88,13 @@ type InspectProfile = {
   pincode?: string
   jeweller_code?: string
   cridora_member_id?: string
+}
+
+function fmtStatGrams(s: string | undefined): string {
+  if (s == null || String(s).trim() === '') return '—'
+  const n = Number.parseFloat(String(s))
+  if (!Number.isFinite(n)) return String(s)
+  return `${n.toLocaleString('en-IN', { maximumFractionDigits: 6 })} g`
 }
 
 function fmtDisplay(v: unknown): string {
@@ -448,32 +459,57 @@ export function AdminDashboardPage() {
         {loadError ? <p className="form-error">{loadError}</p> : null}
 
         {active === 'ops_overview' && data ? (
-          <div className="admin-dash-widgets">
-            <div className="admin-dash-stat admin-dash-stat--emerald">
-              <span className="admin-dash-stat__eyebrow">Total users</span>
-              <p className="admin-dash-stat__value">{data.stats.total_users}</p>
-              <p className="admin-dash-stat__sub">
-                {data.stats.total_customers} customers · {data.stats.total_jewellers} jewellers
-              </p>
+          <>
+            <div className="admin-dash-widgets">
+              <div className="admin-dash-stat admin-dash-stat--emerald">
+                <span className="admin-dash-stat__eyebrow">Total users</span>
+                <p className="admin-dash-stat__value">{data.stats.total_users}</p>
+                <p className="admin-dash-stat__sub">
+                  {data.stats.total_customers} customers · {data.stats.total_jewellers} jewellers
+                </p>
+              </div>
+              <div className="admin-dash-stat admin-dash-stat--amber">
+                <span className="admin-dash-stat__eyebrow">KYC queue</span>
+                <p className="admin-dash-stat__value">{data.stats.kyc_review_queue_count}</p>
+                <p className="admin-dash-stat__sub">Customers not yet verified (uploads optional)</p>
+              </div>
+              <div className="admin-dash-stat admin-dash-stat--iris">
+                <span className="admin-dash-stat__eyebrow">KYB queue</span>
+                <p className="admin-dash-stat__value">{data.stats.kyb_review_queue_count}</p>
+                <p className="admin-dash-stat__sub">Jewellers not yet KYB-verified</p>
+              </div>
+              <div className="admin-dash-stat admin-dash-stat--cyan">
+                <span className="admin-dash-stat__eyebrow">Identity pending</span>
+                <p className="admin-dash-stat__value">
+                  {data.stats.pending_kyc_identity} / {data.stats.pending_kyb_identity}
+                </p>
+                <p className="admin-dash-stat__sub">Customer / jeweller accounts not yet verified</p>
+              </div>
             </div>
-            <div className="admin-dash-stat admin-dash-stat--amber">
-              <span className="admin-dash-stat__eyebrow">KYC queue</span>
-              <p className="admin-dash-stat__value">{data.stats.kyc_review_queue_count}</p>
-              <p className="admin-dash-stat__sub">Customers not yet verified (uploads optional)</p>
+
+            <div className="admin-dash-widgets" style={{ marginTop: '1rem' }}>
+              <div className="admin-dash-stat admin-dash-stat--emerald">
+                <span className="admin-dash-stat__eyebrow">Customer vault grams</span>
+                <p className="admin-dash-stat__value">{fmtStatGrams(data.stats.customer_fractional_grams_total)}</p>
+                <p className="admin-dash-stat__sub">Fractional gold stored for customers</p>
+              </div>
+              <div className="admin-dash-stat admin-dash-stat--iris">
+                <span className="admin-dash-stat__eyebrow">Jeweller liability grams</span>
+                <p className="admin-dash-stat__value">{fmtStatGrams(data.stats.jeweller_custodial_liability_grams_total)}</p>
+                <p className="admin-dash-stat__sub">Outstanding custodial obligations</p>
+              </div>
+              <div className="admin-dash-stat admin-dash-stat--amber">
+                <span className="admin-dash-stat__eyebrow">Counter pending</span>
+                <p className="admin-dash-stat__value">{data.stats.fractional_orders_pending_counter ?? 0}</p>
+                <p className="admin-dash-stat__sub">Fractional orders awaiting OTP</p>
+              </div>
+              <div className="admin-dash-stat admin-dash-stat--cyan">
+                <span className="admin-dash-stat__eyebrow">Fractional completed</span>
+                <p className="admin-dash-stat__value">{data.stats.fractional_orders_completed ?? 0}</p>
+                <p className="admin-dash-stat__sub">Verified purchases on record</p>
+              </div>
             </div>
-            <div className="admin-dash-stat admin-dash-stat--iris">
-              <span className="admin-dash-stat__eyebrow">KYB queue</span>
-              <p className="admin-dash-stat__value">{data.stats.kyb_review_queue_count}</p>
-              <p className="admin-dash-stat__sub">Jewellers not yet KYB-verified</p>
-            </div>
-            <div className="admin-dash-stat admin-dash-stat--cyan">
-              <span className="admin-dash-stat__eyebrow">Identity pending</span>
-              <p className="admin-dash-stat__value">
-                {data.stats.pending_kyc_identity} / {data.stats.pending_kyb_identity}
-              </p>
-              <p className="admin-dash-stat__sub">Customer / jeweller accounts not yet verified</p>
-            </div>
-          </div>
+          </>
         ) : null}
 
         {active === 'ops_overview' && data?.stats.ledger_note ? (

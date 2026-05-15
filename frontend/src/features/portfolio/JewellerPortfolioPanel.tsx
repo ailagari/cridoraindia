@@ -1,121 +1,175 @@
-import { useMemo } from 'react'
-import { useAuth } from '@/context/AuthContext'
-import { buildJewellerDemandSeries } from './series'
-import { PortfolioBarChart, PortfolioDonut, PortfolioSparkRow, PortfolioTrendChart } from './PortfolioCharts'
+import { useCallback, useEffect, useState } from 'react'
+import { fetchGoldWallet } from '@/lib/goldTransferApi'
+import { jewellerFractionalPending, type JewellerFractionalPendingRow } from '@/lib/fractionalPurchaseApi'
+import { LIVE_BALANCE_POLL_MS } from '@/lib/liveDeskIntervals'
+import { useLivePoll } from '@/lib/useLivePoll'
+
+function parseG(s: string): number {
+  const n = Number.parseFloat(s)
+  return Number.isFinite(n) ? n : 0
+}
+
+function fmtWhen(iso: string): string {
+  const t = Date.parse(iso)
+  if (Number.isNaN(t)) return iso.slice(0, 10)
+  return new Date(t).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })
+}
+
+function fmtInrPlain(s: string): string {
+  const n = Number.parseFloat(s)
+  if (!Number.isFinite(n)) return s
+  return n.toLocaleString('en-IN', { maximumFractionDigits: 2 })
+}
 
 export function JewellerPortfolioPanel() {
-  const { user } = useAuth()
-  const seed = user?.id ?? 1
+  const [wallet, setWallet] = useState<Awaited<ReturnType<typeof fetchGoldWallet>>>(null)
+  const [pending, setPending] = useState<JewellerFractionalPendingRow[]>([])
+  const [loadErr, setLoadErr] = useState('')
 
-  const demandSeries = useMemo(() => buildJewellerDemandSeries(seed), [seed])
-  const holdingsTrend = useMemo(() => demandSeries.map((v) => v * 42 + seed * 3), [demandSeries, seed])
-  const barVals = [
-    Math.round(seed * 2.8 + 48),
-    Math.round(seed * 1.9 + 32),
-    Math.round(seed * 1.2 + 24),
-    Math.round(seed * 0.8 + 12),
-  ]
-  const donutSegs = useMemo(
-    () => [
-      { pct: 0.38, color: '#fbbf24', label: '22K bridal' },
-      { pct: 0.29, color: '#d4a85c', label: '24K mint' },
-      { pct: 0.21, color: '#a78bfa', label: 'Custom' },
-      { pct: 0.12, color: '#38bdf8', label: 'Consignment' },
-    ],
-    [],
-  )
+  const refresh = useCallback(async () => {
+    setLoadErr('')
+    const [w, pList] = await Promise.all([fetchGoldWallet(), jewellerFractionalPending()])
+    if (!w) {
+      setLoadErr('Could not load wallet.')
+      setWallet(null)
+      setPending([])
+      return
+    }
+    setWallet(w)
+    setPending(pList)
+  }, [])
 
-  const sparkA = holdingsTrend.slice(0, 6)
-  const sparkB = demandSeries.slice(-6)
+  useEffect(() => {
+    void refresh()
+  }, [refresh])
+
+  useLivePoll(refresh, LIVE_BALANCE_POLL_MS, true)
+
+  const credits = wallet?.recent_liability_credits ?? []
+  const liabilityG = parseG(wallet?.custodial_liability_grams ?? '0')
+  const vaultG = parseG(wallet?.balance_grams ?? '0')
 
   return (
     <div className="dash-panel-max pf-scope">
       <p className="dash-panel-lead pf-lead-intro">
-        Jeweller desk pulse for inventory and customer demand — illustrative until catalog and gram liability APIs feed this
-        view. Cards emphasise BIS 916 listings, transparent sellback, and readiness for redemption queues.
+        Live custodial liability from verified fractional purchases, your pending counter queue, and recent credits that
+        hit your jeweller ledger.
       </p>
 
+      {loadErr ? <p className="form-error">{loadErr}</p> : null}
+
       <div className="pf-grid pf-grid--kpis pf-stagger">
-        <div className="pf-kpi pf-kpi--shimmer pf-kpi--gold">
-          <span className="pf-kpi__eyebrow">Showroom value (INR)</span>
-          <p className="pf-kpi__value">
-            ₹{Math.round((2.42 * seed + 118) * 1e5).toLocaleString('en-IN', { maximumFractionDigits: 0 })}
-          </p>
-          <span className="pf-kpi__hint">Est. showcase + vault</span>
+        <div className="pf-kpi pf-kpi--shimmer pf-kpi--rose">
+          <span className="pf-kpi__eyebrow">Custodial liability</span>
+          <p className="pf-kpi__value">{`${liabilityG.toFixed(6)} g`}</p>
+          <span className="pf-kpi__hint">Gold owed to customers (fractional)</span>
+        </div>
+        <div className="pf-kpi pf-kpi--pulse pf-kpi--gold">
+          <span className="pf-kpi__eyebrow">Vault balance</span>
+          <p className="pf-kpi__value">{`${vaultG.toFixed(6)} g`}</p>
+          <span className="pf-kpi__hint">Your wallet total on platform</span>
+        </div>
+        <div className="pf-kpi pf-kpi--pulse pf-kpi--iris">
+          <span className="pf-kpi__eyebrow">Pending counter</span>
+          <p className="pf-kpi__value">{pending.length}</p>
+          <span className="pf-kpi__hint">Orders awaiting OTP verification</span>
         </div>
         <div className="pf-kpi pf-kpi--shimmer pf-kpi--mint">
-          <span className="pf-kpi__eyebrow">Gold on hand</span>
-          <p className="pf-kpi__value">{(seed * 0.15 + 4.82).toFixed(2)} kg</p>
-          <span className="pf-kpi__hint">SKU-weighted blended</span>
-        </div>
-        <div className="pf-kpi pf-kpi--shimmer pf-kpi--iris">
-          <span className="pf-kpi__eyebrow">Open orders</span>
-          <p className="pf-kpi__value">{Math.round(seed * 0.6 + 7)}</p>
-          <span className="pf-kpi__hint">Awaiting workshop / hallmark</span>
-        </div>
-        <div className="pf-kpi pf-kpi--shimmer pf-kpi--rose">
-          <span className="pf-kpi__eyebrow">Sparkline health</span>
-          <div className="pf-kpi__spark">
-            <PortfolioSparkRow points={sparkA} stroke="#f472b6" />
-          </div>
-          <span className="pf-kpi__hint">Illustrative demand lift</span>
+          <span className="pf-kpi__eyebrow">Recent credits</span>
+          <p className="pf-kpi__value">{credits.length}</p>
+          <span className="pf-kpi__hint">Latest liability ledger rows</span>
         </div>
       </div>
 
-      <div className="pf-grid pf-grid--charts pf-stagger">
-        <article className="pf-card pf-card--lift">
-          <header className="pf-card__head">
-            <h3 className="pf-card__title">Inventory curve</h3>
-            <p className="pf-card__meta">Synthetic curve — replace with live grams</p>
-          </header>
-          <div className="pf-card__viz">
-            <PortfolioTrendChart
-              values={holdingsTrend}
-              stroke="#d4a85c"
-              fillId="jeweller-area-gold"
-              ariaLabel="Area chart of estimated inventory value trend"
-            />
+      <article className="pf-card pf-card--lift pf-card--wide pf-card--ledger-table-wrap pf-stagger">
+        <header className="pf-card__head pf-ledger-head">
+          <div>
+            <h3 className="pf-card__title">Pending counter purchases</h3>
+            <p className="pf-card__meta">Customers waiting for in-store OTP confirmation.</p>
           </div>
-        </article>
+        </header>
+        {pending.length === 0 ? (
+          <p style={{ color: 'var(--text-muted)', margin: 0 }}>No pending counter orders.</p>
+        ) : (
+          <div className="pf-ledger-scroll">
+            <table className="pf-ledger-table">
+              <thead>
+                <tr>
+                  <th>Created</th>
+                  <th>Reference</th>
+                  <th>Customer</th>
+                  <th className="tabular">Grams</th>
+                  <th className="tabular">Total</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pending.map((row) => (
+                  <tr key={row.id} className="pf-ledger-row">
+                    <td className="pf-ledger-date">{fmtWhen(row.created_at)}</td>
+                    <td className="tabular">{row.reference}</td>
+                    <td>
+                      {row.customer.name || row.customer.email}
+                      <span className="tabular" style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                        {' '}
+                        · {row.customer.cridora_member_id}
+                      </span>
+                    </td>
+                    <td className="tabular pf-ledger-grams">{parseG(row.grams).toFixed(6)} g</td>
+                    <td className="tabular pf-ledger-inr pf-ledger-inr--out">₹{fmtInrPlain(row.total_inr)}</td>
+                    <td>
+                      <span className="pf-ledger-pill pf-ledger-pill--buy">{row.status}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </article>
 
-        <article className="pf-card pf-card--lift">
-          <header className="pf-card__head">
-            <h3 className="pf-card__title">Footfall / orders</h3>
-            <p className="pf-card__meta">Daily-style bucket counts</p>
-          </header>
-          <div className="pf-card__viz">
-            <PortfolioBarChart
-              values={barVals}
-              labels={['M', 'T', 'W', 'T']}
-              colors={['#f472b6', '#a78bfa', '#34d399', '#38bdf8']}
-              ariaLabel="Bar chart of weekly footfall or order counts"
-            />
+      <article
+        className="pf-card pf-card--lift pf-card--wide pf-card--ledger-table-wrap pf-stagger"
+        style={{ marginTop: '1rem' }}
+      >
+        <header className="pf-card__head pf-ledger-head">
+          <div>
+            <h3 className="pf-card__title">Recent liability credits</h3>
+            <p className="pf-card__meta">Grams posted to your custodial liability when purchases complete.</p>
           </div>
-        </article>
-
-        <article className="pf-card pf-card--lift pf-card--wide">
-          <header className="pf-card__head">
-            <h3 className="pf-card__title">Metal mix</h3>
-            <p className="pf-card__meta">Category share of active SKUs</p>
-          </header>
-          <div className="pf-donut-wrap">
-            <PortfolioDonut segments={donutSegs} ariaLabel="Donut chart of metal or category mix" />
-            <ul className="pf-donut-legend">
-              {donutSegs.map((s) => (
-                <li key={s.label} className="pf-donut-legend__row">
-                  <span className="pf-swatch" style={{ background: s.color }} />
-                  <span>{s.label}</span>
-                  <strong>{Math.round(s.pct * 100)}%</strong>
-                </li>
-              ))}
-            </ul>
+        </header>
+        {credits.length === 0 ? (
+          <p style={{ color: 'var(--text-muted)', margin: 0 }}>No recent credits yet.</p>
+        ) : (
+          <div className="pf-ledger-scroll">
+            <table className="pf-ledger-table">
+              <thead>
+                <tr>
+                  <th>Credited</th>
+                  <th>Customer</th>
+                  <th className="tabular">Member ID</th>
+                  <th className="tabular">Grams</th>
+                  <th className="tabular">Purchase</th>
+                </tr>
+              </thead>
+              <tbody>
+                {credits.map((row, i) => (
+                  <tr
+                    key={`${row.purchase_reference}-${row.created_at}-${row.customer_member_id}-${i}`}
+                    className="pf-ledger-row"
+                  >
+                    <td className="pf-ledger-date">{fmtWhen(row.created_at)}</td>
+                    <td>{row.customer_label}</td>
+                    <td className="tabular">{row.customer_member_id}</td>
+                    <td className="tabular pf-ledger-grams">+{parseG(row.grams).toFixed(6)} g</td>
+                    <td className="tabular">{row.purchase_reference}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-          <div className="pf-secondary-spark">
-            <span className="pf-secondary-spark__label">Trailing signal</span>
-            <PortfolioSparkRow points={sparkB} stroke="#67e8f9" />
-          </div>
-        </article>
-      </div>
+        )}
+      </article>
     </div>
   )
 }

@@ -10,6 +10,23 @@ export type VaultRowDTO = {
   jeweller_metal_rate_last_updated_at?: string
 }
 
+export type FractionalLedgerRowDTO = {
+  reference: string
+  created_at: string
+  jeweller_name: string
+  grams: string
+  total_inr: string
+  payment_method: string
+}
+
+export type LiabilityCreditRowDTO = {
+  grams: string
+  created_at: string
+  customer_member_id: string
+  customer_label: string
+  purchase_reference: string
+}
+
 export type GoldWalletDTO = {
   cridora_member_id: string
   cridora_global_id?: string
@@ -25,6 +42,10 @@ export type GoldWalletDTO = {
   vaults?: VaultRowDTO[]
   /** Grams liability to customers (jeweller accounts only). */
   custodial_liability_grams?: string
+  /** Completed fractional purchases (customer accounts). */
+  fractional_ledger?: FractionalLedgerRowDTO[]
+  /** Recent custodial liability credits (jeweller accounts). */
+  recent_liability_credits?: LiabilityCreditRowDTO[]
 }
 
 export type GoldResolveRecipient = {

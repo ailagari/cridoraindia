@@ -1,175 +1,195 @@
-import { useMemo } from 'react'
-import { useAuth } from '@/context/AuthContext'
-import {
-  buildCustomerHoldingsInrTrend,
-  buildCustomerMockLedger,
-  buildCustomerWeeklyGramBars,
-  type MockLedgerRow,
-} from './series'
-import { PortfolioBarChart, PortfolioDonut, PortfolioSparkRow, PortfolioTrendChart } from './PortfolioCharts'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { fetchGoldWallet, type FractionalLedgerRowDTO, type VaultRowDTO } from '@/lib/goldTransferApi'
+import { LIVE_BALANCE_POLL_MS } from '@/lib/liveDeskIntervals'
+import { useLivePoll } from '@/lib/useLivePoll'
+import { PortfolioBarChart, PortfolioDonut, PortfolioTrendChart } from './PortfolioCharts'
 
-function ledgerPillClass(kind: MockLedgerRow['kind']): string {
-  if (kind === 'buy') return 'pf-ledger-pill pf-ledger-pill--buy'
-  if (kind === 'sell') return 'pf-ledger-pill pf-ledger-pill--sell'
-  if (kind === 'fee') return 'pf-ledger-pill pf-ledger-pill--fee'
-  if (kind === 'credit') return 'pf-ledger-pill pf-ledger-pill--credit'
-  return 'pf-ledger-pill pf-ledger-pill--xfer'
-}
+const DONUT_COLORS = ['#fbbf24', '#d4a85c', '#67e8f9', '#a78bfa', '#34d399', '#f472b6', '#38bdf8']
 
-function inrToneClass(txt: string): string {
-  if (txt.startsWith('+')) return 'pf-ledger-inr pf-ledger-inr--in'
-  if (txt.startsWith('-')) return 'pf-ledger-inr pf-ledger-inr--out'
-  return 'pf-ledger-inr pf-ledger-inr--mute'
-}
-
-function parseBalanceG(balanceG: string): number {
-  const m = balanceG.match(/([\d.]+)/)
-  if (!m) return 0
-  const n = Number.parseFloat(m[1] ?? '')
+function parseG(s: string): number {
+  const n = Number.parseFloat(s)
   return Number.isFinite(n) ? n : 0
 }
 
-const HOLDING_SECTION_LABEL: Record<MockLedgerRow['holdingType'], string> = {
-  fractional: 'Fractional gold',
-  deposit: 'Gold deposit',
-  goldnest: 'GoldNest',
+function fmtInrSum(vaults: VaultRowDTO[]): number {
+  let t = 0
+  for (const v of vaults) {
+    t += parseG(v.estimated_fractional_value_inr ?? '0')
+  }
+  return t
+}
+
+function fmtWhen(iso: string): string {
+  const t = Date.parse(iso)
+  if (Number.isNaN(t)) return iso.slice(0, 10)
+  return new Date(t).toLocaleDateString('en-IN', { dateStyle: 'medium' })
+}
+
+function fmtInrPlain(s: string): string {
+  const n = Number.parseFloat(s)
+  if (!Number.isFinite(n)) return s
+  return n.toLocaleString('en-IN', { maximumFractionDigits: 2 })
+}
+
+function ledgerRowsWithRunningBal(rows: FractionalLedgerRowDTO[]): Array<FractionalLedgerRowDTO & { balanceG: string }> {
+  const chrono = [...rows].reverse()
+  let bal = 0
+  const out: Array<FractionalLedgerRowDTO & { balanceG: string }> = []
+  for (const r of chrono) {
+    bal += parseG(r.grams)
+    out.push({ ...r, balanceG: `${bal.toFixed(6)} g` })
+  }
+  return out.reverse()
 }
 
 export function CustomerPortfolioPanel() {
-  const { user } = useAuth()
-  const seed = user?.id ?? 1
-  const inrTrend = useMemo(() => buildCustomerHoldingsInrTrend(seed), [seed])
-  const gramBars = useMemo(() => buildCustomerWeeklyGramBars(seed), [seed])
-  const ledgerRows = useMemo(() => buildCustomerMockLedger(seed), [seed])
+  const [wallet, setWallet] = useState<Awaited<ReturnType<typeof fetchGoldWallet>>>(null)
+  const [loadErr, setLoadErr] = useState('')
 
-  const portfolioInr = inrTrend[inrTrend.length - 1] ?? 0
-  const latestBalanceG = ledgerRows[0]?.balanceG ?? '—'
-  const totalGrams = parseBalanceG(latestBalanceG)
-  const redeemableGrams = totalGrams > 0 ? totalGrams * (0.86 + (seed % 7) * 0.015) : 0
-  const redeemableLabel = totalGrams > 0 ? `${redeemableGrams.toFixed(3)} g` : '—'
+  const refresh = useCallback(async () => {
+    setLoadErr('')
+    const w = await fetchGoldWallet()
+    if (!w) {
+      setLoadErr('Could not load wallet.')
+      setWallet(null)
+      return
+    }
+    setWallet(w)
+  }, [])
 
-  const changePct =
-    inrTrend.length > 1 ? ((inrTrend[inrTrend.length - 1]! - inrTrend[0]!) / Math.max(inrTrend[0]!, 1)) * 100 : 0
-  const pnlTone = changePct >= 0 ? 'pf-kpi--mint' : 'pf-kpi--rose'
-  const sparkPts = inrTrend.slice(-7).map((v) => v / 1200)
+  useEffect(() => {
+    void refresh()
+  }, [refresh])
+
+  useLivePoll(refresh, LIVE_BALANCE_POLL_MS, true)
+
+  const vaults = wallet?.vaults ?? []
+  const ledger = wallet?.fractional_ledger ?? []
+  const totalGramsStr = wallet?.balance_grams ?? '0'
+  const totalGrams = parseG(totalGramsStr)
+  const estInr = fmtInrSum(vaults)
 
   const donutSegs = useMemo(() => {
-    const a = 0.4 + ((seed % 5) + 3) * 0.018
-    const b = 0.32 + ((seed % 4) + 1) * 0.02
-    const c = Math.max(0.14, 1 - a - b)
-    const sum = a + b + c
-    return [
-      { pct: a / sum, color: '#fbbf24', label: 'Fractional gold' },
-      { pct: b / sum, color: '#d4a85c', label: 'Gold deposit' },
-      { pct: c / sum, color: '#67e8f9', label: 'GoldNest' },
-    ]
-  }, [seed])
-
-  const ledgerByHolding = useMemo(() => {
-    const buckets: Record<MockLedgerRow['holdingType'], MockLedgerRow[]> = {
-      fractional: [],
-      deposit: [],
-      goldnest: [],
+    if (vaults.length === 0) {
+      return [{ pct: 1, color: '#475569', label: 'No vault holdings yet' }]
     }
-    for (const row of ledgerRows) {
-      buckets[row.holdingType].push(row)
-    }
-    return (['fractional', 'deposit', 'goldnest'] as const).map((k) => ({
-      key: k,
-      label: HOLDING_SECTION_LABEL[k],
-      rows: buckets[k],
+    const grams = vaults.map((v) => Math.max(0, parseG(v.fractional_grams)))
+    const sum = grams.reduce((a, b) => a + b, 0) || 1
+    return vaults.map((v, i) => ({
+      pct: Math.max(0, parseG(v.fractional_grams)) / sum,
+      color: DONUT_COLORS[i % DONUT_COLORS.length]!,
+      label: v.custodian_label || `Jeweller ${v.custodian_id}`,
     }))
-  }, [ledgerRows])
+  }, [vaults])
+
+  const vaultBarVals = useMemo(() => vaults.map((v) => parseG(v.fractional_grams)), [vaults])
+  const vaultBarLabels = useMemo(
+    () =>
+      vaults.map((v) => {
+        const raw = v.custodian_label || `#${v.custodian_id}`
+        return raw.length > 10 ? `${raw.slice(0, 9)}…` : raw
+      }),
+    [vaults],
+  )
+
+  const inrTrendMini = useMemo(() => {
+    if (estInr <= 0) return [0, 0]
+    return [Math.round(estInr * 0.94), Math.round(estInr)]
+  }, [estInr])
+
+  const ledgerDisplay = useMemo(() => ledgerRowsWithRunningBal(ledger), [ledger])
 
   return (
     <div className="dash-panel-max pf-scope">
       <p className="dash-panel-lead pf-lead-intro">
-        Portfolio overview — illustrative charts until live ledger feeds replace demo curves.
+        Live vault balances and completed fractional purchases. Estimated INR sums jewellers&apos; quoted rates on your
+        holdings; profit/loss history requires time-series data not yet exposed.
       </p>
+
+      {loadErr ? <p className="form-error">{loadErr}</p> : null}
 
       <div className="pf-grid pf-grid--kpis pf-stagger">
         <div className="pf-kpi pf-kpi--shimmer pf-kpi--gold">
           <span className="pf-kpi__eyebrow">Total gold</span>
-          <p className="pf-kpi__value">{latestBalanceG}</p>
-          <span className="pf-kpi__hint">All holding types combined</span>
+          <p className="pf-kpi__value">{`${totalGrams.toFixed(6)} g`}</p>
+          <span className="pf-kpi__hint">Fractional vault total (synced)</span>
         </div>
         <div className="pf-kpi pf-kpi--pulse pf-kpi--ocean">
-          <span className="pf-kpi__eyebrow">Current value</span>
+          <span className="pf-kpi__eyebrow">Estimated value</span>
           <p className="pf-kpi__value">
-            ₹{portfolioInr.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+            ₹{estInr.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
           </p>
-          <span className="pf-kpi__hint">Live mark-to-market (sample curve)</span>
+          <span className="pf-kpi__hint">Sum of vault mark-to-market estimates</span>
         </div>
-        <div className={`pf-kpi pf-kpi--pulse ${pnlTone}`}>
-          <span className="pf-kpi__eyebrow">Profit / loss</span>
-          <p className="pf-kpi__value">
-            {changePct >= 0 ? '+' : ''}
-            {changePct.toFixed(1)}%
-          </p>
-          <span className="pf-kpi__hint">Across chart window · not advice</span>
+        <div className="pf-kpi pf-kpi--pulse pf-kpi--iris">
+          <span className="pf-kpi__eyebrow">Vaults</span>
+          <p className="pf-kpi__value">{vaults.filter((v) => parseG(v.fractional_grams) > 0).length}</p>
+          <span className="pf-kpi__hint">Jewellers with fractional balance</span>
         </div>
         <div className="pf-kpi pf-kpi--shimmer pf-kpi--mint">
-          <span className="pf-kpi__eyebrow">Redeemable gold</span>
-          <p className="pf-kpi__value">{redeemableLabel}</p>
-          <span className="pf-kpi__hint">Usable grams after lock-in &amp; policy (sample)</span>
+          <span className="pf-kpi__eyebrow">Purchases on record</span>
+          <p className="pf-kpi__value">{ledger.length}</p>
+          <span className="pf-kpi__hint">Completed fractional orders (shown below)</span>
         </div>
       </div>
+
+      {wallet?.cridora_member_id ? (
+        <p style={{ margin: '0 0 1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+          Cridora member ID <strong className="tabular">{wallet.cridora_member_id}</strong>
+        </p>
+      ) : null}
 
       <div className="pf-grid pf-grid--charts pf-stagger">
         <article className="pf-card pf-card--lift">
           <header className="pf-card__head">
-            <h3 className="pf-card__title">INR value history</h3>
-            <p className="pf-card__meta">Portfolio curve — swaps to live `/api/` feed later</p>
+            <h3 className="pf-card__title">Estimated INR snapshot</h3>
+            <p className="pf-card__meta">Two-point pulse from current vault marks (not historical NAV)</p>
           </header>
           <div className="pf-card__viz">
             <PortfolioTrendChart
-              values={inrTrend}
+              values={inrTrendMini}
               stroke="#fcd34d"
-              fillId="customer-area-portfolio"
-              ariaLabel="Area chart of portfolio INR value over time"
+              fillId="customer-area-portfolio-live"
+              ariaLabel="Minimal trend from estimated portfolio INR"
             />
           </div>
         </article>
 
         <article className="pf-card pf-card--lift">
           <header className="pf-card__head">
-            <h3 className="pf-card__title">Weekly gram adds</h3>
-            <p className="pf-card__meta">Estimated net grams credited (illus.)</p>
+            <h3 className="pf-card__title">Grams per jeweller</h3>
+            <p className="pf-card__meta">Fractional holdings by custodian vault</p>
           </header>
           <div className="pf-card__viz">
-            <PortfolioBarChart
-              values={gramBars}
-              labels={['S', 'M', 'T', 'W', 'T', 'F', 'S']}
-              colors={['#fcd34d', '#fbbf24', '#f472b6', '#38bdf8', '#34d399', '#a78bfa', '#d4a85c']}
-              ariaLabel="Bar chart of weekly gram equivalent additions"
-            />
+            {vaultBarVals.length > 0 && vaultBarVals.some((v) => v > 0) ? (
+              <PortfolioBarChart
+                values={vaultBarVals}
+                labels={vaultBarLabels}
+                colors={vaultBarLabels.map((_, i) => DONUT_COLORS[i % DONUT_COLORS.length]!)}
+                ariaLabel="Bar chart of fractional grams per jeweller vault"
+              />
+            ) : (
+              <p style={{ color: 'var(--text-muted)', margin: 0 }}>No fractional grams yet — buy gold from a verified jeweller.</p>
+            )}
           </div>
         </article>
 
-        <article className="pf-card pf-card--lift pf-card--wide pf-card--ledger">
+        <article className="pf-card pf-card--lift pf-card--wide">
           <header className="pf-card__head">
-            <h3 className="pf-card__title">Holding mix</h3>
-            <p className="pf-card__meta">Fractional, deposit, scheme mix (sample)</p>
+            <h3 className="pf-card__title">Allocation by jeweller</h3>
+            <p className="pf-card__meta">Share of your total fractional grams</p>
           </header>
-          <div className="pf-donut-row">
-            <div className="pf-donut-wrap pf-donut-wrap--compact">
-              <PortfolioDonut segments={donutSegs} ariaLabel="Allocation by holding type" />
-              <ul className="pf-donut-legend pf-donut-legend--tight">
-                {donutSegs.map((s) => (
-                  <li key={s.label} className="pf-donut-legend__row">
-                    <span className="pf-swatch" style={{ background: s.color }} />
-                    <span>{s.label}</span>
-                    <strong>{Math.round(s.pct * 100)}%</strong>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-          <div style={{ marginTop: '1rem' }} className="pf-kpi__spark">
-            <PortfolioSparkRow points={sparkPts.length ? sparkPts : [1, 2, 3]} stroke="#fcd34d" />
-            <p className="pf-card__meta" style={{ margin: '0.5rem 0 0' }}>
-              Short-window INR pulse
-            </p>
+          <div className="pf-donut-wrap">
+            <PortfolioDonut segments={donutSegs} ariaLabel="Fractional gold allocation by jeweller vault" />
+            <ul className="pf-donut-legend">
+              {donutSegs.map((s) => (
+                <li key={s.label} className="pf-donut-legend__row">
+                  <span className="pf-swatch" style={{ background: s.color }} />
+                  <span>{s.label}</span>
+                  <strong>{Math.round(s.pct * 100)}%</strong>
+                </li>
+              ))}
+            </ul>
           </div>
         </article>
       </div>
@@ -177,56 +197,44 @@ export function CustomerPortfolioPanel() {
       <article className="pf-card pf-card--lift pf-card--wide pf-card--ledger-table-wrap pf-stagger">
         <header className="pf-card__head pf-ledger-head">
           <div>
-            <h3 className="pf-card__title">Ledger by holding type</h3>
-            <p className="pf-card__meta">
-              Sample ledger rows — production ties to vault APIs per jeweller.
-            </p>
+            <h3 className="pf-card__title">Ledger — fractional purchases</h3>
+            <p className="pf-card__meta">Completed orders credited to your vault (counter / legacy UPI).</p>
           </div>
         </header>
-        {ledgerByHolding.map((section) => (
-          <div key={section.key} style={{ marginBottom: '1.5rem' }}>
-            <h4
-              style={{
-                margin: '0 0 0.65rem',
-                fontSize: '0.82rem',
-                fontWeight: 800,
-                letterSpacing: '0.06em',
-                textTransform: 'uppercase',
-                color: 'var(--gold-light)',
-              }}
-            >
-              {section.label}
-            </h4>
-            <div className="pf-ledger-scroll">
-              <table className="pf-ledger-table">
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Type</th>
-                    <th>Detail</th>
-                    <th className="tabular">Grams</th>
-                    <th className="tabular">INR</th>
-                    <th className="tabular">Gold bal.</th>
+        {ledgerDisplay.length === 0 ? (
+          <p style={{ color: 'var(--text-muted)', margin: 0 }}>No completed purchases yet.</p>
+        ) : (
+          <div className="pf-ledger-scroll">
+            <table className="pf-ledger-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Activity</th>
+                  <th>Reference</th>
+                  <th>Jeweller</th>
+                  <th className="tabular">Grams</th>
+                  <th className="tabular">Paid</th>
+                  <th className="tabular">Gold bal.</th>
+                </tr>
+              </thead>
+              <tbody>
+                {ledgerDisplay.map((row) => (
+                  <tr key={row.reference} className="pf-ledger-row">
+                    <td className="pf-ledger-date">{fmtWhen(row.created_at)}</td>
+                    <td>
+                      <span className="pf-ledger-pill pf-ledger-pill--buy">buy</span>
+                    </td>
+                    <td className="tabular">{row.reference}</td>
+                    <td>{row.jeweller_name}</td>
+                    <td className="tabular pf-ledger-grams">+{parseG(row.grams).toFixed(6)} g</td>
+                    <td className="tabular pf-ledger-inr pf-ledger-inr--out">₹{fmtInrPlain(row.total_inr)}</td>
+                    <td className="tabular pf-ledger-bal">{row.balanceG}</td>
                   </tr>
-                </thead>
-                <tbody>
-                  {section.rows.map((row) => (
-                    <tr key={row.id} className="pf-ledger-row">
-                      <td className="pf-ledger-date">{row.when}</td>
-                      <td>
-                        <span className={ledgerPillClass(row.kind)}>{row.kind}</span>
-                      </td>
-                      <td>{row.detail}</td>
-                      <td className="tabular pf-ledger-grams">{row.grams}</td>
-                      <td className={`tabular ${inrToneClass(row.inr)}`}>{row.inr}</td>
-                      <td className="tabular pf-ledger-bal">{row.balanceG}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                ))}
+              </tbody>
+            </table>
           </div>
-        ))}
+        )}
       </article>
     </div>
   )

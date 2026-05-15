@@ -8,6 +8,7 @@ import { CustomerDepositInfoPanel } from '@/features/invest/CustomerDepositInfoP
 import { FractionalPurchasePanel } from '@/features/invest/FractionalPurchasePanel'
 import { CustomerKycWorkflow } from '@/features/customer/CustomerKycWorkflow'
 import { CustomerPortfolioPanel } from '@/features/portfolio/CustomerPortfolioPanel'
+import { CustomerVaultsPanel } from '@/features/portfolio/CustomerVaultsPanel'
 import { useAuth } from '@/context/AuthContext'
 import { LIVE_PROFILE_POLL_MS } from '@/lib/liveDeskIntervals'
 import { useLivePoll } from '@/lib/useLivePoll'
@@ -104,9 +105,7 @@ export function CustomerDashboardPage() {
       title={head}
     >
       {active === 'portfolio_overview' ? <CustomerPortfolioPanel /> : null}
-      {active === 'portfolio_holdings' ? (
-        <ComingSoon title="Vaults & ledgers" children="Per-jeweller balances (fractional, deposit, schemes) appear here as ledger APIs roll out." />
-      ) : null}
+      {active === 'portfolio_holdings' ? <CustomerVaultsPanel /> : null}
       {active === 'shop_jewellers' ? <CustomerJewellersBrowsePanel /> : null}
       {active === 'shop_products' ? <CustomerProductsBrowsePanel /> : null}
       {active === 'invest_fractional' ? <FractionalPurchasePanel /> : null}
