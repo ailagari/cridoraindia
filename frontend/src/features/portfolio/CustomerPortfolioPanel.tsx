@@ -1,12 +1,18 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { fetchGoldWallet, type FractionalLedgerRowDTO, type VaultRowDTO } from '@/lib/goldTransferApi'
 import { fetchGoldTicker, fetchSpotPrices, type GoldTickerPayload, type SpotPricesPayload } from '@/lib/marketplaceApi'
 import { LIVE_BALANCE_POLL_MS } from '@/lib/liveDeskIntervals'
 import { useLivePoll } from '@/lib/useLivePoll'
-import { PortfolioBarChart, PortfolioCostVsMarketBoard, PortfolioDonut } from './PortfolioCharts'
+import {
+  PortfolioBarChart,
+  PortfolioCostVsMarketBoard,
+  PortfolioDonut,
+  PortfolioLiveValueVsCostChart,
+} from './PortfolioCharts'
 import { PortfolioGrowwHero, PortfolioSpotPillsRow, PortfolioVaultHoldingsList } from './PortfolioGrowwViews'
 
 const DONUT_COLORS = ['#fbbf24', '#d4a85c', '#67e8f9', '#a78bfa', '#34d399', '#f472b6', '#38bdf8']
+const SESSION_VALUE_SAMPLES_CAP = 56
 
 function parseG(s: string): number {
   const n = Number.parseFloat(s)
@@ -56,6 +62,8 @@ export function CustomerPortfolioPanel() {
   const [loadErr, setLoadErr] = useState('')
   const [privacyMasked, setPrivacyMasked] = useState(false)
   const [portfolioTab, setPortfolioTab] = useState<'overview' | 'charts' | 'ledger'>('overview')
+  const [sessionValueSamples, setSessionValueSamples] = useState<number[]>([])
+  const basisInrRef = useRef<number | null>(null)
 
   const refresh = useCallback(async () => {
     setLoadErr('')
@@ -142,6 +150,23 @@ export function CustomerPortfolioPanel() {
     return estInr
   }, [unrealized?.market_value_inr, estInr])
 
+  useEffect(() => {
+    if (heldGramsSum <= 0) {
+      setSessionValueSamples([])
+      basisInrRef.current = allocatedCost
+      return
+    }
+    const prevBasis = basisInrRef.current
+    basisInrRef.current = allocatedCost
+    if (prevBasis !== null && prevBasis !== allocatedCost) {
+      setSessionValueSamples([marketValueInr])
+      return
+    }
+    setSessionValueSamples((prev) =>
+      [...prev, marketValueInr].slice(-SESSION_VALUE_SAMPLES_CAP),
+    )
+  }, [allocatedCost, heldGramsSum, marketValueInr])
+
   const cumulativeMetalCostSteps = useMemo(() => {
     const sorted = [...ledger].sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at))
     const steps: number[] = []
@@ -194,6 +219,31 @@ export function CustomerPortfolioPanel() {
               masked={privacyMasked}
               onToggleMask={() => setPrivacyMasked((m) => !m)}
             />
+
+            {heldGramsSum > 0 ? (
+              <section className="pf-groww-pnl-shell" aria-label="Live portfolio value versus invested metal cost">
+                <header className="pf-groww-pnl-shell__head">
+                  <h3 className="pf-groww-pnl-shell__title">Live value vs invested</h3>
+                  <p className="pf-groww-pnl-shell__meta">
+                    Dotted horizontal line shows your metal cost basis. Points add on each vault mark refresh — curve above it
+                    is profit territory while you&apos;re here.
+                  </p>
+                </header>
+                {sessionValueSamples.length === 0 ? (
+                  <p className="pf-groww-pnl-shell__waiting">Sampling live valuation…</p>
+                ) : (
+                  <PortfolioLiveValueVsCostChart
+                    samples={sessionValueSamples}
+                    investedInr={allocatedCost}
+                    formatInrAxis={(n) =>
+                      privacyMasked
+                        ? '••••'
+                        : `₹${n.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`
+                    }
+                  />
+                )}
+              </section>
+            ) : null}
 
             <PortfolioVaultHoldingsList
               vaults={vaults}

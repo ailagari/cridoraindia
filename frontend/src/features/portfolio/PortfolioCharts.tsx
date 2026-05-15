@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useId, useMemo } from 'react'
 
 type Point = { x: number; y: number }
 
@@ -196,6 +196,169 @@ function fmtSignedBoard(n: number): string {
   const sign = n >= 0 ? '+' : '−'
   const abs = Math.abs(Math.round(n))
   return `${sign}₹${abs.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`
+}
+
+type LivePnLGeo = {
+  lineD: string
+  baselineY: number
+  xmin: number
+  xmax: number
+  ymin: number
+  ymax: number
+  firstX: number
+  lastX: number
+  lastY: number
+  innerTop: number
+  innerBottom: number
+}
+
+function buildLivePnLGeometry(
+  samples: number[],
+  investedInr: number,
+  svgW: number,
+  svgH: number,
+): LivePnLGeo | null {
+  if (samples.length === 0) return null
+
+  const pl = 4
+  const pr = 4
+  const pt = 6
+  const pb = 16
+  const iw = svgW - pl - pr
+  const ih = svgH - pt - pb
+  let minVal = investedInr > 0 ? Math.min(investedInr, ...samples) : Math.min(...samples)
+  let maxVal = investedInr > 0 ? Math.max(investedInr, ...samples) : Math.max(...samples)
+  const spread = Math.max(maxVal - minVal, Math.max(minVal * 0.015, investedInr * 0.012, 1))
+  minVal = Math.max(0, minVal - spread * 0.06)
+  maxVal = maxVal + spread * 0.06
+  const span = maxVal - minVal || 1
+  const mapY = (v: number) => pt + ih - ((v - minVal) / span) * ih
+  const baselineY = investedInr > 0 ? mapY(investedInr) : pt + ih / 2
+  const n = samples.length
+  const xs = samples.map((_, i) =>
+    n <= 1 ? pl + iw / 2 : pl + (i / Math.max(n - 1, 1)) * iw,
+  )
+  let lineD = ''
+  for (let i = 0; i < n; i++) {
+    const y = mapY(samples[i]!)
+    lineD += i === 0 ? `M ${xs[i]} ${y}` : ` L ${xs[i]} ${y}`
+  }
+  return {
+    lineD,
+    baselineY,
+    xmin: pl,
+    xmax: pl + iw,
+    ymin: minVal,
+    ymax: maxVal,
+    firstX: xs[0]!,
+    lastX: xs[n - 1]!,
+    lastY: mapY(samples[n - 1]!),
+    innerTop: pt,
+    innerBottom: pt + ih,
+  }
+}
+
+/** Live portfolio INR vs dashed metal-cost baseline (samples from polls; horizontal axis = refreshes). */
+export function PortfolioLiveValueVsCostChart({
+  samples,
+  investedInr,
+  formatInrAxis,
+}: {
+  samples: number[]
+  investedInr: number
+  formatInrAxis: (inr: number) => string
+}) {
+  const svgW = 320
+  const svgH = 96
+  const fillGradId = useId().replace(/:/g, '')
+  const geo = useMemo(
+    () => buildLivePnLGeometry(samples, investedInr, svgW, svgH),
+    [samples, investedInr],
+  )
+  if (geo == null) return null
+
+  const lastVal = samples[samples.length - 1] ?? 0
+  const stroke =
+    investedInr > 0 ? (lastVal >= investedInr ? '#34d399' : '#fb7185') : '#fcd34d'
+  const pct =
+    investedInr > 0 && Number.isFinite(lastVal)
+      ? ((lastVal - investedInr) / Math.max(investedInr, 1)) * 100
+      : null
+  const status =
+    investedInr <= 0
+      ? 'Metal cost basis not available.'
+      : lastVal >= investedInr
+        ? 'Live value is at or above your invested metal cost.'
+        : 'Live value is below your invested metal cost.'
+  const pctBit =
+    pct != null && Number.isFinite(pct) && investedInr > 0
+      ? `${pct >= 0 ? '+' : ''}${pct.toFixed(2)} percent versus cost basis.`
+      : ''
+  const aria = `${status} ${pctBit} Cost reference ${formatInrAxis(investedInr)} latest sample ${formatInrAxis(lastVal)}.`
+
+  return (
+    <div className="pf-groww-pnl-chart" role="img" aria-label={aria}>
+      <svg viewBox={`0 0 ${svgW} ${svgH}`} className="pf-groww-pnl-chart__svg" preserveAspectRatio="xMidYMid meet">
+        <title>{aria}</title>
+        <defs>
+          <linearGradient id={fillGradId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={stroke} stopOpacity="0.22" />
+            <stop offset="100%" stopColor={stroke} stopOpacity="0.02" />
+          </linearGradient>
+        </defs>
+        {[0.33, 0.66].map((t) => {
+          const y = geo.innerTop + (geo.innerBottom - geo.innerTop) * t
+          return (
+            <line
+              key={`g-${String(t)}`}
+              x1={geo.xmin}
+              y1={y}
+              x2={geo.xmax}
+              y2={y}
+              stroke="rgba(148, 163, 184, 0.12)"
+              strokeWidth={1}
+            />
+          )
+        })}
+        <text x="8" y="14" fill="rgba(226,232,240,0.55)" fontSize="9">
+          {formatInrAxis(geo.ymax)}
+        </text>
+        <text x="8" y={svgH - 4} fill="rgba(226,232,240,0.55)" fontSize="9">
+          {formatInrAxis(geo.ymin)}
+        </text>
+        {investedInr > 0 ? (
+          <line
+            x1={geo.xmin}
+            y1={geo.baselineY}
+            x2={geo.xmax}
+            y2={geo.baselineY}
+            stroke="rgba(203,213,225,0.55)"
+            strokeWidth={1.35}
+            strokeDasharray="5 5"
+          />
+        ) : null}
+        {investedInr > 0 ? (
+          <path
+            d={`${geo.lineD} L ${geo.lastX} ${geo.baselineY} L ${geo.firstX} ${geo.baselineY} Z`}
+            fill={`url(#${fillGradId})`}
+            opacity={0.9}
+          />
+        ) : null}
+        <path d={geo.lineD} fill="none" stroke={stroke} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
+        <circle cx={geo.lastX} cy={geo.lastY} r={3.5} fill={stroke} />
+      </svg>
+      <div className="pf-groww-pnl-chart__legend" aria-hidden>
+        {investedInr > 0 ? (
+          <span className="pf-groww-pnl-chart__lg">
+            <span className="pf-groww-pnl-chart__dash" /> Metal cost basis
+          </span>
+        ) : null}
+        <span className="pf-groww-pnl-chart__lg">
+          <span className="pf-groww-pnl-chart__dot" style={{ background: stroke }} /> Live vault value (this session)
+        </span>
+      </div>
+    </div>
+  )
 }
 
 function buildCostStepGeometry(

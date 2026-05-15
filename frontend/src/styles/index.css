@@ -3766,6 +3766,89 @@ img {
   color: rgba(148, 163, 184, 0.88);
 }
 
+.pf-groww-pnl-shell {
+  margin-top: 0.95rem;
+  border-radius: 16px;
+  padding: 0.95rem 1.1rem 1rem;
+  border: 1px solid rgba(51, 65, 85, 0.55);
+  background: linear-gradient(155deg, rgba(15, 23, 42, 0.88), rgba(3, 7, 18, 0.62));
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.24);
+}
+
+.pf-groww-pnl-shell__head {
+  margin-bottom: 0.65rem;
+}
+
+.pf-groww-pnl-shell__title {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.pf-groww-pnl-shell__meta {
+  margin: 0.35rem 0 0;
+  font-size: 0.72rem;
+  line-height: 1.4;
+  color: rgba(148, 163, 184, 0.92);
+}
+
+.pf-groww-pnl-shell__waiting {
+  margin: 0;
+  padding: 1rem 0;
+  font-size: 0.72rem;
+  color: rgba(148, 163, 184, 0.9);
+}
+
+.pf-groww-pnl-chart {
+  margin-top: 0.35rem;
+}
+
+.pf-groww-pnl-chart__svg {
+  display: block;
+  width: 100%;
+  max-height: 120px;
+  border-radius: 10px;
+  background: rgba(2, 6, 23, 0.45);
+}
+
+.pf-groww-pnl-chart__legend {
+  margin-top: 0.55rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+  font-size: 0.65rem;
+  color: rgba(148, 163, 184, 0.95);
+}
+
+.pf-groww-pnl-chart__lg {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.38rem;
+}
+
+.pf-groww-pnl-chart__dash {
+  width: 22px;
+  height: 2px;
+  border-radius: 1px;
+  background: repeating-linear-gradient(
+    90deg,
+    rgba(203, 213, 225, 0.75),
+    rgba(203, 213, 225, 0.75) 4px,
+    transparent 4px,
+    transparent 8px
+  );
+}
+
+.pf-groww-pnl-chart__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
 .pf-groww-footnote {
   margin: 0;
   font-size: 0.78rem;
