@@ -6723,6 +6723,151 @@ select.input {
   display: grid;
   gap: 1rem;
 }
+
+.pf-scope .pf-vault-table-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.pf-scope .pf-vault-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  background: rgba(15, 23, 42, 0.35);
+}
+
+.pf-scope .pf-vault-table {
+  width: 100%;
+  min-width: 720px;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.pf-scope .pf-vault-table th {
+  text-align: left;
+  padding: 0.55rem 0.75rem;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.22);
+  background: rgba(15, 23, 42, 0.5);
+  white-space: nowrap;
+}
+
+.pf-scope .pf-vault-table td {
+  padding: 0.65rem 0.75rem;
+  vertical-align: top;
+  color: var(--text-silk);
+}
+
+.pf-scope .pf-vault-table__row td {
+  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.pf-scope .pf-vault-table__detail td {
+  padding: 0.85rem 0.75rem 1rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.22);
+  background: rgba(2, 6, 23, 0.25);
+}
+
+.pf-scope .pf-vault-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.pf-scope .pf-vault-table__item {
+  max-width: 14rem;
+}
+
+.pf-scope .pf-vault-table__title-text {
+  display: block;
+  font-weight: 750;
+  line-height: 1.35;
+}
+
+.pf-scope .pf-vault-table__basis,
+.pf-scope .pf-vault-table__src {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  line-height: 1.35;
+}
+
+.pf-scope .pf-vault-table__src {
+  color: var(--gold-light, #fbbf24);
+  font-weight: 650;
+}
+
+.pf-scope .pf-vault-table__inr-cell {
+  white-space: nowrap;
+}
+
+.pf-scope .pf-vault-table__inr-main {
+  display: block;
+  font-weight: 800;
+  color: var(--gold-light, #fbbf24);
+}
+
+.pf-scope .pf-vault-table__inr-hint {
+  display: block;
+  margin-top: 0.12rem;
+  font-size: 0.62rem;
+  color: var(--text-faint);
+  font-weight: 600;
+}
+
+.pf-scope .pf-vault-table__gain {
+  display: block;
+  margin-top: 0.28rem;
+  font-size: 0.72rem;
+  font-weight: 650;
+  color: #6ee7b7;
+  white-space: normal;
+}
+
+.pf-scope .pf-vault-table__gain--down {
+  color: #fca5a5;
+}
+
+.pf-scope .pf-vault-table__actions {
+  white-space: nowrap;
+}
+
+.pf-scope .pf-vault-table__actions .btn {
+  display: inline-block;
+  margin-right: 0.25rem;
+  margin-bottom: 0.15rem;
+}
+
+.pf-scope .pf-vault-table__detail .pf-vault-docs--inline {
+  margin-top: 0;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.pf-scope .pf-vault-table__detail .pf-vault-edit + .pf-vault-docs--inline {
+  margin-top: 0.85rem;
+}
+
+.pf-scope .pf-vault-pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem 1rem;
+}
+
+.pf-scope .pf-vault-pager__status {
+  font-size: 0.78rem;
+  font-weight: 650;
+  color: var(--text-muted);
+}
+
 .pf-scope .pf-vault-card {
   padding: 1.1rem 1.2rem;
   border-radius: 18px;
