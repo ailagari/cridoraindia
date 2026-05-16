@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
@@ -743,3 +745,238 @@ class FestivalBroadcastNotification(models.Model):
 
     def __str__(self):
         return f"FestivalBroadcast({self.scheduled_at}, {self.status})"
+
+
+class PersonalGoldHolding(models.Model):
+    """Off-vault physical gold tracking & records — MVP: not transferable / redeemable / loanable."""
+
+    PERSONAL = "personal"
+    HOLDING_TYPE_CHOICES = [(PERSONAL, "Personal")]
+
+    CATEGORY_ORNAMENT = "ornament"
+    CATEGORY_COIN = "coin"
+    CATEGORY_BAR = "bar"
+    CATEGORY_OTHER = "other"
+    CATEGORY_CHOICES = [
+        (CATEGORY_ORNAMENT, "Ornament"),
+        (CATEGORY_COIN, "Coin"),
+        (CATEGORY_BAR, "Bar"),
+        (CATEGORY_OTHER, "Other"),
+    ]
+
+    SELF_DECLARED = "self_declared"
+    JEWELLER_ADDED = "jeweller_added"
+    VERIFIED = "verified"
+    VERIFICATION_STATUS_CHOICES = [
+        (SELF_DECLARED, "Self declared"),
+        (JEWELLER_ADDED, "Jeweller added"),
+        (VERIFIED, "Verified"),
+    ]
+
+    CREATED_BY_USER = "user"
+    CREATED_BY_JEWELLER = "jeweller"
+    CREATED_BY_ADMIN = "admin"
+    CREATED_BY_TYPE_CHOICES = [
+        (CREATED_BY_USER, "User"),
+        (CREATED_BY_JEWELLER, "Jeweller"),
+        (CREATED_BY_ADMIN, "Admin"),
+    ]
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="personal_gold_holdings",
+        limit_choices_to={"user_type": User.CUSTOMER},
+    )
+    jeweller = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="personal_holdings_added_for_customers",
+        limit_choices_to={"user_type": User.JEWELLER},
+    )
+    holding_type = models.CharField(
+        max_length=24,
+        choices=HOLDING_TYPE_CHOICES,
+        default=PERSONAL,
+    )
+    title = models.CharField(max_length=255)
+    category = models.CharField(max_length=24, choices=CATEGORY_CHOICES)
+    weight_grams = models.DecimalField(
+        max_digits=16,
+        decimal_places=6,
+        validators=[MinValueValidator(Decimal("0.000001"))],
+    )
+    purity = models.CharField(max_length=64, default="BIS 916")
+    purchase_date = models.DateField(null=True, blank=True)
+    purchase_source = models.CharField(max_length=512, blank=True)
+    estimated_current_value_inr = models.DecimalField(
+        max_digits=18,
+        decimal_places=2,
+        default=0,
+        help_text="Snapshot at last save: reference 22K ₹/g × weight (MVP).",
+    )
+    is_self_declared = models.BooleanField(default=True)
+    verification_status = models.CharField(
+        max_length=24,
+        choices=VERIFICATION_STATUS_CHOICES,
+        default=SELF_DECLARED,
+    )
+    created_by_type = models.CharField(max_length=16, choices=CREATED_BY_TYPE_CHOICES)
+    created_by_id = models.PositiveIntegerField(null=True, blank=True)
+    notes = models.TextField(blank=True)
+    is_removed = models.BooleanField(default=False, db_index=True)
+    removed_at = models.DateTimeField(null=True, blank=True)
+    removed_by = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="personal_holdings_removed",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-updated_at"]
+        indexes = [
+            models.Index(fields=["user", "is_removed"]),
+        ]
+
+    def __str__(self):
+        return f"PersonalGoldHolding({self.user_id}, {self.title})"
+
+
+class PersonalHoldingDocument(models.Model):
+    PURCHASE_INVOICE = "purchase_invoice"
+    GOLD_CERTIFICATE = "gold_certificate"
+    PURITY_CERTIFICATE = "purity_certificate"
+    VALUATION_DOCUMENT = "valuation_document"
+    WARRANTY_CARD = "warranty_card"
+    PRODUCT_IMAGE = "product_image"
+    OTHER = "other"
+    DOCUMENT_TYPE_CHOICES = [
+        (PURCHASE_INVOICE, "Purchase invoice"),
+        (GOLD_CERTIFICATE, "Gold certificate"),
+        (PURITY_CERTIFICATE, "Purity certificate"),
+        (VALUATION_DOCUMENT, "Valuation document"),
+        (WARRANTY_CARD, "Warranty card"),
+        (PRODUCT_IMAGE, "Product image"),
+        (OTHER, "Other"),
+    ]
+
+    UPLOADED_BY_USER = "user"
+    UPLOADED_BY_JEWELLER = "jeweller"
+    UPLOADED_BY_ADMIN = "admin"
+    UPLOADED_BY_TYPE_CHOICES = [
+        (UPLOADED_BY_USER, "User"),
+        (UPLOADED_BY_JEWELLER, "Jeweller"),
+        (UPLOADED_BY_ADMIN, "Admin"),
+    ]
+
+    holding = models.ForeignKey(
+        PersonalGoldHolding,
+        on_delete=models.CASCADE,
+        related_name="documents",
+    )
+    document_type = models.CharField(max_length=32, choices=DOCUMENT_TYPE_CHOICES)
+    file = models.FileField(upload_to="personal_holding_docs/%Y/%m/")
+    original_filename = models.CharField(max_length=255, blank=True)
+    uploaded_by_type = models.CharField(max_length=16, choices=UPLOADED_BY_TYPE_CHOICES)
+    uploaded_by_id = models.PositiveIntegerField(null=True, blank=True)
+    invoice_number = models.CharField(max_length=120, blank=True)
+    document_title = models.CharField(max_length=255, blank=True)
+    remarks = models.TextField(blank=True)
+    is_removed = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"PersonalHoldingDocument({self.holding_id}, {self.document_type})"
+
+
+class PersonalPortfolioAuditLog(models.Model):
+    ACTION_CREATE_HOLDING = "holding_create"
+    ACTION_UPDATE_HOLDING = "holding_update"
+    ACTION_DELETE_HOLDING = "holding_delete"
+    ACTION_UPLOAD_DOCUMENT = "document_upload"
+    ACTION_DELETE_DOCUMENT = "document_delete"
+    ACTION_JEWELLER_ADD = "jeweller_add"
+    ACTION_ADMIN_REMOVE = "admin_remove"
+    ACTION_VERIFICATION_CHANGE = "verification_change"
+    ACTION_CHOICES = [
+        (ACTION_CREATE_HOLDING, "Holding created"),
+        (ACTION_UPDATE_HOLDING, "Holding updated"),
+        (ACTION_DELETE_HOLDING, "Holding deleted"),
+        (ACTION_UPLOAD_DOCUMENT, "Document uploaded"),
+        (ACTION_DELETE_DOCUMENT, "Document deleted"),
+        (ACTION_JEWELLER_ADD, "Jeweller added holding"),
+        (ACTION_ADMIN_REMOVE, "Admin removed"),
+        (ACTION_VERIFICATION_CHANGE, "Verification changed"),
+    ]
+
+    subject_user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="personal_portfolio_audit_logs",
+    )
+    holding = models.ForeignKey(
+        PersonalGoldHolding,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="audit_logs",
+    )
+    document = models.ForeignKey(
+        PersonalHoldingDocument,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="audit_logs",
+    )
+    actor_type = models.CharField(max_length=16, blank=True)
+    actor_id = models.PositiveIntegerField(null=True, blank=True)
+    action = models.CharField(max_length=32, choices=ACTION_CHOICES)
+    metadata = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"PersonalPortfolioAuditLog({self.action}, u={self.subject_user_id})"
+
+
+class PortfolioUserNotification(models.Model):
+    KIND_HOLDING_ADDED = "holding_added"
+    KIND_JEWELLER_ADDED_HOLDING = "jeweller_added_holding"
+    KIND_DOCUMENT_UPLOADED = "document_uploaded"
+    KIND_VERIFICATION_UPDATED = "verification_updated"
+    KIND_CHOICES = [
+        (KIND_HOLDING_ADDED, "Holding added"),
+        (KIND_JEWELLER_ADDED_HOLDING, "Jeweller added holding"),
+        (KIND_DOCUMENT_UPLOADED, "Document uploaded"),
+        (KIND_VERIFICATION_UPDATED, "Verification updated"),
+    ]
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="portfolio_notifications",
+    )
+    kind = models.CharField(max_length=32, choices=KIND_CHOICES)
+    title = models.CharField(max_length=180)
+    body = models.TextField()
+    link_path = models.CharField(max_length=512, blank=True)
+    read_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [models.Index(fields=["user", "read_at"])]
+
+    def __str__(self):
+        return f"PortfolioUserNotification({self.kind}, {self.user_id})"

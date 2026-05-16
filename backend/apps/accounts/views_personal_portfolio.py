@@ -1,0 +1,727 @@
+"""Personal holdings & gold records vault APIs."""
+
+from __future__ import annotations
+
+from decimal import Decimal
+
+from django.conf import settings
+from django.contrib.auth import get_user_model
+from django.db import transaction
+from django.http import FileResponse, Http404
+from django.utils import timezone
+from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from apps.accounts.models import (
+    PersonalGoldHolding,
+    PersonalHoldingDocument,
+    PersonalPortfolioAuditLog,
+    PortfolioUserNotification,
+)
+from apps.accounts.services.personal_holdings import (
+    calculate_holding_value_inr,
+    customer_personal_holdings_qs,
+    customer_portfolio_ledger_payload,
+    normalize_phone_digits,
+    reference_gold_rate_inr_per_gram,
+    validate_document_upload,
+)
+from apps.accounts.services.personal_holdings_audit import log_personal_portfolio_action
+from apps.accounts.services.portfolio_user_notify import create_portfolio_notification
+
+User = get_user_model()
+
+
+def _max_upload_bytes() -> int:
+    return int(getattr(settings, "PERSONAL_HOLDING_MAX_UPLOAD_BYTES", 8 * 1024 * 1024))
+
+
+def _recalc_holding_inr(h: PersonalGoldHolding) -> None:
+    rate, _ = reference_gold_rate_inr_per_gram()
+    h.estimated_current_value_inr = calculate_holding_value_inr(h.weight_grams, rate)
+
+
+def _jeweller_label(u: User) -> str:
+    return (u.business_name or u.email or "").strip()
+
+
+def _holding_detail_dict(
+    h: PersonalGoldHolding,
+    *,
+    include_documents: bool,
+) -> dict:
+    jeweller_name = ""
+    purchase_jeweller_label = ""
+    if h.jeweller_id:
+        j = h.jeweller
+        jeweller_name = _jeweller_label(j)
+        purchase_jeweller_label = f"Purchased From {jeweller_name}"
+    rate, _ = reference_gold_rate_inr_per_gram()
+    live_inr = calculate_holding_value_inr(h.weight_grams, rate)
+    doc_count = h.document_count if hasattr(h, "document_count") else None
+    if doc_count is None:
+        doc_count = h.documents.filter(is_removed=False).count()
+
+    status_map = {
+        PersonalGoldHolding.SELF_DECLARED: "Self Declared",
+        PersonalGoldHolding.JEWELLER_ADDED: "Added by Jeweller",
+        PersonalGoldHolding.VERIFIED: "Verified",
+    }
+    out = {
+        "id": h.id,
+        "holding_type": h.holding_type,
+        "title": h.title,
+        "category": h.category,
+        "weight_grams": str(h.weight_grams),
+        "purity": h.purity,
+        "purchase_date": h.purchase_date.isoformat() if h.purchase_date else None,
+        "purchase_source": h.purchase_source or "",
+        "estimated_current_value_inr": str(live_inr),
+        "is_self_declared": h.is_self_declared,
+        "verification_status": h.verification_status,
+        "status_badge": status_map.get(h.verification_status, h.verification_status),
+        "created_by_type": h.created_by_type,
+        "created_by_id": h.created_by_id,
+        "jeweller_id": h.jeweller_id,
+        "jeweller_name": jeweller_name,
+        "purchase_jeweller_label": purchase_jeweller_label,
+        "notes": h.notes or "",
+        "document_count": doc_count,
+        "created_at": h.created_at.isoformat(),
+        "updated_at": h.updated_at.isoformat(),
+        "mvp_note": "Tracking & Records Only in MVP — not transferable, redeemable, loan, sellback, or emergency fund.",
+    }
+    if include_documents:
+        docs = []
+        for d in h.documents.filter(is_removed=False).order_by("-created_at")[:40]:
+            docs.append(_document_dict(d))
+        out["documents"] = docs
+    return out
+
+
+def _document_dict(d: PersonalHoldingDocument) -> dict:
+    return {
+        "id": d.id,
+        "document_type": d.document_type,
+        "original_filename": d.original_filename or "",
+        "invoice_number": d.invoice_number or "",
+        "document_title": d.document_title or "",
+        "remarks": d.remarks or "",
+        "uploaded_by_type": d.uploaded_by_type,
+        "uploaded_by_id": d.uploaded_by_id,
+        "created_at": d.created_at.isoformat(),
+        "mime_hint": d.original_filename.rsplit(".", 1)[-1].lower() if d.original_filename else "",
+    }
+
+
+def _can_access_holding(user: User, h: PersonalGoldHolding) -> bool:
+    if not user.is_authenticated:
+        return False
+    if user.user_type == User.ADMIN or user.is_superuser:
+        return True
+    if h.user_id == user.id:
+        return True
+    if user.user_type == User.JEWELLER and h.jeweller_id == user.id:
+        return True
+    return False
+
+
+def _can_mutate_holding_customer(user: User, h: PersonalGoldHolding) -> bool:
+    return user.user_type == User.CUSTOMER and h.user_id == user.id and not h.is_removed
+
+
+class CustomerPortfolioLedgerView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if request.user.user_type != User.CUSTOMER:
+            return Response({"detail": "Customers only."}, status=status.HTTP_403_FORBIDDEN)
+        lf = (request.query_params.get("filter") or "all").strip()
+        return Response(customer_portfolio_ledger_payload(request.user, ledger_filter=lf))
+
+
+class PortfolioUserNotificationsListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        try:
+            limit = int(request.query_params.get("limit") or 40)
+        except ValueError:
+            limit = 40
+        limit = max(1, min(limit, 100))
+        qs = PortfolioUserNotification.objects.filter(user=request.user).order_by("-created_at")[:limit]
+        rows = [
+            {
+                "id": n.id,
+                "kind": n.kind,
+                "title": n.title,
+                "body": n.body,
+                "link_path": n.link_path,
+                "read_at": n.read_at.isoformat() if n.read_at else None,
+                "created_at": n.created_at.isoformat(),
+            }
+            for n in qs
+        ]
+        unread = sum(1 for n in qs if n.read_at is None)
+        return Response({"results": rows, "unread_count": unread})
+
+
+class PersonalVaultDocumentsListView(APIView):
+    """Recent documents across all personal holdings (single query)."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if request.user.user_type != User.CUSTOMER:
+            return Response({"detail": "Customers only."}, status=status.HTTP_403_FORBIDDEN)
+        try:
+            limit = int(request.query_params.get("limit") or 60)
+        except ValueError:
+            limit = 60
+        limit = max(1, min(limit, 120))
+        qs = (
+            PersonalHoldingDocument.objects.filter(
+                holding__user=request.user,
+                holding__is_removed=False,
+                is_removed=False,
+            )
+            .select_related("holding")
+            .order_by("-created_at")[:limit]
+        )
+        rows = []
+        for d in qs:
+            rows.append(
+                {
+                    **_document_dict(d),
+                    "holding_id": d.holding_id,
+                    "holding_title": d.holding.title,
+                }
+            )
+        return Response({"results": rows})
+
+
+class PortfolioUserNotificationsMarkReadView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        mark_all = bool(request.data.get("all"))
+        ids = request.data.get("notification_ids")
+        base = PortfolioUserNotification.objects.filter(user=request.user)
+        if mark_all:
+            base.filter(read_at__isnull=True).update(read_at=timezone.now())
+        elif isinstance(ids, list) and ids:
+            base.filter(id__in=ids[:200], read_at__isnull=True).update(read_at=timezone.now())
+        else:
+            return Response(
+                {"detail": "Provide notification_ids (array) or all=true."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return Response({"ok": True})
+
+
+class PersonalHoldingsListCreateView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if request.user.user_type != User.CUSTOMER:
+            return Response({"detail": "Customers only."}, status=status.HTTP_403_FORBIDDEN)
+        qs = customer_personal_holdings_qs(request.user)
+        return Response(
+            {
+                "results": [_holding_detail_dict(h, include_documents=False) for h in qs],
+                "reference_gold_inr_per_gram_22k": str(reference_gold_rate_inr_per_gram()[0].quantize(Decimal("0.01"))),
+            }
+        )
+
+    def post(self, request):
+        if request.user.user_type != User.CUSTOMER:
+            return Response({"detail": "Customers only."}, status=status.HTTP_403_FORBIDDEN)
+        title = (request.data.get("title") or "").strip()
+        category = (request.data.get("category") or "").strip().lower()
+        if not title:
+            return Response({"detail": "Title required."}, status=status.HTTP_400_BAD_REQUEST)
+        valid_cat = {c[0] for c in PersonalGoldHolding.CATEGORY_CHOICES}
+        if category not in valid_cat:
+            return Response({"detail": "Invalid category."}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            weight_grams = Decimal(str(request.data.get("weight_grams") or "0"))
+        except Exception:
+            return Response({"detail": "Invalid weight."}, status=status.HTTP_400_BAD_REQUEST)
+        if weight_grams <= 0:
+            return Response({"detail": "Grams must be greater than 0."}, status=status.HTTP_400_BAD_REQUEST)
+        purity = (request.data.get("purity") or "BIS 916").strip()[:64]
+        if not purity:
+            purity = "BIS 916"
+        purchase_source = (request.data.get("purchase_source") or "").strip()[:512]
+        notes = (request.data.get("notes") or "").strip()
+        purchase_date = None
+        if request.data.get("purchase_date"):
+            from datetime import date as date_cls
+
+            try:
+                purchase_date = date_cls.fromisoformat(str(request.data.get("purchase_date"))[:10])
+            except ValueError:
+                return Response({"detail": "Invalid purchase_date."}, status=status.HTTP_400_BAD_REQUEST)
+
+        with transaction.atomic():
+            h = PersonalGoldHolding(
+                user=request.user,
+                jeweller=None,
+                title=title,
+                category=category,
+                weight_grams=weight_grams,
+                purity=purity,
+                purchase_date=purchase_date,
+                purchase_source=purchase_source,
+                is_self_declared=True,
+                verification_status=PersonalGoldHolding.SELF_DECLARED,
+                created_by_type=PersonalGoldHolding.CREATED_BY_USER,
+                created_by_id=request.user.id,
+                notes=notes,
+            )
+            _recalc_holding_inr(h)
+            h.save()
+            log_personal_portfolio_action(
+                subject_user=request.user,
+                action=PersonalPortfolioAuditLog.ACTION_CREATE_HOLDING,
+                actor_type=PersonalGoldHolding.CREATED_BY_USER,
+                actor_id=request.user.id,
+                holding=h,
+                metadata={"title": title},
+            )
+        create_portfolio_notification(
+            user=request.user,
+            kind=PortfolioUserNotification.KIND_HOLDING_ADDED,
+            title="Personal holding added",
+            body=f"{title} ({weight_grams} g) is now in your Gold Records Vault.",
+            link_path="/userdashboard?section=portfolio_overview&portfolio_tab=personal",
+        )
+        h = customer_personal_holdings_qs(request.user).get(pk=h.pk)
+        return Response(_holding_detail_dict(h, include_documents=True), status=status.HTTP_201_CREATED)
+
+
+class PersonalHoldingDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self, request, pk: int) -> PersonalGoldHolding:
+        h = PersonalGoldHolding.objects.filter(pk=pk, is_removed=False).first()
+        if not h:
+            raise Http404
+        if not _can_access_holding(request.user, h):
+            raise Http404
+        return h
+
+    def get(self, request, pk: int):
+        h = self.get_object(request, pk)
+        annotated = customer_personal_holdings_qs(h.user).filter(pk=h.pk).first()
+        return Response(_holding_detail_dict(annotated or h, include_documents=True))
+
+    def patch(self, request, pk: int):
+        h = PersonalGoldHolding.objects.filter(pk=pk, is_removed=False).first()
+        if not h or not _can_mutate_holding_customer(request.user, h):
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        for field in ("title", "category", "purchase_source", "notes", "purity"):
+            if field in request.data:
+                val = request.data.get(field)
+                if field == "category":
+                    val = str(val or "").strip().lower()
+                    valid_cat = {c[0] for c in PersonalGoldHolding.CATEGORY_CHOICES}
+                    if val not in valid_cat:
+                        return Response({"detail": "Invalid category."}, status=status.HTTP_400_BAD_REQUEST)
+                    setattr(h, field, val)
+                elif field == "purity":
+                    h.purity = str(val or "").strip()[:64] or "BIS 916"
+                else:
+                    setattr(h, field, str(val or "").strip()[:512] if field != "title" else str(val or "").strip()[:255])
+        if "weight_grams" in request.data:
+            try:
+                wg = Decimal(str(request.data.get("weight_grams") or "0"))
+            except Exception:
+                return Response({"detail": "Invalid weight."}, status=status.HTTP_400_BAD_REQUEST)
+            if wg <= 0:
+                return Response({"detail": "Grams must be greater than 0."}, status=status.HTTP_400_BAD_REQUEST)
+            h.weight_grams = wg
+        if "purchase_date" in request.data:
+            raw = request.data.get("purchase_date")
+            if raw in (None, ""):
+                h.purchase_date = None
+            else:
+                from datetime import date as date_cls
+
+                try:
+                    h.purchase_date = date_cls.fromisoformat(str(raw)[:10])
+                except ValueError:
+                    return Response({"detail": "Invalid purchase_date."}, status=status.HTTP_400_BAD_REQUEST)
+        with transaction.atomic():
+            _recalc_holding_inr(h)
+            h.save()
+            log_personal_portfolio_action(
+                subject_user=h.user,
+                action=PersonalPortfolioAuditLog.ACTION_UPDATE_HOLDING,
+                actor_type=PersonalGoldHolding.CREATED_BY_USER,
+                actor_id=request.user.id,
+                holding=h,
+            )
+        h = customer_personal_holdings_qs(h.user).get(pk=h.pk)
+        return Response(_holding_detail_dict(h, include_documents=True))
+
+    def delete(self, request, pk: int):
+        h = PersonalGoldHolding.objects.filter(pk=pk, is_removed=False).first()
+        if not h or not _can_mutate_holding_customer(request.user, h):
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        with transaction.atomic():
+            h.is_removed = True
+            h.removed_at = timezone.now()
+            h.removed_by = None
+            h.save(update_fields=["is_removed", "removed_at", "removed_by", "updated_at"])
+            log_personal_portfolio_action(
+                subject_user=h.user,
+                action=PersonalPortfolioAuditLog.ACTION_DELETE_HOLDING,
+                actor_type=PersonalGoldHolding.CREATED_BY_USER,
+                actor_id=request.user.id,
+                holding=h,
+            )
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class PersonalHoldingDocumentsCreateView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, holding_pk: int):
+        h = PersonalGoldHolding.objects.filter(pk=holding_pk, is_removed=False).first()
+        if not h or not _can_mutate_holding_customer(request.user, h):
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        doc_type = (request.data.get("document_type") or "").strip().lower()
+        valid_t = {c[0] for c in PersonalHoldingDocument.DOCUMENT_TYPE_CHOICES}
+        if doc_type not in valid_t:
+            return Response({"detail": "Invalid document_type."}, status=status.HTTP_400_BAD_REQUEST)
+        f = request.FILES.get("file")
+        if not f:
+            return Response({"detail": "file required."}, status=status.HTTP_400_BAD_REQUEST)
+        max_b = _max_upload_bytes()
+        err = validate_document_upload(
+            filename=f.name, size_bytes=f.size or 0, max_bytes=max_b
+        )
+        if err:
+            return Response({"detail": err}, status=status.HTTP_400_BAD_REQUEST)
+        invoice_number = (request.data.get("invoice_number") or "").strip()[:120]
+        document_title = (request.data.get("document_title") or "").strip()[:255]
+        remarks = (request.data.get("remarks") or "").strip()
+        with transaction.atomic():
+            d = PersonalHoldingDocument(
+                holding=h,
+                document_type=doc_type,
+                file=f,
+                original_filename=f.name[:255],
+                uploaded_by_type=PersonalHoldingDocument.UPLOADED_BY_USER,
+                uploaded_by_id=request.user.id,
+                invoice_number=invoice_number,
+                document_title=document_title,
+                remarks=remarks,
+            )
+            d.save()
+            log_personal_portfolio_action(
+                subject_user=h.user,
+                action=PersonalPortfolioAuditLog.ACTION_UPLOAD_DOCUMENT,
+                actor_type=PersonalHoldingDocument.UPLOADED_BY_USER,
+                actor_id=request.user.id,
+                holding=h,
+                document=d,
+                metadata={"document_type": doc_type},
+            )
+        create_portfolio_notification(
+            user=h.user,
+            kind=PortfolioUserNotification.KIND_DOCUMENT_UPLOADED,
+            title="Vault document uploaded",
+            body=f"New {doc_type.replace('_', ' ')} for “{h.title}”.",
+            link_path=f"/userdashboard?section=portfolio_overview&portfolio_tab=personal&holding={h.id}",
+        )
+        return Response(_document_dict(d), status=status.HTTP_201_CREATED)
+
+
+class PersonalHoldingDocumentDownloadView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, holding_pk: int, doc_pk: int):
+        d = (
+            PersonalHoldingDocument.objects.select_related("holding")
+            .filter(pk=doc_pk, holding_id=holding_pk, is_removed=False)
+            .first()
+        )
+        if not d or not _can_access_holding(request.user, d.holding):
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        if not d.file:
+            return Response({"detail": "Missing file."}, status=status.HTTP_404_NOT_FOUND)
+        fh = d.file.open("rb")
+        resp = FileResponse(fh, as_attachment=True, filename=d.original_filename or d.file.name.rsplit("/", 1)[-1])
+        return resp
+
+
+class PersonalHoldingDocumentDeleteView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, holding_pk: int, doc_pk: int):
+        d = (
+            PersonalHoldingDocument.objects.select_related("holding")
+            .filter(pk=doc_pk, holding_id=holding_pk, is_removed=False)
+            .first()
+        )
+        if not d or not _can_mutate_holding_customer(request.user, d.holding):
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        with transaction.atomic():
+            d.is_removed = True
+            d.save(update_fields=["is_removed"])
+            log_personal_portfolio_action(
+                subject_user=d.holding.user,
+                action=PersonalPortfolioAuditLog.ACTION_DELETE_DOCUMENT,
+                actor_type=PersonalHoldingDocument.UPLOADED_BY_USER,
+                actor_id=request.user.id,
+                holding=d.holding,
+                document=d,
+            )
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class JewellerCustomerLookupView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if request.user.user_type != User.JEWELLER:
+            return Response({"detail": "Jewellers only."}, status=status.HTTP_403_FORBIDDEN)
+        member = (request.query_params.get("cridora_member_id") or "").strip().upper()
+        phone_raw = (request.query_params.get("phone") or "").strip()
+        qs = User.objects.filter(user_type=User.CUSTOMER, kyc_status=User.KYC_VERIFIED)
+        u = None
+        if member.startswith("CRI"):
+            u = qs.filter(cridora_member_id__iexact=member).first()
+        elif phone_raw:
+            digits = normalize_phone_digits(phone_raw)
+            if len(digits) >= 6:
+                u = qs.filter(phone__icontains=digits).first()
+        if not u:
+            return Response({"found": False, "detail": "Verified customer not found."}, status=status.HTTP_404_NOT_FOUND)
+        label = f"{u.first_name} {u.last_name}".strip() or (u.email or "")
+        return Response(
+            {
+                "found": True,
+                "customer": {
+                    "id": u.id,
+                    "label": label,
+                    "cridora_member_id": u.cridora_member_id or "",
+                    "phone": u.phone or "",
+                },
+            }
+        )
+
+
+class JewellerPersonalHoldingCreateView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        jew = request.user
+        if jew.user_type != User.JEWELLER:
+            return Response({"detail": "Jewellers only."}, status=status.HTTP_403_FORBIDDEN)
+        try:
+            cid = int(request.data.get("customer_id") or 0)
+        except (TypeError, ValueError):
+            return Response({"detail": "customer_id required."}, status=status.HTTP_400_BAD_REQUEST)
+        cust = User.objects.filter(
+            pk=cid, user_type=User.CUSTOMER, kyc_status=User.KYC_VERIFIED
+        ).first()
+        if not cust:
+            return Response({"detail": "Verified customer not found."}, status=status.HTTP_400_BAD_REQUEST)
+
+        title = (request.data.get("title") or "").strip()
+        category = (request.data.get("category") or "").strip().lower()
+        valid_cat = {c[0] for c in PersonalGoldHolding.CATEGORY_CHOICES}
+        if not title or category not in valid_cat:
+            return Response({"detail": "Title and valid category required."}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            weight_grams = Decimal(str(request.data.get("weight_grams") or "0"))
+        except Exception:
+            return Response({"detail": "Invalid weight."}, status=status.HTTP_400_BAD_REQUEST)
+        if weight_grams <= 0:
+            return Response({"detail": "Grams must be greater than 0."}, status=status.HTTP_400_BAD_REQUEST)
+        purity = (request.data.get("purity") or "BIS 916").strip()[:64] or "BIS 916"
+        invoice_number = (request.data.get("invoice_number") or "").strip()[:120]
+
+        img = request.FILES.get("product_image")
+        inv = request.FILES.get("invoice_file")
+        max_b = _max_upload_bytes()
+        for f in (x for x in (img, inv) if x):
+            err = validate_document_upload(filename=f.name, size_bytes=f.size or 0, max_bytes=max_b)
+            if err:
+                return Response({"detail": err}, status=status.HTTP_400_BAD_REQUEST)
+
+        with transaction.atomic():
+            h = PersonalGoldHolding(
+                user=cust,
+                jeweller=jew,
+                title=title,
+                category=category,
+                weight_grams=weight_grams,
+                purity=purity,
+                is_self_declared=False,
+                verification_status=PersonalGoldHolding.JEWELLER_ADDED,
+                created_by_type=PersonalGoldHolding.CREATED_BY_JEWELLER,
+                created_by_id=jew.id,
+                purchase_source=_jeweller_label(jew),
+            )
+            _recalc_holding_inr(h)
+            h.save()
+            log_personal_portfolio_action(
+                subject_user=cust,
+                action=PersonalPortfolioAuditLog.ACTION_JEWELLER_ADD,
+                actor_type=PersonalGoldHolding.CREATED_BY_JEWELLER,
+                actor_id=jew.id,
+                holding=h,
+            )
+
+            for f, dtp in ((img, PersonalHoldingDocument.PRODUCT_IMAGE), (inv, PersonalHoldingDocument.PURCHASE_INVOICE)):
+                if not f:
+                    continue
+                d = PersonalHoldingDocument(
+                    holding=h,
+                    document_type=dtp,
+                    file=f,
+                    original_filename=f.name[:255],
+                    uploaded_by_type=PersonalHoldingDocument.UPLOADED_BY_JEWELLER,
+                    uploaded_by_id=jew.id,
+                    invoice_number=invoice_number if dtp == PersonalHoldingDocument.PURCHASE_INVOICE else "",
+                )
+                d.save()
+                log_personal_portfolio_action(
+                    subject_user=cust,
+                    action=PersonalPortfolioAuditLog.ACTION_UPLOAD_DOCUMENT,
+                    actor_type=PersonalHoldingDocument.UPLOADED_BY_JEWELLER,
+                    actor_id=jew.id,
+                    holding=h,
+                    document=d,
+                )
+
+        jname = _jeweller_label(jew)
+        create_portfolio_notification(
+            user=cust,
+            kind=PortfolioUserNotification.KIND_JEWELLER_ADDED_HOLDING,
+            title="Jeweller added to your vault",
+            body=f"{jname} added “{title}” ({weight_grams} g) to your personal holdings.",
+            link_path="/userdashboard?section=portfolio_overview&portfolio_tab=personal",
+        )
+        hs = customer_personal_holdings_qs(cust).filter(pk=h.pk).first()
+        return Response(_holding_detail_dict(hs or h, include_documents=True), status=status.HTTP_201_CREATED)
+
+
+def _admin_ok(request) -> bool:
+    u = request.user
+    return bool(
+        u.is_authenticated
+        and (u.user_type == User.ADMIN or (getattr(u, "is_superuser", False) and getattr(u, "is_staff", False)))
+    )
+
+
+class AdminPersonalHoldingsListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if not _admin_ok(request):
+            return Response({"detail": "Admin only."}, status=status.HTTP_403_FORBIDDEN)
+        qs = PersonalGoldHolding.objects.filter(is_removed=False).select_related("user", "jeweller")
+        uid = request.query_params.get("user_id")
+        if uid:
+            try:
+                qs = qs.filter(user_id=int(uid))
+            except ValueError:
+                pass
+        q = (request.query_params.get("q") or "").strip().lower()
+        if q:
+            qs = qs.filter(title__icontains=q)
+        rows = list(qs.order_by("-updated_at")[:250])
+        return Response(
+            {
+                "results": [_holding_detail_dict(h, include_documents=False) for h in rows],
+            }
+        )
+
+
+class AdminPersonalHoldingRemoveView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk: int):
+        if not _admin_ok(request):
+            return Response({"detail": "Admin only."}, status=status.HTTP_403_FORBIDDEN)
+        h = PersonalGoldHolding.objects.filter(pk=pk, is_removed=False).first()
+        if not h:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        with transaction.atomic():
+            h.is_removed = True
+            h.removed_at = timezone.now()
+            h.removed_by = request.user
+            h.save(update_fields=["is_removed", "removed_at", "removed_by", "updated_at"])
+            log_personal_portfolio_action(
+                subject_user=h.user,
+                action=PersonalPortfolioAuditLog.ACTION_ADMIN_REMOVE,
+                actor_type=PersonalGoldHolding.CREATED_BY_ADMIN,
+                actor_id=request.user.id,
+                holding=h,
+            )
+        return Response({"ok": True})
+
+
+class AdminPersonalHoldingVerifyView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, pk: int):
+        if not _admin_ok(request):
+            return Response({"detail": "Admin only."}, status=status.HTTP_403_FORBIDDEN)
+        h = PersonalGoldHolding.objects.filter(pk=pk, is_removed=False).first()
+        if not h:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        vs = (request.data.get("verification_status") or "").strip().lower()
+        if vs != PersonalGoldHolding.VERIFIED:
+            return Response({"detail": "Only verified status supported in MVP."}, status=status.HTTP_400_BAD_REQUEST)
+        with transaction.atomic():
+            prev = h.verification_status
+            h.verification_status = PersonalGoldHolding.VERIFIED
+            h.save(update_fields=["verification_status", "updated_at"])
+            log_personal_portfolio_action(
+                subject_user=h.user,
+                action=PersonalPortfolioAuditLog.ACTION_VERIFICATION_CHANGE,
+                actor_type=PersonalGoldHolding.CREATED_BY_ADMIN,
+                actor_id=request.user.id,
+                holding=h,
+                metadata={"from": prev, "to": PersonalGoldHolding.VERIFIED},
+            )
+        create_portfolio_notification(
+            user=h.user,
+            kind=PortfolioUserNotification.KIND_VERIFICATION_UPDATED,
+            title="Holding verification updated",
+            body=f"“{h.title}” is now marked verified.",
+            link_path="/userdashboard?section=portfolio_overview&portfolio_tab=personal",
+        )
+        hs = customer_personal_holdings_qs(h.user).filter(pk=h.pk).first()
+        return Response(_holding_detail_dict(hs or h, include_documents=False))
+
+
+class AdminPersonalDocumentRemoveView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, holding_pk: int, doc_pk: int):
+        if not _admin_ok(request):
+            return Response({"detail": "Admin only."}, status=status.HTTP_403_FORBIDDEN)
+        d = PersonalHoldingDocument.objects.filter(pk=doc_pk, holding_id=holding_pk, is_removed=False).first()
+        if not d:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        with transaction.atomic():
+            d.is_removed = True
+            d.save(update_fields=["is_removed"])
+            log_personal_portfolio_action(
+                subject_user=d.holding.user,
+                action=PersonalPortfolioAuditLog.ACTION_DELETE_DOCUMENT,
+                actor_type=PersonalGoldHolding.CREATED_BY_ADMIN,
+                actor_id=request.user.id,
+                holding=d.holding,
+                document=d,
+            )
+        return Response(status=status.HTTP_204_NO_CONTENT)

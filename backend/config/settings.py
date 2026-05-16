@@ -206,6 +206,11 @@ CSRF_TRUSTED_ORIGINS = [
 FILE_UPLOAD_MAX_MEMORY_SIZE = 8 * 1024 * 1024
 DATA_UPLOAD_MAX_MEMORY_SIZE = 8 * 1024 * 1024
 
+# Personal holdings vault: max upload size per document (bytes); align with DATA_UPLOAD_MAX_MEMORY_SIZE in production.
+PERSONAL_HOLDING_MAX_UPLOAD_BYTES = int(
+    os.environ.get("PERSONAL_HOLDING_MAX_UPLOAD_BYTES", str(8 * 1024 * 1024))
+)
+
 # Web Push (VAPID). Generate keys: python manage.py generate_vapid_keys
 WEB_PUSH_VAPID_PUBLIC_KEY = (os.environ.get("WEB_PUSH_VAPID_PUBLIC_KEY") or "").strip()
 WEB_PUSH_VAPID_PRIVATE_KEY = (

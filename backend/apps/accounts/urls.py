@@ -68,7 +68,51 @@ from .views_push import (
     WebPushUnsubscribeView,
     WebPushVapidPublicKeyView,
 )
+from .views_personal_portfolio import (
+    AdminPersonalDocumentRemoveView,
+    AdminPersonalHoldingRemoveView,
+    AdminPersonalHoldingsListView,
+    AdminPersonalHoldingVerifyView,
+    CustomerPortfolioLedgerView,
+    JewellerCustomerLookupView,
+    JewellerPersonalHoldingCreateView,
+    PersonalHoldingDetailView,
+    PersonalHoldingDocumentDeleteView,
+    PersonalHoldingDocumentDownloadView,
+    PersonalHoldingDocumentsCreateView,
+    PersonalHoldingsListCreateView,
+    PersonalVaultDocumentsListView,
+    PortfolioUserNotificationsListView,
+    PortfolioUserNotificationsMarkReadView,
+)
 urlpatterns = [
+    path("portfolio/ledger/", CustomerPortfolioLedgerView.as_view()),
+    path("portfolio/notifications/", PortfolioUserNotificationsListView.as_view()),
+    path("portfolio/notifications/mark-read/", PortfolioUserNotificationsMarkReadView.as_view()),
+    path("portfolio/personal-holdings/", PersonalHoldingsListCreateView.as_view()),
+    path("portfolio/personal-holdings/documents/", PersonalVaultDocumentsListView.as_view()),
+    path("portfolio/personal-holdings/<int:pk>/", PersonalHoldingDetailView.as_view()),
+    path(
+        "portfolio/personal-holdings/<int:holding_pk>/documents/",
+        PersonalHoldingDocumentsCreateView.as_view(),
+    ),
+    path(
+        "portfolio/personal-holdings/<int:holding_pk>/documents/<int:doc_pk>/",
+        PersonalHoldingDocumentDeleteView.as_view(),
+    ),
+    path(
+        "portfolio/personal-holdings/<int:holding_pk>/documents/<int:doc_pk>/download/",
+        PersonalHoldingDocumentDownloadView.as_view(),
+    ),
+    path("jeweller/customers/lookup/", JewellerCustomerLookupView.as_view()),
+    path("jeweller/personal-holdings/", JewellerPersonalHoldingCreateView.as_view()),
+    path("admin/personal-holdings/", AdminPersonalHoldingsListView.as_view()),
+    path("admin/personal-holdings/<int:pk>/remove/", AdminPersonalHoldingRemoveView.as_view()),
+    path("admin/personal-holdings/<int:pk>/verify/", AdminPersonalHoldingVerifyView.as_view()),
+    path(
+        "admin/personal-holdings/<int:holding_pk>/documents/<int:doc_pk>/remove/",
+        AdminPersonalDocumentRemoveView.as_view(),
+    ),
     path("admin/festival-broadcasts/", AdminFestivalBroadcastListCreateView.as_view()),
     path(
         "admin/festival-broadcasts/<int:pk>/cancel/",

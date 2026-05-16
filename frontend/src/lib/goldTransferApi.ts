@@ -41,6 +41,21 @@ export type PortfolioUnrealizedDTO = {
   basis_note: string
 }
 
+/** Aggregated totals: Cridora vault grams/value + personal holdings (reference ₹/g). */
+export type PortfolioTotalsDTO = {
+  reference_gold_inr_per_gram_22k?: string
+  reference_rate_source?: string
+  total_gold_grams?: string
+  personal_grams?: string
+  vault_fractional_grams?: string
+  vault_deposit_grams?: string
+  vault_golden_scheme_grams?: string
+  cridora_active_grams?: string
+  cridora_estimated_value_inr?: string
+  personal_estimated_value_inr?: string
+  total_estimated_value_inr?: string
+}
+
 export type GoldWalletDTO = {
   cridora_member_id: string
   cridora_global_id?: string
@@ -62,6 +77,8 @@ export type GoldWalletDTO = {
   recent_liability_credits?: LiabilityCreditRowDTO[]
   /** Customer unrealized P&L snapshot vs allocated fractional purchase cost. */
   portfolio_unrealized?: PortfolioUnrealizedDTO | null
+  /** Full wealth view: vault + personal (reference marks). */
+  portfolio_totals?: PortfolioTotalsDTO | null
 }
 
 export type JewellerCustodyVaultRowDTO = {
@@ -120,8 +137,10 @@ export async function fetchJewellerCustodyVaults(): Promise<JewellerCustodyVault
 
 export async function fetchJewellerCustomerVaultLedger(
   customerId: number,
+  filter?: string,
 ): Promise<JewellerVaultLedgerPayloadDTO | null> {
-  const res = await authFetch(`/api/v1/jeweller/custody-vaults/${customerId}/ledger/`)
+  const q = filter && filter !== 'all' ? `?filter=${encodeURIComponent(filter)}` : ''
+  const res = await authFetch(`/api/v1/jeweller/custody-vaults/${customerId}/ledger/${q}`)
   if (!res.ok) return null
   return (await res.json()) as JewellerVaultLedgerPayloadDTO
 }

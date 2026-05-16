@@ -26,6 +26,7 @@ from .gold_identity import (
 )
 from .models import GoldBalance, GoldTransfer
 from .serializers import GoldTransferNotifySerializer, GoldWalletSerializer
+from .services.personal_holdings import customer_portfolio_totals_payload
 from .services.jeweller_customer_vault_ledger import (
     jeweller_can_access_customer_vault_ledger,
     jeweller_customer_vault_ledger_payload,
@@ -73,6 +74,9 @@ def _wallet_payload(user: User) -> dict:
         if user.user_type == User.CUSTOMER
         else None
     )
+    portfolio_totals = (
+        customer_portfolio_totals_payload(user) if user.user_type == User.CUSTOMER else {}
+    )
     return GoldWalletSerializer(
         {
             "cridora_member_id": user.cridora_member_id or "",
@@ -91,6 +95,7 @@ def _wallet_payload(user: User) -> dict:
             "fractional_ledger": frac_ledger,
             "recent_liability_credits": liab_credits,
             "portfolio_unrealized": pnl_block,
+            "portfolio_totals": portfolio_totals,
         }
     ).data
 
@@ -180,7 +185,12 @@ class JewellerCustomerVaultLedgerView(APIView):
                 {"detail": "Ledger not available for this customer."},
                 status=status.HTTP_404_NOT_FOUND,
             )
-        return Response(jeweller_customer_vault_ledger_payload(user, customer_id))
+        ledger_filter = (request.query_params.get("filter") or "all").strip()
+        return Response(
+            jeweller_customer_vault_ledger_payload(
+                user, customer_id, ledger_filter=ledger_filter
+            )
+        )
 
 
 class GoldUPIResolveView(APIView):

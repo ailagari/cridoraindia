@@ -1,7 +1,15 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 
-from .models import BankAccount, KYDocument, User
+from .models import (
+    BankAccount,
+    KYDocument,
+    PersonalGoldHolding,
+    PersonalHoldingDocument,
+    PersonalPortfolioAuditLog,
+    PortfolioUserNotification,
+    User,
+)
 
 
 @admin.register(User)
@@ -43,3 +51,34 @@ class KYDocumentAdmin(admin.ModelAdmin):
 class BankAccountAdmin(admin.ModelAdmin):
     list_display = ("user", "account_holder_name", "status", "updated_at")
     list_filter = ("status",)
+
+
+@admin.register(PersonalGoldHolding)
+class PersonalGoldHoldingAdmin(admin.ModelAdmin):
+    list_display = ("title", "user", "jeweller", "weight_grams", "verification_status", "is_removed", "updated_at")
+    list_filter = ("verification_status", "is_removed", "category")
+    search_fields = ("title", "user__email", "user__cridora_member_id")
+    raw_id_fields = ("user", "jeweller", "removed_by")
+
+
+@admin.register(PersonalHoldingDocument)
+class PersonalHoldingDocumentAdmin(admin.ModelAdmin):
+    list_display = ("holding", "document_type", "original_filename", "is_removed", "created_at")
+    list_filter = ("document_type", "is_removed")
+    raw_id_fields = ("holding",)
+
+
+@admin.register(PersonalPortfolioAuditLog)
+class PersonalPortfolioAuditLogAdmin(admin.ModelAdmin):
+    list_display = ("action", "subject_user", "holding", "created_at")
+    list_filter = ("action",)
+    search_fields = ("subject_user__email",)
+    raw_id_fields = ("subject_user", "holding", "document")
+
+
+@admin.register(PortfolioUserNotification)
+class PortfolioUserNotificationAdmin(admin.ModelAdmin):
+    list_display = ("user", "kind", "title", "read_at", "created_at")
+    list_filter = ("kind",)
+    search_fields = ("user__email", "title")
+    raw_id_fields = ("user",)

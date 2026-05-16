@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { fetchGoldWallet, type FractionalLedgerRowDTO, type VaultRowDTO } from '@/lib/goldTransferApi'
+import { useSearchParams } from 'react-router-dom'
+import { fetchGoldWallet, type VaultRowDTO } from '@/lib/goldTransferApi'
+import { fetchPortfolioLedger, type PortfolioLedgerEntryDTO } from '@/lib/personalHoldingsApi'
+import { CustomerPersonalHoldingsPanel, CustomerVaultDocumentsTab } from '@/features/portfolio/CustomerPersonalHoldingsPanel'
 import { fetchGoldTicker, fetchSpotPrices, type GoldTickerPayload, type SpotPricesPayload } from '@/lib/marketplaceApi'
 import { LIVE_BALANCE_POLL_MS } from '@/lib/liveDeskIntervals'
 import { useLivePoll } from '@/lib/useLivePoll'
@@ -10,9 +13,12 @@ import {
   PortfolioLiveValueVsCostChart,
 } from './PortfolioCharts'
 import { PortfolioGrowwHero, PortfolioSpotPillsRow, PortfolioVaultHoldingsList } from './PortfolioGrowwViews'
+import { CustomerVaultsPanel } from './CustomerVaultsPanel'
 
 const DONUT_COLORS = ['#fbbf24', '#d4a85c', '#67e8f9', '#a78bfa', '#34d399', '#f472b6', '#38bdf8']
 const SESSION_VALUE_SAMPLES_CAP = 56
+
+type PortfolioTabId = 'overview' | 'active' | 'personal' | 'documents' | 'charts' | 'transactions'
 
 function parseG(s: string): number {
   const n = Number.parseFloat(s)
@@ -39,29 +45,22 @@ function fmtInrPlain(s: string): string {
   return n.toLocaleString('en-IN', { maximumFractionDigits: 2 })
 }
 
-function ledgerRowsWithRunningBal(rows: FractionalLedgerRowDTO[]): Array<FractionalLedgerRowDTO & { balanceG: string }> {
-  const chrono = [...rows].reverse()
-  let bal = 0
-  const out: Array<FractionalLedgerRowDTO & { balanceG: string }> = []
-  for (const r of chrono) {
-    bal += parseG(r.grams)
-    out.push({ ...r, balanceG: `${bal.toFixed(6)} g` })
-  }
-  return out.reverse()
-}
-
 function parseInrNum(s: string): number {
   const n = Number.parseFloat(s)
   return Number.isFinite(n) ? n : 0
 }
 
 export function CustomerPortfolioPanel() {
+  const [searchParams] = useSearchParams()
   const [wallet, setWallet] = useState<Awaited<ReturnType<typeof fetchGoldWallet>>>(null)
   const [spotPayload, setSpotPayload] = useState<SpotPricesPayload | null>(null)
   const [goldTickerFallback, setGoldTickerFallback] = useState<GoldTickerPayload | null>(null)
   const [loadErr, setLoadErr] = useState('')
   const [privacyMasked, setPrivacyMasked] = useState(false)
-  const [portfolioTab, setPortfolioTab] = useState<'overview' | 'charts' | 'ledger'>('overview')
+  const [portfolioTab, setPortfolioTab] = useState<PortfolioTabId>('overview')
+  const [ledgerFilter, setLedgerFilter] = useState('all')
+  const [ledgerEntries, setLedgerEntries] = useState<PortfolioLedgerEntryDTO[]>([])
+  const [ledgerLoading, setLedgerLoading] = useState(false)
   const [sessionValueSamples, setSessionValueSamples] = useState<number[]>([])
   const basisInrRef = useRef<number | null>(null)
 
@@ -91,12 +90,37 @@ export function CustomerPortfolioPanel() {
   }, [])
 
   useEffect(() => {
+    const raw = (searchParams.get('portfolio_tab') || '').trim().toLowerCase()
+    const allowed = new Set(['overview', 'active', 'personal', 'documents', 'transactions', 'charts'])
+    if (raw && allowed.has(raw)) {
+      setPortfolioTab(raw as PortfolioTabId)
+    }
+  }, [searchParams])
+
+  useEffect(() => {
     void refresh()
   }, [refresh])
 
   useLivePoll(refresh, LIVE_BALANCE_POLL_MS, true)
 
+  useEffect(() => {
+    if (portfolioTab !== 'transactions') return
+    let cancelled = false
+    ;(async () => {
+      setLedgerLoading(true)
+      const r = await fetchPortfolioLedger(ledgerFilter)
+      if (!cancelled) {
+        setLedgerEntries(r?.entries ?? [])
+        setLedgerLoading(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [portfolioTab, ledgerFilter])
+
   const vaults = wallet?.vaults ?? []
+  const totals = wallet?.portfolio_totals ?? null
   const ledger = wallet?.fractional_ledger ?? []
   const totalGramsStr = wallet?.balance_grams ?? '0'
   const totalGrams = parseG(totalGramsStr)
@@ -179,8 +203,6 @@ export function CustomerPortfolioPanel() {
     return steps
   }, [ledger])
 
-  const ledgerDisplay = useMemo(() => ledgerRowsWithRunningBal(ledger), [ledger])
-
   return (
     <div className="dash-panel-max pf-scope">
       {loadErr ? <p className="form-error">{loadErr}</p> : null}
@@ -192,8 +214,11 @@ export function CustomerPortfolioPanel() {
           {(
             [
               ['overview', 'Overview'],
+              ['active', 'Active'],
+              ['personal', 'Personal'],
+              ['documents', 'Documents'],
+              ['transactions', 'Transactions'],
               ['charts', 'Charts'],
-              ['ledger', 'Ledger'],
             ] as const
           ).map(([id, label]) => (
             <button
@@ -209,6 +234,35 @@ export function CustomerPortfolioPanel() {
 
         {portfolioTab === 'overview' ? (
           <>
+            {totals ? (
+              <div className="pf-wealth-kpis" aria-label="Total wealth summary">
+                <div className="pf-wealth-kpi">
+                  <span className="pf-wealth-kpi__eyebrow">Total gold</span>
+                  <p className="pf-wealth-kpi__val tabular">{parseG(totals.total_gold_grams ?? '0').toFixed(3)} g</p>
+                  <p className="pf-wealth-kpi__hint">Vault + personal records</p>
+                </div>
+                <div className="pf-wealth-kpi">
+                  <span className="pf-wealth-kpi__eyebrow">Cridora holdings</span>
+                  <p className="pf-wealth-kpi__val tabular">{parseG(totals.cridora_active_grams ?? '0').toFixed(3)} g</p>
+                  <p className="pf-wealth-kpi__hint">Active vault balances</p>
+                </div>
+                <div className="pf-wealth-kpi">
+                  <span className="pf-wealth-kpi__eyebrow">Personal holdings</span>
+                  <p className="pf-wealth-kpi__val tabular">{parseG(totals.personal_grams ?? '0').toFixed(3)} g</p>
+                  <p className="pf-wealth-kpi__hint">Physical gold you track</p>
+                </div>
+                <div className="pf-wealth-kpi">
+                  <span className="pf-wealth-kpi__eyebrow">Total est. value</span>
+                  <p className="pf-wealth-kpi__val tabular">
+                    ₹
+                    {parseG(totals.total_estimated_value_inr ?? '0').toLocaleString('en-IN', {
+                      maximumFractionDigits: 0,
+                    })}
+                  </p>
+                  <p className="pf-wealth-kpi__hint">Indicative · ref. ₹{totals.reference_gold_inr_per_gram_22k ?? '—'}/g 22K</p>
+                </div>
+              </div>
+            ) : null}
             <PortfolioGrowwHero
               activeVaultCount={activeVaultCount}
               totalGrams={totalGrams}
@@ -318,50 +372,84 @@ export function CustomerPortfolioPanel() {
           </div>
         ) : null}
 
-        {portfolioTab === 'ledger' ? (
+        {portfolioTab === 'active' ? (
+          <div>
+            <p className="dash-panel-lead" style={{ marginBottom: '1rem' }}>
+              <strong>Active Cridora holdings</strong> — vaulted fractional, deposit, and scheme grams with your partner jewellers.{' '}
+              Personal physical gold lives under the Personal tab (tracking-only in MVP).
+            </p>
+            <CustomerVaultsPanel />
+          </div>
+        ) : null}
+
+        {portfolioTab === 'personal' ? <CustomerPersonalHoldingsPanel onChanged={refresh} /> : null}
+
+        {portfolioTab === 'documents' ? (
+          <article className="pf-card pf-card--lift pf-card--wide" style={{ padding: '1.15rem 1.25rem' }}>
+            <CustomerVaultDocumentsTab />
+          </article>
+        ) : null}
+
+        {portfolioTab === 'transactions' ? (
           <article className="pf-card pf-card--lift pf-card--wide pf-card--ledger-table-wrap">
             <header className="pf-card__head pf-ledger-head">
               <div>
-                <h3 className="pf-card__title">Ledger — fractional purchases</h3>
+                <h3 className="pf-card__title">Portfolio ledger</h3>
                 <p className="pf-card__meta">
-                  Completed orders: metal ₹ before GST vs invoice total (incl. GST); allocation uses metal ₹ for P&amp;L above.
+                  Filter by holding type. Personal rows use platform reference ₹/g; vault rows use live marks where applicable.
                 </p>
               </div>
             </header>
-            {ledgerDisplay.length === 0 ? (
-              <p style={{ color: 'var(--text-muted)', margin: 0 }}>No completed purchases yet.</p>
+            <div className="pf-ledger-filter" role="group" aria-label="Ledger filter">
+              {(
+                [
+                  ['all', 'All'],
+                  ['fractional', 'Fractional'],
+                  ['deposit', 'Deposit'],
+                  ['golden_scheme', 'Golden scheme'],
+                  ['personal', 'Personal'],
+                ] as const
+              ).map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  className={`btn btn-sm${ledgerFilter === id ? ' btn-primary' : ' btn-ghost'}`}
+                  onClick={() => setLedgerFilter(id)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            {ledgerLoading ? (
+              <p style={{ color: 'var(--text-muted)' }}>Loading…</p>
+            ) : ledgerEntries.length === 0 ? (
+              <p style={{ color: 'var(--text-muted)', margin: 0 }}>No rows for this filter.</p>
             ) : (
               <div className="pf-ledger-scroll">
                 <table className="pf-ledger-table">
                   <thead>
                     <tr>
                       <th>Date</th>
-                      <th>Activity</th>
+                      <th>Type</th>
                       <th>Reference</th>
+                      <th>Label</th>
                       <th>Jeweller</th>
                       <th className="tabular">Grams</th>
-                      <th className="tabular">Metal (pre‑GST)</th>
-                      <th className="tabular">Total (incl. GST)</th>
-                      <th className="tabular">Gold bal.</th>
+                      <th className="tabular">Est. ₹</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {ledgerDisplay.map((row) => (
-                      <tr key={row.reference} className="pf-ledger-row">
-                        <td className="pf-ledger-date">{fmtWhen(row.created_at)}</td>
+                    {ledgerEntries.map((row) => (
+                      <tr key={`${row.reference}-${row.occurred_at}`} className="pf-ledger-row">
+                        <td className="pf-ledger-date">{fmtWhen(row.occurred_at)}</td>
                         <td>
-                          <span className="pf-ledger-pill pf-ledger-pill--buy">buy</span>
+                          <span className="pf-ledger-pill pf-ledger-pill--buy">{row.transaction_type}</span>
                         </td>
                         <td className="tabular">{row.reference}</td>
-                        <td>{row.jeweller_name}</td>
-                        <td className="tabular pf-ledger-grams">+{parseG(row.grams).toFixed(6)} g</td>
-                        <td className="tabular pf-ledger-inr">
-                          {row.gold_value_inr_pre_gst != null && String(row.gold_value_inr_pre_gst).trim() !== ''
-                            ? `₹${fmtInrPlain(row.gold_value_inr_pre_gst)}`
-                            : '—'}
-                        </td>
-                        <td className="tabular pf-ledger-inr pf-ledger-inr--out">₹{fmtInrPlain(row.total_inr)}</td>
-                        <td className="tabular pf-ledger-bal">{row.balanceG}</td>
+                        <td>{row.label}</td>
+                        <td>{row.jeweller_name || '—'}</td>
+                        <td className="tabular pf-ledger-grams">{parseG(row.grams).toFixed(6)} g</td>
+                        <td className="tabular pf-ledger-inr">₹{fmtInrPlain(row.current_value_inr)}</td>
                       </tr>
                     ))}
                   </tbody>

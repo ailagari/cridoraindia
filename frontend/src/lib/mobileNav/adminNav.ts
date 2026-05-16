@@ -9,6 +9,7 @@ export const ADMIN_NAV_GROUPS: DashboardNavGroup[] = [
     items: [
       { sectionKey: 'ops_overview', label: 'Pulse' },
       { sectionKey: 'ops_portfolio', label: 'Holdings' },
+      { sectionKey: 'ops_personal_vault', label: 'Gold vault' },
     ],
   },
   {

@@ -18,6 +18,7 @@ from .models import (
     KYDocument,
 )
 from .vault_service import sync_customer_aggregate_balance, wallet_vault_payload
+from .services.personal_holdings import customer_portfolio_totals_payload
 
 User = get_user_model()
 
@@ -318,6 +319,9 @@ class UserMeSerializer(serializers.ModelSerializer):
             if obj.user_type == User.CUSTOMER
             else None
         )
+        portfolio_totals = (
+            customer_portfolio_totals_payload(obj) if obj.user_type == User.CUSTOMER else {}
+        )
         data = {
             "cridora_member_id": obj.cridora_member_id or "",
             "cridora_global_id": f"{handle}@cridora" if handle else "",
@@ -339,6 +343,7 @@ class UserMeSerializer(serializers.ModelSerializer):
             if obj.user_type == User.JEWELLER
             else [],
             "portfolio_unrealized": pnl_block,
+            "portfolio_totals": portfolio_totals,
         }
         return GoldWalletSerializer(instance=data).data
 
@@ -383,6 +388,9 @@ class GoldWalletSerializer(serializers.Serializer):
     )
     portfolio_unrealized = serializers.DictField(
         required=False, allow_null=True, default=None
+    )
+    portfolio_totals = serializers.DictField(
+        required=False, allow_null=True, default=dict
     )
 
 

@@ -6,6 +6,7 @@ import { authFetch } from '@/lib/api'
 import { LIVE_ADMIN_POLL_MS } from '@/lib/liveDeskIntervals'
 import { useLivePoll } from '@/lib/useLivePoll'
 import { AdminPortfolioPanel } from '@/features/portfolio/AdminPortfolioPanel'
+import { AdminPersonalHoldingsPanel } from '@/features/portfolio/AdminPersonalHoldingsPanel'
 import { AdminFractionalOtpPolicyPanel } from '@/features/admin/AdminFractionalOtpPolicyPanel'
 import { AdminFestivalBroadcastPanel } from '@/features/admin/AdminFestivalBroadcastPanel'
 import { AdminGoldTickerPanel, AdminMarketplaceCatalogSetupPanel } from '@/features/marketplace/AdminMarketplaceSection'
@@ -517,6 +518,8 @@ export function AdminDashboardPage() {
         {active === 'ops_overview' && data?.stats.ledger_note ? (
           <p className="dash-footnote">{data.stats.ledger_note}</p>
         ) : null}
+
+        {active === 'ops_personal_vault' ? <AdminPersonalHoldingsPanel /> : null}
 
         {active === 'ops_portfolio' && data ? (
           <AdminPortfolioPanel stats={data.stats} />
