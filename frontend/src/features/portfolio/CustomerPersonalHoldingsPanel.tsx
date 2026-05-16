@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useId, useMemo, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useState } from 'react'
 import { FileUploadTrigger, type FileUploadTriggerPhase } from '@/components/ui'
 import { fetchVerifiedJewellers, type JewellerStorefrontDTO } from '@/lib/marketplaceApi'
 import {
@@ -130,6 +130,7 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
   const [approvedJewellers, setApprovedJewellers] = useState<JewellerStorefrontDTO[]>([])
 
   const [vaultPage, setVaultPage] = useState(1)
+  const [vaultOpenIds, setVaultOpenIds] = useState<Set<number>>(() => new Set())
   const [editingId, setEditingId] = useState<number | null>(null)
   const [eTitle, setETitle] = useState('')
   const [eCategory, setECategory] = useState('ornament')
@@ -171,6 +172,18 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
   }, [rows.length])
 
   useEffect(() => {
+    const start = (vaultPage - 1) * VAULT_PAGE_SIZE
+    const allowed = new Set(rows.slice(start, start + VAULT_PAGE_SIZE).map((r) => r.id))
+    setVaultOpenIds((prev) => {
+      const n = new Set<number>()
+      for (const id of prev) {
+        if (allowed.has(id)) n.add(id)
+      }
+      return n
+    })
+  }, [vaultPage, rows])
+
+  useEffect(() => {
     let cancelled = false
     ;(async () => {
       const list = await fetchVerifiedJewellers()
@@ -194,6 +207,7 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
     if (idx >= 0) {
       setVaultPage(Math.floor(idx / VAULT_PAGE_SIZE) + 1)
     }
+    setVaultOpenIds((prev) => new Set(prev).add(h.id))
     setEditingId(h.id)
     setETitle(h.title)
     setECategory(h.category)
@@ -287,6 +301,11 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
       return
     }
     if (editingId === id) setEditingId(null)
+    setVaultOpenIds((prev) => {
+      const n = new Set(prev)
+      n.delete(id)
+      return n
+    })
     void refresh()
     onChanged?.()
   }
@@ -538,61 +557,81 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
       {rows.length === 0 ? (
         <p style={{ color: 'var(--text-muted)' }}>No personal holdings yet. Add your first piece to see live reference value.</p>
       ) : (
-        <div className="pf-vault-table-block">
-          <div className="pf-vault-table-wrap">
-            <table className="pf-vault-table">
-              <thead>
-                <tr>
-                  <th scope="col">Item</th>
-                  <th scope="col">Category</th>
-                  <th scope="col">Weight</th>
-                  <th scope="col">Purity</th>
-                  <th scope="col">Est. value</th>
-                  <th scope="col">Docs</th>
-                  <th scope="col">Status</th>
-                  <th scope="col">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pageRows.map((h) => (
-                  <Fragment key={h.id}>
-                    <tr className="pf-vault-table__row">
-                      <td className="pf-vault-table__item">
-                        <span className="pf-vault-table__title-text">{h.title}</span>
-                        {h.purchase_price_inr_per_gram ? (
-                          <span className="pf-vault-table__basis">
-                            ₹{parseN(h.purchase_price_inr_per_gram).toLocaleString('en-IN')}/g · basis ~₹
-                            {parseN(h.purchase_cost_basis_inr).toLocaleString('en-IN')}
-                          </span>
-                        ) : null}
-                        {h.purchase_jeweller_label ? (
-                          <span className="pf-vault-table__src">{h.purchase_jeweller_label}</span>
-                        ) : h.purchase_source ? (
-                          <span className="pf-vault-table__src">{h.purchase_source}</span>
-                        ) : null}
-                      </td>
-                      <td>{categoryLabel(h.category)}</td>
-                      <td className="tabular">{h.weight_grams} g</td>
-                      <td>{h.purity}</td>
-                      <td className="pf-vault-table__inr-cell">
-                        <span className="tabular pf-vault-table__inr-main">
+        <div className="pf-vault-holdings">
+          <div className="pf-vault-acc-list" role="list">
+            {pageRows.map((h) => {
+              const accOpen = vaultOpenIds.has(h.id)
+              const accPanelId = `pf-vault-acc-panel-${h.id}`
+              const accLabelId = `pf-vault-acc-label-${h.id}`
+              return (
+                <div key={h.id} className="pf-vault-acc card" role="listitem">
+                  <button
+                    type="button"
+                    className="pf-vault-acc__trigger"
+                    id={accLabelId}
+                    aria-expanded={accOpen}
+                    aria-controls={accPanelId}
+                    onClick={() => {
+                      setVaultOpenIds((prev) => {
+                        const n = new Set(prev)
+                        if (n.has(h.id)) n.delete(h.id)
+                        else n.add(h.id)
+                        return n
+                      })
+                    }}
+                  >
+                    <span className="pf-vault-acc__trigger-main">
+                      <span className="pf-vault-acc__title">{h.title}</span>
+                      <span className="pf-vault-acc__meta">
+                        {categoryLabel(h.category)}
+                        <span aria-hidden="true"> · </span>
+                        <span className="tabular">{h.weight_grams} g</span>
+                        <span aria-hidden="true"> · </span>
+                        {h.purity}
+                        <span aria-hidden="true"> · </span>
+                        <span className="tabular pf-vault-acc__est">
                           ₹{parseN(h.estimated_current_value_inr).toLocaleString('en-IN')}
                         </span>
-                        <span className="pf-vault-table__inr-hint">ref. est.</span>
-                        {h.reference_gain_percent ? (
-                          <span
-                            className={`pf-vault-table__gain${parseN(h.reference_gain_inr) < 0 ? ' pf-vault-table__gain--down' : ''}`}
-                          >
-                            {parseN(h.reference_gain_inr) >= 0 ? '+' : ''}
-                            {parseN(h.reference_gain_inr).toLocaleString('en-IN')} ({h.reference_gain_percent}%)
-                          </span>
-                        ) : null}
-                      </td>
-                      <td className="tabular">{h.document_count}</td>
-                      <td>
-                        <span className={`pf-vault-badge pf-vault-badge--${h.verification_status}`}>{h.status_badge}</span>
-                      </td>
-                      <td className="pf-vault-table__actions">
+                        <span className="pf-vault-acc__est-hint"> ref. est.</span>
+                      </span>
+                      {h.reference_gain_percent ? (
+                        <span
+                          className={`pf-vault-acc__gain${parseN(h.reference_gain_inr) < 0 ? ' pf-vault-acc__gain--down' : ''}`}
+                        >
+                          {parseN(h.reference_gain_inr) >= 0 ? '+' : ''}
+                          {parseN(h.reference_gain_inr).toLocaleString('en-IN')} ({h.reference_gain_percent}%)
+                        </span>
+                      ) : null}
+                      {h.purchase_price_inr_per_gram ? (
+                        <span className="pf-vault-acc__basis">
+                          ₹{parseN(h.purchase_price_inr_per_gram).toLocaleString('en-IN')}/g · basis ~₹
+                          {parseN(h.purchase_cost_basis_inr).toLocaleString('en-IN')}
+                        </span>
+                      ) : null}
+                      {h.purchase_jeweller_label ? (
+                        <span className="pf-vault-acc__src">{h.purchase_jeweller_label}</span>
+                      ) : h.purchase_source ? (
+                        <span className="pf-vault-acc__src">{h.purchase_source}</span>
+                      ) : null}
+                    </span>
+                    <span className="pf-vault-acc__trigger-side">
+                      <span className={`pf-vault-badge pf-vault-badge--${h.verification_status}`}>{h.status_badge}</span>
+                      <span className="pf-vault-acc__doc-count">
+                        {h.document_count} doc{h.document_count === 1 ? '' : 's'}
+                      </span>
+                      <span className={`pf-vault-acc__chev${accOpen ? ' pf-vault-acc__chev--open' : ''}`} aria-hidden>
+                        ▼
+                      </span>
+                    </span>
+                  </button>
+                  {accOpen ? (
+                    <div
+                      className="pf-vault-acc__panel"
+                      id={accPanelId}
+                      role="region"
+                      aria-labelledby={accLabelId}
+                    >
+                      <div className="pf-vault-acc__toolbar">
                         <button
                           type="button"
                           className="btn btn-ghost btn-sm"
@@ -604,103 +643,99 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
                         <button type="button" className="btn btn-ghost btn-sm" onClick={() => void removeHolding(h.id)}>
                           Remove
                         </button>
-                      </td>
-                    </tr>
-                    <tr className="pf-vault-table__detail">
-                      <td colSpan={8}>
-                        {editingId === h.id ? (
-                          <div className="pf-vault-edit" aria-busy={editBusy}>
-                            <h5 className="pf-vault-form__section-title">Edit holding</h5>
-                            <div className="pf-vault-form__grid">
-                              <label className="pf-vault-field">
-                                <span>Title</span>
-                                <input className="input" value={eTitle} onChange={(e) => setETitle(e.target.value)} disabled={editBusy} />
-                              </label>
-                              <label className="pf-vault-field">
-                                <span>Category</span>
-                                <select className="input" value={eCategory} onChange={(e) => setECategory(e.target.value)} disabled={editBusy}>
-                                  {CATS.map((c) => (
-                                    <option key={c.v} value={c.v}>
-                                      {c.l}
-                                    </option>
-                                  ))}
-                                </select>
-                              </label>
-                              <label className="pf-vault-field">
-                                <span>Weight (g)</span>
-                                <input className="input tabular" value={eWeight} onChange={(e) => setEWeight(e.target.value)} disabled={editBusy} />
-                              </label>
-                              <label className="pf-vault-field">
-                                <span>Purity</span>
-                                <input className="input" value={ePurity} onChange={(e) => setEPurity(e.target.value)} disabled={editBusy} />
-                              </label>
-                              <label className="pf-vault-field">
-                                <span>Purchase ₹/g (optional)</span>
-                                <input
-                                  className="input tabular"
-                                  value={ePurchasePrice}
-                                  onChange={(e) => setEPurchasePrice(e.target.value)}
-                                  placeholder="Leave blank to clear"
-                                  disabled={editBusy}
-                                />
-                              </label>
-                              <label className="pf-vault-field">
-                                <span>Jeweller / shop</span>
-                                <PurchaseSourceJewellerField
-                                  value={ePurchaseSource}
-                                  onChange={setEPurchaseSource}
-                                  disabled={editBusy}
-                                  jewellers={approvedJewellers}
-                                  className="input"
-                                />
-                              </label>
-                              <label className="pf-vault-field">
-                                <span>Purchase date</span>
-                                <input
-                                  className="input"
-                                  type="date"
-                                  value={ePurchaseDate}
-                                  onChange={(e) => setEPurchaseDate(e.target.value)}
-                                  disabled={editBusy}
-                                />
-                              </label>
-                              <label className="pf-vault-field pf-vault-field--wide">
-                                <span>Notes</span>
-                                <textarea className="input" rows={2} value={eNotes} onChange={(e) => setENotes(e.target.value)} disabled={editBusy} />
-                              </label>
-                            </div>
-                            <div className="pf-vault-edit__actions">
-                              <button type="button" className="btn btn-ghost btn-sm" onClick={cancelEdit} disabled={editBusy}>
-                                Cancel
-                              </button>
-                              <button
-                                type="button"
-                                className="btn btn-primary btn-sm"
-                                disabled={editBusy || !eTitle.trim() || !eWeight.trim()}
-                                onClick={() => void saveEdit()}
-                              >
-                                {editBusy ? 'Saving…' : 'Save changes'}
-                              </button>
-                            </div>
+                      </div>
+                      {editingId === h.id ? (
+                        <div className="pf-vault-edit" aria-busy={editBusy}>
+                          <h5 className="pf-vault-form__section-title">Edit holding</h5>
+                          <div className="pf-vault-form__grid">
+                            <label className="pf-vault-field">
+                              <span>Title</span>
+                              <input className="input" value={eTitle} onChange={(e) => setETitle(e.target.value)} disabled={editBusy} />
+                            </label>
+                            <label className="pf-vault-field">
+                              <span>Category</span>
+                              <select className="input" value={eCategory} onChange={(e) => setECategory(e.target.value)} disabled={editBusy}>
+                                {CATS.map((c) => (
+                                  <option key={c.v} value={c.v}>
+                                    {c.l}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                            <label className="pf-vault-field">
+                              <span>Weight (g)</span>
+                              <input className="input tabular" value={eWeight} onChange={(e) => setEWeight(e.target.value)} disabled={editBusy} />
+                            </label>
+                            <label className="pf-vault-field">
+                              <span>Purity</span>
+                              <input className="input" value={ePurity} onChange={(e) => setEPurity(e.target.value)} disabled={editBusy} />
+                            </label>
+                            <label className="pf-vault-field">
+                              <span>Purchase ₹/g (optional)</span>
+                              <input
+                                className="input tabular"
+                                value={ePurchasePrice}
+                                onChange={(e) => setEPurchasePrice(e.target.value)}
+                                placeholder="Leave blank to clear"
+                                disabled={editBusy}
+                              />
+                            </label>
+                            <label className="pf-vault-field">
+                              <span>Jeweller / shop</span>
+                              <PurchaseSourceJewellerField
+                                value={ePurchaseSource}
+                                onChange={setEPurchaseSource}
+                                disabled={editBusy}
+                                jewellers={approvedJewellers}
+                                className="input"
+                              />
+                            </label>
+                            <label className="pf-vault-field">
+                              <span>Purchase date</span>
+                              <input
+                                className="input"
+                                type="date"
+                                value={ePurchaseDate}
+                                onChange={(e) => setEPurchaseDate(e.target.value)}
+                                disabled={editBusy}
+                              />
+                            </label>
+                            <label className="pf-vault-field pf-vault-field--wide">
+                              <span>Notes</span>
+                              <textarea className="input" rows={2} value={eNotes} onChange={(e) => setENotes(e.target.value)} disabled={editBusy} />
+                            </label>
                           </div>
-                        ) : null}
-                        <HoldingDocumentsPanel
-                          documents={h.documents ?? []}
-                          holdingId={h.id}
-                          onDownload={(doc) => openPersonalDocumentDownload(h.id, doc.id)}
-                          onDelete={async (doc) => removeDoc(h.id, doc.id)}
-                          onChanged={() => {
-                            void refresh()
-                            onChanged?.()
-                          }}
-                          onError={(msg) => setLoadErr(msg)}
-                        />
-                      </td>
-                    </tr>
-                  </Fragment>
-                ))}
-              </tbody>
-            </table>
+                          <div className="pf-vault-edit__actions">
+                            <button type="button" className="btn btn-ghost btn-sm" onClick={cancelEdit} disabled={editBusy}>
+                              Cancel
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-primary btn-sm"
+                              disabled={editBusy || !eTitle.trim() || !eWeight.trim()}
+                              onClick={() => void saveEdit()}
+                            >
+                              {editBusy ? 'Saving…' : 'Save changes'}
+                            </button>
+                          </div>
+                        </div>
+                      ) : null}
+                      <HoldingDocumentsPanel
+                        documents={h.documents ?? []}
+                        holdingId={h.id}
+                        onDownload={(doc) => openPersonalDocumentDownload(h.id, doc.id)}
+                        onDelete={async (doc) => removeDoc(h.id, doc.id)}
+                        onChanged={() => {
+                          void refresh()
+                          onChanged?.()
+                        }}
+                        onError={(msg) => setLoadErr(msg)}
+                      />
+                    </div>
+                  ) : null}
+                </div>
+              )
+            })}
           </div>
           {totalVaultPages > 1 ? (
             <nav className="pf-vault-pager" aria-label="Vault holdings pages">
