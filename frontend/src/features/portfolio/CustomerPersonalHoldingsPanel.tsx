@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useState } from 'react'
 import { FileUploadTrigger, type FileUploadTriggerPhase } from '@/components/ui'
+import { fetchVerifiedJewellers, type JewellerStorefrontDTO } from '@/lib/marketplaceApi'
 import {
   createPersonalHolding,
   deletePersonalDocument,
@@ -44,6 +45,66 @@ function formatLedgerType(t: string): string {
   }
 }
 
+function jewellerSuggestLabel(j: JewellerStorefrontDTO): string {
+  const name = j.business_name.trim()
+  const city = j.city.trim()
+  const state = j.state.trim()
+  if (!name) return ''
+  if (city && state) return `${name}, ${city}, ${state}`
+  if (city) return `${name}, ${city}`
+  if (state) return `${name}, ${state}`
+  return name
+}
+
+function PurchaseSourceJewellerField({
+  value,
+  onChange,
+  disabled,
+  jewellers,
+  className,
+}: {
+  value: string
+  onChange: (v: string) => void
+  disabled?: boolean
+  jewellers: JewellerStorefrontDTO[]
+  className?: string
+}) {
+  const uid = useId().replace(/:/g, '')
+  const listId = `cridora-jeweller-src-${uid}`
+
+  const options = useMemo(() => {
+    const rows: { id: number; label: string }[] = []
+    for (const j of jewellers) {
+      const label = jewellerSuggestLabel(j)
+      if (!label) continue
+      rows.push({ id: j.id, label })
+    }
+    rows.sort((a, b) => a.label.localeCompare(b.label))
+    return rows
+  }, [jewellers])
+
+  const inputCls = className ?? 'input pf-vault-form__input'
+
+  return (
+    <>
+      <input
+        className={inputCls}
+        list={listId}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="Jeweller or shop — suggestions from verified Cridora partners"
+        autoComplete="off"
+        disabled={disabled}
+      />
+      <datalist id={listId}>
+        {options.map((o) => (
+          <option key={o.id} value={o.label} />
+        ))}
+      </datalist>
+    </>
+  )
+}
+
 export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () => void }) {
   const [rows, setRows] = useState<PersonalHoldingDTO[]>([])
   const [loadErr, setLoadErr] = useState('')
@@ -60,6 +121,7 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
   const [purchaseSource, setPurchaseSource] = useState('')
   const [purchaseDate, setPurchaseDate] = useState('')
   const [notes, setNotes] = useState('')
+  const [approvedJewellers, setApprovedJewellers] = useState<JewellerStorefrontDTO[]>([])
 
   const [editingId, setEditingId] = useState<number | null>(null)
   const [eTitle, setETitle] = useState('')
@@ -85,6 +147,19 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
   useEffect(() => {
     void refresh()
   }, [refresh])
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      const list = await fetchVerifiedJewellers()
+      if (!cancelled) {
+        setApprovedJewellers(Array.isArray(list) ? list : [])
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   useEffect(() => {
     if (!vaultSaveSuccess) return
@@ -366,16 +441,18 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
               <h5 id="pf-vault-section-prov" className="pf-vault-form__section-title">
                 Optional provenance
               </h5>
-              <p className="pf-vault-form__section-hint">Where you bought it and when — useful with invoices on the same card.</p>
+              <p className="pf-vault-form__section-hint">
+                Where you bought it and when — useful with invoices on the same card. Start typing a jeweller name to see{' '}
+                <strong>verified Cridora partners</strong>; you can still enter any shop or text.
+              </p>
               <div className="pf-vault-form__grid pf-vault-form__grid--prov">
                 <label className="pf-vault-field">
-                  <span>Source</span>
-                  <input
-                    className="input pf-vault-form__input"
+                  <span>Jeweller / shop</span>
+                  <PurchaseSourceJewellerField
                     value={purchaseSource}
-                    onChange={(e) => setPurchaseSource(e.target.value)}
-                    placeholder="Shop name, city, or “family”"
+                    onChange={setPurchaseSource}
                     disabled={busy}
+                    jewellers={approvedJewellers}
                   />
                 </label>
                 <label className="pf-vault-field">
@@ -583,9 +660,15 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
 
                     <label className="pf-vault-field">
 
-                      <span>Source</span>
+                      <span>Jeweller / shop</span>
 
-                      <input className="input" value={ePurchaseSource} onChange={(e) => setEPurchaseSource(e.target.value)} disabled={editBusy} />
+                      <PurchaseSourceJewellerField
+                        value={ePurchaseSource}
+                        onChange={setEPurchaseSource}
+                        disabled={editBusy}
+                        jewellers={approvedJewellers}
+                        className="input"
+                      />
 
                     </label>
 

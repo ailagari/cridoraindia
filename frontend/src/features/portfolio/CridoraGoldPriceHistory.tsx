@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useMemo, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useState, type ReactNode } from 'react'
 import {
   fetchGoldTickerHistory,
   type GoldTickerHistoryPayload,
@@ -74,7 +74,15 @@ function seriesFromPayload(body: GoldTickerHistoryPayload | null): {
   }
 }
 
-export function CridoraGoldPriceHistory() {
+export function CridoraGoldPriceHistory({
+  vaultTotals,
+  vaultSortBar,
+}: {
+  /** Compact vault summary (e.g. total grams + indicative ₹) shown beside sort controls. */
+  vaultTotals?: ReactNode
+  /** Sort / toolbar buttons for the vault list below. */
+  vaultSortBar?: ReactNode
+}) {
   const fillId = useId().replace(/:/g, '')
   const [range, setRange] = useState<GoldTickerHistoryRange>('1w')
   const [data, setData] = useState<GoldTickerHistoryPayload | null>(null)
@@ -138,6 +146,21 @@ export function CridoraGoldPriceHistory() {
           ))}
         </div>
       </div>
+
+      {vaultSortBar != null || vaultTotals != null ? (
+        <div className="pf-cridora-gold-history__vault-tools">
+          {vaultTotals != null ? (
+            <div className="pf-cridora-gold-history__vault-totals" aria-label="Vault holdings totals">
+              {vaultTotals}
+            </div>
+          ) : (
+            <span className="pf-cridora-gold-history__vault-totals-spacer" aria-hidden />
+          )}
+          {vaultSortBar != null ? (
+            <div className="pf-cridora-gold-history__vault-sort-wrap">{vaultSortBar}</div>
+          ) : null}
+        </div>
+      ) : null}
 
       {loadErr ? <p className="form-error">{loadErr}</p> : null}
       {loading && !data ? <p className="pf-cridora-gold-history__loading">Loading chart…</p> : null}

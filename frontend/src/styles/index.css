@@ -4481,63 +4481,6 @@ select.input {
   box-shadow: 0 14px 40px rgba(0, 0, 0, 0.3);
 }
 
-.pf-groww-holdings__head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 0.85rem 1.25rem;
-  margin-bottom: 0.9rem;
-  padding-bottom: 0.85rem;
-  border-bottom: 1px solid rgba(51, 65, 85, 0.55);
-}
-
-.pf-groww-holdings__head-text {
-  min-width: 0;
-  flex: 1 1 200px;
-}
-
-.pf-groww-holdings__title {
-  margin: 0;
-  font-size: 1.05rem;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  color: var(--text-silk);
-}
-
-.pf-groww-holdings__subtitle {
-  margin: 0.28rem 0 0;
-  font-size: 0.74rem;
-  color: var(--text-muted);
-  line-height: 1.35;
-}
-
-.pf-groww-holdings__head-metrics {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.85rem 1.35rem;
-}
-
-.pf-groww-holdings__metric {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 0.18rem;
-  text-align: right;
-}
-
-@media (max-width: 520px) {
-  .pf-groww-holdings__metric {
-    align-items: flex-start;
-    text-align: left;
-  }
-
-  .pf-groww-holdings__head-metrics {
-    width: 100%;
-    justify-content: space-between;
-  }
-}
-
 .pf-groww-holdings__metric-label {
   font-size: 0.58rem;
   font-weight: 800;
@@ -4625,6 +4568,55 @@ select.input {
   border-color: rgba(251, 191, 36, 0.55);
   color: #fde68a;
   background: rgba(251, 191, 36, 0.1);
+}
+
+.pf-cridora-gold-history__vault-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem 1rem;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(51, 65, 85, 0.4);
+}
+
+.pf-cridora-gold-history__vault-totals {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.65rem;
+}
+
+.pf-cridora-gold-history__vault-totals .pf-groww-holdings__metric-label {
+  margin: 0;
+}
+
+.pf-cridora-gold-history__vault-totals .pf-groww-holdings__metric-val {
+  margin: 0;
+  font-size: 1rem;
+  text-shadow: none;
+}
+
+.pf-groww-holdings__metric-label--after {
+  margin-left: 0.35rem;
+  padding-left: 0.65rem;
+  border-left: 1px solid rgba(71, 85, 105, 0.5);
+}
+
+.pf-cridora-gold-history__vault-totals-spacer {
+  flex: 1 1 4rem;
+  min-width: 0;
+}
+
+.pf-cridora-gold-history__vault-sort-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.pf-groww-holdings__bar--in-chart {
+  margin: 0;
 }
 
 .pf-cridora-gold-history__loading,

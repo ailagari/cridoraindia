@@ -312,50 +312,45 @@ export function PortfolioVaultHoldingsList({
 
   return (
     <section className="pf-groww-holdings pf-groww-holdings--panel" aria-label="Holdings by vault">
-      <header className="pf-groww-holdings__head">
-        <div className="pf-groww-holdings__head-text">
-          <h3 className="pf-groww-holdings__title">Your vaulted positions</h3>
-          <p className="pf-groww-holdings__subtitle">Per‑jeweller fractional balance and live mark</p>
-        </div>
-        {totalHeldGrams > 0 ? (
-          <div className="pf-groww-holdings__head-metrics" aria-label="Vault holdings totals">
-            <div className="pf-groww-holdings__metric">
+      <CridoraGoldPriceHistory
+        vaultTotals={
+          totalHeldGrams > 0 ? (
+            <>
               <span className="pf-groww-holdings__metric-label">Total in vaults</span>
               <span className="pf-groww-holdings__metric-val tabular">{totalHeldGrams.toFixed(4)} g</span>
-            </div>
-            <div className="pf-groww-holdings__metric">
-              <span className="pf-groww-holdings__metric-label">Indicative value</span>
+              <span className="pf-groww-holdings__metric-label pf-groww-holdings__metric-label--after">Indicative value</span>
               <span className="pf-groww-holdings__metric-val tabular pf-groww-holdings__metric-val--inr">
                 {disp(`₹${fmtInr2(heldVaultMarketInr)}`)}
               </span>
-            </div>
+            </>
+          ) : null
+        }
+        vaultSortBar={
+          <div className="pf-groww-holdings__bar pf-groww-holdings__bar--in-chart">
+            <button
+              type="button"
+              className={`pf-groww-mini-sort ${sortBy === 'grams' ? 'pf-groww-mini-sort--on' : ''}`}
+              onClick={() => setSortBy('grams')}
+            >
+              Sort <SvgIconSort /> · grams
+            </button>
+            <button
+              type="button"
+              className={`pf-groww-mini-sort ${sortBy === 'value' ? 'pf-groww-mini-sort--on' : ''}`}
+              onClick={() => setSortBy('value')}
+            >
+              Sort <SvgIconSort /> · value
+            </button>
+            <button
+              type="button"
+              className={`pf-groww-mini-sort ${sortBy === 'name' ? 'pf-groww-mini-sort--on' : ''}`}
+              onClick={() => setSortBy('name')}
+            >
+              <SvgIconGrid /> · name
+            </button>
           </div>
-        ) : null}
-      </header>
-      <CridoraGoldPriceHistory />
-      <div className="pf-groww-holdings__bar">
-        <button
-          type="button"
-          className={`pf-groww-mini-sort ${sortBy === 'grams' ? 'pf-groww-mini-sort--on' : ''}`}
-          onClick={() => setSortBy('grams')}
-        >
-          Sort <SvgIconSort /> · grams
-        </button>
-        <button
-          type="button"
-          className={`pf-groww-mini-sort ${sortBy === 'value' ? 'pf-groww-mini-sort--on' : ''}`}
-          onClick={() => setSortBy('value')}
-        >
-          Sort <SvgIconSort /> · value
-        </button>
-        <button
-          type="button"
-          className={`pf-groww-mini-sort ${sortBy === 'name' ? 'pf-groww-mini-sort--on' : ''}`}
-          onClick={() => setSortBy('name')}
-        >
-          <SvgIconGrid /> · name
-        </button>
-      </div>
+        }
+      />
 
       {rows.length === 0 ? (
         <p className="pf-groww-holdings__empty">No vault holdings yet — buy fractional gold from a verified jeweller.</p>
