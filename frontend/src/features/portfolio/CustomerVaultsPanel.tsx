@@ -53,8 +53,9 @@ export function CustomerVaultsPanel() {
           </p>
         </div>
         <div className="pf-kpi pf-kpi--ocean pf-kpi--pulse">
-          <span className="pf-kpi__eyebrow">Total fractional</span>
-          <p className="pf-kpi__value">{totalGrams} g</p>
+          <span className="pf-kpi__eyebrow">Total vaulted gold</span>
+          <p className="pf-kpi__value pf-kpi__value--grams">{totalGrams} g</p>
+          <span className="pf-kpi__hint">Metal held · primary balance</span>
         </div>
       </div>
 
@@ -73,9 +74,9 @@ export function CustomerVaultsPanel() {
                 </div>
                 <div style={{ textAlign: 'right' }}>
                   <p style={{ margin: 0, fontSize: '0.62rem', fontWeight: 800, letterSpacing: '0.08em', color: 'var(--text-faint)' }}>
-                    FRACTIONAL
+                    GOLD HELD
                   </p>
-                  <p style={{ margin: '0.2rem 0 0', fontSize: '1.35rem', fontWeight: 800 }} className="tabular">
+                  <p style={{ margin: '0.2rem 0 0', fontSize: '1.55rem', fontWeight: 800 }} className="tabular">
                     {v.fractional_grams} g
                   </p>
                 </div>
@@ -98,11 +99,12 @@ export function CustomerVaultsPanel() {
                   </strong>
                 </p>
                 <p style={{ margin: 0 }}>
-                  Est. value{' '}
-                  <strong className="tabular" style={{ color: 'var(--gold-light)' }}>
+                  Board mark ₹{parseG(v.jeweller_metal_rate_inr_per_gram ?? '0').toLocaleString('en-IN', { maximumFractionDigits: 2 })}/g
+                  {' · '}
+                  <span style={{ fontSize: '0.76rem', color: 'var(--text-faint)' }}>Indicative ₹ value</span>{' '}
+                  <strong className="tabular" style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-muted)' }}>
                     ₹{parseG(v.estimated_fractional_value_inr ?? '0').toLocaleString('en-IN', { maximumFractionDigits: 0 })}
-                  </strong>{' '}
-                  @ ₹{parseG(v.jeweller_metal_rate_inr_per_gram ?? '0').toLocaleString('en-IN', { maximumFractionDigits: 2 })}/g
+                  </strong>
                 </p>
                 <p style={{ margin: 0, fontSize: '0.78rem' }}>
                   Rate as of {formatJewellerMetalRateAsOf(v.jeweller_metal_rate_last_updated_at) ?? '—'}

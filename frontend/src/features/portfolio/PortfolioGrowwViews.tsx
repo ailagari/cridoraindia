@@ -147,9 +147,20 @@ export function PortfolioGrowwHero({
             <span>Vault holdings ({activeVaultCount})</span>
             <SvgIconChevronDown />
           </div>
-          <p className="pf-groww-hero__grams tabular">{`${totalGrams.toFixed(6)} g`} total gold</p>
-          <p className="pf-groww-hero__big tabular">{disp(mainVal)}</p>
-          <p className="pf-groww-hero__sub">Live vault mark‑to‑market (jeweller ₹/g)</p>
+          <p className="pf-groww-hero__big pf-groww-hero__big--grams tabular">{`${totalGrams.toFixed(6)} g`}</p>
+          <p className="pf-groww-hero__sub">
+            Total vaulted gold
+            {activeVaultCount > 0 ? (
+              <>
+                {' '}
+                across {activeVaultCount} {activeVaultCount === 1 ? 'vault' : 'vaults'}
+              </>
+            ) : null}
+          </p>
+          <p className="pf-groww-hero__secondary-inr tabular">{disp(mainVal)}</p>
+          <p className="pf-groww-hero__sub pf-groww-hero__sub--after-inr">
+            Indicative live value (jeweller ₹/g marks)
+          </p>
           <div className="pf-groww-hero__cost-inline">
             <span className="pf-groww-hero__cost-inline-label">Metal cost basis</span>
             <span className="pf-groww-hero__cost-inline-val tabular">{disp(investVal)}</span>
@@ -207,7 +218,7 @@ export function PortfolioVaultHoldingsList({
   totalHeldGrams: number
   masked: boolean
 }) {
-  const [sortBy, setSortBy] = useState<'value' | 'name'>('value')
+  const [sortBy, setSortBy] = useState<'grams' | 'value' | 'name'>('grams')
 
   const rows = useMemo(() => {
     const held = vaults.filter((v) => parseG(v.fractional_grams) > 0)
@@ -241,9 +252,11 @@ export function PortfolioVaultHoldingsList({
         ratePerG,
       }
     })
-    out.sort((a, b) =>
-      sortBy === 'name' ? a.name.localeCompare(b.name) : b.market - a.market,
-    )
+    out.sort((a, b) => {
+      if (sortBy === 'name') return a.name.localeCompare(b.name)
+      if (sortBy === 'grams') return b.grams - a.grams
+      return b.market - a.market
+    })
     return out
   }, [vaults, allocatedCost, totalHeldGrams, sortBy])
 
@@ -252,6 +265,13 @@ export function PortfolioVaultHoldingsList({
   return (
     <section className="pf-groww-holdings" aria-label="Holdings by vault">
       <div className="pf-groww-holdings__bar">
+        <button
+          type="button"
+          className={`pf-groww-mini-sort ${sortBy === 'grams' ? 'pf-groww-mini-sort--on' : ''}`}
+          onClick={() => setSortBy('grams')}
+        >
+          Sort <SvgIconSort /> · grams
+        </button>
         <button
           type="button"
           className={`pf-groww-mini-sort ${sortBy === 'value' ? 'pf-groww-mini-sort--on' : ''}`}
@@ -276,20 +296,22 @@ export function PortfolioVaultHoldingsList({
             <li key={r.key} className="pf-groww-holding-row">
               <div className="pf-groww-holding-row__left">
                 <h4 className="pf-groww-holding-row__title">{r.name}</h4>
-                <span className="pf-groww-holding-row__meta tabular">
-                  {r.grams.toFixed(4)} g
-                  {r.ratePerG ? ` · ${r.ratePerG}` : ''}
-                </span>
+                {r.ratePerG ? (
+                  <span className="pf-groww-holding-row__meta tabular">{r.ratePerG} board mark</span>
+                ) : null}
               </div>
               <div className="pf-groww-holding-row__spark" aria-hidden>
                 <VaultTrendSparkline trend={r.trend} />
               </div>
               <div className="pf-groww-holding-row__right">
-                <span className={`pf-groww-holding-row__cur tabular ${r.trend === 'down' ? 'pf-groww-holding-row__cur--down' : r.trend === 'up' ? 'pf-groww-holding-row__cur--up' : ''}`}>
-                  {disp(`₹${fmtInr2(r.market)}`)}
+                <span className="pf-groww-holding-row__grams tabular">{r.grams.toFixed(4)} g</span>
+                <span
+                  className={`pf-groww-holding-row__cur tabular ${r.trend === 'down' ? 'pf-groww-holding-row__cur--down' : r.trend === 'up' ? 'pf-groww-holding-row__cur--up' : ''}`}
+                >
+                  {disp(`₹${fmtInr2(r.market)}`)} <span className="pf-groww-holding-row__cur-label">live ₹</span>
                 </span>
                 <span className="pf-groww-holding-row__inv tabular">
-                  ({disp(`₹${fmtInr2(r.investedShare)}`)} cost share)
+                  Cost share {disp(`₹${fmtInr2(r.investedShare)}`)}
                 </span>
               </div>
             </li>
