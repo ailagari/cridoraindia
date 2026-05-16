@@ -1,8 +1,12 @@
 from django.contrib import admin
 
-from .models import JewellerPricingProfile, MetalPurity, ProductCategory
+from .models import GoldTickerReferenceHistory, JewellerPricingProfile, MetalPurity, ProductCategory
 
 
+@admin.register(GoldTickerReferenceHistory)
+class GoldTickerReferenceHistoryAdmin(admin.ModelAdmin):
+    list_display = ("recorded_at", "inr_per_gram_22k", "base_source")
+    ordering = ("-recorded_at",)
 @admin.register(MetalPurity)
 class MetalPurityAdmin(admin.ModelAdmin):
     list_display = ("label", "slug", "fine_fraction", "sort_order", "is_active")

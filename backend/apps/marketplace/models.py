@@ -134,6 +134,21 @@ class GoldTickerConfig(models.Model):
         return adjusted_inr_from_decimal(self.reference_price_inr_per_gram_22k, family="gold", key="22K", ticker=self)
 
 
+class GoldTickerReferenceHistory(models.Model):
+    """Sampled Cridora 22K ₹/g platform reference over time (for charts)."""
+
+    recorded_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    inr_per_gram_22k = models.DecimalField(max_digits=12, decimal_places=2)
+    base_source = models.CharField(max_length=64, blank=True, default="")
+
+    class Meta:
+        ordering = ["-recorded_at"]
+        verbose_name_plural = "Gold ticker reference history"
+
+    def __str__(self) -> str:
+        return f"{self.recorded_at.isoformat()} · ₹{self.inr_per_gram_22k}/g"
+
+
 class MetalPurity(models.Model):
     """Admin-managed hallmark / fineness options (Django admin). Jewellers enable subsets on their pricing profile."""
 

@@ -4559,6 +4559,141 @@ select.input {
   text-shadow: none;
 }
 
+.pf-cridora-gold-history {
+  margin: 0 0 1rem;
+  padding: 0.85rem 0.75rem 0.95rem;
+  border-radius: 14px;
+  border: 1px solid rgba(129, 140, 248, 0.22);
+  background: rgba(3, 7, 18, 0.35);
+}
+
+.pf-cridora-gold-history__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  margin-bottom: 0.65rem;
+}
+
+.pf-cridora-gold-history__title {
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text-silk);
+}
+
+.pf-cridora-gold-history__subtitle {
+  margin: 0.22rem 0 0;
+  max-width: 42rem;
+  font-size: 0.68rem;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+.pf-cridora-gold-history__ranges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  justify-content: flex-end;
+}
+
+.pf-cridora-gold-history__range {
+  padding: 0.32rem 0.55rem;
+  border-radius: 8px;
+  border: 1px solid rgba(71, 85, 105, 0.45);
+  background: rgba(15, 23, 42, 0.55);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease,
+    background 0.15s ease;
+}
+
+.pf-cridora-gold-history__range:hover {
+  border-color: rgba(129, 140, 248, 0.4);
+  color: var(--text-silk);
+}
+
+.pf-cridora-gold-history__range--on {
+  border-color: rgba(251, 191, 36, 0.55);
+  color: #fde68a;
+  background: rgba(251, 191, 36, 0.1);
+}
+
+.pf-cridora-gold-history__loading,
+.pf-cridora-gold-history__empty {
+  margin: 0.35rem 0;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.pf-cridora-gold-history__chart-wrap {
+  margin: 0.15rem 0 0.25rem;
+}
+
+.pf-cridora-gold-history__chart-wrap .pf-chart-svg {
+  width: 100%;
+  min-height: 72px;
+  display: block;
+}
+
+.pf-cridora-gold-history__footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem 0.75rem;
+  margin-top: 0.35rem;
+}
+
+.pf-cridora-gold-history__axis {
+  font-size: 0.62rem;
+  font-weight: 650;
+  color: var(--text-faint);
+  flex: 0 0 auto;
+}
+
+.pf-cridora-gold-history__stats {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem 1rem;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.pf-cridora-gold-history__now {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: #6ee7b7;
+}
+
+.pf-cridora-gold-history__src {
+  font-weight: 650;
+  font-size: 0.68rem;
+  color: var(--text-muted);
+}
+
+.pf-cridora-gold-history__spread {
+  font-size: 0.68rem;
+  color: rgba(253, 224, 71, 0.9);
+}
+
+.pf-cridora-gold-history__fine {
+  margin: 0.5rem 0 0;
+  font-size: 0.6rem;
+  line-height: 1.45;
+  color: rgba(148, 163, 184, 0.75);
+}
+
 .pf-groww-holdings__bar {
   display: flex;
   flex-wrap: wrap;

@@ -251,6 +251,12 @@ def _finalize_spot_payload(payload: dict, *, include_live_raw: bool) -> dict:
     base, src = resolve_cridora_base_22k_inr()
     payload["platform_base_inr_per_gram_22k"] = str(base)
     payload["cridora_base_source"] = src
+    try:
+        from .gold_ticker_history import maybe_record_gold_reference_history
+
+        maybe_record_gold_reference_history(base=base, source=src)
+    except Exception:
+        logger.exception("gold reference history sample failed")
     return payload
 
 

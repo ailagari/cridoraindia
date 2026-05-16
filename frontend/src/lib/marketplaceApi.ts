@@ -7,6 +7,16 @@ export type GoldTickerPayload = {
   updated_at: string
 }
 
+export type GoldTickerHistoryRange = 'live' | '1d' | '1w' | '1m' | '6m' | '1y'
+
+export type GoldTickerHistoryPayload = {
+  range: string
+  window_hours?: number
+  note?: string
+  points: Array<{ t: string; v: string; src?: string }>
+  latest: { t: string; v: string; source: string }
+}
+
 export type LiveRawSpotPayload = {
   currency: string
   unit: string
@@ -158,6 +168,19 @@ export async function fetchGoldTicker(): Promise<GoldTickerPayload | null> {
     return null
   }
   return (await res.json()) as GoldTickerPayload
+}
+
+export async function fetchGoldTickerHistory(
+  range: GoldTickerHistoryRange,
+): Promise<GoldTickerHistoryPayload | null> {
+  const res = await apiFetch(
+    `/api/v1/marketplace/gold-ticker/history/?range=${encodeURIComponent(range)}`,
+    { cache: 'no-store' },
+  )
+  if (!res.ok) {
+    return null
+  }
+  return (await res.json()) as GoldTickerHistoryPayload
 }
 
 export async function fetchSpotPrices(): Promise<SpotPricesPayload | null> {

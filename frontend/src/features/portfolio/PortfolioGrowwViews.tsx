@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import type { GoldTickerPayload, SpotPricesPayload } from '@/lib/marketplaceApi'
 import type { VaultRowDTO } from '@/lib/goldTransferApi'
 import { VaultTrendSparkline } from './PortfolioCharts'
+import { CridoraGoldPriceHistory } from './CridoraGoldPriceHistory'
 
 function parseG(s: string): number {
   const n = Number.parseFloat(s)
@@ -331,6 +332,7 @@ export function PortfolioVaultHoldingsList({
           </div>
         ) : null}
       </header>
+      <CridoraGoldPriceHistory />
       <div className="pf-groww-holdings__bar">
         <button
           type="button"

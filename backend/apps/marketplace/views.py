@@ -1,9 +1,11 @@
 import logging
 import uuid
+from datetime import timezone as py_tz
 
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -76,6 +78,28 @@ class MarketplaceGoldTickerPublicView(APIView):
             logger.exception("Gold rate alert check failed")
         ticker = get_or_create_ticker()
         return Response(GoldTickerPublicSerializer(ticker).data)
+
+
+class MarketplaceGoldTickerHistoryView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        from decimal import Decimal
+
+        from .gold_ticker_history import fetch_history_payload, normalize_range_param
+        from .spot_prices import resolve_cridora_base_22k_inr
+
+        raw_range = (request.query_params.get("range") or "").strip()
+        rk = normalize_range_param(raw_range)
+        body = fetch_history_payload(range_key=rk)
+        base, src = resolve_cridora_base_22k_inr()
+        now = timezone.now()
+        body["latest"] = {
+            "t": now.astimezone(py_tz.utc).isoformat().replace("+00:00", "Z"),
+            "v": str(base.quantize(Decimal("0.01"))),
+            "source": src,
+        }
+        return Response(body)
 
 
 class MarketplaceCatalogMetaView(APIView):
