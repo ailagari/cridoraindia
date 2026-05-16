@@ -459,7 +459,7 @@ export function NotificationBell({
           </button>
         ) : null}
       </div>
-      {setupHint ? (
+      {setupHint && !usePlatformFeed ? (
         <p className="notif-panel-hint" style={{ marginTop: '-0.35rem', color: 'var(--gold-light)' }}>
           {setupHint}
         </p>
@@ -541,7 +541,27 @@ export function NotificationBell({
       ) : null}
       <ul className="notif-list">
         {displayItems.map((n) =>
-          useLiveFeed ? (
+          n.kind === 'promo' ? (
+            useLiveFeed ? (
+              <li key={n.id}>
+                <button
+                  type="button"
+                  className={`notif-item-btn notif-item-btn--promo-only${n.read ? '' : ' notif-item-btn--unread'}`}
+                  onClick={() => void onFeedItemActivate(n)}
+                >
+                  <span className="notif-kind notif-kind--promo">Promo</span>
+                  <p className="notif-item-title">{n.title}</p>
+                  <p className="notif-item-body">{n.body}</p>
+                </button>
+              </li>
+            ) : (
+              <li key={n.id} className={`notif-item notif-item--promo-only${n.read ? '' : ' notif-item--unread'}`}>
+                <span className="notif-kind notif-kind--promo">Promo</span>
+                <p className="notif-item-title">{n.title}</p>
+                <p className="notif-item-body">{n.body}</p>
+              </li>
+            )
+          ) : useLiveFeed ? (
             <li key={n.id}>
               <button
                 type="button"

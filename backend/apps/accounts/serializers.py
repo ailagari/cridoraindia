@@ -402,10 +402,19 @@ class GoldTransferNotifySerializer(serializers.Serializer):
 
 class AdminNotificationSerializer(serializers.ModelSerializer):
     unread = serializers.SerializerMethodField()
+    body = serializers.SerializerMethodField()
 
     class Meta:
         model = AdminNotification
         fields = ("id", "kind", "title", "body", "link_path", "created_at", "unread")
+
+    def get_body(self, obj: AdminNotification) -> str:
+        raw = obj.body or ""
+        if obj.kind == AdminNotification.KIND_FESTIVAL_BROADCAST_SENT:
+            from apps.accounts.services.festival_broadcast import strip_festival_broadcast_feed_body
+
+            return strip_festival_broadcast_feed_body(raw)
+        return raw
 
     def get_unread(self, obj: AdminNotification):
         read_ids = self.context.get("read_ids")

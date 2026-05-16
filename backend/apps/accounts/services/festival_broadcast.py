@@ -1,6 +1,7 @@
 """Process scheduled festival / broadcast Web Push notifications."""
 
 import logging
+import re
 
 from django.db import transaction
 from django.db.models import Count
@@ -13,6 +14,20 @@ logger = logging.getLogger(__name__)
 
 MAX_RETAINED_FESTIVAL_SCHEDULES = 3
 MAX_RETAINED_FESTIVAL_FEED_ROWS = 3
+
+_ZERO_DEVICE_SUFFIX = "Sent to 0 devices — check VAPID env vars and user subscriptions."
+_SENT_COUNT_SUFFIX_RE = re.compile(r"(?:\r?\n){2}Sent to \d+ subscribed device\(s\)\.\s*\Z")
+
+
+def strip_festival_broadcast_feed_body(text: str) -> str:
+    """Remove internal delivery stats appended to older in-app festival receipts."""
+    if not text:
+        return ""
+    s = text.rstrip()
+    if s.endswith(_ZERO_DEVICE_SUFFIX):
+        s = s[: -len(_ZERO_DEVICE_SUFFIX)].rstrip()
+    s = _SENT_COUNT_SUFFIX_RE.sub("", s)
+    return s.rstrip()
 
 
 def prune_festival_broadcast_feed_notifications(*, max_rows: int = MAX_RETAINED_FESTIVAL_FEED_ROWS) -> int:
@@ -125,16 +140,10 @@ def process_due_festival_broadcasts(*, limit: int = 50) -> int:
                 preview = row.body.strip()
                 if len(preview) > 400:
                     preview = preview[:397] + "…"
-                device_note = (
-                    f"Sent to {n} subscribed device(s)."
-                    if n
-                    else "Sent to 0 devices — check VAPID env vars and user subscriptions."
-                )
-                body_feed = f"{preview}\n\n{device_note}" if preview else device_note
                 AdminNotification.objects.create(
                     kind=AdminNotification.KIND_FESTIVAL_BROADCAST_SENT,
                     title=row.title.strip() or "Festival broadcast sent",
-                    body=body_feed,
+                    body=preview,
                     link_path="/",
                     actor=row.created_by,
                 )

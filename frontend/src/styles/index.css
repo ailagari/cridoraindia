@@ -4067,6 +4067,8 @@ select.input {
   display: flex;
   gap: 0.65rem;
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
   padding-bottom: 0.2rem;
   scrollbar-width: thin;
 }
@@ -4122,6 +4124,7 @@ select.input {
   gap: 1.35rem;
   border-bottom: 1px solid rgba(71, 85, 105, 0.35);
   padding: 0 0.1rem;
+  flex-wrap: nowrap;
 }
 
 .pf-groww-tab {
@@ -4133,6 +4136,9 @@ select.input {
   color: var(--text-muted);
   cursor: pointer;
   position: relative;
+  flex-shrink: 0;
+  white-space: nowrap;
+  touch-action: manipulation;
 }
 
 .pf-groww-tab--active {
@@ -4148,6 +4154,23 @@ select.input {
   height: 2.5px;
   border-radius: 3px 3px 0 0;
   background: linear-gradient(90deg, #818cf8, #34d399);
+}
+
+@media (max-width: 720px) {
+  .pf-groww-tabs {
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    gap: 0.95rem;
+    padding-left: max(0.1rem, env(safe-area-inset-left, 0px));
+    padding-right: max(0.1rem, env(safe-area-inset-right, 0px));
+  }
+
+  .pf-groww-tabs::-webkit-scrollbar {
+    height: 0;
+  }
 }
 
 .pf-groww-hero {
@@ -4912,6 +4935,8 @@ select.input {
 
 .pf-ledger-scroll {
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
   border-radius: 10px;
   border: 1px solid rgba(165, 180, 252, 0.12);
   background: var(--pf-ledger-bg);
@@ -6961,4 +6986,26 @@ select.input {
 .pf-scope .pf-ledger-filter button {
   font-size: 0.72rem;
   font-weight: 650;
+}
+
+@media (max-width: 720px) {
+  .pf-scope .pf-ledger-filter {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    padding-bottom: 0.2rem;
+    padding-left: max(0, env(safe-area-inset-left, 0px));
+    padding-right: max(0, env(safe-area-inset-right, 0px));
+  }
+
+  .pf-scope .pf-ledger-filter::-webkit-scrollbar {
+    height: 0;
+  }
+
+  .pf-scope .pf-ledger-filter button {
+    flex-shrink: 0;
+  }
 }

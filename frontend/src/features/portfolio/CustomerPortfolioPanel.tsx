@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { fetchGoldWallet, type VaultRowDTO } from '@/lib/goldTransferApi'
 import { fetchPortfolioLedger, type PortfolioLedgerEntryDTO } from '@/lib/personalHoldingsApi'
-import { CustomerPersonalHoldingsPanel, CustomerVaultDocumentsTab } from '@/features/portfolio/CustomerPersonalHoldingsPanel'
+import { CustomerPersonalHoldingsPanel } from '@/features/portfolio/CustomerPersonalHoldingsPanel'
 import { fetchGoldTicker, fetchSpotPrices, type GoldTickerPayload, type SpotPricesPayload } from '@/lib/marketplaceApi'
 import { LIVE_BALANCE_POLL_MS } from '@/lib/liveDeskIntervals'
 import { useLivePoll } from '@/lib/useLivePoll'
@@ -18,7 +18,7 @@ import { CustomerVaultsPanel } from './CustomerVaultsPanel'
 const DONUT_COLORS = ['#fbbf24', '#d4a85c', '#67e8f9', '#a78bfa', '#34d399', '#f472b6', '#38bdf8']
 const SESSION_VALUE_SAMPLES_CAP = 56
 
-type PortfolioTabId = 'overview' | 'active' | 'personal' | 'documents' | 'charts' | 'transactions'
+type PortfolioTabId = 'overview' | 'active' | 'personal' | 'charts' | 'transactions'
 
 function parseG(s: string): number {
   const n = Number.parseFloat(s)
@@ -63,6 +63,7 @@ export function CustomerPortfolioPanel() {
   const [ledgerLoading, setLedgerLoading] = useState(false)
   const [sessionValueSamples, setSessionValueSamples] = useState<number[]>([])
   const basisInrRef = useRef<number | null>(null)
+  const portfolioTabsRef = useRef<HTMLElement | null>(null)
 
   const refresh = useCallback(async () => {
     setLoadErr('')
@@ -91,11 +92,23 @@ export function CustomerPortfolioPanel() {
 
   useEffect(() => {
     const raw = (searchParams.get('portfolio_tab') || '').trim().toLowerCase()
-    const allowed = new Set(['overview', 'active', 'personal', 'documents', 'transactions', 'charts'])
+    if (raw === 'documents') {
+      setPortfolioTab('personal')
+      return
+    }
+    const allowed = new Set(['overview', 'active', 'personal', 'transactions', 'charts'])
     if (raw && allowed.has(raw)) {
       setPortfolioTab(raw as PortfolioTabId)
     }
   }, [searchParams])
+
+  useEffect(() => {
+    const nav = portfolioTabsRef.current
+    if (!nav) return
+    if (typeof window.matchMedia === 'function' && window.matchMedia('(min-width: 721px)').matches) return
+    const active = nav.querySelector('.pf-groww-tab--active')
+    active?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' })
+  }, [portfolioTab])
 
   useEffect(() => {
     void refresh()
@@ -210,13 +223,12 @@ export function CustomerPortfolioPanel() {
       <div className="pf-groww-shell pf-stagger">
         <PortfolioSpotPillsRow spot={spotPayload} tickerFallback={goldTickerFallback} />
 
-        <nav className="pf-groww-tabs" aria-label="Portfolio sections">
+        <nav ref={portfolioTabsRef} className="pf-groww-tabs" aria-label="Portfolio sections">
           {(
             [
               ['overview', 'Overview'],
               ['active', 'Active'],
               ['personal', 'Personal'],
-              ['documents', 'Documents'],
               ['transactions', 'Transactions'],
               ['charts', 'Charts'],
             ] as const
@@ -364,12 +376,6 @@ export function CustomerPortfolioPanel() {
         ) : null}
 
         {portfolioTab === 'personal' ? <CustomerPersonalHoldingsPanel onChanged={refresh} /> : null}
-
-        {portfolioTab === 'documents' ? (
-          <article className="pf-card pf-card--lift pf-card--wide" style={{ padding: '1.15rem 1.25rem' }}>
-            <CustomerVaultDocumentsTab />
-          </article>
-        ) : null}
 
         {portfolioTab === 'transactions' ? (
           <article className="pf-card pf-card--lift pf-card--wide pf-card--ledger-table-wrap">
