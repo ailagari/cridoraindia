@@ -205,8 +205,9 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
         return
       }
       setEditingId(null)
-      setVaultSaveSuccess(`“${res.data.title}” was updated.`)
-      void refresh()
+      const label = res.data?.title?.trim() || eTitle.trim() || 'Record'
+      setVaultSaveSuccess(`“${label}” was updated.`)
+      await refresh()
       onChanged?.()
     } catch {
       setLoadErr('Could not reach the server. Check your connection and try again.')
@@ -241,8 +242,9 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
       setPurchaseSource('')
       setPurchaseDate('')
       setPurchasePricePerGram('')
-      setVaultSaveSuccess(`“${res.data.title}” was saved to your vault. Documents are listed on the same card below.`)
-      void refresh()
+      const label = res.data?.title?.trim() || title.trim() || 'Record'
+      setVaultSaveSuccess(`“${label}” was saved to your vault. Documents are listed on the same card below.`)
+      await refresh()
       onChanged?.()
     } catch {
       setLoadErr('Could not reach the server. Check your connection and try again.')

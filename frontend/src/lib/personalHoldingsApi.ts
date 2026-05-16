@@ -106,14 +106,25 @@ export async function createPersonalHolding(body: {
   purchase_date?: string
   purchase_price_inr_per_gram?: string
   notes?: string
-}): Promise<{ ok: true; data: PersonalHoldingDTO } | { ok: false; detail: string }> {
+}): Promise<
+  { ok: true; data: PersonalHoldingDTO | null } | { ok: false; detail: string }
+> {
   const res = await authFetch('/api/v1/portfolio/personal-holdings/', {
     method: 'POST',
     jsonBody: body as unknown as Record<string, unknown>,
   })
-  const data = (await res.json()) as PersonalHoldingDTO & { detail?: string }
-  if (!res.ok) return { ok: false, detail: data.detail ?? 'Could not create holding.' }
-  return { ok: true, data: data as PersonalHoldingDTO }
+  const parsed = await readResponseJson<PersonalHoldingDTO & { detail?: string }>(res)
+  if (!res.ok) {
+    const detail =
+      parsed && typeof parsed.detail === 'string' && parsed.detail.trim()
+        ? parsed.detail
+        : 'Could not create holding.'
+    return { ok: false, detail }
+  }
+  if (parsed && typeof (parsed as PersonalHoldingDTO).id === 'number') {
+    return { ok: true, data: parsed as PersonalHoldingDTO }
+  }
+  return { ok: true, data: null }
 }
 
 export async function updatePersonalHolding(
@@ -128,14 +139,25 @@ export async function updatePersonalHolding(
     purchase_price_inr_per_gram: string | null
     notes: string
   }>,
-): Promise<{ ok: true; data: PersonalHoldingDTO } | { ok: false; detail: string }> {
+): Promise<
+  { ok: true; data: PersonalHoldingDTO | null } | { ok: false; detail: string }
+> {
   const res = await authFetch(`/api/v1/portfolio/personal-holdings/${id}/`, {
     method: 'PATCH',
     jsonBody: body as unknown as Record<string, unknown>,
   })
-  const data = (await res.json()) as PersonalHoldingDTO & { detail?: string }
-  if (!res.ok) return { ok: false, detail: data.detail ?? 'Could not update holding.' }
-  return { ok: true, data: data as PersonalHoldingDTO }
+  const parsed = await readResponseJson<PersonalHoldingDTO & { detail?: string }>(res)
+  if (!res.ok) {
+    const detail =
+      parsed && typeof parsed.detail === 'string' && parsed.detail.trim()
+        ? parsed.detail
+        : 'Could not update holding.'
+    return { ok: false, detail }
+  }
+  if (parsed && typeof (parsed as PersonalHoldingDTO).id === 'number') {
+    return { ok: true, data: parsed as PersonalHoldingDTO }
+  }
+  return { ok: true, data: null }
 }
 
 export async function uploadPersonalDocument(
