@@ -12,6 +12,10 @@ export type PersonalHoldingDTO = {
   purity: string
   purchase_date: string | null
   purchase_source: string
+  purchase_price_inr_per_gram: string | null
+  purchase_cost_basis_inr: string
+  reference_gain_inr: string
+  reference_gain_percent: string
   estimated_current_value_inr: string
   is_self_declared: boolean
   verification_status: string
@@ -60,10 +64,13 @@ export async function fetchPersonalHolding(id: number): Promise<PersonalHoldingD
   return (await res.json()) as PersonalHoldingDTO
 }
 
-export async function fetchPersonalHoldings(): Promise<{ results: PersonalHoldingDTO[] } | null> {
-  const res = await authFetch('/api/v1/portfolio/personal-holdings/')
+export async function fetchPersonalHoldings(opts?: {
+  documents?: boolean
+}): Promise<{ results: PersonalHoldingDTO[]; reference_gold_inr_per_gram_22k?: string } | null> {
+  const q = opts?.documents ? '?documents=1' : ''
+  const res = await authFetch(`/api/v1/portfolio/personal-holdings/${q}`)
   if (!res.ok) return null
-  return (await res.json()) as { results: PersonalHoldingDTO[] }
+  return (await res.json()) as { results: PersonalHoldingDTO[]; reference_gold_inr_per_gram_22k?: string }
 }
 
 export async function fetchPersonalVaultDocuments(): Promise<{ results: PersonalDocumentDTO[] } | null> {
@@ -86,6 +93,7 @@ export async function createPersonalHolding(body: {
   purity?: string
   purchase_source?: string
   purchase_date?: string
+  purchase_price_inr_per_gram?: string
   notes?: string
 }): Promise<{ ok: true; data: PersonalHoldingDTO } | { ok: false; detail: string }> {
   const res = await authFetch('/api/v1/portfolio/personal-holdings/', {
@@ -94,6 +102,28 @@ export async function createPersonalHolding(body: {
   })
   const data = (await res.json()) as PersonalHoldingDTO & { detail?: string }
   if (!res.ok) return { ok: false, detail: data.detail ?? 'Could not create holding.' }
+  return { ok: true, data: data as PersonalHoldingDTO }
+}
+
+export async function updatePersonalHolding(
+  id: number,
+  body: Partial<{
+    title: string
+    category: string
+    weight_grams: string
+    purity: string
+    purchase_source: string
+    purchase_date: string | null
+    purchase_price_inr_per_gram: string | null
+    notes: string
+  }>,
+): Promise<{ ok: true; data: PersonalHoldingDTO } | { ok: false; detail: string }> {
+  const res = await authFetch(`/api/v1/portfolio/personal-holdings/${id}/`, {
+    method: 'PATCH',
+    jsonBody: body as unknown as Record<string, unknown>,
+  })
+  const data = (await res.json()) as PersonalHoldingDTO & { detail?: string }
+  if (!res.ok) return { ok: false, detail: data.detail ?? 'Could not update holding.' }
   return { ok: true, data: data as PersonalHoldingDTO }
 }
 

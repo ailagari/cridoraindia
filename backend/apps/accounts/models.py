@@ -811,6 +811,13 @@ class PersonalGoldHolding(models.Model):
     purity = models.CharField(max_length=64, default="BIS 916")
     purchase_date = models.DateField(null=True, blank=True)
     purchase_source = models.CharField(max_length=512, blank=True)
+    purchase_price_inr_per_gram = models.DecimalField(
+        max_digits=18,
+        decimal_places=4,
+        null=True,
+        blank=True,
+        help_text="Optional: what you paid per gram (₹/g) — used for indicative gain vs reference mark.",
+    )
     estimated_current_value_inr = models.DecimalField(
         max_digits=18,
         decimal_places=2,

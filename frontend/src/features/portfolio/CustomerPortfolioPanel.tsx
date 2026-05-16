@@ -255,13 +255,56 @@ export function CustomerPortfolioPanel() {
                   <span className="pf-wealth-kpi__eyebrow">Total est. value</span>
                   <p className="pf-wealth-kpi__val tabular">
                     ₹
-                    {parseG(totals.total_estimated_value_inr ?? '0').toLocaleString('en-IN', {
+                    {parseInrNum(totals.total_estimated_value_inr ?? '0').toLocaleString('en-IN', {
                       maximumFractionDigits: 0,
                     })}
                   </p>
                   <p className="pf-wealth-kpi__hint">Indicative · ref. ₹{totals.reference_gold_inr_per_gram_22k ?? '—'}/g 22K</p>
                 </div>
+                {totals.personal_recorded_cost_basis_inr &&
+                parseInrNum(totals.personal_recorded_cost_basis_inr) > 0 ? (
+                  <>
+                    <div className="pf-wealth-kpi">
+                      <span className="pf-wealth-kpi__eyebrow">Personal · recorded cost</span>
+                      <p className="pf-wealth-kpi__val tabular">
+                        ₹
+                        {parseInrNum(totals.personal_recorded_cost_basis_inr).toLocaleString('en-IN', {
+                          maximumFractionDigits: 0,
+                        })}
+                      </p>
+                      <p className="pf-wealth-kpi__hint">Σ weight × ₹/g you entered</p>
+                    </div>
+                    <div className="pf-wealth-kpi">
+                      <span className="pf-wealth-kpi__eyebrow">Personal · ref. gain</span>
+                      <p
+                        className={`pf-wealth-kpi__val tabular${
+                          parseInrNum(totals.personal_gain_on_recorded_cost_inr ?? '0') < 0
+                            ? ' pf-wealth-kpi__val--neg'
+                            : ''
+                        }`}
+                      >
+                        ₹
+                        {parseInrNum(totals.personal_gain_on_recorded_cost_inr ?? '0').toLocaleString('en-IN', {
+                          maximumFractionDigits: 0,
+                        })}
+                        {totals.personal_gain_on_recorded_cost_percent ? (
+                          <>
+                            {' '}
+                            (<span className="tabular">{totals.personal_gain_on_recorded_cost_percent}</span>%)
+                          </>
+                        ) : null}
+                      </p>
+                      <p className="pf-wealth-kpi__hint">vs purchase ₹/g at platform reference mark</p>
+                    </div>
+                  </>
+                ) : null}
               </div>
+            ) : null}
+            {totals ? (
+              <p className="pf-groww-footnote" style={{ marginTop: '0.15rem', marginBottom: '1rem' }}>
+                Total metal combines balances held with jewellers on Cridora plus personal items you track. Reference ₹/g on personal rows
+                is the platform 22K mark — not your store&apos;s invoice rate. Optional purchase ₹/g unlocks indicative gain vs that reference.
+              </p>
             ) : null}
             <PortfolioGrowwHero
               activeVaultCount={activeVaultCount}

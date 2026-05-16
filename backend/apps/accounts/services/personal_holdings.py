@@ -6,7 +6,7 @@ from decimal import Decimal
 from typing import Any
 
 from django.contrib.auth import get_user_model
-from django.db.models import Count, DecimalField, Q, Sum
+from django.db.models import Case, Count, DecimalField, F, Q, Sum, When
 from django.db.models.functions import Coalesce
 
 from apps.accounts.models import PersonalGoldHolding, VaultHolding
@@ -71,6 +71,33 @@ def customer_portfolio_totals_payload(user: User) -> dict[str, Any]:
     personal_g = pers["g"] or Decimal("0")
     ref_personal_inr = calculate_holding_value_inr(personal_g, rate)
 
+    recorded_basis = PersonalGoldHolding.objects.filter(user=user, is_removed=False).aggregate(
+        b=Coalesce(
+            Sum(
+                Case(
+                    When(
+                        purchase_price_inr_per_gram__isnull=False,
+                        then=F("weight_grams") * F("purchase_price_inr_per_gram"),
+                    ),
+                    default=Decimal("0"),
+                    output_field=DecimalField(max_digits=24, decimal_places=6),
+                )
+            ),
+            Decimal("0"),
+        ),
+    )["b"] or Decimal("0")
+    recorded_basis = recorded_basis.quantize(Decimal("0.01"))
+    personal_gain_inr_s = ""
+    personal_gain_pct_s = ""
+    if recorded_basis > 0:
+        pg = (ref_personal_inr - recorded_basis).quantize(Decimal("0.01"))
+        personal_gain_inr_s = str(pg)
+        personal_gain_pct_s = str(
+            ((ref_personal_inr - recorded_basis) / recorded_basis * Decimal("100")).quantize(
+                Decimal("0.01")
+            )
+        )
+
     total_g = (cridora_active_g + personal_g).quantize(Decimal("0.000001"))
     from apps.accounts.vault_service import wallet_vault_payload
 
@@ -93,6 +120,9 @@ def customer_portfolio_totals_payload(user: User) -> dict[str, Any]:
         "vault_golden_scheme_grams": str(scheme_g.quantize(Decimal("0.000001"))),
         "cridora_estimated_value_inr": str(cridora_est_inr),
         "personal_estimated_value_inr": str(ref_personal_inr.quantize(Decimal("0.01"))),
+        "personal_recorded_cost_basis_inr": str(recorded_basis) if recorded_basis > 0 else "",
+        "personal_gain_on_recorded_cost_inr": personal_gain_inr_s,
+        "personal_gain_on_recorded_cost_percent": personal_gain_pct_s,
         "total_estimated_value_inr": str(total_est_inr),
     }
 

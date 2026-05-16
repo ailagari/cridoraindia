@@ -5827,6 +5827,31 @@ img {
   align-items: flex-start;
   margin-bottom: 1rem;
 }
+.pf-scope .pf-vault-hero--bar {
+  align-items: stretch;
+  padding: 1.05rem 1.2rem;
+  border-radius: 18px;
+  border: 1px solid rgba(251, 191, 36, 0.2);
+  background:
+    linear-gradient(145deg, rgba(251, 191, 36, 0.07) 0%, transparent 55%),
+    rgba(15, 23, 42, 0.35);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset;
+  margin-bottom: 1.15rem;
+  gap: 1rem 1.25rem;
+}
+.pf-scope .pf-vault-hero__text {
+  flex: 1 1 240px;
+  min-width: 0;
+}
+.pf-scope .pf-vault-hero__eyebrow {
+  display: block;
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(251, 191, 36, 0.88);
+  margin-bottom: 0.3rem;
+}
 .pf-scope .pf-vault-hero__title {
   margin: 0;
   font-size: 1.35rem;
@@ -5840,16 +5865,348 @@ img {
   line-height: 1.55;
   font-size: 0.92rem;
 }
-.pf-scope .pf-vault-form__head {
-  margin: 0 0 0.85rem;
-  font-size: 1rem;
+.pf-scope .pf-vault-hero__stat {
+  margin: 0.5rem 0 0;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.4;
 }
+.pf-scope .pf-vault-hero__stat--empty {
+  color: var(--text-faint);
+  font-style: italic;
+}
+.pf-scope .pf-vault-hero__stat-num {
+  font-weight: 800;
+  color: rgba(253, 224, 71, 0.95);
+}
+.pf-scope .pf-vault-hero__actions {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  align-self: center;
+}
+.pf-scope .pf-vault-hero__cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.58rem 1.2rem;
+  min-height: 2.65rem;
+  border-radius: 999px;
+  font: inherit;
+  font-weight: 750;
+  font-size: 0.87rem;
+  letter-spacing: 0.01em;
+  border: none;
+  cursor: pointer;
+  color: #0c1222;
+  background: linear-gradient(155deg, #fef3c7 0%, #fbbf24 42%, #d97706 125%);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.4) inset,
+    0 6px 20px rgba(180, 83, 9, 0.28);
+  transition:
+    transform 0.16s ease,
+    box-shadow 0.16s ease,
+    filter 0.16s ease;
+}
+.pf-scope .pf-vault-hero__cta:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.04);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.45) inset,
+    0 10px 28px rgba(180, 83, 9, 0.34);
+}
+.pf-scope .pf-vault-hero__cta:active {
+  transform: translateY(0);
+  filter: brightness(0.98);
+}
+.pf-scope .pf-vault-hero__cta:focus-visible {
+  outline: 2px solid rgba(251, 191, 36, 0.9);
+  outline-offset: 3px;
+}
+.pf-scope .pf-vault-hero__cta--muted {
+  color: var(--text);
+  background: rgba(30, 41, 59, 0.65);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.05) inset;
+}
+.pf-scope .pf-vault-hero__cta--muted:hover {
+  filter: brightness(1.08);
+  border-color: rgba(251, 191, 36, 0.35);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06) inset;
+}
+.pf-scope .pf-vault-hero__cta-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 999px;
+  font-size: 1.1rem;
+  font-weight: 400;
+  line-height: 1;
+  background: rgba(12, 18, 34, 0.2);
+  color: inherit;
+}
+.pf-scope .pf-vault-hero__cta--muted .pf-vault-hero__cta-icon {
+  background: rgba(251, 191, 36, 0.12);
+}
+.pf-scope .pf-vault-hero__cta-icon--close {
+  font-size: 1.25rem;
+  font-weight: 300;
+}
+.pf-scope .pf-vault-form {
+  position: relative;
+  margin-bottom: 1.35rem;
+  padding: 0;
+  overflow: hidden;
+  border-radius: 20px;
+  border: 1px solid rgba(251, 191, 36, 0.22);
+  background:
+    linear-gradient(165deg, rgba(251, 191, 36, 0.06) 0%, transparent 42%),
+    var(--surface-1, rgba(15, 23, 42, 0.72));
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.04) inset,
+    0 24px 48px rgba(0, 0, 0, 0.22);
+}
+
+.pf-scope .pf-vault-form::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 3px;
+  background: linear-gradient(
+    90deg,
+    rgba(251, 191, 36, 0.15),
+    rgba(251, 191, 36, 0.85),
+    rgba(253, 224, 71, 0.45),
+    rgba(251, 191, 36, 0.2)
+  );
+  pointer-events: none;
+}
+
+.pf-scope .pf-vault-form__header {
+  position: relative;
+  padding: 1.25rem 1.35rem 1rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+}
+.pf-scope .pf-vault-form__eyebrow {
+  display: block;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: rgba(251, 191, 36, 0.85);
+  margin-bottom: 0.35rem;
+}
+.pf-scope .pf-vault-form__title {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 780;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+}
+.pf-scope .pf-vault-form__lede {
+  margin: 0.55rem 0 0;
+  max-width: 62ch;
+  font-size: 0.86rem;
+  line-height: 1.55;
+  color: var(--text-muted);
+}
+
+.pf-scope .pf-vault-form__sections {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.85rem;
+  padding: 1rem 1.35rem 1.1rem;
+}
+
+@media (min-width: 768px) {
+  .pf-scope .pf-vault-form__sections {
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
+  }
+  .pf-scope .pf-vault-form__section--full {
+    grid-column: 1 / -1;
+  }
+}
+
+.pf-scope .pf-vault-form__section {
+  padding: 1rem 1.05rem;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  background: rgba(15, 23, 42, 0.35);
+}
+.pf-scope .pf-vault-form__section--metal {
+  border-color: rgba(251, 191, 36, 0.28);
+  background: linear-gradient(145deg, rgba(251, 191, 36, 0.09), rgba(15, 23, 42, 0.5));
+}
+.pf-scope .pf-vault-form__section-title {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+.pf-scope .pf-vault-form__section-hint {
+  margin: 0.35rem 0 0.85rem;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+.pf-scope .pf-vault-form__section > .pf-vault-field + .pf-vault-field {
+  margin-top: 0.85rem;
+}
+
+.pf-scope .pf-vault-form__metal-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem 1rem;
+}
+@media (min-width: 520px) {
+  .pf-scope .pf-vault-form__metal-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.pf-scope .pf-vault-form__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.35rem;
+}
+.pf-scope .pf-vault-form__chip {
+  appearance: none;
+  margin: 0;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 650;
+  padding: 0.42rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  color: var(--text-muted);
+  background: rgba(15, 23, 42, 0.55);
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    color 0.15s ease;
+}
+.pf-scope .pf-vault-form__chip:hover {
+  border-color: rgba(251, 191, 36, 0.45);
+  color: var(--text);
+}
+.pf-scope .pf-vault-form__chip--active {
+  border-color: rgba(251, 191, 36, 0.65);
+  background: rgba(251, 191, 36, 0.14);
+  color: #fde68a;
+  box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.12);
+}
+.pf-scope .pf-vault-form__chip:focus-visible {
+  outline: 2px solid rgba(251, 191, 36, 0.7);
+  outline-offset: 2px;
+}
+.pf-scope .pf-vault-form__chip:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.pf-scope .pf-vault-form__suffix-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.pf-scope .pf-vault-form__input--with-suffix {
+  padding-right: 2.35rem;
+  width: 100%;
+}
+.pf-scope .pf-vault-form__suffix {
+  position: absolute;
+  right: 0.85rem;
+  font-size: 0.82rem;
+  font-weight: 750;
+  color: var(--text-faint);
+  pointer-events: none;
+}
+
+.pf-scope .pf-vault-form__input:focus {
+  border-color: rgba(251, 191, 36, 0.45);
+}
+.pf-scope .pf-vault-form__textarea {
+  resize: vertical;
+  min-height: 4.5rem;
+  line-height: 1.45;
+}
+
 .pf-scope .pf-vault-form__grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 0.75rem 1rem;
-  margin-bottom: 1rem;
 }
+.pf-scope .pf-vault-form__grid--prov {
+  margin-top: 0;
+}
+
+.pf-scope .pf-vault-form__footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.85rem 1.25rem;
+  padding: 0.95rem 1.35rem 1.15rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.12);
+  background: rgba(0, 0, 0, 0.15);
+}
+.pf-scope .pf-vault-form__mvp {
+  margin: 0;
+  flex: 1 1 220px;
+  font-size: 0.72rem;
+  line-height: 1.45;
+  color: var(--text-faint);
+  max-width: 48ch;
+}
+.pf-scope .pf-vault-form__mvp-tag {
+  display: inline-block;
+  margin-right: 0.35rem;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  vertical-align: 0.05em;
+  background: rgba(56, 189, 248, 0.15);
+  color: #7dd3fc;
+}
+.pf-scope .pf-vault-form__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+.pf-scope .pf-vault-form__submit {
+  min-width: 8.5rem;
+}
+
+.pf-scope .pf-vault-form__saving {
+  margin: 0 1.35rem;
+  padding: 0.55rem 0.85rem;
+  border-radius: 10px;
+  border: 1px solid rgba(251, 191, 36, 0.35);
+  background: rgba(251, 191, 36, 0.08);
+  color: #fde68a;
+  font-size: 0.82rem;
+  font-weight: 650;
+}
+
+.pf-scope .pf-vault-save-flash {
+  max-width: none;
+}
+
 .pf-scope .pf-vault-field span {
   display: block;
   font-size: 0.72rem;
@@ -5903,6 +6260,132 @@ img {
   margin: 0.15rem 0 0;
   font-size: 0.7rem;
   color: var(--text-faint);
+}
+.pf-scope .pf-vault-card__basis {
+  margin: 0.35rem 0 0;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+.pf-scope .pf-vault-card__gain {
+  margin: 0.25rem 0 0;
+  font-size: 0.8rem;
+  font-weight: 650;
+  color: #6ee7b7;
+}
+.pf-scope .pf-vault-card__gain--down {
+  color: #fca5a5;
+}
+.pf-scope .pf-vault-card__gain-note {
+  font-weight: 500;
+  font-size: 0.72rem;
+  color: var(--text-faint);
+}
+.pf-scope .pf-vault-edit {
+  margin-top: 0.9rem;
+  padding: 0.85rem 1rem;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(15, 23, 42, 0.4);
+}
+.pf-scope .pf-vault-edit__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  margin-top: 0.75rem;
+}
+.pf-scope .pf-vault-docs--inline {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.15);
+}
+.pf-scope .pf-vault-docs__head {
+  margin-bottom: 0.35rem;
+}
+.pf-scope .pf-vault-docs__replace-hint {
+  margin: 0.35rem 0 0;
+  font-size: 0.8rem;
+  font-weight: 650;
+  color: #fde68a;
+}
+.pf-scope .pf-vault-docs .pf-vault-disclaimer {
+  margin: 0 0 0.65rem;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+.pf-scope .pf-vault-doc-feedback {
+  margin: 0 0 0.65rem !important;
+  max-width: none !important;
+  font-size: 0.82rem !important;
+}
+.pf-scope .pf-vault-doc-add {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 0.65rem;
+}
+.pf-scope .pf-vault-doc-add__type {
+  max-width: 220px;
+}
+.pf-scope .pf-vault-docs__empty {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+.pf-scope .pf-vault-doc-rows {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.pf-scope .pf-vault-doc-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.65rem;
+  align-items: flex-start;
+  padding: 0.65rem 0.85rem;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  background: rgba(15, 23, 42, 0.45);
+}
+.pf-scope .pf-vault-doc-row__type {
+  display: block;
+  font-weight: 750;
+  font-size: 0.84rem;
+}
+.pf-scope .pf-vault-doc-row__name {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  word-break: break-word;
+}
+.pf-scope .pf-vault-doc-row__meta {
+  display: inline-block;
+  margin-right: 0.65rem;
+  font-size: 0.74rem;
+  color: var(--text-faint);
+}
+.pf-scope .pf-vault-doc-row__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+}
+.pf-scope .pf-vault-form__metal-grid .pf-vault-field--wide {
+  grid-column: 1 / -1;
+}
+.pf-scope .pf-wealth-kpi__val.pf-wealth-kpi__val--neg {
+  color: #fca5a5 !important;
+}
+.pf-scope .pf-vault-card__foot--toolbar {
+  margin-top: 0.65rem;
+  margin-bottom: 0.25rem;
 }
 .pf-scope .pf-vault-card__foot {
   display: flex;

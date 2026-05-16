@@ -53,6 +53,9 @@ export type PortfolioTotalsDTO = {
   cridora_active_grams?: string
   cridora_estimated_value_inr?: string
   personal_estimated_value_inr?: string
+  personal_recorded_cost_basis_inr?: string
+  personal_gain_on_recorded_cost_inr?: string
+  personal_gain_on_recorded_cost_percent?: string
   total_estimated_value_inr?: string
 }
 

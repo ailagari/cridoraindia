@@ -7,6 +7,7 @@ from decimal import Decimal
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import transaction
+from django.db.models import Prefetch
 from django.http import FileResponse, Http404
 from django.utils import timezone
 from rest_framework import status
@@ -38,6 +39,19 @@ def _max_upload_bytes() -> int:
     return int(getattr(settings, "PERSONAL_HOLDING_MAX_UPLOAD_BYTES", 8 * 1024 * 1024))
 
 
+def _parse_purchase_price_inr_per_gram_field(raw) -> tuple[Decimal | None, str | None]:
+    """Return (quantized value, error_detail). None value with no error means clear field."""
+    if raw in (None, "", "null"):
+        return None, None
+    try:
+        pp = Decimal(str(raw))
+    except Exception:
+        return None, "Invalid purchase_price_inr_per_gram."
+    if pp < 0:
+        return None, "purchase_price_inr_per_gram must be >= 0."
+    return pp.quantize(Decimal("0.0001")), None
+
+
 def _recalc_holding_inr(h: PersonalGoldHolding) -> None:
     rate, _ = reference_gold_rate_inr_per_gram()
     h.estimated_current_value_inr = calculate_holding_value_inr(h.weight_grams, rate)
@@ -64,6 +78,15 @@ def _holding_detail_dict(
     if doc_count is None:
         doc_count = h.documents.filter(is_removed=False).count()
 
+    basis = None
+    if h.purchase_price_inr_per_gram is not None:
+        basis = (h.weight_grams * h.purchase_price_inr_per_gram).quantize(Decimal("0.01"))
+    gain_inr_s = ""
+    gain_pct_s = ""
+    if basis is not None and basis > 0:
+        gain_inr_s = str((live_inr - basis).quantize(Decimal("0.01")))
+        gain_pct_s = str(((live_inr - basis) / basis * Decimal("100")).quantize(Decimal("0.01")))
+
     status_map = {
         PersonalGoldHolding.SELF_DECLARED: "Self Declared",
         PersonalGoldHolding.JEWELLER_ADDED: "Added by Jeweller",
@@ -78,6 +101,12 @@ def _holding_detail_dict(
         "purity": h.purity,
         "purchase_date": h.purchase_date.isoformat() if h.purchase_date else None,
         "purchase_source": h.purchase_source or "",
+        "purchase_price_inr_per_gram": (
+            str(h.purchase_price_inr_per_gram) if h.purchase_price_inr_per_gram is not None else None
+        ),
+        "purchase_cost_basis_inr": str(basis) if basis is not None else "",
+        "reference_gain_inr": gain_inr_s,
+        "reference_gain_percent": gain_pct_s,
         "estimated_current_value_inr": str(live_inr),
         "is_self_declared": h.is_self_declared,
         "verification_status": h.verification_status,
@@ -228,9 +257,23 @@ class PersonalHoldingsListCreateView(APIView):
         if request.user.user_type != User.CUSTOMER:
             return Response({"detail": "Customers only."}, status=status.HTTP_403_FORBIDDEN)
         qs = customer_personal_holdings_qs(request.user)
+        inc_docs = str(request.query_params.get("documents") or "").lower() in (
+            "1",
+            "true",
+            "yes",
+        )
+        if inc_docs:
+            qs = qs.prefetch_related(
+                Prefetch(
+                    "documents",
+                    queryset=PersonalHoldingDocument.objects.filter(is_removed=False).order_by(
+                        "-created_at"
+                    ),
+                )
+            )
         return Response(
             {
-                "results": [_holding_detail_dict(h, include_documents=False) for h in qs],
+                "results": [_holding_detail_dict(h, include_documents=inc_docs) for h in qs],
                 "reference_gold_inr_per_gram_22k": str(reference_gold_rate_inr_per_gram()[0].quantize(Decimal("0.01"))),
             }
         )
@@ -256,6 +299,13 @@ class PersonalHoldingsListCreateView(APIView):
             purity = "BIS 916"
         purchase_source = (request.data.get("purchase_source") or "").strip()[:512]
         notes = (request.data.get("notes") or "").strip()
+        purchase_price_inr_per_gram = None
+        if request.data.get("purchase_price_inr_per_gram") not in (None, "", "null"):
+            purchase_price_inr_per_gram, perr = _parse_purchase_price_inr_per_gram_field(
+                request.data.get("purchase_price_inr_per_gram")
+            )
+            if perr:
+                return Response({"detail": perr}, status=status.HTTP_400_BAD_REQUEST)
         purchase_date = None
         if request.data.get("purchase_date"):
             from datetime import date as date_cls
@@ -275,6 +325,7 @@ class PersonalHoldingsListCreateView(APIView):
                 purity=purity,
                 purchase_date=purchase_date,
                 purchase_source=purchase_source,
+                purchase_price_inr_per_gram=purchase_price_inr_per_gram,
                 is_self_declared=True,
                 verification_status=PersonalGoldHolding.SELF_DECLARED,
                 created_by_type=PersonalGoldHolding.CREATED_BY_USER,
@@ -335,6 +386,15 @@ class PersonalHoldingDetailView(APIView):
                     h.purity = str(val or "").strip()[:64] or "BIS 916"
                 else:
                     setattr(h, field, str(val or "").strip()[:512] if field != "title" else str(val or "").strip()[:255])
+        if "purchase_price_inr_per_gram" in request.data:
+            raw_pp = request.data.get("purchase_price_inr_per_gram")
+            if raw_pp in (None, "", "null"):
+                h.purchase_price_inr_per_gram = None
+            else:
+                ppv, perr = _parse_purchase_price_inr_per_gram_field(raw_pp)
+                if perr:
+                    return Response({"detail": perr}, status=status.HTTP_400_BAD_REQUEST)
+                h.purchase_price_inr_per_gram = ppv
         if "weight_grams" in request.data:
             try:
                 wg = Decimal(str(request.data.get("weight_grams") or "0"))
