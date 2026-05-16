@@ -76,9 +76,7 @@ export function CustomerVaultsPanel() {
                   <p style={{ margin: 0, fontSize: '0.62rem', fontWeight: 800, letterSpacing: '0.08em', color: 'var(--text-faint)' }}>
                     GOLD HELD
                   </p>
-                  <p style={{ margin: '0.2rem 0 0', fontSize: '1.55rem', fontWeight: 800 }} className="tabular">
-                    {v.fractional_grams} g
-                  </p>
+                  <p className="pf-vault-card__grams-glow tabular">{v.fractional_grams} g</p>
                 </div>
               </div>
               <div
@@ -102,7 +100,7 @@ export function CustomerVaultsPanel() {
                   Board mark ₹{parseG(v.jeweller_metal_rate_inr_per_gram ?? '0').toLocaleString('en-IN', { maximumFractionDigits: 2 })}/g
                   {' · '}
                   <span style={{ fontSize: '0.76rem', color: 'var(--text-faint)' }}>Indicative ₹ value</span>{' '}
-                  <strong className="tabular" style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-muted)' }}>
+                  <strong className="tabular pf-vault-card__inr-value">
                     ₹{parseG(v.estimated_fractional_value_inr ?? '0').toLocaleString('en-IN', { maximumFractionDigits: 0 })}
                   </strong>
                 </p>
