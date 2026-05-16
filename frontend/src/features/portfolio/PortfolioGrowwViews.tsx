@@ -114,6 +114,9 @@ export function PortfolioGrowwHero({
   masked,
   onToggleMask,
   summaryChartSlot,
+  portfolioTotalGrams,
+  portfolioTotalInr,
+  personalGrams,
 }: {
   activeVaultCount: number
   totalGrams: number
@@ -125,6 +128,10 @@ export function PortfolioGrowwHero({
   onToggleMask: () => void
   /** Live value vs cost spark; when omitted, summary is two columns (value + cost | P&amp;L). */
   summaryChartSlot?: ReactNode
+  /** When set, shows full portfolio (vault + personal) totals above the vaulted hero column. */
+  portfolioTotalGrams?: number | null
+  portfolioTotalInr?: number | null
+  personalGrams?: number | null
 }) {
 
   const mainVal = `₹${fmtInr2(marketValueInr)}`
@@ -137,14 +144,44 @@ export function PortfolioGrowwHero({
   const disp = (s: string) => (masked ? maskInr(s) : s)
   const triple = summaryChartSlot != null
 
+  const hasPortfolioWide =
+    portfolioTotalGrams != null &&
+    Number.isFinite(portfolioTotalGrams) &&
+    portfolioTotalGrams > 0 &&
+    portfolioTotalInr != null &&
+    Number.isFinite(portfolioTotalInr)
+
   return (
     <section className="pf-groww-hero" aria-label="Portfolio summary">
+      {hasPortfolioWide ? (
+        <div className="pf-groww-hero__portfolio-band" aria-label="Total portfolio metal">
+          <div className="pf-groww-hero__portfolio-band-label">Total holdings</div>
+          <div className="pf-groww-hero__portfolio-band-main">
+            <span className="pf-groww-hero__portfolio-band-grams tabular">
+              {(portfolioTotalGrams as number).toFixed(3)} g
+            </span>
+            <span className="pf-groww-hero__portfolio-band-dot" aria-hidden />
+            <span className="pf-groww-hero__portfolio-band-inr tabular">
+              {disp(`₹${fmtInr2(portfolioTotalInr as number)}`)}
+            </span>
+          </div>
+          <p className="pf-groww-hero__portfolio-band-hint">
+            Vault metal plus personal records — indicative value from live vault marks and 22K reference on personal
+          </p>
+          {personalGrams != null && personalGrams > 0 ? (
+            <p className="pf-groww-hero__portfolio-band-split tabular">
+              Personal holdings: {(personalGrams as number).toFixed(3)} g included above
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
       <div
         className={`pf-groww-hero__summary${triple ? ' pf-groww-hero__summary--triple' : ' pf-groww-hero__summary--double'}`}
       >
         <div className="pf-groww-hero__col pf-groww-hero__col--value">
           <div className="pf-groww-hero__eyebrow">
-            <span>Vault holdings ({activeVaultCount})</span>
+            <span>Cridora vaulted ({activeVaultCount})</span>
             <SvgIconChevronDown />
           </div>
           <p className="pf-groww-hero__big pf-groww-hero__big--grams tabular">{`${totalGrams.toFixed(6)} g`}</p>
@@ -220,6 +257,16 @@ export function PortfolioVaultHoldingsList({
 }) {
   const [sortBy, setSortBy] = useState<'grams' | 'value' | 'name'>('grams')
 
+  const heldVaultMarketInr = useMemo(() => {
+    let t = 0
+    for (const v of vaults) {
+      if (parseG(v.fractional_grams) > 0) {
+        t += parseG(v.estimated_fractional_value_inr ?? '0')
+      }
+    }
+    return t
+  }, [vaults])
+
   const rows = useMemo(() => {
     const held = vaults.filter((v) => parseG(v.fractional_grams) > 0)
     const denom = totalHeldGrams > 0 ? totalHeldGrams : 1
@@ -263,7 +310,27 @@ export function PortfolioVaultHoldingsList({
   const disp = (s: string) => (masked ? maskInr(s) : s)
 
   return (
-    <section className="pf-groww-holdings" aria-label="Holdings by vault">
+    <section className="pf-groww-holdings pf-groww-holdings--panel" aria-label="Holdings by vault">
+      <header className="pf-groww-holdings__head">
+        <div className="pf-groww-holdings__head-text">
+          <h3 className="pf-groww-holdings__title">Your vaulted positions</h3>
+          <p className="pf-groww-holdings__subtitle">Per‑jeweller fractional balance and live mark</p>
+        </div>
+        {totalHeldGrams > 0 ? (
+          <div className="pf-groww-holdings__head-metrics" aria-label="Vault holdings totals">
+            <div className="pf-groww-holdings__metric">
+              <span className="pf-groww-holdings__metric-label">Total in vaults</span>
+              <span className="pf-groww-holdings__metric-val tabular">{totalHeldGrams.toFixed(4)} g</span>
+            </div>
+            <div className="pf-groww-holdings__metric">
+              <span className="pf-groww-holdings__metric-label">Indicative value</span>
+              <span className="pf-groww-holdings__metric-val tabular pf-groww-holdings__metric-val--inr">
+                {disp(`₹${fmtInr2(heldVaultMarketInr)}`)}
+              </span>
+            </div>
+          </div>
+        ) : null}
+      </header>
       <div className="pf-groww-holdings__bar">
         <button
           type="button"

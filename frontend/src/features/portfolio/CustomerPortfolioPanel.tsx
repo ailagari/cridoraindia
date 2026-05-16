@@ -236,7 +236,7 @@ export function CustomerPortfolioPanel() {
           <>
             {totals ? (
               <div className="pf-wealth-kpis" aria-label="Total wealth summary">
-                <div className="pf-wealth-kpi">
+                <div className="pf-wealth-kpi pf-wealth-kpi--lead">
                   <span className="pf-wealth-kpi__eyebrow">Total gold</span>
                   <p className="pf-wealth-kpi__val tabular">{parseG(totals.total_gold_grams ?? '0').toFixed(3)} g</p>
                   <p className="pf-wealth-kpi__hint">Vault + personal records</p>
@@ -315,6 +315,9 @@ export function CustomerPortfolioPanel() {
               pnlPct={Number.isFinite(pnlPct) ? pnlPct : null}
               masked={privacyMasked}
               onToggleMask={() => setPrivacyMasked((m) => !m)}
+              portfolioTotalGrams={totals ? parseG(totals.total_gold_grams ?? '0') : null}
+              portfolioTotalInr={totals ? parseInrNum(totals.total_estimated_value_inr ?? '0') : null}
+              personalGrams={totals ? parseG(totals.personal_grams ?? '0') : null}
               summaryChartSlot={
                 heldGramsSum > 0 ? (
                   sessionValueSamples.length === 0 ? (
