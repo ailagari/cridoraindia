@@ -1,5 +1,5 @@
 import { DeferredFilePicker } from '@/components/ui'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   fetchJewellerCustodyVaults,
   fetchJewellerCustomerVaultLedger,
@@ -30,7 +30,6 @@ function formatLedgerTxnType(t: string): string {
       return 'Golden scheme'
     case 'personal':
       return 'Personal holding'
-      return 'Redeem'
     default:
       return t.replace(/_/g, ' ')
   }
@@ -65,7 +64,14 @@ export function JewellerCustomerVaultsPanel() {
   const [loadErr, setLoadErr] = useState('')
   const [ledgerByCustomer, setLedgerByCustomer] = useState<Record<number, LedgerRowState>>({})
   const [ledgerFilter, setLedgerFilter] = useState('all')
+  /** Accordion open state — ref only so filter changes do not duplicate effects. */
+  const ledgerOpenCustomersRef = useRef<Record<number, boolean>>({})
+  const ledgerFilterRef = useRef(ledgerFilter)
   const [addOpen, setAddOpen] = useState(false)
+
+  useEffect(() => {
+    ledgerFilterRef.current = ledgerFilter
+  }, [ledgerFilter])
 
   const refresh = useCallback(async () => {
     setLoadErr('')
@@ -88,6 +94,7 @@ export function JewellerCustomerVaultsPanel() {
 
   const ensureLedger = useCallback(
     async (customerId: number) => {
+      const requestedFilter = ledgerFilterRef.current
       let skipFetch = false
       setLedgerByCustomer((prev) => {
         const cur = prev[customerId]
@@ -95,14 +102,17 @@ export function JewellerCustomerVaultsPanel() {
           skipFetch = true
           return prev
         }
-        if (cur?.status === 'ok' && cur.filter === ledgerFilter) {
+        if (cur?.status === 'ok' && cur.filter === requestedFilter) {
           skipFetch = true
           return prev
         }
         return { ...prev, [customerId]: { status: 'loading' } }
       })
       if (skipFetch) return
-      const data = await fetchJewellerCustomerVaultLedger(customerId, ledgerFilter)
+      const data = await fetchJewellerCustomerVaultLedger(customerId, requestedFilter)
+      if (ledgerFilterRef.current !== requestedFilter) {
+        return
+      }
       if (!data) {
         setLedgerByCustomer((prev) => ({
           ...prev,
@@ -112,11 +122,21 @@ export function JewellerCustomerVaultsPanel() {
       }
       setLedgerByCustomer((prev) => ({
         ...prev,
-        [customerId]: { status: 'ok', data, filter: ledgerFilter },
+        [customerId]: { status: 'ok', data, filter: requestedFilter },
       }))
     },
-    [ledgerFilter],
+    [],
   )
+
+  useEffect(() => {
+    setLedgerByCustomer({})
+    const ids = Object.entries(ledgerOpenCustomersRef.current)
+      .filter(([, open]) => open)
+      .map(([id]) => Number(id))
+    for (const id of ids) {
+      if (Number.isFinite(id)) void ensureLedger(id)
+    }
+  }, [ledgerFilter, ensureLedger])
 
   const sampleRateIso = rows[0]?.jeweller_metal_rate_last_updated_at
 
@@ -150,8 +170,9 @@ export function JewellerCustomerVaultsPanel() {
           [
             ['all', 'All'],
             ['fractional', 'Fractional'],
-            ['deposit', 'Deposit'],
-            ['golden_scheme', 'Golden scheme'],
+            ['transfer_in', 'Transfer in'],
+            ['transfer_out', 'Transfer out'],
+            ['sellback', 'Sellback'],
             ['personal', 'Personal'],
           ] as const
         ).map(([id, label]) => (
@@ -159,10 +180,7 @@ export function JewellerCustomerVaultsPanel() {
             key={id}
             type="button"
             className={`btn btn-sm${ledgerFilter === id ? ' btn-primary' : ' btn-ghost'}`}
-            onClick={() => {
-              setLedgerFilter(id)
-              setLedgerByCustomer({})
-            }}
+            onClick={() => setLedgerFilter(id)}
           >
             {label}
           </button>
@@ -246,7 +264,9 @@ export function JewellerCustomerVaultsPanel() {
                 className="jeweller-mkt-acc card jeweller-vault-ledger-acc"
                 style={{ marginTop: '1rem' }}
                 onToggle={(ev) => {
-                  if (!ev.currentTarget.open) return
+                  const open = ev.currentTarget.open
+                  ledgerOpenCustomersRef.current[v.customer_id] = open
+                  if (!open) return
                   void ensureLedger(v.customer_id)
                 }}
               >

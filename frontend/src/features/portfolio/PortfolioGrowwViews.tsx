@@ -3,7 +3,6 @@ import type { ReactNode } from 'react'
 import type { GoldTickerPayload, SpotPricesPayload } from '@/lib/marketplaceApi'
 import type { VaultRowDTO } from '@/lib/goldTransferApi'
 import { VaultTrendSparkline } from './PortfolioCharts'
-import { CridoraGoldPriceHistory } from './CridoraGoldPriceHistory'
 
 function parseG(s: string): number {
   const n = Number.parseFloat(s)
@@ -312,45 +311,43 @@ export function PortfolioVaultHoldingsList({
 
   return (
     <section className="pf-groww-holdings pf-groww-holdings--panel" aria-label="Holdings by vault">
-      <CridoraGoldPriceHistory
-        vaultTotals={
-          totalHeldGrams > 0 ? (
-            <>
-              <span className="pf-groww-holdings__metric-label">Total in vaults</span>
-              <span className="pf-groww-holdings__metric-val tabular">{totalHeldGrams.toFixed(4)} g</span>
-              <span className="pf-groww-holdings__metric-label pf-groww-holdings__metric-label--after">Indicative value</span>
-              <span className="pf-groww-holdings__metric-val tabular pf-groww-holdings__metric-val--inr">
-                {disp(`₹${fmtInr2(heldVaultMarketInr)}`)}
-              </span>
-            </>
-          ) : null
-        }
-        vaultSortBar={
-          <div className="pf-groww-holdings__bar pf-groww-holdings__bar--in-chart">
-            <button
-              type="button"
-              className={`pf-groww-mini-sort ${sortBy === 'grams' ? 'pf-groww-mini-sort--on' : ''}`}
-              onClick={() => setSortBy('grams')}
-            >
-              Sort <SvgIconSort /> · grams
-            </button>
-            <button
-              type="button"
-              className={`pf-groww-mini-sort ${sortBy === 'value' ? 'pf-groww-mini-sort--on' : ''}`}
-              onClick={() => setSortBy('value')}
-            >
-              Sort <SvgIconSort /> · value
-            </button>
-            <button
-              type="button"
-              className={`pf-groww-mini-sort ${sortBy === 'name' ? 'pf-groww-mini-sort--on' : ''}`}
-              onClick={() => setSortBy('name')}
-            >
-              <SvgIconGrid /> · name
-            </button>
+      <div className="pf-groww-holdings__vault-toolbar">
+        {totalHeldGrams > 0 ? (
+          <div className="pf-groww-holdings__vault-totals-row" aria-label="Vault holdings totals">
+            <span className="pf-groww-holdings__metric-label">Total in vaults</span>
+            <span className="pf-groww-holdings__metric-val tabular">{totalHeldGrams.toFixed(4)} g</span>
+            <span className="pf-groww-holdings__metric-label pf-groww-holdings__metric-label--after">Indicative value</span>
+            <span className="pf-groww-holdings__metric-val tabular pf-groww-holdings__metric-val--inr">
+              {disp(`₹${fmtInr2(heldVaultMarketInr)}`)}
+            </span>
           </div>
-        }
-      />
+        ) : (
+          <span className="pf-groww-holdings__vault-toolbar-spacer" aria-hidden />
+        )}
+        <div className="pf-groww-holdings__bar pf-groww-holdings__bar--toolbar-end">
+          <button
+            type="button"
+            className={`pf-groww-mini-sort ${sortBy === 'grams' ? 'pf-groww-mini-sort--on' : ''}`}
+            onClick={() => setSortBy('grams')}
+          >
+            Sort <SvgIconSort /> · grams
+          </button>
+          <button
+            type="button"
+            className={`pf-groww-mini-sort ${sortBy === 'value' ? 'pf-groww-mini-sort--on' : ''}`}
+            onClick={() => setSortBy('value')}
+          >
+            Sort <SvgIconSort /> · value
+          </button>
+          <button
+            type="button"
+            className={`pf-groww-mini-sort ${sortBy === 'name' ? 'pf-groww-mini-sort--on' : ''}`}
+            onClick={() => setSortBy('name')}
+          >
+            <SvgIconGrid /> · name
+          </button>
+        </div>
+      </div>
 
       {rows.length === 0 ? (
         <p className="pf-groww-holdings__empty">No vault holdings yet — buy fractional gold from a verified jeweller.</p>
