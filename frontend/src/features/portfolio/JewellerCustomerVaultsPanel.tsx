@@ -1,3 +1,4 @@
+import { DeferredFilePicker } from '@/components/ui'
 import { useCallback, useEffect, useState } from 'react'
 import {
   fetchJewellerCustodyVaults,
@@ -360,8 +361,17 @@ function JewellerPersonalHoldingInline({ onDone }: { onDone: () => void }) {
   const [weight, setWeight] = useState('')
   const [purity, setPurity] = useState('BIS 916')
   const [invoiceNumber, setInvoiceNumber] = useState('')
+  const [productImageFile, setProductImageFile] = useState<File | null>(null)
+  const [invoiceMediaFile, setInvoiceMediaFile] = useState<File | null>(null)
   const [busy, setBusy] = useState(false)
   const [formErr, setFormErr] = useState('')
+  const [formSuccess, setFormSuccess] = useState('')
+
+  useEffect(() => {
+    if (!formSuccess) return
+    const t = window.setTimeout(() => setFormSuccess(''), 7000)
+    return () => window.clearTimeout(t)
+  }, [formSuccess])
 
   const runLookup = async () => {
     setLookupErr('')
@@ -381,6 +391,7 @@ function JewellerPersonalHoldingInline({ onDone }: { onDone: () => void }) {
 
   const submit = async () => {
     setFormErr('')
+    setFormSuccess('')
     if (customerId == null) {
       setFormErr('Look up a verified customer first.')
       return
@@ -393,10 +404,8 @@ function JewellerPersonalHoldingInline({ onDone }: { onDone: () => void }) {
     fd.set('weight_grams', weight.trim())
     fd.set('purity', purity.trim() || 'BIS 916')
     if (invoiceNumber.trim()) fd.set('invoice_number', invoiceNumber.trim())
-    const img = (document.getElementById('jph-product-image') as HTMLInputElement | null)?.files?.[0]
-    const inv = (document.getElementById('jph-invoice-file') as HTMLInputElement | null)?.files?.[0]
-    if (img) fd.set('product_image', img)
-    if (inv) fd.set('invoice_file', inv)
+    if (productImageFile) fd.set('product_image', productImageFile)
+    if (invoiceMediaFile) fd.set('invoice_file', invoiceMediaFile)
     const res = await jewellerCreatePersonalHolding(fd)
     setBusy(false)
     if (!res.ok) {
@@ -406,6 +415,9 @@ function JewellerPersonalHoldingInline({ onDone }: { onDone: () => void }) {
     setTitle('')
     setWeight('')
     setInvoiceNumber('')
+    setProductImageFile(null)
+    setInvoiceMediaFile(null)
+    setFormSuccess(`Added “${res.data.title}” to the customer’s Gold Records Vault.`)
     onDone()
   }
 
@@ -458,16 +470,27 @@ function JewellerPersonalHoldingInline({ onDone }: { onDone: () => void }) {
           <input className="input" value={invoiceNumber} onChange={(e) => setInvoiceNumber(e.target.value)} />
         </label>
       </div>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem' }}>
-        <label style={{ fontSize: '0.82rem' }}>
-          Product photo
-          <input id="jph-product-image" type="file" accept=".jpg,.jpeg,.png,.webp" style={{ display: 'block', marginTop: '0.25rem' }} />
-        </label>
-        <label style={{ fontSize: '0.82rem' }}>
-          Invoice PDF/photo
-          <input id="jph-invoice-file" type="file" accept=".jpg,.jpeg,.png,.webp,.pdf" style={{ display: 'block', marginTop: '0.25rem' }} />
-        </label>
+      <div className="jeweller-vault-files" style={{ display: 'grid', gap: '0.75rem', maxWidth: '520px' }}>
+        <DeferredFilePicker
+          label="Product photo"
+          accept=".jpg,.jpeg,.png,.webp"
+          file={productImageFile}
+          onChange={setProductImageFile}
+          disabled={busy}
+        />
+        <DeferredFilePicker
+          label="Invoice PDF or photo"
+          accept=".jpg,.jpeg,.png,.webp,.pdf"
+          file={invoiceMediaFile}
+          onChange={setInvoiceMediaFile}
+          disabled={busy}
+        />
       </div>
+      {formSuccess ? (
+        <p className="form-feedback form-feedback--success" role="status">
+          {formSuccess}
+        </p>
+      ) : null}
       {formErr ? <p className="form-error">{formErr}</p> : null}
       <button type="button" className="btn btn-primary" disabled={busy || customerId == null} onClick={() => void submit()}>
         Add to customer vault

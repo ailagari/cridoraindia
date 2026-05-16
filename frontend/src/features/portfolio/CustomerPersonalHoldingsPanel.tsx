@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { FileUploadTrigger, type FileUploadTriggerPhase } from '@/components/ui'
 import {
   createPersonalHolding,
   deletePersonalDocument,
@@ -260,7 +261,7 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
         </p>
       ) : null}
       {vaultSaveSuccess ? (
-        <p className="admin-dash-form-success admin-dash-form-success--block pf-vault-save-flash" role="status">
+        <p className="form-feedback form-feedback--success pf-vault-save-flash" role="status">
           {vaultSaveSuccess}
         </p>
       ) : null}
@@ -721,9 +722,13 @@ function HoldingDocumentsPanel({
 
   const [feedback, setFeedback] = useState('')
 
-  const [uploadBusy, setUploadBusy] = useState(false)
+  const [uploadPhase, setUploadPhase] = useState<FileUploadTriggerPhase>('idle')
+
+  const [pickPreview, setPickPreview] = useState<{ url: string | null; name: string } | null>(null)
 
   const [replaceTarget, setReplaceTarget] = useState<PersonalDocumentDTO | null>(null)
+
+  const fileGateBusy = uploadPhase === 'uploading' || uploadPhase === 'done'
 
   useEffect(() => {
 
@@ -737,9 +742,37 @@ function HoldingDocumentsPanel({
 
 
 
+  useEffect(() => {
+
+    if (uploadPhase !== 'done' && uploadPhase !== 'error') return
+
+    const ms = uploadPhase === 'done' ? 2200 : 4000
+
+    const t = window.setTimeout(() => setUploadPhase('idle'), ms)
+
+    return () => window.clearTimeout(t)
+
+  }, [uploadPhase])
+
+
+
   const runUpload = async (file: File, type: string, replaceOf: PersonalDocumentDTO | null) => {
 
-    setUploadBusy(true)
+    let objectUrl: string | null = null
+
+    if (file.type.startsWith('image/')) {
+
+      objectUrl = URL.createObjectURL(file)
+
+      setPickPreview({ url: objectUrl, name: file.name })
+
+    } else {
+
+      setPickPreview({ url: null, name: file.name })
+
+    }
+
+    setUploadPhase('uploading')
 
     setFeedback('')
 
@@ -749,47 +782,63 @@ function HoldingDocumentsPanel({
 
     fd.set('document_type', type)
 
-    const up = await uploadPersonalDocument(holdingId, fd)
+    try {
 
-    if (!up.ok) {
+      const up = await uploadPersonalDocument(holdingId, fd)
 
-      onError(up.detail)
+      if (!up.ok) {
 
-      setUploadBusy(false)
+        onError(up.detail)
 
-      return
-
-    }
-
-    if (replaceOf) {
-
-      const del = await deletePersonalDocument(holdingId, replaceOf.id)
-
-      if (!del.ok) {
-
-        onError(del.detail)
-
-        setFeedback('New file saved; could not remove the old copy. Delete it manually if you see two files.')
-
-        setReplaceTarget(null)
-
-        setUploadBusy(false)
-
-        onChanged()
+        setUploadPhase('error')
 
         return
 
       }
 
+      if (replaceOf) {
+
+        const del = await deletePersonalDocument(holdingId, replaceOf.id)
+
+        if (!del.ok) {
+
+          onError(del.detail)
+
+          setFeedback('New file saved; could not remove the old copy. Delete it manually if you see two files.')
+
+          setReplaceTarget(null)
+
+          setUploadPhase('error')
+
+          onChanged()
+
+          return
+
+        }
+
+      }
+
+      setFeedback(replaceOf ? 'File replaced.' : 'Uploaded.')
+
+      setReplaceTarget(null)
+
+      setUploadPhase('done')
+
+      onChanged()
+
+    } catch {
+
+      onError('Could not reach the server.')
+
+      setUploadPhase('error')
+
+    } finally {
+
+      if (objectUrl) URL.revokeObjectURL(objectUrl)
+
+      setPickPreview(null)
+
     }
-
-    setFeedback(replaceOf ? 'File replaced.' : 'Uploaded.')
-
-    setReplaceTarget(null)
-
-    setUploadBusy(false)
-
-    onChanged()
 
   }
 
@@ -825,7 +874,7 @@ function HoldingDocumentsPanel({
 
       {feedback ? (
 
-        <p className="admin-dash-form-success admin-dash-form-success--block pf-vault-doc-feedback" role="status">
+        <p className="form-feedback form-feedback--success pf-vault-doc-feedback" role="status">
 
           {feedback}
 
@@ -833,9 +882,25 @@ function HoldingDocumentsPanel({
 
       ) : null}
 
+      {pickPreview ? (
+
+        <div className="ui-staging-preview" aria-live="polite">
+
+          {pickPreview.url ? <img className="ui-staging-preview__thumb" src={pickPreview.url} alt="" /> : null}
+
+          <p className="ui-staging-preview__meta">
+
+            <strong>Selected:</strong> {pickPreview.name}
+
+          </p>
+
+        </div>
+
+      ) : null}
+
       <div className="pf-vault-doc-add">
 
-        <select className="input pf-vault-doc-add__type" value={docType} onChange={(e) => setDocType(e.target.value)} disabled={uploadBusy}>
+        <select className="input pf-vault-doc-add__type" value={docType} onChange={(e) => setDocType(e.target.value)} disabled={fileGateBusy}>
 
           {DOC_TYPES.map((d) => (
 
@@ -849,41 +914,29 @@ function HoldingDocumentsPanel({
 
         </select>
 
-        <label className="btn btn-ghost" style={{ cursor: uploadBusy ? 'wait' : 'pointer' }}>
+        <FileUploadTrigger
 
-          {uploadBusy ? 'Working…' : replaceTarget ? 'Choose replacement' : 'Upload file'}
+          accept=".jpg,.jpeg,.png,.webp,.pdf"
 
-          <input
+          phase={uploadPhase}
 
-            type="file"
+          disabled={fileGateBusy}
 
-            accept=".jpg,.jpeg,.png,.webp,.pdf"
+          idleLabel={replaceTarget ? 'Choose replacement' : 'Upload file'}
 
-            hidden
+          onFile={(f) => {
 
-            disabled={uploadBusy}
+            const type = replaceTarget ? replaceTarget.document_type : docType
 
-            onChange={(e) => {
+            void runUpload(f, type, replaceTarget)
 
-              const f = e.target.files?.[0]
+          }}
 
-              e.target.value = ''
-
-              if (!f) return
-
-              const type = replaceTarget ? replaceTarget.document_type : docType
-
-              void runUpload(f, type, replaceTarget)
-
-            }}
-
-          />
-
-        </label>
+        />
 
         {replaceTarget ? (
 
-          <button type="button" className="btn btn-ghost btn-sm" disabled={uploadBusy} onClick={() => setReplaceTarget(null)}>
+          <button type="button" className="btn btn-ghost btn-sm" disabled={fileGateBusy} onClick={() => setReplaceTarget(null)}>
 
             Cancel replace
 
@@ -931,7 +984,7 @@ function HoldingDocumentsPanel({
 
                   className="btn btn-ghost btn-sm"
 
-                  disabled={uploadBusy}
+                  disabled={fileGateBusy}
 
                   onClick={() => {
 
@@ -955,7 +1008,7 @@ function HoldingDocumentsPanel({
 
                   className="btn btn-ghost btn-sm"
 
-                  disabled={uploadBusy}
+                  disabled={fileGateBusy}
 
                   onClick={() => void onDelete(d).then((ok) => ok && setFeedback('Removed.'))}
 
