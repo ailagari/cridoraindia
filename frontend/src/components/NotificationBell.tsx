@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { MOCK_NOTIFICATIONS, hydrateMockNotificationsForAccount, persistAllMockNotificationsRead, type AppNotification } from '@/lib/mockNotifications'
 import { useAuth } from '@/context/AuthContext'
@@ -16,6 +17,9 @@ import { CRIDORA_PUSH_REFRESH_MESSAGE_TYPE } from '@/lib/cridoraSwMessages'
 /** Faster poll while panel open so badges/lists stay fresh without reloading the page. */
 const FEED_POLL_MS_PANEL_OPEN = 2000
 const FEED_POLL_MS_BACKGROUND = 8000
+
+/** Matches dashboard mobile breakpoint (bottom nav, wrapped top bar). */
+const MOBILE_SHEET_MQ = '(max-width: 960px)'
 
 type ApiAdminNotification = {
   id: number
@@ -100,6 +104,8 @@ export function NotificationBell({
   const [pushTestBusy, setPushTestBusy] = useState(false)
   const [pushTestMsg, setPushTestMsg] = useState('')
   const rootRef = useRef<HTMLDivElement>(null)
+  /** Bottom sheet on narrow viewports (PWA / mobile dashboards). */
+  const [useSheetLayout, setUseSheetLayout] = useState(false)
 
   const setupHint = pushSetupHint()
 
@@ -183,12 +189,38 @@ export function NotificationBell({
   }, [open])
 
   useEffect(() => {
-    if (!open) return
+    const mq = window.matchMedia(MOBILE_SHEET_MQ)
+    const sync = () => setUseSheetLayout(mq.matches)
+    sync()
+    mq.addEventListener('change', sync)
+    return () => mq.removeEventListener('change', sync)
+  }, [])
+
+  useEffect(() => {
+    if (!open || useSheetLayout) return
     const onDoc = (e: MouseEvent) => {
       if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false)
     }
     document.addEventListener('mousedown', onDoc)
     return () => document.removeEventListener('mousedown', onDoc)
+  }, [open, useSheetLayout])
+
+  useEffect(() => {
+    if (!open || !useSheetLayout) return
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prevOverflow
+    }
+  }, [open, useSheetLayout])
+
+  useEffect(() => {
+    if (!open) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
   }, [open])
 
   useEffect(() => {
@@ -415,149 +447,189 @@ export function NotificationBell({
 
   const feedError = adminFeedError || platformFeedError
 
-  return (
-    <div className="notif-bell-wrap" ref={rootRef}>
-      <button
-        type="button"
-        className={`notif-bell-btn${compact ? ' notif-bell-btn--compact' : ''}`}
-        aria-expanded={open}
-        aria-haspopup="true"
-        aria-label={unread ? `Notifications, ${unread} unread` : 'Notifications'}
-        onClick={() => setOpen((o) => !o)}
-      >
-        <span className="notif-bell-ico" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 6a4 4 0 0 0-4 4v3l-1.5 2.5h11L16 13v-3a4 4 0 0 0-4-4" />
-            <path strokeLinecap="round" d="M10 18a2 2 0 0 0 4 0" />
-          </svg>
-        </span>
-        {unread > 0 ? <span className="notif-bell-badge">{unread > 9 ? '9+' : unread}</span> : null}
-      </button>
-      {open ? (
-        <div className="notif-panel card" role="dialog" aria-label="Notifications">
-          <div className="notif-panel-head">
-            <h2 className="notif-panel-title">Alerts</h2>
-            {(useLiveFeed || user?.id != null) && unread > 0 ? (
-              <button type="button" className="btn btn-ghost notif-panel-clear" onClick={() => void markAllRead()}>
-                Mark read
-              </button>
-            ) : null}
+  const panelInner = (
+    <>
+      <div className="notif-panel-head">
+        <h2 className="notif-panel-title" id="notif-panel-heading">
+          Alerts
+        </h2>
+        {(useLiveFeed || user?.id != null) && unread > 0 ? (
+          <button type="button" className="btn btn-ghost notif-panel-clear" onClick={() => void markAllRead()}>
+            Mark read
+          </button>
+        ) : null}
+      </div>
+      {setupHint ? (
+        <p className="notif-panel-hint" style={{ marginTop: '-0.35rem', color: 'var(--gold-light)' }}>
+          {setupHint}
+        </p>
+      ) : null}
+      {hintPrimary ? <p className="notif-panel-hint">{hintPrimary}</p> : null}
+      {feedError ? <p className="form-error notif-panel-hint">{feedError}</p> : null}
+      {!hidePushRowInBell ? (
+        <div className="notif-push-row">
+          <div className="notif-push-copy">
+            <span className="notif-push-label">Device notifications</span>
+            {!pushSupported ? (
+              <span className="notif-push-status">Not supported in this browser or context.</span>
+            ) : Notification.permission === 'denied' ? (
+              <span className="notif-push-status">Blocked in browser settings — allow notifications for this site.</span>
+            ) : pushActive ? (
+              <span className="notif-push-status notif-push-status--on">On for this device</span>
+            ) : pushServerReady === false ? (
+              <>
+                <span className="notif-push-status">Unavailable on this deployment</span>
+                <span className="notif-push-detail">See the note above — VAPID env vars are missing on the server.</span>
+              </>
+            ) : pushServerReady === null ? (
+              <span className="notif-push-status">Checking server setup…</span>
+            ) : (
+              <span className="notif-push-status">Off</span>
+            )}
+            {pushError ? <span className="notif-push-err">{pushError}</span> : null}
           </div>
-          {setupHint ? (
-            <p className="notif-panel-hint" style={{ marginTop: '-0.35rem', color: 'var(--gold-light)' }}>
-              {setupHint}
-            </p>
-          ) : null}
-          {hintPrimary ? <p className="notif-panel-hint">{hintPrimary}</p> : null}
-          {feedError ? <p className="form-error notif-panel-hint">{feedError}</p> : null}
-          {!hidePushRowInBell ? (
-            <div className="notif-push-row">
-              <div className="notif-push-copy">
-                <span className="notif-push-label">Device notifications</span>
-                {!pushSupported ? (
-                  <span className="notif-push-status">Not supported in this browser or context.</span>
-                ) : Notification.permission === 'denied' ? (
-                  <span className="notif-push-status">Blocked in browser settings — allow notifications for this site.</span>
-                ) : pushActive ? (
-                  <span className="notif-push-status notif-push-status--on">On for this device</span>
-                ) : pushServerReady === false ? (
-                  <>
-                    <span className="notif-push-status">Unavailable on this deployment</span>
-                    <span className="notif-push-detail">See the note above — VAPID env vars are missing on the server.</span>
-                  </>
-                ) : pushServerReady === null ? (
-                  <span className="notif-push-status">Checking server setup…</span>
-                ) : (
-                  <span className="notif-push-status">Off</span>
-                )}
-                {pushError ? <span className="notif-push-err">{pushError}</span> : null}
-              </div>
-              {pushSupported && Notification.permission !== 'denied' ? (
-                pushActive ? (
-                  <button
-                    type="button"
-                    className="btn btn-ghost notif-push-btn"
-                    disabled={pushBusy}
-                    onClick={() => void disablePush()}
-                  >
-                    Turn off
-                  </button>
-                ) : pushServerReady === true ? (
-                  <button
-                    type="button"
-                    className="btn btn-primary notif-push-btn"
-                    disabled={pushBusy}
-                    onClick={() => void enablePush()}
-                  >
-                    Enable
-                  </button>
-                ) : null
-              ) : null}
-            </div>
-          ) : null}
-          {useAdminFeed && user && pushActive && pushServerReady === true ? (
-            <div className="notif-push-row" style={{ marginTop: '0.5rem', flexWrap: 'wrap' }}>
+          {pushSupported && Notification.permission !== 'denied' ? (
+            pushActive ? (
               <button
                 type="button"
                 className="btn btn-ghost notif-push-btn"
-                disabled={pushTestBusy}
-                onClick={() => void sendAdminTestPush()}
+                disabled={pushBusy}
+                onClick={() => void disablePush()}
               >
-                Send test notification
+                Turn off
               </button>
-              {pushTestMsg ? (
-                <span className="notif-push-detail" style={{ flex: '1 1 100%' }}>
-                  {pushTestMsg}
-                </span>
-              ) : null}
-            </div>
-          ) : null}
-          {displayItems.length === 0 ? (
-            <p className="notif-panel-hint" style={{ marginTop: '0.75rem' }}>
-              {items.length === 0
-                ? usePlatformFeed
-                  ? 'No broadcasts yet. After an admin sends one, it will show here.'
-                  : 'No alerts yet.'
-                : showHistory
-                  ? 'No alerts match this view.'
-                  : "You're all caught up — nothing unread."}
-            </p>
-          ) : null}
-          <ul className="notif-list">
-            {displayItems.map((n) =>
-              useLiveFeed ? (
-                <li key={n.id}>
-                  <button
-                    type="button"
-                    className={`notif-item-btn${n.read ? '' : ' notif-item-btn--unread'}`}
-                    onClick={() => void onFeedItemActivate(n)}
-                  >
-                    <span className={kindClass(n.kind)}>{n.kind}</span>
-                    <p className="notif-item-title">{n.title}</p>
-                    <p className="notif-item-body">{n.body}</p>
-                    <p className="notif-item-time">{n.time}</p>
-                    {n.link_path ? <span className="notif-item-open-hint">Tap to open</span> : null}
-                  </button>
-                </li>
-              ) : (
-                <li key={n.id} className={`notif-item${n.read ? '' : ' notif-item--unread'}`}>
-                  <span className={kindClass(n.kind)}>{n.kind}</span>
-                  <p className="notif-item-title">{n.title}</p>
-                  <p className="notif-item-body">{n.body}</p>
-                  <p className="notif-item-time">{n.time}</p>
-                </li>
-              ),
-            )}
-          </ul>
-          {readCount > 0 ? (
-            <div className="notif-panel-hint" style={{ marginTop: '0.5rem' }}>
-              <button type="button" className="btn btn-ghost notif-panel-clear" onClick={() => setShowHistory((h) => !h)}>
-                {showHistory ? 'Show unread only' : `Past alerts (${readCount})`}
+            ) : pushServerReady === true ? (
+              <button
+                type="button"
+                className="btn btn-primary notif-push-btn"
+                disabled={pushBusy}
+                onClick={() => void enablePush()}
+              >
+                Enable
               </button>
-            </div>
+            ) : null
           ) : null}
         </div>
       ) : null}
-    </div>
+      {useAdminFeed && user && pushActive && pushServerReady === true ? (
+        <div className="notif-push-row" style={{ marginTop: '0.5rem', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            className="btn btn-ghost notif-push-btn"
+            disabled={pushTestBusy}
+            onClick={() => void sendAdminTestPush()}
+          >
+            Send test notification
+          </button>
+          {pushTestMsg ? (
+            <span className="notif-push-detail" style={{ flex: '1 1 100%' }}>
+              {pushTestMsg}
+            </span>
+          ) : null}
+        </div>
+      ) : null}
+      {displayItems.length === 0 ? (
+        <p className="notif-panel-hint" style={{ marginTop: '0.75rem' }}>
+          {items.length === 0
+            ? usePlatformFeed
+              ? 'No broadcasts yet. After an admin sends one, it will show here.'
+              : 'No alerts yet.'
+            : showHistory
+              ? 'No alerts match this view.'
+              : "You're all caught up — nothing unread."}
+        </p>
+      ) : null}
+      <ul className="notif-list">
+        {displayItems.map((n) =>
+          useLiveFeed ? (
+            <li key={n.id}>
+              <button
+                type="button"
+                className={`notif-item-btn${n.read ? '' : ' notif-item-btn--unread'}`}
+                onClick={() => void onFeedItemActivate(n)}
+              >
+                <span className={kindClass(n.kind)}>{n.kind}</span>
+                <p className="notif-item-title">{n.title}</p>
+                <p className="notif-item-body">{n.body}</p>
+                <p className="notif-item-time">{n.time}</p>
+                {n.link_path ? <span className="notif-item-open-hint">Tap to open</span> : null}
+              </button>
+            </li>
+          ) : (
+            <li key={n.id} className={`notif-item${n.read ? '' : ' notif-item--unread'}`}>
+              <span className={kindClass(n.kind)}>{n.kind}</span>
+              <p className="notif-item-title">{n.title}</p>
+              <p className="notif-item-body">{n.body}</p>
+              <p className="notif-item-time">{n.time}</p>
+            </li>
+          ),
+        )}
+      </ul>
+      {readCount > 0 ? (
+        <div className="notif-panel-hint" style={{ marginTop: '0.5rem' }}>
+          <button type="button" className="btn btn-ghost notif-panel-clear" onClick={() => setShowHistory((h) => !h)}>
+            {showHistory ? 'Show unread only' : `Past alerts (${readCount})`}
+          </button>
+        </div>
+      ) : null}
+    </>
+  )
+
+  const sheetPortal =
+    open && useSheetLayout && typeof document !== 'undefined'
+      ? createPortal(
+          <>
+            <button
+              type="button"
+              className="notif-sheet-backdrop"
+              aria-label="Close notifications"
+              onClick={() => setOpen(false)}
+            />
+            <div
+              className="notif-panel notif-panel--sheet card"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="notif-panel-heading"
+            >
+              <div className="notif-sheet-toolbar">
+                <span className="notif-sheet-grab" aria-hidden="true" />
+                <button type="button" className="btn btn-ghost notif-sheet-close" onClick={() => setOpen(false)}>
+                  Close
+                </button>
+              </div>
+              {panelInner}
+            </div>
+          </>,
+          document.body,
+        )
+      : null
+
+  return (
+    <>
+      <div className="notif-bell-wrap" ref={rootRef}>
+        <button
+          type="button"
+          className={`notif-bell-btn${compact ? ' notif-bell-btn--compact' : ''}`}
+          aria-expanded={open}
+          aria-haspopup="dialog"
+          aria-label={unread ? `Notifications, ${unread} unread` : 'Notifications'}
+          onClick={() => setOpen((o) => !o)}
+        >
+          <span className="notif-bell-ico" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6a4 4 0 0 0-4 4v3l-1.5 2.5h11L16 13v-3a4 4 0 0 0-4-4" />
+              <path strokeLinecap="round" d="M10 18a2 2 0 0 0 4 0" />
+            </svg>
+          </span>
+          {unread > 0 ? <span className="notif-bell-badge">{unread > 9 ? '9+' : unread}</span> : null}
+        </button>
+        {open && !useSheetLayout ? (
+          <div className="notif-panel card" role="dialog" aria-labelledby="notif-panel-heading">
+            {panelInner}
+          </div>
+        ) : null}
+      </div>
+      {sheetPortal}
+    </>
   )
 }

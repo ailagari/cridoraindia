@@ -118,11 +118,14 @@
 html {
   scroll-behavior: smooth;
   font-size: 16px;
+  min-height: 100vh;
+  min-height: 100dvh;
 }
 
 body {
   margin: 0;
   min-height: 100vh;
+  min-height: 100dvh;
   font-family: var(--font);
   font-weight: 400;
   font-optical-sizing: auto;
@@ -137,6 +140,7 @@ body {
 
 #root {
   min-height: 100vh;
+  min-height: 100dvh;
 }
 
 /* --- Responsive media frames (any image dimensions → stable layout) --- */
@@ -1840,6 +1844,7 @@ select.input {
 
 .dash-shell {
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   background: var(--dash-shell-bg);
   color: var(--text);
@@ -5247,6 +5252,7 @@ select.input {
   background: var(--dash-pill-bg);
   color: var(--text-silk);
   cursor: pointer;
+  touch-action: manipulation;
 }
 
 .notif-bell-btn--compact {
@@ -5296,6 +5302,80 @@ select.input {
 
 .dash-topbar-right .notif-panel {
   right: 0;
+}
+
+.notif-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: rgba(0, 8, 20, 0.52);
+  backdrop-filter: blur(5px);
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
+}
+
+.notif-panel--sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  top: auto;
+  width: 100%;
+  max-width: none;
+  max-height: min(88vh, calc(100vh - env(safe-area-inset-top, 0px) - 1.25rem));
+  max-height: min(88dvh, calc(100dvh - env(safe-area-inset-top, 0px) - 1.25rem));
+  border-radius: 18px 18px 0 0;
+  border-bottom: none;
+  padding-top: 0 !important;
+  padding-left: max(1rem, env(safe-area-inset-left, 0px)) !important;
+  padding-right: max(1rem, env(safe-area-inset-right, 0px)) !important;
+  padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px)) !important;
+  z-index: 101;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  box-shadow: 0 -14px 48px rgba(0, 0, 0, 0.58);
+}
+
+.notif-sheet-toolbar {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  padding: 0.35rem 0 0.6rem;
+  margin-bottom: 0.15rem;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: inherit;
+  border-bottom: 1px solid rgba(165, 180, 252, 0.08);
+}
+
+.notif-sheet-grab {
+  grid-column: 2;
+  justify-self: center;
+  pointer-events: none;
+}
+
+.notif-sheet-grab::before {
+  content: '';
+  display: block;
+  width: 2.35rem;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.42);
+}
+
+.notif-sheet-close {
+  grid-column: 3;
+  justify-self: end;
+  min-height: 2.5rem;
+  padding: 0.35rem 0.75rem !important;
+  font-size: 0.68rem !important;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .notif-panel-head {
@@ -5487,6 +5567,18 @@ select.input {
 }
 
 @media (max-width: 960px) {
+  html,
+  body {
+    overflow-x: hidden;
+  }
+
+  .notif-bell-btn--compact {
+    min-width: 2.65rem;
+    min-height: 2.65rem;
+    width: 2.65rem;
+    height: 2.65rem;
+  }
+
   /* Bottom hub nav replaces the horizontal subsection strip on mobile PWA */
   .dash-hub-tabs {
     display: none !important;
@@ -5550,8 +5642,13 @@ select.input {
   }
 
   .dash-public-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.55rem;
+    padding: 0.25rem 0.55rem;
     font-size: 0.58rem;
     letter-spacing: 0.1em;
+    touch-action: manipulation;
   }
 
   .dash-coming__title {
@@ -6122,6 +6219,14 @@ select.input {
 [data-theme="light"] .notif-panel {
   background: linear-gradient(165deg, #ffffff 0%, rgba(248, 250, 255, 0.995) 100%) !important;
   box-shadow: var(--shadow-card);
+}
+
+[data-theme="light"] .notif-sheet-backdrop {
+  background: rgba(15, 23, 42, 0.38);
+}
+
+[data-theme="light"] .notif-sheet-toolbar {
+  border-bottom-color: rgba(148, 163, 184, 0.22);
 }
 
 [data-theme="light"] .notif-panel .notif-item-body {
