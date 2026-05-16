@@ -430,9 +430,15 @@ class FractionalGoldPurchase(models.Model):
 class GoldSellbackRequest(models.Model):
     """Customer sells fractional vault gold back to the custodian jeweller (cash estimate; payout offline in MVP)."""
 
+    STATUS_PENDING_JEWELLER = "pending_jeweller"
+    STATUS_REJECTED = "rejected"
+    STATUS_ACCEPTED_AWAITING_OTP = "accepted_awaiting_otp"
     STATUS_COMPLETED = "completed"
 
     STATUS_CHOICES = [
+        (STATUS_PENDING_JEWELLER, "Pending jeweller"),
+        (STATUS_REJECTED, "Rejected"),
+        (STATUS_ACCEPTED_AWAITING_OTP, "Accepted awaiting OTP"),
         (STATUS_COMPLETED, "Completed"),
     ]
 
@@ -464,14 +470,39 @@ class GoldSellbackRequest(models.Model):
         decimal_places=2,
         help_text="grams × buyback ₹/g at execution.",
     )
-    status = models.CharField(max_length=24, choices=STATUS_CHOICES, default=STATUS_COMPLETED)
+    status = models.CharField(
+        max_length=32,
+        choices=STATUS_CHOICES,
+        default=STATUS_PENDING_JEWELLER,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-updated_at", "-created_at"]
+
+    def __str__(self):
+        return f"GoldSellbackRequest({self.customer_id}, {self.jeweller_id}, {self.grams}g)"
+
+
+class GoldSellbackOtp(models.Model):
+    """OTP customer shares with jeweller after offline cash payout to settle vault debit."""
+
+    sellback = models.OneToOneField(
+        GoldSellbackRequest,
+        on_delete=models.CASCADE,
+        related_name="settlement_otp",
+    )
+    code_hash = models.CharField(max_length=64)
+    expires_at = models.DateTimeField(db_index=True)
+    failed_attempts = models.PositiveSmallIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         ordering = ["-created_at"]
 
     def __str__(self):
-        return f"GoldSellbackRequest({self.customer_id}, {self.jeweller_id}, {self.grams}g)"
+        return f"GoldSellbackOtp(sellback={self.sellback_id})"
 
 
 class FractionalCounterOtp(models.Model):

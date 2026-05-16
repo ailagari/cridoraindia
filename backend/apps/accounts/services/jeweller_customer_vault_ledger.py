@@ -117,7 +117,11 @@ def jeweller_customer_vault_ledger_payload(jeweller: User, customer_id: int) -> 
         )
 
     sellbacks = (
-        GoldSellbackRequest.objects.filter(customer_id=customer_id, jeweller=jeweller)
+        GoldSellbackRequest.objects.filter(
+            customer_id=customer_id,
+            jeweller=jeweller,
+            status=GoldSellbackRequest.STATUS_COMPLETED,
+        )
         .order_by("-created_at")[:_MAX_ROWS]
     )
     for s in sellbacks:

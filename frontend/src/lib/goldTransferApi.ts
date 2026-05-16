@@ -135,14 +135,18 @@ export type SellbackQuoteDTO = {
   reference_metal_inr_per_gram: string
   buyback_inr_per_gram: string
   cash_estimate_inr: string
+  quote_input_mode: 'grams' | 'cash_inr'
+  requested_cash_inr?: string
 }
 
 export type JewellerSellbackRowDTO = {
   id: number
   reference: string
   created_at: string
+  updated_at: string
   customer_id: number
   customer_label: string
+  customer_phone: string
   grams: string
   reference_metal_inr_per_gram_snapshot: string
   buyback_inr_per_gram_snapshot: string
@@ -150,13 +154,26 @@ export type JewellerSellbackRowDTO = {
   status: string
 }
 
+export type SellbackOutstandingDTO = {
+  id: number
+  reference: string
+  status: string
+  jeweller_label: string
+  grams: string
+  cash_estimate_inr: string
+  buyback_inr_per_gram: string
+  otp_expires_at: string | null
+  created_at: string
+  updated_at: string
+}
+
 export async function postGoldSellbackQuote(
   jewellerId: number,
-  grams: string,
+  body: { grams: string } | { cash_inr: string },
 ): Promise<{ ok: true; data: SellbackQuoteDTO } | { ok: false; detail: string }> {
   const res = await authFetch('/api/v1/gold/sellback/quote/', {
     method: 'POST',
-    jsonBody: { jeweller_id: jewellerId, grams },
+    jsonBody: { jeweller_id: jewellerId, ...body },
   })
   const data = (await res.json()) as SellbackQuoteDTO & { detail?: string }
   if (!res.ok) {
@@ -168,25 +185,116 @@ export async function postGoldSellbackQuote(
 export async function postGoldSellbackConfirm(
   jewellerId: number,
   grams: string,
-): Promise<{ ok: true; wallet: GoldWalletDTO; detail: string } | { ok: false; detail: string }> {
+): Promise<
+  | {
+      ok: true
+      wallet: GoldWalletDTO
+      detail: string
+      otp_code?: string
+      otp_expires_at?: string
+      sellback?: { id: number; reference: string; grams: string; cash_estimate_inr: string; status: string }
+    }
+  | { ok: false; detail: string }
+> {
   const res = await authFetch('/api/v1/gold/sellback/confirm/', {
     method: 'POST',
     jsonBody: { jeweller_id: jewellerId, grams },
   })
-  const data = (await res.json()) as { detail?: string; wallet?: GoldWalletDTO }
+  const data = (await res.json()) as {
+    detail?: string
+    wallet?: GoldWalletDTO
+    otp_code?: string
+    otp_expires_at?: string
+    sellback?: { id: number; reference: string; grams: string; cash_estimate_inr: string; status: string }
+  }
   if (!res.ok) {
     return { ok: false, detail: data.detail ?? 'Sellback failed.' }
   }
   if (!data.wallet) {
     return { ok: false, detail: 'Unexpected response.' }
   }
-  return { ok: true, wallet: data.wallet, detail: data.detail ?? 'Done.' }
+  return {
+    ok: true,
+    wallet: data.wallet,
+    detail: data.detail ?? 'Done.',
+    otp_code: data.otp_code,
+    otp_expires_at: data.otp_expires_at,
+    sellback: data.sellback,
+  }
+}
+
+export async function fetchSellbackOutstanding(): Promise<SellbackOutstandingDTO[] | null> {
+  const res = await authFetch('/api/v1/gold/sellback/outstanding/')
+  if (!res.ok) return null
+  const data = (await res.json()) as { results?: SellbackOutstandingDTO[] }
+  return data.results ?? []
+}
+
+export async function postSellbackOtpRegenerate(
+  sellbackId: number,
+): Promise<{ ok: true; otp_code: string; otp_expires_at: string } | { ok: false; detail: string }> {
+  const res = await authFetch(`/api/v1/gold/sellback/${sellbackId}/otp/regenerate/`, {
+    method: 'POST',
+    jsonBody: {},
+  })
+  const data = (await res.json()) as {
+    detail?: string
+    otp_code?: string
+    otp_expires_at?: string
+  }
+  if (!res.ok || !data.otp_code) {
+    return { ok: false, detail: data.detail ?? 'Could not regenerate OTP.' }
+  }
+  return { ok: true, otp_code: data.otp_code, otp_expires_at: data.otp_expires_at ?? '' }
 }
 
 export async function fetchJewellerSellbacks(): Promise<{ results: JewellerSellbackRowDTO[] } | null> {
   const res = await authFetch('/api/v1/jeweller/sellbacks/')
   if (!res.ok) return null
   return (await res.json()) as { results: JewellerSellbackRowDTO[] }
+}
+
+export async function postJewellerSellbackAccept(
+  sellbackId: number,
+): Promise<{ ok: true; detail: string } | { ok: false; detail: string }> {
+  const res = await authFetch(`/api/v1/jeweller/sellbacks/${sellbackId}/accept/`, {
+    method: 'POST',
+    jsonBody: {},
+  })
+  const data = (await res.json()) as { detail?: string }
+  if (!res.ok) {
+    return { ok: false, detail: data.detail ?? 'Could not accept.' }
+  }
+  return { ok: true, detail: data.detail ?? 'Accepted.' }
+}
+
+export async function postJewellerSellbackReject(
+  sellbackId: number,
+): Promise<{ ok: true; detail: string } | { ok: false; detail: string }> {
+  const res = await authFetch(`/api/v1/jeweller/sellbacks/${sellbackId}/reject/`, {
+    method: 'POST',
+    jsonBody: {},
+  })
+  const data = (await res.json()) as { detail?: string }
+  if (!res.ok) {
+    return { ok: false, detail: data.detail ?? 'Could not reject.' }
+  }
+  return { ok: true, detail: data.detail ?? 'Rejected.' }
+}
+
+export async function postJewellerSellbackComplete(
+  sellbackId: number,
+  otp: string,
+): Promise<{ ok: true; detail: string } | { ok: false; detail: string }> {
+  const res = await authFetch(`/api/v1/jeweller/sellbacks/${sellbackId}/complete/`, {
+    method: 'POST',
+    jsonBody: { otp: otp.trim() },
+  })
+  const data = (await res.json()) as { detail?: string }
+  if (!res.ok) {
+    return { ok: false, detail: data.detail ?? 'Could not complete.' }
+  }
+  return { ok: true, detail: data.detail ?? 'Completed.' }
 }
 
 export async function resolveGoldUPI(gold_upi: string): Promise<{

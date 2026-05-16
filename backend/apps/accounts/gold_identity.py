@@ -89,6 +89,23 @@ def effective_custodian(user: User) -> User | None:
     return user.default_jeweller
 
 
+MAX_CASH_INR = Decimal("9999999999.99")
+
+
+def parse_cash_inr(value) -> tuple[Decimal | None, str | None]:
+    try:
+        x = Decimal(str(value))
+    except Exception:
+        return None, "Invalid cash amount."
+    if x <= 0:
+        return None, "Enter a positive cash amount."
+    if x != x.quantize(Decimal("0.01")):
+        return None, "Use at most 2 decimal places for INR."
+    if x > MAX_CASH_INR:
+        return None, "Amount too large."
+    return x, None
+
+
 def parse_grams(value) -> tuple[Decimal | None, str | None]:
     try:
         g = Decimal(str(value))
