@@ -3,6 +3,17 @@ import type { PortfolioTotalsDTO } from '@/lib/goldTransferApi'
 
 export type { PortfolioTotalsDTO }
 
+async function readResponseJson<T extends object>(res: Response): Promise<T | null> {
+  const text = await res.text()
+  const t = text.trim()
+  if (!t) return null
+  try {
+    return JSON.parse(t) as T
+  } catch {
+    return null
+  }
+}
+
 export type PersonalHoldingDTO = {
   id: number
   holding_type: string
@@ -135,9 +146,15 @@ export async function uploadPersonalDocument(
     method: 'POST',
     body: form,
   })
-  const data = (await res.json()) as PersonalDocumentDTO & { detail?: string }
-  if (!res.ok) return { ok: false, detail: data.detail ?? 'Upload failed.' }
-  return { ok: true, data: data as PersonalDocumentDTO }
+  const parsed = await readResponseJson<PersonalDocumentDTO & { detail?: string }>(res)
+  if (!res.ok) {
+    const detail =
+      parsed && typeof parsed.detail === 'string' && parsed.detail.trim()
+        ? parsed.detail
+        : 'Upload failed.'
+    return { ok: false, detail }
+  }
+  return { ok: true, data: (parsed ?? {}) as PersonalDocumentDTO }
 }
 
 export async function deletePersonalHolding(id: number): Promise<{ ok: true } | { ok: false; detail: string }> {

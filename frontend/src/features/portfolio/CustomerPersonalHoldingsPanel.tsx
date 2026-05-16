@@ -802,13 +802,15 @@ function HoldingDocumentsPanel({
 
         if (!del.ok) {
 
-          onError(del.detail)
+          setFeedback(
 
-          setFeedback('New file saved; could not remove the old copy. Delete it manually if you see two files.')
+            'New file is uploaded. We could not remove the old copy automatically — delete the duplicate file from the list if you still see it.',
+
+          )
 
           setReplaceTarget(null)
 
-          setUploadPhase('error')
+          setUploadPhase('done')
 
           onChanged()
 
