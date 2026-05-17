@@ -440,10 +440,21 @@ def _annotate_product_public(
         ),
         "image_url": product.image_url,
         "is_x_redeem": product.is_x_redeem,
+        "is_published": product.is_published,
         "rating": str(product.rating),
         "jeweller_name": jeweller_name,
         "jeweller_city": product.jeweller.city or "",
         "pricing_mode": product.pricing_mode,
+        "jeweller_markup_percent": (
+            str(product.jeweller_markup_percent)
+            if product.jeweller_markup_percent is not None
+            else ""
+        ),
+        "manual_gold_rate_inr_per_gram": (
+            str(product.manual_gold_rate_inr_per_gram)
+            if product.manual_gold_rate_inr_per_gram is not None
+            else ""
+        ),
         "jeweller_metal_rate_last_updated_at": rate_as_of.isoformat(),
         "metal_rate_inr_per_gram_used": str(metal_rate),
         "jeweller_markup_percent_applied": str(

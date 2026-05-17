@@ -9,17 +9,25 @@ import {
   type MarketplaceCatalogMetaDTO,
 } from '@/lib/marketplaceApi'
 import { useLivePoll } from '@/lib/useLivePoll'
-import { numOrZero } from '@/features/marketplace/jewellerMarketplaceShared'
+import {
+  INITIAL_SKU_FORM,
+  buildSkuPayload,
+  rowToEditForm,
+  type ProductRow,
+  type SkuFormState,
+} from '@/features/marketplace/jewellerSkuForm'
+import { JewellerSkuFormTable } from '@/features/marketplace/JewellerSkuFormTable'
 
 const PRODUCT_IMAGE_MAX_BYTES = 4 * 1024 * 1024
-
-type ProductRow = Record<string, unknown>
 
 export function JewellerMarketplacePanel() {
   const { user } = useAuth()
   const skuImageInputRef = useRef<HTMLInputElement>(null)
   const catalogImageInputRef = useRef<HTMLInputElement>(null)
+  const editSkuImageInputRef = useRef<HTMLInputElement>(null)
   const catalogDefaultsDoneRef = useRef(false)
+  const editSectionRef = useRef<HTMLDetailsElement>(null)
+  const editingProductIdRef = useRef<number | null>(null)
 
   const [products, setProducts] = useState<ProductRow[]>([])
   const [catalogMeta, setCatalogMeta] = useState<MarketplaceCatalogMetaDTO | null>(null)
@@ -32,30 +40,10 @@ export function JewellerMarketplacePanel() {
   const [busy, setBusy] = useState(false)
   const [productImageBusy, setProductImageBusy] = useState(false)
   const [pendingCatalogProductId, setPendingCatalogProductId] = useState<number | null>(null)
+  const [editingId, setEditingId] = useState<number | null>(null)
 
-  const [form, setForm] = useState({
-    name: '',
-    product_category_id: '',
-    metal_purity_id: '',
-    stock_quantity: '1',
-    gold_weight_grams: '',
-    making_charge_mode: MAKING_FIXED_PER_GRAM,
-    making_charge_per_gram: '',
-    making_charge_percent: '',
-    image_url: '',
-    pricing_mode: 'spot_markup',
-    jeweller_markup_percent: '',
-    manual_gold_rate_inr_per_gram: '',
-    stone_included: false,
-    stone_type: '',
-    stone_weight_grams: '',
-    stone_cost_inr: '',
-    is_x_redeem: true,
-    is_published: true,
-    rating: '4.5',
-    same_store_making_charge_percent: '',
-    same_store_making_charge_per_gram: '',
-  })
+  const [form, setForm] = useState<SkuFormState>(() => ({ ...INITIAL_SKU_FORM }))
+  const [editForm, setEditForm] = useState<SkuFormState>(() => ({ ...INITIAL_SKU_FORM }))
 
   const flashSuccess = useCallback((msg: string) => {
     setSuccessMsg(msg)
@@ -141,6 +129,27 @@ export function JewellerMarketplacePanel() {
     return metals.filter((m) => m.slug === 'bis916')
   }, [catalogMeta, profileMetalIds])
 
+  const editSkuMetalOptions = useMemo(() => {
+    if (editingId == null || !catalogMeta) return skuMetalOptions
+    const row = products.find((p) => Number(p.id) === editingId)
+    const rawMp = row?.metal_purity_id
+    if (rawMp == null) return skuMetalOptions
+    const mpNum = Number(rawMp)
+    if (!Number.isFinite(mpNum)) return skuMetalOptions
+    if (skuMetalOptions.some((m) => m.id === mpNum)) return skuMetalOptions
+    const extra = catalogMeta.metal_purities.find((m) => m.id === mpNum)
+    return extra ? [...skuMetalOptions, extra] : skuMetalOptions
+  }, [catalogMeta, editingId, products, skuMetalOptions])
+
+  useEffect(() => {
+    editingProductIdRef.current = editingId
+  }, [editingId])
+
+  useEffect(() => {
+    if (editingId == null) return
+    editSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [editingId])
+
   const saveMetalPuritiesOffered = async () => {
     setPurityOfferBusy(true)
     setFormError('')
@@ -203,8 +212,13 @@ export function JewellerMarketplacePanel() {
     }
     const body = (await res.json()) as { image_url?: string }
     const url = body.image_url
-    if (url && productId == null) {
-      setForm((f) => ({ ...f, image_url: url }))
+    const editTarget = editingProductIdRef.current
+    if (url) {
+      if (productId == null) {
+        setForm((f) => ({ ...f, image_url: url }))
+      } else if (editTarget != null && productId === editTarget) {
+        setEditForm((f) => ({ ...f, image_url: url }))
+      }
     }
     await refresh()
     flashSuccess(
@@ -215,76 +229,17 @@ export function JewellerMarketplacePanel() {
   const addProduct = async () => {
     setBusy(true)
     setFormError('')
-    const pcId = Number.parseInt(form.product_category_id, 10)
-    const mpId = Number.parseInt(form.metal_purity_id, 10)
-    const stockN = Number.parseInt(form.stock_quantity, 10)
-    if (!Number.isFinite(pcId) || pcId < 1) {
+    const built = buildSkuPayload(form)
+    if (!built.ok) {
       setBusy(false)
       setSuccessMsg('')
-      setFormError('Choose a category from the dropdown.')
+      setFormError(built.error)
       return
-    }
-    if (!Number.isFinite(mpId) || mpId < 1) {
-      setBusy(false)
-      setSuccessMsg('')
-      setFormError('Choose a metal purity.')
-      return
-    }
-    if (!Number.isFinite(stockN) || stockN < 0) {
-      setBusy(false)
-      setSuccessMsg('')
-      setFormError('Stock quantity must be a whole number (0 or more).')
-      return
-    }
-    const body: Record<string, unknown> = {
-      name: form.name.trim(),
-      product_category: pcId,
-      metal_purity: mpId,
-      stock_quantity: stockN,
-      gold_weight_grams: numOrZero(form.gold_weight_grams),
-      making_charge_mode: form.making_charge_mode,
-      image_url: form.image_url.trim(),
-      pricing_mode: form.pricing_mode,
-      is_x_redeem: form.is_x_redeem,
-      is_published: form.is_published,
-      rating: numOrZero(form.rating),
-      stone_included: form.stone_included,
-      stone_type: form.stone_type.trim(),
-    }
-    if (form.making_charge_mode === MAKING_PERCENT_OF_METAL) {
-      body.making_charge_percent = numOrZero(form.making_charge_percent)
-      body.making_charge_per_gram = '0'
-      const ss = form.same_store_making_charge_percent.trim()
-      body.same_store_making_charge_percent = ss !== '' ? numOrZero(ss) : null
-      body.same_store_making_charge_per_gram = null
-    } else {
-      body.making_charge_per_gram = numOrZero(form.making_charge_per_gram)
-      body.making_charge_percent = null
-      const ss = form.same_store_making_charge_per_gram.trim()
-      body.same_store_making_charge_per_gram = ss !== '' ? numOrZero(ss) : null
-      body.same_store_making_charge_percent = null
-    }
-    const jmp = form.jeweller_markup_percent.trim()
-    if (jmp !== '') {
-      body.jeweller_markup_percent = numOrZero(jmp)
-    }
-    if (form.pricing_mode === 'manual_rate') {
-      body.manual_gold_rate_inr_per_gram = numOrZero(form.manual_gold_rate_inr_per_gram)
-    }
-    if (form.stone_included) {
-      const sw = form.stone_weight_grams.trim()
-      if (sw !== '') {
-        body.stone_weight_grams = numOrZero(sw)
-      }
-      const sc = form.stone_cost_inr.trim()
-      if (sc !== '') {
-        body.stone_cost_inr = numOrZero(sc)
-      }
     }
 
     const res = await authFetch('/api/v1/jeweller/marketplace/products/', {
       method: 'POST',
-      jsonBody: body,
+      jsonBody: built.body,
     })
     setBusy(false)
     if (!res.ok) {
@@ -314,6 +269,45 @@ export function JewellerMarketplacePanel() {
     flashSuccess('SKU added to your catalogue.')
   }
 
+  const cancelEdit = () => {
+    setEditingId(null)
+    setEditForm({ ...INITIAL_SKU_FORM })
+  }
+
+  const saveEdit = async () => {
+    const id = editingId
+    if (id == null) return
+    setBusy(true)
+    setFormError('')
+    const built = buildSkuPayload(editForm)
+    if (!built.ok) {
+      setBusy(false)
+      setSuccessMsg('')
+      setFormError(built.error)
+      return
+    }
+    const res = await authFetch(`/api/v1/jeweller/marketplace/products/${id}/`, {
+      method: 'PATCH',
+      jsonBody: built.body,
+    })
+    setBusy(false)
+    if (!res.ok) {
+      setSuccessMsg('')
+      const j = await res.json().catch(() => ({}))
+      setFormError(JSON.stringify(j))
+      return
+    }
+    cancelEdit()
+    await refresh()
+    flashSuccess('SKU updated.')
+  }
+
+  const beginEdit = (row: ProductRow) => {
+    setFormError('')
+    setEditingId(Number(row.id))
+    setEditForm(rowToEditForm(row))
+  }
+
   const removeProduct = async (id: number) => {
     setBusy(true)
     setFormError('')
@@ -324,6 +318,9 @@ export function JewellerMarketplacePanel() {
       const j = await res.json().catch(() => ({}))
       setFormError(JSON.stringify(j))
       return
+    }
+    if (editingId === id) {
+      cancelEdit()
     }
     await refresh()
     flashSuccess('SKU removed from catalogue.')
@@ -421,330 +418,16 @@ export function JewellerMarketplacePanel() {
             board ₹/g; lower purity adjusts fine-gold value automatically. Add a photo (upload or URL) before publishing.
           </p>
 
-          <table className="admin-user-table jeweller-mkt-sku-table">
-            <tbody>
-              <tr>
-                <th scope="row">Product photo</th>
-                <td>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', alignItems: 'center' }}>
-                    {form.image_url.trim() !== '' ? (
-                      <img
-                        src={form.image_url.trim()}
-                        alt=""
-                        style={{
-                          width: 88,
-                          height: 88,
-                          objectFit: 'cover',
-                          borderRadius: 12,
-                          border: '1px solid var(--border-soft)',
-                          background: 'var(--veil)',
-                        }}
-                      />
-                    ) : (
-                      <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>No image yet</span>
-                    )}
-                    <input
-                      ref={skuImageInputRef}
-                      type="file"
-                      accept="image/jpeg,image/png,image/webp"
-                      disabled={disableActions}
-                      style={{ display: 'none' }}
-                      onChange={(e) => {
-                        const f = e.target.files?.[0]
-                        e.target.value = ''
-                        if (f) void uploadProductImage(f)
-                      }}
-                    />
-                    <button
-                      type="button"
-                      className="btn btn-ghost"
-                      disabled={disableActions}
-                      onClick={() => skuImageInputRef.current?.click()}
-                    >
-                      {productImageBusy ? 'Uploading…' : 'Upload photo'}
-                    </button>
-                  </div>
-                  <label className="field" style={{ marginTop: '0.65rem' }}>
-                    <span>Or image URL</span>
-                    <input
-                      value={form.image_url}
-                      onChange={(e) => setForm((f) => ({ ...f, image_url: e.target.value }))}
-                      placeholder="https://…"
-                    />
-                  </label>
-                </td>
-              </tr>
-              <tr>
-                <th scope="row">Product name</th>
-                <td>
-                  <label className="field" style={{ margin: 0 }}>
-                    <input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
-                  </label>
-                </td>
-              </tr>
-              <tr>
-                <th scope="row">Category</th>
-                <td>
-                  <label className="field" style={{ margin: 0 }}>
-                    <select
-                      style={{ width: '100%', maxWidth: '100%' }}
-                      value={form.product_category_id}
-                      onChange={(e) => setForm((f) => ({ ...f, product_category_id: e.target.value }))}
-                      disabled={!catalogMeta}
-                    >
-                      {catalogMeta?.product_categories.map((c) => (
-                        <option key={c.id} value={String(c.id)}>
-                          {c.label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                </td>
-              </tr>
-              <tr>
-                <th scope="row">Metal purity</th>
-                <td>
-                  <label className="field" style={{ margin: 0 }}>
-                    <select
-                      style={{ width: '100%', maxWidth: '100%' }}
-                      value={form.metal_purity_id}
-                      onChange={(e) => setForm((f) => ({ ...f, metal_purity_id: e.target.value }))}
-                      disabled={skuMetalOptions.length === 0}
-                    >
-                      {skuMetalOptions.length === 0 ? (
-                        <option value="">Loading purities…</option>
-                      ) : (
-                        skuMetalOptions.map((m) => (
-                          <option key={m.id} value={String(m.id)}>
-                            {m.label}
-                          </option>
-                        ))
-                      )}
-                    </select>
-                  </label>
-                  <p style={{ margin: '0.35rem 0 0', fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>
-                    Enable additional purities in <strong>Metal purities offered</strong> above. Default is BIS 916 when none are selected.
-                  </p>
-                </td>
-              </tr>
-              <tr>
-                <th scope="row">Stock (units)</th>
-                <td>
-                  <label className="field" style={{ margin: 0 }}>
-                    <input
-                      inputMode="numeric"
-                      value={form.stock_quantity}
-                      onChange={(e) => setForm((f) => ({ ...f, stock_quantity: e.target.value }))}
-                      placeholder="e.g. 12"
-                    />
-                  </label>
-                </td>
-              </tr>
-              <tr>
-                <th scope="row">Gold weight (g)</th>
-                <td>
-                  <label className="field" style={{ margin: 0 }}>
-                    <input
-                      inputMode="decimal"
-                      value={form.gold_weight_grams}
-                      onChange={(e) => setForm((f) => ({ ...f, gold_weight_grams: e.target.value }))}
-                    />
-                  </label>
-                </td>
-              </tr>
-              <tr>
-                <th scope="row">Making charge type</th>
-                <td>
-                  <label className="field" style={{ margin: 0 }}>
-                    <select
-                      value={form.making_charge_mode}
-                      onChange={(e) => setForm((f) => ({ ...f, making_charge_mode: e.target.value }))}
-                    >
-                      <option value={MAKING_FIXED_PER_GRAM}>Fixed (₹ per gram of gold)</option>
-                      <option value={MAKING_PERCENT_OF_METAL}>Percentage of gold metal value</option>
-                    </select>
-                  </label>
-                </td>
-              </tr>
-              <tr>
-                <th scope="row">{form.making_charge_mode === MAKING_PERCENT_OF_METAL ? 'Making (% metal)' : 'Making (₹/g)'}</th>
-                <td>
-                  {form.making_charge_mode === MAKING_PERCENT_OF_METAL ? (
-                    <label className="field" style={{ margin: 0 }}>
-                      <input
-                        inputMode="decimal"
-                        value={form.making_charge_percent}
-                        onChange={(e) => setForm((f) => ({ ...f, making_charge_percent: e.target.value }))}
-                        placeholder="e.g. 8.5"
-                      />
-                    </label>
-                  ) : (
-                    <label className="field" style={{ margin: 0 }}>
-                      <input
-                        inputMode="decimal"
-                        value={form.making_charge_per_gram}
-                        onChange={(e) => setForm((f) => ({ ...f, making_charge_per_gram: e.target.value }))}
-                      />
-                    </label>
-                  )}
-                </td>
-              </tr>
-              <tr>
-                <th scope="row">
-                  {form.making_charge_mode === MAKING_PERCENT_OF_METAL
-                    ? 'Same-shop making (% metal)'
-                    : 'Same-shop making (₹/g)'}
-                </th>
-                <td>
-                  <label className="field" style={{ margin: 0 }}>
-                    {form.making_charge_mode === MAKING_PERCENT_OF_METAL ? (
-                      <input
-                        inputMode="decimal"
-                        value={form.same_store_making_charge_percent}
-                        onChange={(e) =>
-                          setForm((f) => ({ ...f, same_store_making_charge_percent: e.target.value }))
-                        }
-                        placeholder="Leave blank to use cross purchase rate for everyone"
-                      />
-                    ) : (
-                      <input
-                        inputMode="decimal"
-                        value={form.same_store_making_charge_per_gram}
-                        onChange={(e) =>
-                          setForm((f) => ({ ...f, same_store_making_charge_per_gram: e.target.value }))
-                        }
-                        placeholder="Leave blank to use cross purchase rate for everyone"
-                      />
-                    )}
-                  </label>
-                  <p style={{ margin: '0.35rem 0 0', fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>
-                    Customers whose default jeweller is you pay this making charge; everyone else pays the cross purchase
-                    rate above.
-                  </p>
-                </td>
-              </tr>
-              <tr>
-                <th scope="row">Pricing mode</th>
-                <td>
-                  <label className="field" style={{ margin: 0 }}>
-                    <select value={form.pricing_mode} onChange={(e) => setForm((f) => ({ ...f, pricing_mode: e.target.value }))}>
-                      <option value="spot_markup">Spot base + markup</option>
-                      <option value="manual_rate">Manual gold ₹/g</option>
-                    </select>
-                  </label>
-                </td>
-              </tr>
-              <tr>
-                <th scope="row">{form.pricing_mode === 'spot_markup' ? 'SKU markup override (%)' : 'Manual gold (₹/g)'}</th>
-                <td>
-                  {form.pricing_mode === 'spot_markup' ? (
-                    <label className="field" style={{ margin: 0 }}>
-                      <input
-                        inputMode="decimal"
-                        value={form.jeweller_markup_percent}
-                        onChange={(e) => setForm((f) => ({ ...f, jeweller_markup_percent: e.target.value }))}
-                        placeholder="Blank uses default from Rates & schemes"
-                      />
-                    </label>
-                  ) : (
-                    <label className="field" style={{ margin: 0 }}>
-                      <input
-                        inputMode="decimal"
-                        value={form.manual_gold_rate_inr_per_gram}
-                        onChange={(e) => setForm((f) => ({ ...f, manual_gold_rate_inr_per_gram: e.target.value }))}
-                      />
-                    </label>
-                  )}
-                </td>
-              </tr>
-              <tr>
-                <th scope="row">Display rating</th>
-                <td>
-                  <label className="field" style={{ margin: 0 }}>
-                    <input inputMode="decimal" value={form.rating} onChange={(e) => setForm((f) => ({ ...f, rating: e.target.value }))} />
-                  </label>
-                </td>
-              </tr>
-              <tr>
-                <th scope="row">Cross-jeweller redemption</th>
-                <td>
-                  <label className="field" style={{ margin: 0, flexDirection: 'row', alignItems: 'center', gap: '0.5rem' }}>
-                    <input
-                      type="checkbox"
-                      checked={form.is_x_redeem}
-                      onChange={(e) => setForm((f) => ({ ...f, is_x_redeem: e.target.checked }))}
-                    />
-                    <span>X-redeem enabled</span>
-                  </label>
-                </td>
-              </tr>
-              <tr>
-                <th scope="row">Published</th>
-                <td>
-                  <label className="field" style={{ margin: 0, flexDirection: 'row', alignItems: 'center', gap: '0.5rem' }}>
-                    <input
-                      type="checkbox"
-                      checked={form.is_published}
-                      onChange={(e) => setForm((f) => ({ ...f, is_published: e.target.checked }))}
-                    />
-                    <span>Eligible after approval</span>
-                  </label>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-
-          <details className="jeweller-mkt-subacc">
-            <summary>Stone details (optional)</summary>
-            <div className="jeweller-mkt-subacc__body">
-              <label className="field" style={{ flexDirection: 'row', alignItems: 'center', gap: '0.5rem' }}>
-                <input
-                  type="checkbox"
-                  checked={form.stone_included}
-                  onChange={(e) => setForm((f) => ({ ...f, stone_included: e.target.checked }))}
-                />
-                <span>Stone included in piece</span>
-              </label>
-              {form.stone_included ? (
-                <table className="admin-user-table jeweller-mkt-sku-table" style={{ marginTop: '1rem' }}>
-                  <tbody>
-                    <tr>
-                      <th scope="row">Stone type</th>
-                      <td>
-                        <label className="field" style={{ margin: 0 }}>
-                          <input value={form.stone_type} onChange={(e) => setForm((f) => ({ ...f, stone_type: e.target.value }))} />
-                        </label>
-                      </td>
-                    </tr>
-                    <tr>
-                      <th scope="row">Stone weight (g)</th>
-                      <td>
-                        <label className="field" style={{ margin: 0 }}>
-                          <input
-                            inputMode="decimal"
-                            value={form.stone_weight_grams}
-                            onChange={(e) => setForm((f) => ({ ...f, stone_weight_grams: e.target.value }))}
-                          />
-                        </label>
-                      </td>
-                    </tr>
-                    <tr>
-                      <th scope="row">Stone cost (₹)</th>
-                      <td>
-                        <label className="field" style={{ margin: 0 }}>
-                          <input
-                            inputMode="decimal"
-                            value={form.stone_cost_inr}
-                            onChange={(e) => setForm((f) => ({ ...f, stone_cost_inr: e.target.value }))}
-                          />
-                        </label>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              ) : null}
-            </div>
-          </details>
+          <JewellerSkuFormTable
+            form={form}
+            setForm={setForm}
+            catalogMeta={catalogMeta}
+            skuMetalOptions={skuMetalOptions}
+            disableActions={disableActions}
+            productImageBusy={productImageBusy}
+            skuImageInputRef={skuImageInputRef}
+            onUploadImage={(f) => void uploadProductImage(f)}
+          />
 
           <button
             type="button"
@@ -757,6 +440,35 @@ export function JewellerMarketplacePanel() {
           </button>
         </div>
       </details>
+
+      {editingId !== null ? (
+        <details ref={editSectionRef} className="jeweller-mkt-acc card" open style={{ marginBottom: '1rem' }}>
+          <summary>Edit catalogue SKU</summary>
+          <div className="jeweller-mkt-acc__body">
+            <p className="dash-coming__text" style={{ marginTop: 0 }}>
+              Update stock, pricing, and other fields, then save. Photo upload sets this SKU&apos;s listing image.
+            </p>
+            <JewellerSkuFormTable
+              form={editForm}
+              setForm={setEditForm}
+              catalogMeta={catalogMeta}
+              skuMetalOptions={editSkuMetalOptions}
+              disableActions={disableActions}
+              productImageBusy={productImageBusy}
+              skuImageInputRef={editSkuImageInputRef}
+              onUploadImage={(f) => void uploadProductImage(f, editingId)}
+            />
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', marginTop: '1rem' }}>
+              <button type="button" className="btn btn-primary" disabled={disableActions} onClick={() => void saveEdit()}>
+                Save changes
+              </button>
+              <button type="button" className="btn btn-ghost" disabled={disableActions} onClick={cancelEdit}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </details>
+      ) : null}
 
       <details className="jeweller-mkt-acc card" open>
         <summary>Your catalogue</summary>
@@ -839,6 +551,14 @@ export function JewellerMarketplacePanel() {
                       <td className="tabular">{String(row.sellback_indicative_inr_per_gram ?? '')}</td>
                       <td>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', justifyContent: 'flex-end' }}>
+                          <button
+                            type="button"
+                            className="btn btn-ghost kyb-btn-sm"
+                            disabled={disableActions}
+                            onClick={() => beginEdit(row)}
+                          >
+                            Edit
+                          </button>
                           <button
                             type="button"
                             className="btn btn-ghost kyb-btn-sm"
