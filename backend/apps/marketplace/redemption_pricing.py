@@ -1,0 +1,91 @@
+"""Vault redemption checkout — INR totals aligned with frontend `marketplacePricing.ts`."""
+
+from __future__ import annotations
+
+from decimal import ROUND_UP, Decimal
+
+from django.contrib.auth import get_user_model
+
+from .models import MarketplaceProduct, get_or_create_ticker, jeweller_profile_for
+from .pricing import gold_metal_value_inr, gold_rate_inr_per_gram, stone_component_inr
+from .spot_prices import resolve_cridora_base_22k_inr
+
+User = get_user_model()
+
+_DISCOUNT_ON_MAKING = Decimal("0.05")
+_GST_GOLD = Decimal("0.03")
+_GST_MAKING = Decimal("0.18")
+
+
+def _effective_making_percent(product: MarketplaceProduct, same_store: bool) -> Decimal:
+    cross = product.making_charge_percent or Decimal("0")
+    if not same_store:
+        return cross
+    if product.same_store_making_charge_percent is not None:
+        return product.same_store_making_charge_percent
+    return cross
+
+
+def _effective_making_per_gram(product: MarketplaceProduct, same_store: bool) -> Decimal:
+    cross = product.making_charge_per_gram or Decimal("0")
+    if not same_store:
+        return cross
+    if product.same_store_making_charge_per_gram is not None:
+        return product.same_store_making_charge_per_gram
+    return cross
+
+
+def _raw_making_inr(
+    product: MarketplaceProduct, metal_val: Decimal, same_store: bool
+) -> Decimal:
+    if product.making_charge_mode == MarketplaceProduct.MAKING_PERCENT_OF_METAL:
+        pct = _effective_making_percent(product, same_store) / Decimal("100")
+        return (metal_val * pct).quantize(Decimal("0.01"))
+    per_g = _effective_making_per_gram(product, same_store)
+    return (product.gold_weight_grams * per_g).quantize(Decimal("0.01"))
+
+
+def invoice_totals_for_vault_redemption(
+    product: MarketplaceProduct, customer: User | None
+) -> tuple[Decimal, Decimal, Decimal, bool]:
+    """
+    Returns (final_invoice_inr, metal_rate_inr_per_gram_used, jeweller_subtotal_inr, same_store).
+    """
+    profile = jeweller_profile_for(product.jeweller)
+    cridora_base, _ = resolve_cridora_base_22k_inr()
+    metal_rate = gold_rate_inr_per_gram(product, profile, cridora_base)
+    metal_val = gold_metal_value_inr(product, metal_rate)
+    stone = stone_component_inr(product)
+    gold_line = metal_val + stone
+
+    same_store = bool(
+        customer
+        and customer.user_type == User.CUSTOMER
+        and customer.default_jeweller_id == product.jeweller_id
+    )
+
+    raw_making = _raw_making_inr(product, metal_val, same_store)
+    discount = (raw_making * _DISCOUNT_ON_MAKING).quantize(Decimal("0.01"))
+    making = (raw_making - discount).quantize(Decimal("0.01"))
+    gst_gold = (gold_line * _GST_GOLD).quantize(Decimal("0.01"))
+    gst_making = (making * _GST_MAKING).quantize(Decimal("0.01"))
+    jeweller_subtotal = (gold_line + making + gst_gold + gst_making).quantize(
+        Decimal("0.01")
+    )
+
+    cross = Decimal("0")
+    if product.is_x_redeem:
+        cross = get_or_create_ticker().cross_platform_fee_inr or Decimal("0")
+        if cross < 0:
+            cross = Decimal("0")
+
+    final_invoice = (jeweller_subtotal + cross).quantize(Decimal("0.01"))
+    return final_invoice, metal_rate, jeweller_subtotal, same_store
+
+
+def grams_to_charge_for_invoice(final_invoice_inr: Decimal, metal_rate_inr: Decimal) -> Decimal:
+    if metal_rate_inr <= 0:
+        return Decimal("0")
+    return (final_invoice_inr / metal_rate_inr).quantize(
+        Decimal("0.000001"), rounding=ROUND_UP
+    )

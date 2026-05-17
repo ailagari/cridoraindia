@@ -158,6 +158,7 @@ def customer_portfolio_ledger_payload(user: User, ledger_filter: str = "all") ->
         GoldSellbackRequest,
         GoldTransfer,
         GoldVault,
+        VaultProductRedemption,
     )
     from apps.accounts.wallet_extras import customer_completed_fractional_ledger
     from apps.marketplace.models import jeweller_profile_for
@@ -268,6 +269,25 @@ def customer_portfolio_ledger_payload(user: User, ledger_filter: str = "all") ->
             }
         )
 
+    for rp in VaultProductRedemption.objects.filter(customer=user).select_related(
+        "jeweller", "product"
+    ):
+        j = rp.jeweller
+        jlabel = j.business_name or j.email or ""
+        occurred = rp.created_at.isoformat()
+        cur = rp.final_invoice_inr.quantize(Decimal("0.01"))
+        rows.append(
+            {
+                "occurred_at": occurred,
+                "transaction_type": "redemption_purchase",
+                "reference": f"RP-{rp.id}",
+                "grams": str(rp.grams_charged),
+                "label": f"Vault purchase · {rp.product_name}",
+                "jeweller_name": jlabel,
+                "current_value_inr": str(cur),
+            }
+        )
+
     other_holdings = Prefetch(
         "holdings",
         queryset=VaultHolding.objects.exclude(
@@ -329,6 +349,7 @@ def customer_portfolio_ledger_payload(user: User, ledger_filter: str = "all") ->
         "transfer_out",
         "transfer",
         "sellback",
+        "redemption_purchase",
     }
     lf = (ledger_filter or "all").strip().lower()
     if lf not in allowed:

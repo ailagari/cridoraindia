@@ -516,6 +516,7 @@ def public_jeweller_storefront(user) -> dict:
     listing_count = MarketplaceProduct.objects.filter(
         jeweller=user,
         is_published=True,
+        moderation_status=MarketplaceProduct.MOD_APPROVED,
     ).count()
     return {
         "id": user.id,

@@ -55,6 +55,8 @@ function formatPortfolioLedgerTxnType(t: string): string {
       return 'Transfer out'
     case 'sellback':
       return 'Redemption'
+    case 'redemption_purchase':
+      return 'Vault shop'
     case 'golden_scheme':
       return 'Golden scheme'
     case 'deposit':
@@ -71,6 +73,7 @@ function portfolioLedgerPillClass(t: string): string {
   switch (t) {
     case 'transfer_out':
     case 'sellback':
+    case 'redemption_purchase':
       return `${base} pf-ledger-pill--sell`
     case 'transfer_in':
       return `${base} pf-ledger-pill--credit`
@@ -437,6 +440,7 @@ export function CustomerPortfolioPanel() {
                   ['golden_scheme', 'Golden scheme'],
                   ['transfer', 'Transfers'],
                   ['sellback', 'Redemptions'],
+                  ['redemption_purchase', 'Vault shop'],
                   ['personal', 'Personal'],
                 ] as const
               ).map(([id, label]) => (

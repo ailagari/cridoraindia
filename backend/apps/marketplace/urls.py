@@ -19,6 +19,7 @@ from .views import (
     MarketplaceProductPublicDetailView,
     MarketplaceProductsPublicView,
 )
+from .redemption_views import VaultRedemptionConfirmView, VaultRedemptionQuoteView
 
 urlpatterns = [
     path("marketplace/spot-prices/", MarketplaceSpotPricesView.as_view()),
@@ -29,6 +30,14 @@ urlpatterns = [
     path("marketplace/jewellers/<int:pk>/", MarketplaceJewellerDetailPublicView.as_view()),
     path("marketplace/products/<int:pk>/", MarketplaceProductPublicDetailView.as_view()),
     path("marketplace/products/", MarketplaceProductsPublicView.as_view()),
+    path(
+        "marketplace/redemption/quote/",
+        VaultRedemptionQuoteView.as_view(),
+    ),
+    path(
+        "marketplace/redemption/confirm/",
+        VaultRedemptionConfirmView.as_view(),
+    ),
     path("jeweller/marketplace/profile/", JewellerPricingProfileView.as_view()),
     path("jeweller/marketplace/logo/", JewellerMarketplaceLogoUploadView.as_view()),
     path("jeweller/marketplace/product-image/", JewellerProductImageUploadView.as_view()),

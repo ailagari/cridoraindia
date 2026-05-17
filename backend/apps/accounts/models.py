@@ -605,6 +605,46 @@ class GoldDepositCounterOtp(models.Model):
         return f"GoldDepositCounterOtp(intake={self.intake_id})"
 
 
+class VaultProductRedemption(models.Model):
+    """Marketplace SKU paid by debiting the customer's vault at the listing jeweller."""
+
+    customer = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="vault_product_redemptions",
+        limit_choices_to={"user_type": User.CUSTOMER},
+    )
+    jeweller = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="vault_product_redemptions_as_jeweller",
+        limit_choices_to={"user_type": User.JEWELLER},
+    )
+    product = models.ForeignKey(
+        "marketplace.MarketplaceProduct",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="vault_redemptions",
+    )
+    product_name = models.CharField(max_length=255)
+    grams_charged = models.DecimalField(max_digits=16, decimal_places=6)
+    final_invoice_inr = models.DecimalField(max_digits=16, decimal_places=2)
+    jeweller_subtotal_inr = models.DecimalField(max_digits=16, decimal_places=2)
+    metal_rate_inr_per_gram = models.DecimalField(max_digits=12, decimal_places=2)
+    same_store_checkout = models.BooleanField(default=False)
+    cross_platform_fee_inr = models.DecimalField(
+        max_digits=12, decimal_places=2, default=0
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"VaultProductRedemption({self.customer_id}, {self.product_name[:40]})"
+
+
 class PlatformOperationalSettings(models.Model):
     """Singleton (pk=1): runtime operational limits configurable without redeploy."""
 
@@ -657,10 +697,12 @@ class JewellerLiabilityLedgerEntry(models.Model):
     LEDGER_KIND_FRACTIONAL_CREDIT = "fractional_credit"
     LEDGER_KIND_SELLBACK_RELEASE = "sellback_release"
     LEDGER_KIND_DEPOSIT_CREDIT = "deposit_credit"
+    LEDGER_KIND_REDEMPTION_PURCHASE_RELEASE = "redemption_purchase_release"
     LEDGER_KIND_CHOICES = [
         (LEDGER_KIND_FRACTIONAL_CREDIT, "Fractional credit"),
         (LEDGER_KIND_SELLBACK_RELEASE, "Sellback release"),
         (LEDGER_KIND_DEPOSIT_CREDIT, "Gold deposit credit"),
+        (LEDGER_KIND_REDEMPTION_PURCHASE_RELEASE, "Vault redemption purchase"),
     ]
 
     jeweller = models.ForeignKey(
@@ -699,6 +741,13 @@ class JewellerLiabilityLedgerEntry(models.Model):
     )
     gold_deposit_intake = models.ForeignKey(
         "GoldDepositIntake",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="liability_entries",
+    )
+    vault_product_redemption = models.ForeignKey(
+        "VaultProductRedemption",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,

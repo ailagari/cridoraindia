@@ -38,6 +38,7 @@ export const CUSTOMER_NAV_GROUPS: DashboardNavGroup[] = [
     shortLabel: 'Use',
     icon: 'grid',
     items: [
+      { sectionKey: 'redeem_vault_shop', label: 'Shop with vault' },
       { sectionKey: 'redeem_transfer', label: 'Transfer' },
       { sectionKey: 'redeem_hub', label: 'Redeem & liquidity' },
     ],
@@ -69,7 +70,7 @@ export const CUSTOMER_LEGACY_SECTION: Record<string, string> = {
   portfolio_pnl: 'portfolio_holdings',
   portfolio_locked: 'portfolio_holdings',
   portfolio_activity: 'portfolio_holdings',
-  redeem_ornament: 'redeem_hub',
+  redeem_ornament: 'redeem_vault_shop',
   redeem_cash: 'redeem_hub',
   redeem_loan: 'redeem_hub',
   redeem_emergency: 'redeem_hub',

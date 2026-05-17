@@ -10,6 +10,7 @@ import { CustomerKycWorkflow } from '@/features/customer/CustomerKycWorkflow'
 import { CustomerPortfolioPanel } from '@/features/portfolio/CustomerPortfolioPanel'
 import { CustomerVaultsPanel } from '@/features/portfolio/CustomerVaultsPanel'
 import { CustomerSellbackPanel } from '@/features/redeem/CustomerSellbackPanel'
+import { CustomerVaultRedemptionShopPanel } from '@/features/redeem/CustomerVaultRedemptionShopPanel'
 import { useAuth } from '@/context/AuthContext'
 import { LIVE_PROFILE_POLL_MS } from '@/lib/liveDeskIntervals'
 import { useLivePoll } from '@/lib/useLivePoll'
@@ -111,12 +112,13 @@ export function CustomerDashboardPage() {
       {active === 'shop_products' ? <CustomerProductsBrowsePanel /> : null}
       {active === 'invest_fractional' ? <FractionalPurchasePanel /> : null}
       {active === 'invest_deposit' ? <CustomerDepositInfoPanel /> : null}
+      {active === 'redeem_vault_shop' ? <CustomerVaultRedemptionShopPanel /> : null}
       {active === 'redeem_hub' ? (
         <>
           <CustomerSellbackPanel />
           <ComingSoon
             title="More liquidity options"
-            children="Ornament redemption, loans, and emergency funds will plug in here next."
+            children="Loans and emergency funds will plug in here next. Use Shop with vault for ornament redemption from the catalogue."
           />
         </>
       ) : null}

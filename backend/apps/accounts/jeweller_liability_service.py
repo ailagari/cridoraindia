@@ -13,6 +13,7 @@ from .models import (
     GoldSellbackRequest,
     JewellerLiabilityBalance,
     JewellerLiabilityLedgerEntry,
+    VaultProductRedemption,
 )
 
 User = get_user_model()
@@ -101,6 +102,36 @@ def release_custodial_liability_for_sellback(
         kind=JewellerLiabilityLedgerEntry.LEDGER_KIND_SELLBACK_RELEASE,
         fractional_purchase=None,
         gold_sellback=sellback,
+    )
+    bal, _ = JewellerLiabilityBalance.objects.select_for_update().get_or_create(
+        jeweller=jeweller,
+        defaults={"liability_grams": Decimal("0")},
+    )
+    bal.refresh_from_db()
+    new_liab = bal.liability_grams - grams
+    if new_liab < Decimal("0"):
+        new_liab = Decimal("0")
+    JewellerLiabilityBalance.objects.filter(pk=bal.pk).update(liability_grams=new_liab)
+
+
+def release_custodial_liability_for_redemption_purchase(
+    jeweller: User,
+    customer: User,
+    grams: Decimal,
+    redemption: VaultProductRedemption,
+) -> None:
+    if jeweller.user_type != User.JEWELLER:
+        raise ValueError("Liability jeweller must be a jeweller user.")
+    if customer.user_type != User.CUSTOMER:
+        raise ValueError("Customer required.")
+    JewellerLiabilityLedgerEntry.objects.create(
+        jeweller=jeweller,
+        customer=customer,
+        grams=grams,
+        kind=JewellerLiabilityLedgerEntry.LEDGER_KIND_REDEMPTION_PURCHASE_RELEASE,
+        fractional_purchase=None,
+        gold_sellback=None,
+        vault_product_redemption=redemption,
     )
     bal, _ = JewellerLiabilityBalance.objects.select_for_update().get_or_create(
         jeweller=jeweller,

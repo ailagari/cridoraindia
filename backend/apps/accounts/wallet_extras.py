@@ -115,7 +115,12 @@ def jeweller_recent_liability_credits(jeweller: User) -> list[dict]:
         return []
     qs = (
         JewellerLiabilityLedgerEntry.objects.filter(jeweller=jeweller)
-        .select_related("customer", "fractional_purchase", "gold_deposit_intake")
+        .select_related(
+            "customer",
+            "fractional_purchase",
+            "gold_deposit_intake",
+            "vault_product_redemption",
+        )
         .order_by("-created_at")[:25]
     )
     rows = []
@@ -125,6 +130,8 @@ def jeweller_recent_liability_credits(jeweller: User) -> list[dict]:
             ref = f"FR-{e.fractional_purchase_id}"
         elif e.gold_deposit_intake_id:
             ref = f"GD-{e.gold_deposit_intake_id}"
+        elif e.vault_product_redemption_id:
+            ref = f"RP-{e.vault_product_redemption_id}"
         mid = ""
         cust_label = ""
         if e.customer_id:

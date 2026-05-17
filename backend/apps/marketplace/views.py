@@ -122,6 +122,7 @@ class MarketplaceProductsPublicView(APIView):
     def get(self, request):
         qs = MarketplaceProduct.objects.filter(
             is_published=True,
+            moderation_status=MarketplaceProduct.MOD_APPROVED,
             jeweller__is_active=True,
             jeweller__kyc_status=User.KYC_VERIFIED,
         ).select_related("jeweller", "metal_purity", "product_category")
@@ -145,6 +146,7 @@ class MarketplaceProductPublicDetailView(APIView):
             ).get(
                 pk=pk,
                 is_published=True,
+                moderation_status=MarketplaceProduct.MOD_APPROVED,
                 jeweller__is_active=True,
                 jeweller__kyc_status=User.KYC_VERIFIED,
             )
