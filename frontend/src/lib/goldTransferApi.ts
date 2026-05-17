@@ -90,11 +90,32 @@ export type GoldWalletDTO = {
   portfolio_totals?: PortfolioTotalsDTO | null
 }
 
-/** Non-negative vaulted grams from wallet API (`balance_grams`). */
+/** Non-negative vaulted grams from wallet API (`balance_grams`) — sum across all custodians. */
 export function walletBalanceGrams(w: GoldWalletDTO | null | undefined): number {
   if (!w) return 0
   const n = Number.parseFloat(w.balance_grams ?? '0')
   return Number.isFinite(n) ? Math.max(0, n) : 0
+}
+
+/**
+ * Grams the customer can apply at checkout for a listing from this custodian jeweller:
+ * fractional + deposit + golden scheme (and transfers, which credit fractional), matching server debit order.
+ * Capped by piece weight in UI, not here.
+ */
+export function vaultCheckoutEligibleGramsAtJeweller(
+  w: GoldWalletDTO | null | undefined,
+  jewellerId: number,
+): number {
+  if (!w?.vaults?.length || !Number.isFinite(jewellerId) || jewellerId <= 0) return 0
+  const row = w.vaults.find((v) => v.custodian_id === jewellerId)
+  if (!row) return 0
+  const vt = Number.parseFloat(row.vault_total_grams ?? '0')
+  if (Number.isFinite(vt) && vt > 0) return Math.max(0, vt)
+  const fg = Number.parseFloat(row.fractional_grams ?? '0')
+  const dg = Number.parseFloat(row.deposit_grams ?? '0')
+  const gg = Number.parseFloat(row.golden_scheme_grams ?? '0')
+  const sum = (Number.isFinite(fg) ? fg : 0) + (Number.isFinite(dg) ? dg : 0) + (Number.isFinite(gg) ? gg : 0)
+  return Math.max(0, sum)
 }
 
 /** Custodian jeweller IDs where the customer holds any positive vaulted grams. */

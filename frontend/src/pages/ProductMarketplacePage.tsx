@@ -22,7 +22,7 @@ import {
   type CheckoutPricingContext,
   type PriceBreakdown,
 } from '@/lib/marketplacePricing'
-import { fetchGoldWallet, holdingsJewellerIdsFromWallet, walletBalanceGrams } from '@/lib/goldTransferApi'
+import { fetchGoldWallet, holdingsJewellerIdsFromWallet, vaultCheckoutEligibleGramsAtJeweller, walletBalanceGrams, type GoldWalletDTO } from '@/lib/goldTransferApi'
 import { mergeJewellerListWithDemos } from '@/lib/jewellerMarketplaceDemos'
 import { LIVE_BALANCE_POLL_MS, LIVE_CATALOG_POLL_MS, LIVE_DIRECTORY_POLL_MS } from '@/lib/liveDeskIntervals'
 import { mergeProductCatalogWithDemos } from '@/lib/productMarketplaceDemos'
@@ -75,21 +75,25 @@ function CheckoutView({
   const [payMode, setPayMode] = useState<'cash' | 'vault'>('cash')
   const [vaultGrams, setVaultGrams] = useState(0)
   const [pricingCtx, setPricingCtx] = useState<CheckoutPricingContext | undefined>(undefined)
-  const [portfolioVaultGrams, setPortfolioVaultGrams] = useState(0)
+  /** Spendable vaulted grams custodied with this listing's jeweller (fractional + deposit + scheme). */
+  const [eligibleGramsAtSeller, setEligibleGramsAtSeller] = useState(0)
+  const [totalVaultedAllPartners, setTotalVaultedAllPartners] = useState(0)
 
   const refreshWallet = useCallback(async () => {
     const w = await fetchGoldWallet()
     if (!w) {
       setPricingCtx(undefined)
-      setPortfolioVaultGrams(0)
+      setEligibleGramsAtSeller(0)
+      setTotalVaultedAllPartners(0)
       return
     }
     setPricingCtx({
       customerDefaultJewellerId: w.default_jeweller_id,
       holdingsJewellerIds: holdingsJewellerIdsFromWallet(w),
     })
-    setPortfolioVaultGrams(walletBalanceGrams(w))
-  }, [])
+    setTotalVaultedAllPartners(walletBalanceGrams(w))
+    setEligibleGramsAtSeller(vaultCheckoutEligibleGramsAtJeweller(w, product.jeweller_id))
+  }, [product.jeweller_id])
 
   useEffect(() => {
     void refreshWallet()
@@ -97,7 +101,7 @@ function CheckoutView({
 
   useLivePoll(refreshWallet, LIVE_BALANCE_POLL_MS, true)
 
-  const maxVaultGrams = Math.min(weight, portfolioVaultGrams)
+  const maxVaultGrams = Math.min(weight, eligibleGramsAtSeller)
 
   useEffect(() => {
     setVaultGrams((g) => Math.min(g, maxVaultGrams))
@@ -108,10 +112,10 @@ function CheckoutView({
       calculateCheckoutPrice(
         product,
         payMode === 'vault' ? vaultGrams : 0,
-        portfolioVaultGrams,
+        eligibleGramsAtSeller,
         pricingCtx,
       ),
-    [product, payMode, vaultGrams, portfolioVaultGrams, pricingCtx],
+    [product, payMode, vaultGrams, eligibleGramsAtSeller, pricingCtx],
   )
 
   const payDisplay = Math.max(0, p.payableAmount)
@@ -127,9 +131,11 @@ function CheckoutView({
       <p className="lead lead-tight" style={{ marginBottom: '1.75rem' }}>
         Final amount is shown here only: jeweller metal and making lines, taxes, and — when applicable — a Cridora
         platform fee (never charged by the jeweller). Choose cash / UPI or your Cridora account; with the account you can
-        apply part of your gold balance and pay the rest in cash. Your vaulted balance from your Cridora account is shown
-        below; gold applied is credited at ₹{formatInr(Number.parseFloat(product.metal_rate_inr_per_gram_used), 2)}/g
-        (this listing’s metal rate). Sellback notes are storefront disclosures only.
+        apply part of your gold balance and pay the rest in cash. Vault grams apply from holdings{' '}
+        <strong>custodied with {product.jeweller_name}</strong> (fractional, deposit, transfers, and golden scheme balances
+        at that jeweller). Gold applied is credited at ₹
+        {formatInr(Number.parseFloat(product.metal_rate_inr_per_gram_used), 2)}/g (this listing’s metal rate). Sellback
+        notes are storefront disclosures only.
       </p>
 
       <div
@@ -334,8 +340,12 @@ function CheckoutView({
               <span style={{ fontSize: '0.88rem' }}>
                 <strong>Cridora account (gold)</strong>
                 <span style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.78rem', marginTop: 4 }}>
-                  Choose how many grams to apply; the rest is paid in cash / UPI. Available{' '}
-                  {portfolioVaultGrams.toFixed(3)}g (max {maxVaultGrams.toFixed(3)}g on this piece).
+                  Apply grams custodied with <strong>{product.jeweller_name}</strong>:{' '}
+                  <span className="tabular">{eligibleGramsAtSeller.toFixed(3)}g</span> available (fractional, deposit,
+                  transfers, scheme). This piece&apos;s gold weight is{' '}
+                  <span className="tabular">{weight.toFixed(3)}g</span> — you can apply up to{' '}
+                  <span className="tabular">{maxVaultGrams.toFixed(3)}g</span> (the lower of the two). Total vaulted
+                  network-wide: <span className="tabular">{totalVaultedAllPartners.toFixed(3)}g</span>.
                 </span>
               </span>
             </label>
@@ -344,7 +354,7 @@ function CheckoutView({
           {vaultActive ? (
             <div style={{ marginBottom: '1rem' }}>
               <label htmlFor="vault-grams" style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)' }}>
-                Grams from Cridora account (0 – {maxVaultGrams.toFixed(3)})
+                Grams to apply (0 – {maxVaultGrams.toFixed(3)})
               </label>
               <input
                 id="vault-grams"
@@ -378,6 +388,18 @@ function CheckoutView({
                   fontFamily: 'var(--font)',
                 }}
               />
+              <p
+                className="form-footnote"
+                style={{
+                  margin: '0.45rem 0 0',
+                  fontSize: '0.68rem',
+                  color: 'var(--text-muted)',
+                  lineHeight: 1.45,
+                }}
+              >
+                Golden scheme grams count once credited to your vault here. If your jeweller enforces a scheme lock-in,
+                only unlocked portions are spendable once that rule is on your ledger.
+              </p>
             </div>
           ) : null}
 
@@ -494,7 +516,7 @@ export function ProductMarketplacePage() {
   const [catalog, setCatalog] = useState<MarketplaceProductDTO[]>([])
   const [loadError, setLoadError] = useState('')
   const [cartQtyById, setCartQtyById] = useState<Record<number, number>>({})
-  const [portfolioVaultGrams, setPortfolioVaultGrams] = useState(0)
+  const [goldWallet, setGoldWallet] = useState<GoldWalletDTO | null>(null)
 
   const cartItemCount = useMemo(
     () => Object.values(cartQtyById).reduce((sum, n) => sum + n, 0),
@@ -529,8 +551,7 @@ export function ProductMarketplacePage() {
   }, [])
 
   const refreshVaultBalance = useCallback(async () => {
-    const w = await fetchGoldWallet()
-    setPortfolioVaultGrams(walletBalanceGrams(w))
+    setGoldWallet(await fetchGoldWallet())
   }, [])
 
   useEffect(() => {
@@ -870,10 +891,10 @@ export function ProductMarketplacePage() {
                   textTransform: 'uppercase',
                 }}
               >
-                Vault balance
+                Vault balance (all partners)
               </p>
               <p style={{ margin: '0.2rem 0 0', fontWeight: 800 }} className="tabular">
-                {portfolioVaultGrams.toFixed(3)}g
+                {walletBalanceGrams(goldWallet).toFixed(3)}g
               </p>
             </div>
             <div
@@ -950,7 +971,10 @@ export function ProductMarketplacePage() {
                 <div style={{ padding: '1.25rem', flex: 1, display: 'flex', flexDirection: 'column' }}>
                   <h2 style={{ margin: '0 0 0.85rem', fontSize: '1.05rem', lineHeight: 1.25 }}>{p.name}</h2>
                   <div style={{ marginBottom: '0.85rem' }}>
-                    <MarketplaceProductListSummary p={p} portfolioVaultGrams={portfolioVaultGrams} />
+                    <MarketplaceProductListSummary
+                      p={p}
+                      portfolioVaultGrams={vaultCheckoutEligibleGramsAtJeweller(goldWallet, p.jeweller_id)}
+                    />
                   </div>
                   <div
                     style={{

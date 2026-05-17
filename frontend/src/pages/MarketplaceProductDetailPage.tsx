@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ProductPhoto } from '@/components/ProductPhoto'
 import {
@@ -6,7 +6,12 @@ import {
   type MarketplaceProductDTO,
 } from '@/lib/marketplaceApi'
 import { useLivePoll } from '@/lib/useLivePoll'
-import { fetchGoldWallet, holdingsJewellerIdsFromWallet, walletBalanceGrams } from '@/lib/goldTransferApi'
+import {
+  fetchGoldWallet,
+  holdingsJewellerIdsFromWallet,
+  vaultCheckoutEligibleGramsAtJeweller,
+  type GoldWalletDTO,
+} from '@/lib/goldTransferApi'
 import { LIVE_BALANCE_POLL_MS } from '@/lib/liveDeskIntervals'
 import {
   MarketplaceProductPricingBreakdown,
@@ -45,7 +50,7 @@ export function MarketplaceProductDetailPage() {
   const [product, setProduct] = useState<MarketplaceProductDTO | null>(null)
   const [loadError, setLoadError] = useState('')
   const [pricingContext, setPricingContext] = useState<CheckoutPricingContext | undefined>(undefined)
-  const [portfolioVaultGrams, setPortfolioVaultGrams] = useState(0)
+  const [goldWallet, setGoldWallet] = useState<GoldWalletDTO | null>(null)
 
   const idNum = productId && /^\d+$/.test(productId) ? Number.parseInt(productId, 10) : NaN
 
@@ -72,16 +77,21 @@ export function MarketplaceProductDetailPage() {
   const refreshWallet = useCallback(async () => {
     const w = await fetchGoldWallet()
     if (!w) {
+      setGoldWallet(null)
       setPricingContext(undefined)
-      setPortfolioVaultGrams(0)
       return
     }
+    setGoldWallet(w)
     setPricingContext({
       customerDefaultJewellerId: w.default_jeweller_id,
       holdingsJewellerIds: holdingsJewellerIdsFromWallet(w),
     })
-    setPortfolioVaultGrams(walletBalanceGrams(w))
   }, [])
+
+  const portfolioVaultGrams = useMemo(
+    () => vaultCheckoutEligibleGramsAtJeweller(goldWallet, product?.jeweller_id ?? 0),
+    [goldWallet, product?.jeweller_id],
+  )
 
   useEffect(() => {
     void refreshWallet()

@@ -10,7 +10,7 @@ import {
 import {
   fetchGoldWallet,
   holdingsJewellerIdsFromWallet,
-  walletBalanceGrams,
+  vaultCheckoutEligibleGramsAtJeweller,
   type GoldWalletDTO,
 } from '@/lib/goldTransferApi'
 import { mergeProductCatalogWithDemos } from '@/lib/productMarketplaceDemos'
@@ -56,7 +56,6 @@ export function CustomerProductsBrowsePanel() {
 
   useLivePoll(refreshWallet, LIVE_BALANCE_POLL_MS, true)
 
-  const portfolioVaultGrams = useMemo(() => walletBalanceGrams(wallet), [wallet])
   const checkoutPricingContext = useMemo((): CheckoutPricingContext | undefined => {
     if (!wallet) return undefined
     return {
@@ -248,7 +247,10 @@ export function CustomerProductsBrowsePanel() {
                   </p>
                 ) : null}
                 <div style={{ marginTop: '0.65rem' }}>
-                  <MarketplaceProductListSummary p={p} portfolioVaultGrams={portfolioVaultGrams} />
+                  <MarketplaceProductListSummary
+                    p={p}
+                    portfolioVaultGrams={vaultCheckoutEligibleGramsAtJeweller(wallet, p.jeweller_id)}
+                  />
                 </div>
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem', marginTop: 'auto' }}>
