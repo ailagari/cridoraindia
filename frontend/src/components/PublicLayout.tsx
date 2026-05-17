@@ -5,6 +5,7 @@ import { PublicMobileUserMenu } from '@/components/PublicMobileUserMenu'
 import { GoldTickerStrip } from '@/components/GoldTickerStrip'
 import { PublicMobileSegmentBar } from '@/components/PublicMobileSegmentBar'
 import { useAuth, type AuthUser } from '@/context/AuthContext'
+import { crossRedemptionMasterDisclaimer } from '@/features/crossRedemption/legalCopy'
 import { dashboardLandingPath } from '@/lib/routes'
 
 const primaryNav = [
@@ -112,6 +113,9 @@ export function PublicLayout() {
           <p style={{ margin: '0 0 1rem', color: 'var(--text-muted)', maxWidth: '56ch', lineHeight: 1.55 }}>
             Cridora connects verified jewellers and savers for India-first gold vaults, marketplace discovery, and supervised
             redemption.
+          </p>
+          <p style={{ margin: '0 0 1rem', color: 'var(--text-faint)', maxWidth: '72ch', fontSize: '0.78rem' }}>
+            {crossRedemptionMasterDisclaimer}
           </p>
           <div className="nav-links" style={{ gap: '0.75rem 1.25rem' }}>
             <Link to="/why-cridora">Why Cridora</Link>

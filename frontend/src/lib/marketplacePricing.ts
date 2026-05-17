@@ -12,11 +12,6 @@ export type PriceBreakdown = {
   payableAmount: number
   goldFromVault: number
   discountAmount: number
-  /**
-   * When > 0, metal (fine gold) value is partially/fully treated as already settled via vault purchase:
-   * cash bill omits that share of metal and its 3% GST; GST on making + platform fee is a single 18% on (making + fee).
-   */
-  vaultMetalWaiverFraction: number
 }
 
 /** Fallback when API omits `cross_platform_fee_inr` (legacy clients). */
@@ -202,47 +197,8 @@ export function calculateCheckoutPrice(
   vaultBalanceGrams: number,
   ctx?: CheckoutPricingContext,
   quantity: number = 1,
-  vaultMetalWaiverFraction: number = 0,
 ): PriceBreakdown {
   const q = Math.max(1, Math.min(9999, Math.floor(Number.isFinite(quantity) ? quantity : 1)))
-  const waiver = Math.min(1, Math.max(0, Number.isFinite(vaultMetalWaiverFraction) ? vaultMetalWaiverFraction : 0))
-
-  if (waiver > 0) {
-    const weight = Number.parseFloat(p.gold_weight_grams)
-    const metalPreUnit = Number.parseFloat(p.gold_metal_value_inr)
-    const stonePreUnit = Number.parseFloat(p.stone_component_inr)
-    const m = (Number.isFinite(metalPreUnit) ? metalPreUnit : 0) * q
-    const s = (Number.isFinite(stonePreUnit) ? stonePreUnit : 0) * q
-    const metalPay = m * (1 - waiver)
-    const gstMetalStone = (metalPay + s) * 0.03
-
-    const rawMk0 = rawMakingChargesInr(p, ctx)
-    const discountAmount = rawMk0 * DISCOUNT_RATE * q
-    const makingCharges = rawMk0 * q - discountAmount
-    const crossPlatformFee = cridoraCrossPlatformFeeInr(p, ctx) * q
-    const gstOnMaking = (makingCharges + crossPlatformFee) * 0.18
-
-    const goldValue = metalPay + s
-    const gstOnGold = gstMetalStone
-    const jewellerSubtotal = goldValue + gstOnGold + makingCharges + gstOnMaking
-    const finalAmount = jewellerSubtotal + crossPlatformFee
-
-    return {
-      goldValue,
-      makingCharges,
-      gstOnGold,
-      gstOnMaking,
-      jewellerSubtotal,
-      crossPlatformFee,
-      finalAmount,
-      vaultValueOffset: 0,
-      payableAmount: finalAmount,
-      goldFromVault: Number.isFinite(weight) && weight > 0 ? waiver * weight * q : 0,
-      discountAmount,
-      vaultMetalWaiverFraction: waiver,
-    }
-  }
-
   const j0 = jewellerLineParts(p, ctx)
   const j = {
     goldValue: j0.goldValue * q,
@@ -273,18 +229,7 @@ export function calculateCheckoutPrice(
     payableAmount,
     goldFromVault,
     discountAmount: j.discountAmount,
-    vaultMetalWaiverFraction: 0,
   }
-}
-
-/** Sum of piece gold weights × qty (vault settlement uses this as the metal gram budget). */
-export function cartTotalGoldGrams(lines: ReadonlyArray<{ product: MarketplaceProductDTO; qty: number }>): number {
-  let g = 0
-  for (const { product: p, qty } of lines) {
-    const w = Number.parseFloat(p.gold_weight_grams)
-    if (Number.isFinite(w) && w > 0) g += w * qty
-  }
-  return g
 }
 
 /** Weighted listing ₹/g across cart lines (same-jeweller vault credit). */

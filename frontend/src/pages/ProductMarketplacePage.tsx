@@ -112,27 +112,25 @@ function CheckoutView({
     () => calculateCheckoutPrice(product, 0, 0, pricingCtx),
     [product, pricingCtx],
   )
-  const gramsSuggestedFullOrder =
-    weight > 0 ? weight : vaultGramsAtListingRateForOrderInr(cashOnlyBreakdown.finalAmount, metalRate)
+  const gramsSuggestedFullOrder = vaultGramsAtListingRateForOrderInr(
+    cashOnlyBreakdown.finalAmount,
+    metalRate,
+  )
   const maxVaultGrams = eligibleGramsAtSeller
 
   useEffect(() => {
     setVaultGrams((g) => Math.min(g, maxVaultGrams))
   }, [maxVaultGrams])
 
-  const waiverFraction =
-    payMode === 'vault' && weight > 0 ? Math.min(1, vaultGrams / weight) : 0
   const p: PriceBreakdown = useMemo(
     () =>
       calculateCheckoutPrice(
         product,
-        payMode === 'vault' && waiverFraction <= 0 ? vaultGrams : 0,
+        payMode === 'vault' ? vaultGrams : 0,
         eligibleGramsAtSeller,
         pricingCtx,
-        1,
-        waiverFraction,
       ),
-    [product, payMode, vaultGrams, eligibleGramsAtSeller, pricingCtx, waiverFraction],
+    [product, payMode, vaultGrams, eligibleGramsAtSeller, pricingCtx],
   )
 
   const payDisplay = Math.max(0, p.payableAmount)
@@ -207,18 +205,8 @@ function CheckoutView({
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', fontSize: '0.88rem' }}>
-            <Row
-              label={
-                p.vaultMetalWaiverFraction > 0 ? 'Gold + stone (cash portion)' : 'Gold + stone (metal layer)'
-              }
-              value={`₹${formatInr(p.goldValue)}`}
-            />
-            <Row
-              label={
-                p.vaultMetalWaiverFraction > 0 ? 'GST on metal & stone (3%, cash portion)' : 'GST on gold (3%)'
-              }
-              value={`₹${formatInr(p.gstOnGold, 2)}`}
-            />
+            <Row label="Gold + stone (metal layer)" value={`₹${formatInr(p.goldValue)}`} />
+            <Row label="GST on gold (3%)" value={`₹${formatInr(p.gstOnGold, 2)}`} />
             <Row
               label="Making charges"
               value={
@@ -237,14 +225,7 @@ function CheckoutView({
                 </span>
               }
             />
-            <Row
-              label={
-                p.vaultMetalWaiverFraction > 0
-                  ? 'GST on making & platform fee (18%)'
-                  : 'GST on making (18%)'
-              }
-              value={`₹${formatInr(p.gstOnMaking, 2)}`}
-            />
+            <Row label="GST on making (18%)" value={`₹${formatInr(p.gstOnMaking, 2)}`} />
             <Row
               label="Subtotal (jeweller)"
               value={`₹${formatInr(p.jewellerSubtotal)}`}
@@ -264,13 +245,6 @@ function CheckoutView({
                 No Cridora cross-network platform fee on this order in this demo.
               </p>
             )}
-            {p.vaultMetalWaiverFraction > 0 ? (
-              <p style={{ margin: '0.65rem 0 0', fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: 1.45 }}>
-                You already paid for vaulted gold and its GST when you bought fractional gold. This bill drops that metal value (and
-                its 3% GST) for the grams you apply from your vault; on cross-jeweller redemption the corresponding metal is billed
-                to {product.jeweller_name} via Cridora. GST on making and on the Cridora platform fee is combined at 18% above.
-              </p>
-            ) : null}
           </div>
 
           <div
@@ -380,12 +354,11 @@ function CheckoutView({
               <span style={{ fontSize: '0.88rem' }}>
                 <strong>Cridora account (gold)</strong>
                 <span style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.78rem', marginTop: 4 }}>
-                  <strong>Vault rate:</strong> ₹{formatInr(metalRate, 2)}/g. Use vault grams to match catalogue gold weight (
-                  <span className="tabular">{gramsSuggestedFullOrder.toFixed(3)}g</span> this piece): metal and 3% GST on that
-                  metal are not charged again; you pay making, Cridora fees (when applicable), and 18% GST on those together. Reference
-                  all-cash total ₹{formatInr(cashOnlyBreakdown.finalAmount)}. You hold{' '}
-                  <span className="tabular">{eligibleGramsAtSeller.toFixed(3)}g</span> with {product.jeweller_name}. Total vaulted
-                  (all partners): <span className="tabular">{totalVaultedAllPartners.toFixed(3)}g</span>.
+                  <strong>Vault rate:</strong> ₹{formatInr(metalRate, 2)}/g · <strong>Suggested for full order:</strong>{' '}
+                  <span className="tabular">{gramsSuggestedFullOrder.toFixed(3)}g</span> (covers ₹
+                  {formatInr(cashOnlyBreakdown.finalAmount)} incl. taxes &amp; platform fee). You hold{' '}
+                  <span className="tabular">{eligibleGramsAtSeller.toFixed(3)}g</span> with {product.jeweller_name}. Total
+                  vaulted (all partners): <span className="tabular">{totalVaultedAllPartners.toFixed(3)}g</span>.
                 </span>
               </span>
             </label>
@@ -403,7 +376,7 @@ function CheckoutView({
                   }
                   disabled={maxVaultGrams <= 0 || !Number.isFinite(gramsSuggestedFullOrder)}
                 >
-                  Use suggested — match piece gold weight
+                  Use suggested — pay full order in gold
                 </button>
               </div>
               <label htmlFor="vault-grams" style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)' }}>
@@ -477,41 +450,23 @@ function CheckoutView({
                   borderRadius: 14,
                 }}
               >
-                {p.vaultMetalWaiverFraction > 0 ? (
-                  <>
-                    <Row
-                      label="Vault metal applied (prepaid gold + its GST not re-billed)"
-                      value={<strong className="tabular">{p.goldFromVault.toFixed(3)}g</strong>}
-                      muted
-                    />
-                    {product.is_x_redeem ? (
-                      <p style={{ margin: 0, fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: 1.45 }}>
-                        Cross-jeweller: metal settled from your vault is billed to {product.jeweller_name} via Cridora; your cash/UPI
-                        is only making, platform fee, and GST on those charges.
-                      </p>
-                    ) : null}
-                  </>
-                ) : (
-                  <>
-                    <Row label="Grams selected (vault rate)" value={<strong>{vaultGrams.toFixed(3)}g</strong>} muted />
-                    <Row
-                      label="Credit toward order (capped at invoice)"
-                      value={<strong style={{ color: 'var(--success)' }}>₹{formatInr(p.vaultValueOffset)}</strong>}
-                      muted
-                    />
-                    <Row
-                      label="Grams counted on this bill"
-                      value={<strong className="tabular">{p.goldFromVault.toFixed(3)}g</strong>}
-                      muted
-                    />
-                    {vaultGrams * metalRate > cashOnlyBreakdown.finalAmount + 1e-6 ? (
-                      <p style={{ margin: 0, fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: 1.45 }}>
-                        Invoice fully covered — credit stops at ₹{formatInr(cashOnlyBreakdown.finalAmount)}; extra gram selection is
-                        not needed for this order.
-                      </p>
-                    ) : null}
-                  </>
-                )}
+                <Row label="Grams selected (vault rate)" value={<strong>{vaultGrams.toFixed(3)}g</strong>} muted />
+                <Row
+                  label="Credit toward order (capped at invoice)"
+                  value={<strong style={{ color: 'var(--success)' }}>₹{formatInr(p.vaultValueOffset)}</strong>}
+                  muted
+                />
+                <Row
+                  label="Grams counted on this bill"
+                  value={<strong className="tabular">{p.goldFromVault.toFixed(3)}g</strong>}
+                  muted
+                />
+                {vaultGrams * metalRate > p.finalAmount + 1e-6 ? (
+                  <p style={{ margin: 0, fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: 1.45 }}>
+                    Invoice fully covered — credit stops at ₹{formatInr(p.finalAmount)}; extra gram selection is not needed
+                    for this order.
+                  </p>
+                ) : null}
               </div>
             ) : (
               <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-muted)' }}>
@@ -786,13 +741,15 @@ export function ProductMarketplacePage() {
     [addToCart],
   )
 
-  const handleBuyNow = useCallback(
+  const openCheckout = useCallback(
     (p: MarketplaceProductDTO) => {
-      const r = addToCart(p, 1)
-      setCartToast(r.message)
-      openCartReview()
+      setCheckoutProduct(p)
+      const next = new URLSearchParams(searchParams)
+      next.set('checkout', String(p.id))
+      next.delete('cart')
+      setSearchParams(next, { replace: true })
     },
-    [addToCart, openCartReview],
+    [searchParams, setSearchParams],
   )
 
   const setJewellerFilter = useCallback(
@@ -1185,7 +1142,7 @@ export function ProductMarketplacePage() {
                       type="button"
                       className="btn btn-primary"
                       style={{ padding: '0.5rem 0.65rem' }}
-                      onClick={() => handleBuyNow(p)}
+                      onClick={() => openCheckout(p)}
                     >
                       Buy now
                     </button>

@@ -3,11 +3,19 @@ from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 
 from .models import (
     BankAccount,
+    CrossRedemptionEvent,
+    CrossRedemptionRequest,
+    CrossRedemptionSagaStep,
+    ExposureReservation,
+    IntegrationOutbox,
+    JewellerCrossPolicy,
     KYDocument,
     PersonalGoldHolding,
     PersonalHoldingDocument,
     PersonalPortfolioAuditLog,
     PortfolioUserNotification,
+    SettlementBatch,
+    SettlementObligation,
     User,
 )
 
@@ -82,3 +90,66 @@ class PortfolioUserNotificationAdmin(admin.ModelAdmin):
     list_filter = ("kind",)
     search_fields = ("user__email", "title")
     raw_id_fields = ("user",)
+
+
+@admin.register(JewellerCrossPolicy)
+class JewellerCrossPolicyAdmin(admin.ModelAdmin):
+    list_display = ("jeweller", "allow_cross_redemption", "require_source_approval", "trust_tier", "updated_at")
+    raw_id_fields = ("jeweller",)
+
+
+@admin.register(CrossRedemptionRequest)
+class CrossRedemptionRequestAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "user",
+        "source_jeweller",
+        "destination_jeweller",
+        "lifecycle_stage",
+        "saga_status",
+        "workflow_state",
+        "deadline_at",
+        "created_at",
+    )
+    list_filter = ("lifecycle_stage", "saga_status", "workflow_state")
+    raw_id_fields = ("user", "source_jeweller", "destination_jeweller")
+    search_fields = ("user__email",)
+
+
+@admin.register(CrossRedemptionEvent)
+class CrossRedemptionEventAdmin(admin.ModelAdmin):
+    list_display = ("request", "actor", "event_type", "created_at")
+    list_filter = ("actor",)
+    raw_id_fields = ("request",)
+
+
+@admin.register(ExposureReservation)
+class ExposureReservationAdmin(admin.ModelAdmin):
+    list_display = ("request", "source_jeweller", "destination_jeweller", "status", "reserved_value_inr")
+    list_filter = ("status",)
+    raw_id_fields = ("request", "source_jeweller", "destination_jeweller")
+
+
+@admin.register(CrossRedemptionSagaStep)
+class CrossRedemptionSagaStepAdmin(admin.ModelAdmin):
+    list_display = ("request", "step_name", "direction", "status", "created_at")
+    list_filter = ("status", "direction")
+    raw_id_fields = ("request",)
+
+
+@admin.register(IntegrationOutbox)
+class IntegrationOutboxAdmin(admin.ModelAdmin):
+    list_display = ("idempotency_key", "message_type", "status", "created_at")
+    list_filter = ("status", "message_type")
+
+
+@admin.register(SettlementBatch)
+class SettlementBatchAdmin(admin.ModelAdmin):
+    list_display = ("id", "created_at")
+
+
+@admin.register(SettlementObligation)
+class SettlementObligationAdmin(admin.ModelAdmin):
+    list_display = ("from_jeweller", "to_jeweller", "amount_inr", "status", "batch", "created_at")
+    list_filter = ("status",)
+    raw_id_fields = ("from_jeweller", "to_jeweller", "batch")

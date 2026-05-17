@@ -5682,10 +5682,6 @@ select.input {
   color: var(--danger);
 }
 
-.public-mobile-segment-bar {
-  display: none;
-}
-
 @media (max-width: 767px) {
   .public-nav-desktop {
     display: none !important;
@@ -5753,51 +5749,6 @@ select.input {
 
   .public-hub-tabs {
     display: none !important;
-  }
-
-  .public-mobile-segment-bar {
-    display: block;
-    border-bottom: 1px solid var(--border-soft);
-    background: var(--public-hub-tabs-bg);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-  }
-
-  .public-mobile-segment-bar__inner {
-    padding: 0.48rem 0 0.52rem;
-  }
-
-  .public-mobile-segment-bar__pair {
-    display: flex;
-    gap: 0.45rem;
-  }
-
-  .public-mobile-segment-btn {
-    flex: 1;
-    min-height: 2.55rem;
-    padding: 0.35rem 0.65rem;
-    border-radius: 999px;
-    border: 1px solid var(--border-soft);
-    background: transparent;
-    color: var(--text-muted);
-    font: inherit;
-    font-size: 0.72rem;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
-    touch-action: manipulation;
-    transition:
-      color 0.2s ease,
-      border-color 0.2s ease,
-      background 0.2s ease;
-  }
-
-  .public-mobile-segment-btn--active {
-    border-color: rgba(212, 168, 92, 0.48);
-    color: var(--gold-light);
-    background: rgba(212, 168, 92, 0.12);
   }
 
   .public-bottom-item .mobile-tab-label {

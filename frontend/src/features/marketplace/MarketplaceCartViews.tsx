@@ -4,7 +4,6 @@ import { ProductPhoto } from '@/components/ProductPhoto'
 import {
   calculateCheckoutPrice,
   cartBlendedMetalRateInrPerGram,
-  cartTotalGoldGrams,
   makingChargesShortLabel,
   maxOrderQtyForProduct,
   vaultGramsAtListingRateForOrderInr,
@@ -281,54 +280,30 @@ export function MarketplaceCartCheckout({
     setVaultGrams((g) => Math.min(g, maxVaultGrams))
   }, [maxVaultGrams])
 
-  const totalGoldGrams = useMemo(() => cartTotalGoldGrams(lines), [lines])
-
-  const waiverFraction = useMemo(() => {
-    if (payMode !== 'vault' || !vaultAllowed || vaultGrams <= 0 || totalGoldGrams <= 0) return 0
-    return Math.min(1, vaultGrams / totalGoldGrams)
-  }, [payMode, vaultAllowed, vaultGrams, totalGoldGrams])
-
-  const { sumFinalCashOnly, sumFinal, lineBreakdowns, jewellerNames } = useMemo(() => {
-    let sumCash = 0
+  const { sumFinal, lineBreakdowns, jewellerNames } = useMemo(() => {
     let sum = 0
     const lbs: { product: MarketplaceProductDTO; qty: number; bd: PriceBreakdown }[] = []
     const jn = new Set<string>()
     for (const l of lines) {
-      const bdCash = calculateCheckoutPrice(l.product, 0, 0, pricingCtx, l.qty, 0)
-      const bd = calculateCheckoutPrice(l.product, 0, 0, pricingCtx, l.qty, waiverFraction)
-      sumCash += bdCash.finalAmount
+      const bd = calculateCheckoutPrice(l.product, 0, 0, pricingCtx, l.qty)
       sum += bd.finalAmount
       jn.add(l.product.jeweller_name)
       lbs.push({ product: l.product, qty: l.qty, bd })
     }
-    return {
-      sumFinalCashOnly: sumCash,
-      sumFinal: sum,
-      lineBreakdowns: lbs,
-      jewellerNames: [...jn].sort(),
-    }
-  }, [lines, pricingCtx, waiverFraction])
+    return { sumFinal: sum, lineBreakdowns: lbs, jewellerNames: [...jn].sort() }
+  }, [lines, pricingCtx])
 
   const blendRate = useMemo(() => cartBlendedMetalRateInrPerGram(lines), [lines])
 
-  const orderTotalDisplayed = waiverFraction > 0 ? sumFinal : sumFinalCashOnly
-
   const vaultValueOffset =
-    payMode === 'vault' && vaultAllowed && waiverFraction <= 0 && vaultGrams > 0 && blendRate > 0
-      ? Math.min(Math.max(0, Math.min(vaultGrams, maxVaultGrams)) * blendRate, sumFinalCashOnly)
+    payMode === 'vault' && vaultAllowed && blendRate > 0
+      ? Math.min(Math.max(0, Math.min(vaultGrams, maxVaultGrams)) * blendRate, sumFinal)
       : 0
-  const payableAmount =
-    waiverFraction > 0 ? sumFinal : Math.max(0, sumFinalCashOnly - vaultValueOffset)
-  const goldGramsAppliedToMetal =
-    waiverFraction > 0 ? Math.min(vaultGrams, totalGoldGrams) : blendRate > 0 ? vaultValueOffset / blendRate : 0
-  const gramsSuggestedFullOrder =
-    totalGoldGrams > 0
-      ? totalGoldGrams
-      : vaultGramsAtListingRateForOrderInr(sumFinalCashOnly, blendRate)
+  const payableAmount = Math.max(0, sumFinal - vaultValueOffset)
+  const goldFromVault = blendRate > 0 ? vaultValueOffset / blendRate : 0
+  const gramsSuggestedFullOrder = vaultGramsAtListingRateForOrderInr(sumFinal, blendRate)
 
   const firstName = lines[0]?.product.jeweller_name ?? 'jeweller'
-
-  const anyCrossRedeem = useMemo(() => lines.some((l) => l.product.is_x_redeem), [lines])
 
   useEffect(() => {
     if (!vaultAllowed && payMode === 'vault') setPayMode('cash')
@@ -345,7 +320,7 @@ export function MarketplaceCartCheckout({
       </button>
       <h1 className="h1-page">Payment</h1>
       <p className="lead lead-tight" style={{ marginBottom: '1.5rem', fontSize: '0.95rem' }}>
-        Order total <strong className="tabular">₹{formatInr(orderTotalDisplayed)}</strong>
+        Order total <strong className="tabular">₹{formatInr(sumFinal)}</strong>
         {jewellerNames.length > 1 ? (
           <>
             {' '}
@@ -389,15 +364,7 @@ export function MarketplaceCartCheckout({
             ))}
           </div>
           <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border-soft)' }}>
-            <Row
-              label={waiverFraction > 0 ? 'Bill (vault metal pricing)' : 'Due (before vault credit)'}
-              value={`₹${formatInr(orderTotalDisplayed)}`}
-            />
-            {waiverFraction > 0 ? (
-              <div style={{ marginTop: '0.35rem' }}>
-                <Row label="Reference: all-cash total" value={`₹${formatInr(sumFinalCashOnly)}`} muted />
-              </div>
-            ) : null}
+            <Row label="Due (before vault)" value={`₹${formatInr(sumFinal)}`} />
           </div>
         </div>
 
@@ -464,10 +431,8 @@ export function MarketplaceCartCheckout({
                 <span style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.78rem', marginTop: 4 }}>
                   {vaultAllowed ? (
                     <>
-                      Vault grams settle fine gold you already paid for (and its 3% GST) toward this order. Making and Cridora fees
-                      use the same- or cross-jeweller rates on the listing; one 18% GST applies to making + platform fee together.
-                      <strong> Blended ₹/g:</strong> ₹{formatInr(blendRate, 2)}/g · <strong>Suggested to match catalogue gold:</strong>{' '}
-                      <span className="tabular">{gramsSuggestedFullOrder.toFixed(3)}g</span> (order gold weight · qty). You hold{' '}
+                      <strong>Blended vault rate:</strong> ₹{formatInr(blendRate, 2)}/g · <strong>Suggested for full order:</strong>{' '}
+                      <span className="tabular">{gramsSuggestedFullOrder.toFixed(3)}g</span>. You hold{' '}
                       <span className="tabular">{eligibleGramsAtSeller.toFixed(3)}g</span> with {firstName}. Total vaulted (all
                       partners): <span className="tabular">{totalVaultedAllPartners.toFixed(3)}g</span>.
                     </>
@@ -489,7 +454,7 @@ export function MarketplaceCartCheckout({
                   onClick={() => setVaultGrams(Math.min(maxVaultGrams, gramsSuggestedFullOrder))}
                   disabled={maxVaultGrams <= 0 || !Number.isFinite(gramsSuggestedFullOrder)}
                 >
-                  Use suggested — match catalogue gold weight
+                  Use suggested — full order in gold
                 </button>
               </div>
               <label htmlFor="vault-grams-cart" style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)' }}>
@@ -541,30 +506,8 @@ export function MarketplaceCartCheckout({
           >
             {payMode === 'vault' && vaultAllowed && vaultGrams > 0 ? (
               <div style={{ fontSize: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                {waiverFraction > 0 ? (
-                  <>
-                    <Row
-                      label="Vault metal applied (prepaid gold + its GST not re-billed)"
-                      value={<strong className="tabular">{goldGramsAppliedToMetal.toFixed(3)}g</strong>}
-                      muted
-                    />
-                    {anyCrossRedeem ? (
-                      <p style={{ margin: 0, fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: 1.45 }}>
-                        Cross-jeweller lines: the gold value settled from your vault is charged to the listing jeweller through
-                        Cridora; you only pay making, platform fees, and GST on those charges here.
-                      </p>
-                    ) : null}
-                  </>
-                ) : (
-                  <>
-                    <Row
-                      label="Credit toward order (blended rate)"
-                      value={<strong style={{ color: 'var(--success)' }}>₹{formatInr(vaultValueOffset)}</strong>}
-                      muted
-                    />
-                    <Row label="≈ Gold on bill" value={<strong className="tabular">{goldGramsAppliedToMetal.toFixed(3)}g</strong>} muted />
-                  </>
-                )}
+                <Row label="Credit toward order (blended rate)" value={<strong style={{ color: 'var(--success)' }}>₹{formatInr(vaultValueOffset)}</strong>} muted />
+                <Row label="≈ Gold on bill" value={<strong className="tabular">{goldFromVault.toFixed(3)}g</strong>} muted />
               </div>
             ) : (
               <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-muted)' }}>
@@ -603,7 +546,7 @@ export function MarketplaceCartCheckout({
           </button>
           <p className="form-footnote" style={{ marginTop: '1rem', textAlign: 'center', fontSize: '0.72rem' }}>
             Demo checkout · {lines.length} line(s)
-            {payMode === 'vault' && vaultGrams > 0 ? ` · ~${goldGramsAppliedToMetal.toFixed(3)}g from vault` : ''}
+            {payMode === 'vault' && vaultGrams > 0 ? ` · ~${goldFromVault.toFixed(3)}g toward bill` : ''}
           </p>
         </div>
       </div>

@@ -92,6 +92,20 @@ from .views_personal_portfolio import (
     PortfolioUserNotificationsListView,
     PortfolioUserNotificationsMarkReadView,
 )
+from .cross_redemption_views import (
+    AdminCrossRedemptionListView,
+    AdminCrossRedemptionRiskBlockView,
+    AdminCrossRedemptionSettlementCompleteView,
+    CustomerCrossRedemptionAuthorizeView,
+    CustomerCrossRedemptionCancelView,
+    CustomerCrossRedemptionListView,
+    JewellerCrossRedemptionDestAcceptView,
+    JewellerCrossRedemptionDestRejectView,
+    JewellerCrossRedemptionFulfillmentHeartbeatView,
+    JewellerCrossRedemptionInboxView,
+    JewellerCrossRedemptionSourceApproveView,
+    JewellerCrossRedemptionSourceRejectView,
+)
 urlpatterns = [
     path("portfolio/ledger/", CustomerPortfolioLedgerView.as_view()),
     path("portfolio/notifications/", PortfolioUserNotificationsListView.as_view()),
@@ -219,4 +233,37 @@ urlpatterns = [
         AdminDocumentRequestReuploadView.as_view(),
     ),
     path("admin/users/<int:user_id>/freeze/", AdminFreezeUserView.as_view()),
+    path("cross-redemption/authorize/", CustomerCrossRedemptionAuthorizeView.as_view()),
+    path("cross-redemption/", CustomerCrossRedemptionListView.as_view()),
+    path("cross-redemption/<int:pk>/cancel/", CustomerCrossRedemptionCancelView.as_view()),
+    path("jeweller/cross-redemption/inbox/", JewellerCrossRedemptionInboxView.as_view()),
+    path(
+        "jeweller/cross-redemption/<int:pk>/destination/accept/",
+        JewellerCrossRedemptionDestAcceptView.as_view(),
+    ),
+    path(
+        "jeweller/cross-redemption/<int:pk>/destination/reject/",
+        JewellerCrossRedemptionDestRejectView.as_view(),
+    ),
+    path(
+        "jeweller/cross-redemption/<int:pk>/source/approve/",
+        JewellerCrossRedemptionSourceApproveView.as_view(),
+    ),
+    path(
+        "jeweller/cross-redemption/<int:pk>/source/reject/",
+        JewellerCrossRedemptionSourceRejectView.as_view(),
+    ),
+    path(
+        "jeweller/cross-redemption/<int:pk>/fulfillment/heartbeat/",
+        JewellerCrossRedemptionFulfillmentHeartbeatView.as_view(),
+    ),
+    path("admin/cross-redemption/", AdminCrossRedemptionListView.as_view()),
+    path(
+        "admin/cross-redemption/<int:pk>/risk-block/",
+        AdminCrossRedemptionRiskBlockView.as_view(),
+    ),
+    path(
+        "admin/cross-redemption/<int:pk>/settlement-complete/",
+        AdminCrossRedemptionSettlementCompleteView.as_view(),
+    ),
 ]

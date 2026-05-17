@@ -8,6 +8,7 @@ from django.contrib.auth import get_user_model
 from django.db.models import F
 
 from .models import (
+    CrossRedemptionRequest,
     FractionalGoldPurchase,
     GoldDepositIntake,
     GoldSellbackRequest,
@@ -132,6 +133,124 @@ def release_custodial_liability_for_redemption_purchase(
         fractional_purchase=None,
         gold_sellback=None,
         vault_product_redemption=redemption,
+    )
+    bal, _ = JewellerLiabilityBalance.objects.select_for_update().get_or_create(
+        jeweller=jeweller,
+        defaults={"liability_grams": Decimal("0")},
+    )
+    bal.refresh_from_db()
+    new_liab = bal.liability_grams - grams
+    if new_liab < Decimal("0"):
+        new_liab = Decimal("0")
+    JewellerLiabilityBalance.objects.filter(pk=bal.pk).update(liability_grams=new_liab)
+
+
+def release_custodial_liability_cross_redemption_source(
+    jeweller: User,
+    customer: User,
+    grams: Decimal,
+    redemption: CrossRedemptionRequest,
+) -> None:
+    if jeweller.user_type != User.JEWELLER:
+        raise ValueError("Liability jeweller must be a jeweller user.")
+    if customer.user_type != User.CUSTOMER:
+        raise ValueError("Customer required.")
+    JewellerLiabilityLedgerEntry.objects.create(
+        jeweller=jeweller,
+        customer=customer,
+        grams=grams,
+        kind=JewellerLiabilityLedgerEntry.LEDGER_KIND_CROSS_REDEMPTION_SOURCE_RELEASE,
+        fractional_purchase=None,
+        gold_sellback=None,
+        cross_redemption_request=redemption,
+    )
+    bal, _ = JewellerLiabilityBalance.objects.select_for_update().get_or_create(
+        jeweller=jeweller,
+        defaults={"liability_grams": Decimal("0")},
+    )
+    bal.refresh_from_db()
+    new_liab = bal.liability_grams - grams
+    if new_liab < Decimal("0"):
+        new_liab = Decimal("0")
+    JewellerLiabilityBalance.objects.filter(pk=bal.pk).update(liability_grams=new_liab)
+
+
+def assume_custodial_liability_cross_redemption_destination(
+    jeweller: User,
+    customer: User,
+    grams: Decimal,
+    redemption: CrossRedemptionRequest,
+) -> None:
+    if jeweller.user_type != User.JEWELLER:
+        raise ValueError("Liability jeweller must be a jeweller user.")
+    if customer.user_type != User.CUSTOMER:
+        raise ValueError("Liability customer must be a customer user.")
+    JewellerLiabilityLedgerEntry.objects.create(
+        jeweller=jeweller,
+        customer=customer,
+        grams=grams,
+        kind=JewellerLiabilityLedgerEntry.LEDGER_KIND_CROSS_REDEMPTION_DEST_ASSUME,
+        fractional_purchase=None,
+        gold_sellback=None,
+        cross_redemption_request=redemption,
+    )
+    bal, _ = JewellerLiabilityBalance.objects.select_for_update().get_or_create(
+        jeweller=jeweller,
+        defaults={"liability_grams": Decimal("0")},
+    )
+    JewellerLiabilityBalance.objects.filter(pk=bal.pk).update(
+        liability_grams=F("liability_grams") + grams
+    )
+
+
+def rollback_release_custodial_liability_cross_redemption_source(
+    jeweller: User,
+    customer: User,
+    grams: Decimal,
+    redemption: CrossRedemptionRequest,
+) -> None:
+    """Reverse source release: restore custodial liability at source jeweller."""
+    if jeweller.user_type != User.JEWELLER:
+        raise ValueError("Liability jeweller must be a jeweller user.")
+    if customer.user_type != User.CUSTOMER:
+        raise ValueError("Customer required.")
+    JewellerLiabilityLedgerEntry.objects.create(
+        jeweller=jeweller,
+        customer=customer,
+        grams=grams,
+        kind=JewellerLiabilityLedgerEntry.LEDGER_KIND_CROSS_REDEMPTION_SOURCE_ROLLBACK,
+        fractional_purchase=None,
+        gold_sellback=None,
+        cross_redemption_request=redemption,
+    )
+    bal, _ = JewellerLiabilityBalance.objects.select_for_update().get_or_create(
+        jeweller=jeweller,
+        defaults={"liability_grams": Decimal("0")},
+    )
+    JewellerLiabilityBalance.objects.filter(pk=bal.pk).update(
+        liability_grams=F("liability_grams") + grams
+    )
+
+
+def rollback_assume_custodial_liability_cross_redemption_destination(
+    jeweller: User,
+    customer: User,
+    grams: Decimal,
+    redemption: CrossRedemptionRequest,
+) -> None:
+    """Reverse destination assume: remove liability assumed at destination jeweller."""
+    if jeweller.user_type != User.JEWELLER:
+        raise ValueError("Liability jeweller must be a jeweller user.")
+    if customer.user_type != User.CUSTOMER:
+        raise ValueError("Liability customer must be a customer user.")
+    JewellerLiabilityLedgerEntry.objects.create(
+        jeweller=jeweller,
+        customer=customer,
+        grams=grams,
+        kind=JewellerLiabilityLedgerEntry.LEDGER_KIND_CROSS_REDEMPTION_DEST_ROLLBACK,
+        fractional_purchase=None,
+        gold_sellback=None,
+        cross_redemption_request=redemption,
     )
     bal, _ = JewellerLiabilityBalance.objects.select_for_update().get_or_create(
         jeweller=jeweller,

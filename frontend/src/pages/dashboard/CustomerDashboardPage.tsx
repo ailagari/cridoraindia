@@ -9,6 +9,7 @@ import { FractionalPurchasePanel } from '@/features/invest/FractionalPurchasePan
 import { CustomerKycWorkflow } from '@/features/customer/CustomerKycWorkflow'
 import { CustomerPortfolioPanel } from '@/features/portfolio/CustomerPortfolioPanel'
 import { CustomerVaultsPanel } from '@/features/portfolio/CustomerVaultsPanel'
+import { CustomerCrossRedemptionPanel } from '@/features/crossRedemption/CustomerCrossRedemptionPanel'
 import { CustomerSellbackPanel } from '@/features/redeem/CustomerSellbackPanel'
 import { CustomerVaultRedemptionShopPanel } from '@/features/redeem/CustomerVaultRedemptionShopPanel'
 import { useAuth } from '@/context/AuthContext'
@@ -116,6 +117,7 @@ export function CustomerDashboardPage() {
       {active === 'redeem_hub' ? (
         <>
           <CustomerSellbackPanel />
+          <CustomerCrossRedemptionPanel />
           <ComingSoon
             title="More liquidity options"
             children="Loans and emergency funds will plug in here next. Use Shop with vault for ornament redemption from the catalogue."

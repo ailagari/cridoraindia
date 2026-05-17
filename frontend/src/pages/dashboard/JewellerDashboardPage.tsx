@@ -10,6 +10,7 @@ import { JewellerMarketplacePanel } from '@/features/marketplace/JewellerMarketp
 import { JewellerRatesSchemesPanel } from '@/features/marketplace/JewellerRatesSchemesPanel'
 import { JewellerGoldDepositPanel } from '@/features/invest/JewellerGoldDepositPanel'
 import { JewellerFractionalVerifyPanel } from '@/features/invest/JewellerFractionalVerifyPanel'
+import { JewellerCrossRedemptionInboxPanel } from '@/features/crossRedemption/JewellerCrossRedemptionInboxPanel'
 import { JewellerSellbacksPanel } from '@/features/redeem/JewellerSellbacksPanel'
 import { useAuth } from '@/context/AuthContext'
 import { authFetch } from '@/lib/api'
@@ -108,6 +109,7 @@ export function JewellerDashboardPage() {
       {active === 'txn_ops' ? (
         <>
           <JewellerSellbacksPanel />
+          <JewellerCrossRedemptionInboxPanel />
           <Coming
             title="Ornament redemption & loans"
             body="Catalog-backed ornament redemption and loan workflows will join this operations hub."

@@ -186,6 +186,46 @@ def credit_customer_vault_lines(
     sync_customer_aggregate_balance(customer)
 
 
+def debit_customer_vault_lines(
+    customer: User, custodian: User, lines: list[tuple[str, Decimal]]
+) -> str | None:
+    """Subtract grams by holding_type rows; returns error or None."""
+    vault = ensure_vault(customer, custodian)
+    with transaction.atomic():
+        for holding_type, g in lines:
+            if g <= 0:
+                continue
+            hid = _vault_holding(vault, holding_type).pk
+            b = (
+                VaultHolding.objects.select_for_update()
+                .filter(pk=hid)
+                .values_list("balance_grams", flat=True)
+                .first()
+            )
+            bal = b if b is not None else Decimal("0")
+            if bal < g:
+                return "Insufficient gold balance."
+            VaultHolding.objects.filter(pk=hid).update(balance_grams=F("balance_grams") - g)
+    sync_customer_aggregate_balance(customer)
+    return None
+
+
+def reverse_customer_vault_transfer_lines(
+    customer: User,
+    source_custodian: User,
+    destination_custodian: User,
+    lines: list[tuple[str, Decimal]],
+) -> str | None:
+    """
+    Undo a prior debit-from-source / credit-to-destination transfer using the same line breakdown.
+    """
+    err = debit_customer_vault_lines(customer, destination_custodian, lines)
+    if err:
+        return err
+    credit_customer_vault_lines(customer, source_custodian, lines)
+    return None
+
+
 def legacy_credit_jeweller_balance(jeweller: User, grams: Decimal) -> None:
     GoldBalance.objects.select_for_update().get_or_create(
         user=jeweller, defaults={"balance_grams": Decimal("0")}

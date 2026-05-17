@@ -215,7 +215,7 @@ export function JewellerMarketplacePanel() {
     const editTarget = editingProductIdRef.current
     if (url) {
       if (productId == null) {
-        setForm((f) => ({ ...f, image_url: url }))
+      setForm((f) => ({ ...f, image_url: url }))
       } else if (editTarget != null && productId === editTarget) {
         setEditForm((f) => ({ ...f, image_url: url }))
       }

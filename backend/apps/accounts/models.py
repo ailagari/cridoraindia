@@ -698,11 +698,19 @@ class JewellerLiabilityLedgerEntry(models.Model):
     LEDGER_KIND_SELLBACK_RELEASE = "sellback_release"
     LEDGER_KIND_DEPOSIT_CREDIT = "deposit_credit"
     LEDGER_KIND_REDEMPTION_PURCHASE_RELEASE = "redemption_purchase_release"
+    LEDGER_KIND_CROSS_REDEMPTION_SOURCE_RELEASE = "cross_redemption_source_release"
+    LEDGER_KIND_CROSS_REDEMPTION_DEST_ASSUME = "cross_redemption_dest_assume"
+    LEDGER_KIND_CROSS_REDEMPTION_SOURCE_ROLLBACK = "cr_xr_src_rel_rb"
+    LEDGER_KIND_CROSS_REDEMPTION_DEST_ROLLBACK = "cr_xr_dst_asm_rb"
     LEDGER_KIND_CHOICES = [
         (LEDGER_KIND_FRACTIONAL_CREDIT, "Fractional credit"),
         (LEDGER_KIND_SELLBACK_RELEASE, "Sellback release"),
         (LEDGER_KIND_DEPOSIT_CREDIT, "Gold deposit credit"),
         (LEDGER_KIND_REDEMPTION_PURCHASE_RELEASE, "Vault redemption purchase"),
+        (LEDGER_KIND_CROSS_REDEMPTION_SOURCE_RELEASE, "Cross redemption source release"),
+        (LEDGER_KIND_CROSS_REDEMPTION_DEST_ASSUME, "Cross redemption destination assume"),
+        (LEDGER_KIND_CROSS_REDEMPTION_SOURCE_ROLLBACK, "Cross redemption source rollback"),
+        (LEDGER_KIND_CROSS_REDEMPTION_DEST_ROLLBACK, "Cross redemption dest rollback"),
     ]
 
     jeweller = models.ForeignKey(
@@ -753,6 +761,13 @@ class JewellerLiabilityLedgerEntry(models.Model):
         blank=True,
         related_name="liability_entries",
     )
+    cross_redemption_request = models.ForeignKey(
+        "CrossRedemptionRequest",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="liability_entries",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -760,6 +775,331 @@ class JewellerLiabilityLedgerEntry(models.Model):
 
     def __str__(self):
         return f"JewellerLiabilityLedgerEntry(j={self.jeweller_id}, {self.grams}g)"
+
+
+class JewellerCrossPolicy(models.Model):
+    """Per-jeweller cross-redemption caps, reserve, and optional source-approval gate (MVP)."""
+
+    jeweller = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name="cross_redemption_policy",
+        limit_choices_to={"user_type": User.JEWELLER},
+    )
+    require_source_approval = models.BooleanField(default=False)
+    instant_enabled = models.BooleanField(default=False)
+    allow_cross_redemption = models.BooleanField(default=True)
+    trust_tier = models.PositiveSmallIntegerField(default=0)
+    settlement_delay_hours = models.PositiveIntegerField(default=24)
+    max_daily_exposure_inr = models.DecimalField(max_digits=18, decimal_places=2, default=500_000)
+    max_pending_liability_inr = models.DecimalField(max_digits=18, decimal_places=2, default=10_000_000)
+    reserve_balance_inr = models.DecimalField(max_digits=18, decimal_places=2, default=0)
+    risk_multiplier = models.DecimalField(max_digits=8, decimal_places=2, default=3)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Jeweller cross-redemption policy"
+
+    def __str__(self):
+        return f"JewellerCrossPolicy(j={self.jeweller_id})"
+
+
+class CrossRedemptionRequest(models.Model):
+    """Cross-jeweller redemption authorization + saga (grams move only after fulfillment checkpoint)."""
+
+    class LifecycleStage(models.TextChoices):
+        AUTH = "auth", "Auth"
+        FULFILLMENT = "fulfillment", "Fulfillment"
+        SETTLEMENT = "settlement", "Settlement"
+        CLOSED = "closed", "Closed"
+
+    class Outcome(models.TextChoices):
+        SUCCESS = "success", "Success"
+        FAILURE = "failure", "Failure"
+
+    class CloseReason(models.TextChoices):
+        TIMEOUT = "timeout", "Timeout"
+        REJECT = "reject", "Reject"
+        RISK_BLOCK = "risk_block", "Risk block"
+        USER_CANCEL = "user_cancel", "User cancel"
+        SYSTEM_KILL_SWITCH = "system_kill_switch", "System kill switch"
+
+    class SagaStatus(models.TextChoices):
+        IDLE = "idle", "Idle"
+        IN_PROGRESS = "in_progress", "In progress"
+        COMMITTED = "committed", "Committed"
+        COMPENSATING = "compensating", "Compensating"
+        ABORTED = "aborted", "Aborted"
+
+    class WorkflowState(models.TextChoices):
+        AWAITING_DESTINATION = "awaiting_destination", "Awaiting destination"
+        AWAITING_SOURCE = "awaiting_source", "Awaiting source"
+        SAGA_PENDING = "saga_pending", "Saga pending"
+        SAGA_DONE = "saga_done", "Saga done"
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="cross_redemption_requests",
+        limit_choices_to={"user_type": User.CUSTOMER},
+    )
+    source_jeweller = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="cross_redemption_requests_as_source",
+        limit_choices_to={"user_type": User.JEWELLER},
+    )
+    destination_jeweller = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="cross_redemption_requests_as_destination",
+        limit_choices_to={"user_type": User.JEWELLER},
+    )
+    grams = models.DecimalField(max_digits=16, decimal_places=6)
+    estimated_value_snapshot_inr = models.DecimalField(max_digits=18, decimal_places=2)
+    lifecycle_stage = models.CharField(
+        max_length=16,
+        choices=LifecycleStage.choices,
+        default=LifecycleStage.AUTH,
+    )
+    outcome = models.CharField(
+        max_length=16,
+        choices=Outcome.choices,
+        null=True,
+        blank=True,
+    )
+    close_reason_code = models.CharField(
+        max_length=32,
+        choices=CloseReason.choices,
+        null=True,
+        blank=True,
+    )
+    workflow_state = models.CharField(
+        max_length=32,
+        choices=WorkflowState.choices,
+        default=WorkflowState.AWAITING_DESTINATION,
+    )
+    ux_lane = models.CharField(
+        max_length=16,
+        blank=True,
+        default="",
+        help_text="instant | delayed — drives public UX mapping only.",
+    )
+    deadline_at = models.DateTimeField(null=True, blank=True)
+    lease_holder = models.CharField(max_length=64, blank=True, default="")
+    lease_until = models.DateTimeField(null=True, blank=True)
+    checkpoint_seq = models.PositiveIntegerField(default=0)
+    last_completed_step = models.CharField(max_length=64, blank=True, default="")
+    saga_status = models.CharField(
+        max_length=20,
+        choices=SagaStatus.choices,
+        default=SagaStatus.IDLE,
+    )
+    fulfillment_committed_at = models.DateTimeField(null=True, blank=True)
+    metadata = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["deadline_at", "lifecycle_stage"]),
+            models.Index(fields=["destination_jeweller", "workflow_state"]),
+            models.Index(fields=["source_jeweller", "workflow_state"]),
+        ]
+
+    def __str__(self):
+        return f"CrossRedemptionRequest({self.pk}, {self.lifecycle_stage})"
+
+
+class CrossRedemptionEvent(models.Model):
+    """Append-only audit log for cross-redemption."""
+
+    class Actor(models.TextChoices):
+        USER = "user", "User"
+        JEWELLER_SOURCE = "jeweller_source", "Jeweller source"
+        JEWELLER_DEST = "jeweller_dest", "Jeweller destination"
+        SYSTEM = "system", "System"
+        ADMIN = "admin", "Admin"
+
+    request = models.ForeignKey(
+        CrossRedemptionRequest,
+        on_delete=models.CASCADE,
+        related_name="events",
+    )
+    actor = models.CharField(max_length=20, choices=Actor.choices)
+    event_type = models.CharField(max_length=64)
+    payload = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["id"]
+
+    def __str__(self):
+        return f"CrossRedemptionEvent({self.request_id}, {self.event_type})"
+
+
+class ExposureReservation(models.Model):
+    """Time-bounded exposure hold (reversible); grams are NOT moved while ACTIVE."""
+
+    class Status(models.TextChoices):
+        ACTIVE = "active", "Active"
+        RELEASED = "released", "Released"
+        CONSUMED = "consumed", "Consumed"
+
+    request = models.OneToOneField(
+        CrossRedemptionRequest,
+        on_delete=models.CASCADE,
+        related_name="exposure_reservation",
+    )
+    source_jeweller = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="cross_exposure_reservations_as_source",
+        limit_choices_to={"user_type": User.JEWELLER},
+    )
+    destination_jeweller = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="cross_exposure_reservations_as_dest",
+        limit_choices_to={"user_type": User.JEWELLER},
+    )
+    reserved_value_inr = models.DecimalField(max_digits=18, decimal_places=2)
+    status = models.CharField(
+        max_length=16,
+        choices=Status.choices,
+        default=Status.ACTIVE,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"ExposureReservation(r={self.request_id}, {self.status})"
+
+
+class CrossRedemptionSagaStep(models.Model):
+    """Idempotent saga step log (forward / compensation)."""
+
+    class Direction(models.TextChoices):
+        FWD = "fwd", "Forward"
+        REV = "rev", "Reverse"
+
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pending"
+        SUCCEEDED = "succeeded", "Succeeded"
+        FAILED = "failed", "Failed"
+        SKIPPED = "skipped", "Skipped"
+
+    request = models.ForeignKey(
+        CrossRedemptionRequest,
+        on_delete=models.CASCADE,
+        related_name="saga_steps",
+    )
+    step_name = models.CharField(max_length=64)
+    direction = models.CharField(max_length=8, choices=Direction.choices)
+    idempotency_key = models.CharField(max_length=128, unique=True)
+    status = models.CharField(
+        max_length=16,
+        choices=Status.choices,
+        default=Status.PENDING,
+    )
+    error_detail = models.CharField(max_length=500, blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["id"]
+
+    def __str__(self):
+        return f"SagaStep({self.request_id}, {self.step_name}, {self.direction})"
+
+
+class IntegrationOutbox(models.Model):
+    """Out-of-band side effects; never call HTTP inside DB transactions."""
+
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pending"
+        PROCESSING = "processing", "Processing"
+        DONE = "done", "Done"
+        FAILED = "failed", "Failed"
+
+    idempotency_key = models.CharField(max_length=128, unique=True)
+    message_type = models.CharField(max_length=64)
+    payload = models.JSONField(default=dict, blank=True)
+    status = models.CharField(
+        max_length=16,
+        choices=Status.choices,
+        default=Status.PENDING,
+    )
+    available_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["id"]
+
+    def __str__(self):
+        return f"Outbox({self.message_type}, {self.status})"
+
+
+class SettlementBatch(models.Model):
+    """MVP batch marker (no payment gateway)."""
+
+    summary = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"SettlementBatch({self.pk})"
+
+
+class SettlementObligation(models.Model):
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pending"
+        SETTLED = "settled", "Settled"
+        FAILED = "failed", "Failed"
+
+    from_jeweller = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="settlement_obligations_from",
+        limit_choices_to={"user_type": User.JEWELLER},
+    )
+    to_jeweller = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="settlement_obligations_to",
+        limit_choices_to={"user_type": User.JEWELLER},
+    )
+    amount_inr = models.DecimalField(max_digits=18, decimal_places=2)
+    grams_equivalent = models.DecimalField(max_digits=16, decimal_places=6)
+    status = models.CharField(
+        max_length=16,
+        choices=Status.choices,
+        default=Status.PENDING,
+    )
+    batch = models.ForeignKey(
+        SettlementBatch,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="obligations",
+    )
+    linked_requests = models.ManyToManyField(
+        CrossRedemptionRequest,
+        related_name="settlement_obligations",
+        blank=True,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["status", "from_jeweller"]),
+        ]
+
+    def __str__(self):
+        return f"SettlementObligation({self.from_jeweller_id}→{self.to_jeweller_id}, {self.status})"
 
 
 class WebPushSubscription(models.Model):

@@ -112,9 +112,7 @@ export function MarketplaceProductDetailPage() {
 
   const goCheckout = () => {
     if (!product) return
-    const r = addToCart(product, 1)
-    setCartToast(r.message)
-    navigate('/marketplace?cart=1')
+    navigate(`/marketplace?checkout=${product.id}`)
   }
 
   const handleAddToCart = () => {
