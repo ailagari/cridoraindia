@@ -159,7 +159,24 @@ export function cridoraCrossPlatformFeeInr(p: MarketplaceProductDTO, ctx?: Check
   return DEFAULT_CROSS_PLATFORM_FEE_INR
 }
 
-/** True when the customer’s vaulted balance can cover the piece’s gold weight (before checkout slider). */
+/** Grams at the listing vault metal rate (₹/g) needed to cover the full cash order total. */
+export function vaultGramsAtListingRateForOrderInr(finalOrderInr: number, metalRateInrPerGram: number): number {
+  if (!(metalRateInrPerGram > 0) || !(finalOrderInr > 0)) return 0
+  return finalOrderInr / metalRateInrPerGram
+}
+
+/** True when vaulted grams at this custodian are enough to cover the full order at the listing vault rate. */
+export function vaultCanCoverFullOrder(
+  p: MarketplaceProductDTO,
+  vaultBalanceGrams: number,
+  ctx?: CheckoutPricingContext,
+): boolean {
+  const b = calculateCheckoutPrice(p, 0, 0, ctx)
+  const need = vaultGramsAtListingRateForOrderInr(b.finalAmount, Number.parseFloat(p.metal_rate_inr_per_gram_used))
+  return Math.max(0, vaultBalanceGrams) + 1e-9 >= need
+}
+
+/** @deprecated Use vaultCanCoverFullOrder — vault credit is not limited to piece gold weight. */
 export function vaultCanCoverFullGoldWeight(p: MarketplaceProductDTO, vaultBalanceGrams: number): boolean {
   const w = Number.parseFloat(p.gold_weight_grams)
   const v = Math.max(0, vaultBalanceGrams)
@@ -176,10 +193,11 @@ export function calculateCheckoutPrice(
   const crossPlatformFee = cridoraCrossPlatformFeeInr(p, ctx)
   const finalAmount = j.jewellerSubtotal + crossPlatformFee
   const metalRate = Number.parseFloat(p.metal_rate_inr_per_gram_used)
-  const weight = Number.parseFloat(p.gold_weight_grams)
-  const cappedGrams = Math.max(0, Math.min(vaultGramsToApply, vaultBalanceGrams, weight))
-  const vaultValueOffset = cappedGrams * metalRate
+  const cappedGrams = Math.max(0, Math.min(vaultGramsToApply, vaultBalanceGrams))
+  const rawVaultInr = cappedGrams * metalRate
+  const vaultValueOffset = Math.min(rawVaultInr, finalAmount)
   const payableAmount = Math.max(0, finalAmount - vaultValueOffset)
+  const goldFromVault = metalRate > 0 ? vaultValueOffset / metalRate : 0
 
   return {
     goldValue: j.goldValue,
@@ -191,7 +209,7 @@ export function calculateCheckoutPrice(
     finalAmount,
     vaultValueOffset,
     payableAmount,
-    goldFromVault: cappedGrams,
+    goldFromVault,
     discountAmount: j.discountAmount,
   }
 }

@@ -2,7 +2,8 @@ import type { MarketplaceProductDTO } from '@/lib/marketplaceApi'
 import {
   makingChargesBreakdownLabel,
   calculateCheckoutPrice,
-  vaultCanCoverFullGoldWeight,
+  vaultCanCoverFullOrder,
+  vaultGramsAtListingRateForOrderInr,
   type CheckoutPricingContext,
 } from '@/lib/marketplacePricing'
 
@@ -93,9 +94,10 @@ export function MarketplaceProductPricingBreakdown({
   const rateTimesG = metalRate * weightG
   const vaultCap = Math.max(0, portfolioVaultGrams)
   const base = calculateCheckoutPrice(p, 0, vaultCap, pricingContext)
-  const vaultEst = calculateCheckoutPrice(p, Math.min(weightG, vaultCap), vaultCap, pricingContext)
-  const fullGoldVaultMatch =
-    vaultCanCoverFullGoldWeight(p, vaultCap) && vaultEst.goldFromVault + 1e-9 >= weightG
+  const needGramsAtVaultRate = vaultGramsAtListingRateForOrderInr(base.finalAmount, metalRate)
+  const gramsToApplyForFullCashCover = Math.min(vaultCap, needGramsAtVaultRate)
+  const vaultEst = calculateCheckoutPrice(p, gramsToApplyForFullCashCover, vaultCap, pricingContext)
+  const fullGoldVaultMatch = vaultCanCoverFullOrder(p, vaultCap, pricingContext)
   const goldMetal = Number.parseFloat(p.gold_metal_value_inr)
   const stoneComp = Number.parseFloat(p.stone_component_inr)
   const showMetalSplit = hasStoneOrOtherMetal(p)
@@ -141,7 +143,6 @@ export function MarketplaceProductPricingBreakdown({
       <CardPriceRow label="GST on metal (3%)" value={`₹${formatInr(base.gstOnGold, 2)}`} />
       <CardPriceRow label={makingChargesBreakdownLabel(p, pricingContext)} value={`₹${formatInr(base.makingCharges)}`} />
       <CardPriceRow label="GST on making (18%)" value={`₹${formatInr(base.gstOnMaking, 2)}`} />
-      <div style={{ height: 1, background: 'var(--border-soft)', margin: '0.15rem 0' }} />
       <div
         style={{
           display: 'flex',
@@ -167,6 +168,10 @@ export function MarketplaceProductPricingBreakdown({
           ₹{formatInr(base.finalAmount)}
         </span>
       </div>
+      <CardPriceRow
+        label={`Suggested vault grams (full order @ ₹${formatInr(metalRate, 2)}/g)`}
+        value={`${needGramsAtVaultRate.toFixed(3)} g`}
+      />
       <div
         style={{
           display: 'flex',
@@ -179,7 +184,7 @@ export function MarketplaceProductPricingBreakdown({
         }}
       >
         <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>
-          With vault (up to {vaultEst.goldFromVault.toFixed(3)}g)
+          With vault toward full order ({gramsToApplyForFullCashCover.toFixed(3)}g applied @ rate)
         </span>
         <span
           className="tabular"
@@ -195,8 +200,8 @@ export function MarketplaceProductPricingBreakdown({
       </div>
       <p style={{ margin: 0, fontSize: '0.62rem', color: 'var(--text-muted)', lineHeight: 1.45 }}>
         {fullGoldVaultMatch
-          ? 'If vault grams match this piece’s gold weight, cash is mainly making + GST on making, plus other bill lines.'
-          : 'At checkout, apply up to the lesser of your vaulted grams and this piece’s gold weight.'}
+          ? 'Your balance at this jeweller can cover the full order at the listing vault rate (making, GST, platform fee included in the total above).'
+          : 'At checkout you can pay in gold only, cash only, or a mix. Credit is valued at the listing ₹/g, up to the invoice total.'}
       </p>
     </div>
   )

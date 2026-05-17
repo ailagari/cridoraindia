@@ -19,6 +19,7 @@ import { useLivePoll } from '@/lib/useLivePoll'
 import {
   calculateCheckoutPrice,
   makingChargesShortLabel,
+  vaultGramsAtListingRateForOrderInr,
   type CheckoutPricingContext,
   type PriceBreakdown,
 } from '@/lib/marketplacePricing'
@@ -101,7 +102,16 @@ function CheckoutView({
 
   useLivePoll(refreshWallet, LIVE_BALANCE_POLL_MS, true)
 
-  const maxVaultGrams = Math.min(weight, eligibleGramsAtSeller)
+  const metalRate = Number.parseFloat(product.metal_rate_inr_per_gram_used)
+  const cashOnlyBreakdown = useMemo(
+    () => calculateCheckoutPrice(product, 0, 0, pricingCtx),
+    [product, pricingCtx],
+  )
+  const gramsSuggestedFullOrder = vaultGramsAtListingRateForOrderInr(
+    cashOnlyBreakdown.finalAmount,
+    metalRate,
+  )
+  const maxVaultGrams = eligibleGramsAtSeller
 
   useEffect(() => {
     setVaultGrams((g) => Math.min(g, maxVaultGrams))
@@ -130,12 +140,11 @@ function CheckoutView({
       <h1 className="h1-page">Secure checkout</h1>
       <p className="lead lead-tight" style={{ marginBottom: '1.75rem' }}>
         Final amount is shown here only: jeweller metal and making lines, taxes, and — when applicable — a Cridora
-        platform fee (never charged by the jeweller). Choose cash / UPI or your Cridora account; with the account you can
-        apply part of your gold balance and pay the rest in cash. Vault grams apply from holdings{' '}
-        <strong>custodied with {product.jeweller_name}</strong> (fractional, deposit, transfers, and golden scheme balances
-        at that jeweller). Gold applied is credited at ₹
-        {formatInr(Number.parseFloat(product.metal_rate_inr_per_gram_used), 2)}/g (this listing’s metal rate). Sellback
-        notes are storefront disclosures only.
+        platform fee (never charged by the jeweller). Pay fully in gold from your vault at this jeweller’s listing rate,
+        fully in cash / UPI, or any mix. Vault grams come from holdings <strong>custodied with {product.jeweller_name}</strong>{' '}
+        (fractional, deposit, transfers, golden scheme). Gold is credited toward the bill at ₹
+        {formatInr(Number.parseFloat(product.metal_rate_inr_per_gram_used), 2)}/g (this listing’s metal rate), up to the
+        invoice total. Sellback notes are storefront disclosures only.
       </p>
 
       <div
@@ -340,12 +349,11 @@ function CheckoutView({
               <span style={{ fontSize: '0.88rem' }}>
                 <strong>Cridora account (gold)</strong>
                 <span style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.78rem', marginTop: 4 }}>
-                  Apply grams custodied with <strong>{product.jeweller_name}</strong>:{' '}
-                  <span className="tabular">{eligibleGramsAtSeller.toFixed(3)}g</span> available (fractional, deposit,
-                  transfers, scheme). This piece&apos;s gold weight is{' '}
-                  <span className="tabular">{weight.toFixed(3)}g</span> — you can apply up to{' '}
-                  <span className="tabular">{maxVaultGrams.toFixed(3)}g</span> (the lower of the two). Total vaulted
-                  network-wide: <span className="tabular">{totalVaultedAllPartners.toFixed(3)}g</span>.
+                  <strong>Vault rate:</strong> ₹{formatInr(metalRate, 2)}/g · <strong>Suggested for full order:</strong>{' '}
+                  <span className="tabular">{gramsSuggestedFullOrder.toFixed(3)}g</span> (covers ₹
+                  {formatInr(cashOnlyBreakdown.finalAmount)} incl. taxes &amp; platform fee). You hold{' '}
+                  <span className="tabular">{eligibleGramsAtSeller.toFixed(3)}g</span> with {product.jeweller_name}. Total
+                  vaulted (all partners): <span className="tabular">{totalVaultedAllPartners.toFixed(3)}g</span>.
                 </span>
               </span>
             </label>
@@ -353,8 +361,30 @@ function CheckoutView({
 
           {vaultActive ? (
             <div style={{ marginBottom: '1rem' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center', marginBottom: '0.5rem' }}>
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  style={{ padding: '0.35rem 0.65rem', fontSize: '0.72rem', borderRadius: 12 }}
+                  onClick={() =>
+                    setVaultGrams(Math.min(maxVaultGrams, gramsSuggestedFullOrder))
+                  }
+                  disabled={maxVaultGrams <= 0 || !Number.isFinite(gramsSuggestedFullOrder)}
+                >
+                  Use suggested — pay full order in gold
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  style={{ padding: '0.35rem 0.65rem', fontSize: '0.72rem', borderRadius: 12 }}
+                  onClick={() => setVaultGrams(maxVaultGrams)}
+                  disabled={maxVaultGrams <= 0}
+                >
+                  Apply max available ({maxVaultGrams.toFixed(3)}g)
+                </button>
+              </div>
               <label htmlFor="vault-grams" style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)' }}>
-                Grams to apply (0 – {maxVaultGrams.toFixed(3)})
+                Grams at vault rate (0 – {maxVaultGrams.toFixed(3)})
               </label>
               <input
                 id="vault-grams"
@@ -407,12 +437,12 @@ function CheckoutView({
             style={{
               padding: '1rem',
               borderRadius: 16,
-              border: vaultActive && p.goldFromVault > 0 ? '2px solid var(--gold)' : '1px solid var(--border-soft)',
-              background: vaultActive && p.goldFromVault > 0 ? 'var(--gold-shine-12)' : 'var(--veil-35)',
+              border: vaultActive && vaultGrams > 0 ? '2px solid var(--gold)' : '1px solid var(--border-soft)',
+              background: vaultActive && vaultGrams > 0 ? 'var(--gold-shine-12)' : 'var(--veil-35)',
               marginBottom: '1rem',
             }}
           >
-            {vaultActive && p.goldFromVault > 0 ? (
+            {vaultActive && vaultGrams > 0 ? (
               <div
                 style={{
                   fontSize: '0.85rem',
@@ -424,12 +454,23 @@ function CheckoutView({
                   borderRadius: 14,
                 }}
               >
-                <Row label="Vault grams applied" value={<strong>{p.goldFromVault.toFixed(3)}g</strong>} muted />
+                <Row label="Grams selected (vault rate)" value={<strong>{vaultGrams.toFixed(3)}g</strong>} muted />
                 <Row
-                  label="Credit toward order"
+                  label="Credit toward order (capped at invoice)"
                   value={<strong style={{ color: 'var(--success)' }}>₹{formatInr(p.vaultValueOffset)}</strong>}
                   muted
                 />
+                <Row
+                  label="Grams counted on this bill"
+                  value={<strong className="tabular">{p.goldFromVault.toFixed(3)}g</strong>}
+                  muted
+                />
+                {vaultGrams * metalRate > p.finalAmount + 1e-6 ? (
+                  <p style={{ margin: 0, fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: 1.45 }}>
+                    Invoice fully covered — credit stops at ₹{formatInr(p.finalAmount)}; extra gram selection is not needed
+                    for this order.
+                  </p>
+                ) : null}
               </div>
             ) : (
               <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-muted)' }}>
@@ -450,7 +491,7 @@ function CheckoutView({
             }}
           >
             <p style={{ margin: '0 0 0.35rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-              {vaultActive && p.goldFromVault > 0 ? 'Remaining (cash / UPI)' : 'Due now (cash / UPI)'}
+              {vaultActive && vaultGrams > 0 ? 'Remaining (cash / UPI)' : 'Due now (cash / UPI)'}
             </p>
             <p style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800 }} className="tabular">
               ₹{formatInr(payDisplay)}
@@ -458,18 +499,20 @@ function CheckoutView({
           </div>
 
           <button type="button" className="btn btn-primary" style={{ width: '100%' }}>
-            {payDisplay <= 0 && vaultActive && p.goldFromVault > 0
+            {payDisplay <= 0 && vaultActive && vaultGrams > 0
               ? 'Confirm — vault covers this order'
               : payDisplay <= 0
                 ? 'Confirm payment'
-                : vaultActive && p.goldFromVault > 0
+                : vaultActive && vaultGrams > 0
                   ? `Pay ₹${formatInr(payDisplay)} cash + vault`
                   : `Pay ₹${formatInr(payDisplay)} with cash / UPI`}
           </button>
 
           <p className="form-footnote" style={{ marginTop: '1rem', textAlign: 'center', fontSize: '0.72rem' }}>
             Demo checkout · piece {weight.toFixed(3)}g
-            {vaultActive ? ` · vault debit ${p.goldFromVault.toFixed(3)}g on confirm` : ''}
+            {vaultActive && vaultGrams > 0
+              ? ` · ~${p.goldFromVault.toFixed(3)}g valued toward this bill at confirm`
+              : ''}
           </p>
         </div>
       </div>
