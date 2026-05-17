@@ -165,7 +165,7 @@ export function PublicMobileChrome() {
 export function PublicHeaderActions() {
   return (
     <div className="public-header-actions">
-      <NotificationBell compact hidePushControls />
+      <NotificationBell compact />
     </div>
   )
 }

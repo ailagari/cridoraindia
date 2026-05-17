@@ -431,7 +431,20 @@ export function NotificationBell({
           ' Enable device notifications for festival and platform broadcasts — delivery is the same for every account role.'
         )}
       </>
-    ) : usePlatformFeed ? null : pushServerReady === false ? (
+    ) : usePlatformFeed ? (
+      <>
+        Festival and platform alerts appear in this feed.
+        {pushServerReady === false ? (
+          <span>
+            {' '}
+            <strong>Device alerts unavailable:</strong> Web Push needs VAPID keys on the server (hosting env vars). You can still
+            read messages here; tray notifications will work once keys are configured.
+          </span>
+        ) : (
+          ' Turn on device notifications below for system / tray alerts on this phone or computer—the same for customers, jewellers, and admins.'
+        )}
+      </>
+    ) : pushServerReady === false ? (
     <>
       <strong>Unavailable on this deployment.</strong> Web Push needs VAPID keys on the server (hosting env vars:
       WEB_PUSH_VAPID_PUBLIC_KEY, WEB_PUSH_VAPID_PRIVATE_KEY, WEB_PUSH_VAPID_CONTACT). Sample alerts below still appear here for
@@ -459,7 +472,7 @@ export function NotificationBell({
           </button>
         ) : null}
       </div>
-      {setupHint && !usePlatformFeed ? (
+      {setupHint ? (
         <p className="notif-panel-hint" style={{ marginTop: '-0.35rem', color: 'var(--gold-light)' }}>
           {setupHint}
         </p>
