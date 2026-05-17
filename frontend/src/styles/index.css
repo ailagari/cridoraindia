@@ -5682,6 +5682,50 @@ select.input {
   color: var(--danger);
 }
 
+.public-segment-nav {
+  border-bottom: 1px solid var(--border-soft);
+  background: var(--veil-88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.public-segment-nav__inner {
+  display: flex;
+  gap: 0.45rem;
+  padding: 0.45rem 0 0.52rem;
+}
+
+.public-segment-nav__btn {
+  flex: 1;
+  text-align: center;
+  text-decoration: none;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 0.55rem 0.45rem;
+  border-radius: 12px;
+  border: 1px solid var(--border-soft);
+  color: var(--text-muted);
+  background: transparent;
+  transition:
+    color 0.2s ease,
+    background 0.2s ease,
+    border-color 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.public-segment-nav__btn:hover {
+  color: var(--text-silk);
+}
+
+.public-segment-nav__btn--active {
+  color: var(--gold-light);
+  border-color: rgba(212, 168, 92, 0.45);
+  background: rgba(212, 168, 92, 0.1);
+}
+
 @media (max-width: 767px) {
   .public-nav-desktop {
     display: none !important;

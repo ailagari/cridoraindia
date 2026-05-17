@@ -12,14 +12,14 @@ function topForPath(pathname: string): { to: string; label: string }[] {
   }
   if (pathname.startsWith('/discover') || pathname.startsWith('/why-cridora') || pathname.startsWith('/features')) {
     return [
-      { to: '/discover', label: 'Hub' },
+      { to: '/discover/customers', label: 'Users' },
+      { to: '/discover/jewellers', label: 'Jewellers' },
       { to: '/why-cridora', label: 'Why' },
       { to: '/features', label: 'Features' },
     ]
   }
-  if (pathname.startsWith('/shop') || pathname.startsWith('/jewellers') || pathname.startsWith('/marketplace')) {
+  if (pathname.startsWith('/jewellers') || pathname.startsWith('/marketplace')) {
     return [
-      { to: '/shop', label: 'Hub' },
       { to: '/jewellers', label: 'Jewellers' },
       { to: '/marketplace', label: 'Products' },
     ]
@@ -46,9 +46,7 @@ export function PublicMobileChrome() {
   const pills = topForPath(pathname)
 
   const isShopPath =
-    pathname.startsWith('/shop') ||
-    pathname.startsWith('/marketplace') ||
-    pathname.startsWith('/jewellers')
+    pathname.startsWith('/shop') || pathname.startsWith('/marketplace') || pathname.startsWith('/jewellers')
   const isJoinPath =
     pathname.startsWith('/join') || pathname.startsWith('/signup') || pathname.startsWith('/jeweller/apply')
   const discoverActive =
@@ -91,7 +89,7 @@ export function PublicMobileChrome() {
           )}
         </NavLink>
         <NavLink
-          to="/discover"
+          to="/discover/customers"
           className={({ isActive }) =>
             `public-bottom-item${discoverActive || isActive ? ' public-bottom-item--active' : ''}`
           }
@@ -106,7 +104,7 @@ export function PublicMobileChrome() {
           )}
         </NavLink>
         <NavLink
-          to="/shop"
+          to="/jewellers"
           className={({ isActive }) =>
             `public-bottom-item${isShopPath || isActive ? ' public-bottom-item--active' : ''}`
           }
