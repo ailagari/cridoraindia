@@ -1,4 +1,6 @@
-export const USER_REASONS: { title: string; body: string }[] = [
+export type DiscoverBenefit = { title: string; body: string }
+
+export const USER_REASONS: DiscoverBenefit[] = [
   {
     title: 'Buy gold in any amount',
     body: 'Start from ₹100, ₹500, or ₹1,000 — no large lump sums required. Gold savings stay within reach.',
@@ -51,7 +53,7 @@ export const USER_REASONS: { title: string; body: string }[] = [
   },
 ]
 
-export const JEWELLER_REASONS: { title: string; body: string }[] = [
+export const JEWELLER_REASONS: DiscoverBenefit[] = [
   {
     title: 'Customer acquisition',
     body: 'Digital traffic, younger savers, and nationwide visibility without rebuilding discovery from zero.',

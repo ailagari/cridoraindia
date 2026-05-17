@@ -1,6 +1,7 @@
 import { type CSSProperties } from 'react'
-import { Link } from 'react-router-dom'
-import { JEWELLER_REASONS, USER_REASONS } from '@/content/whyCridoraBenefits'
+import { Link, useLocation } from 'react-router-dom'
+import { JEWELLER_REASONS, USER_REASONS } from '@/content/discoverBenefits'
+import { usePublicLayoutMax767 } from '@/hooks/usePublicLayoutMax767'
 
 const POSITIONING =
   'A live gold utility and redemption ecosystem — not simple balance-only digital gold, not stocks, ETFs, or commodity day-trading.'
@@ -43,6 +44,84 @@ function staggerStyle(index: number): CSSProperties {
 }
 
 export function WhyCridoraPage() {
+  const narrow = usePublicLayoutMax767()
+  const { hash } = useLocation()
+  const mobileAudience = hash === '#discover-jewellers' ? 'jewellers' : 'customers'
+  const mobileItems = mobileAudience === 'jewellers' ? JEWELLER_REASONS : USER_REASONS
+
+  if (narrow) {
+    return (
+      <div className="container page">
+        <span className="pill">Why Cridora</span>
+        <h1 className="h1-page" style={{ marginTop: '0.75rem' }}>
+          One platform for India’s gold savings
+        </h1>
+        <blockquote
+          className="card"
+          style={{
+            margin: '1.25rem 0 0',
+            padding: '1.2rem 1.35rem',
+            borderRadius: 20,
+            border: '1px solid var(--border-soft)',
+            fontSize: 'clamp(0.98rem, 2.8vw, 1.2rem)',
+            fontWeight: 600,
+            fontStyle: 'italic',
+            letterSpacing: '-0.02em',
+            lineHeight: 1.45,
+            color: 'var(--text)',
+            background: 'linear-gradient(135deg, var(--navy-55) 0%, var(--veil-55) 100%)',
+          }}
+        >
+          “{POSITIONING}”
+        </blockquote>
+        <h2 className="cridora-section-title" style={{ marginTop: '1.75rem' }}>
+          {mobileAudience === 'jewellers' ? 'Why jewellers will join Cridora' : 'Why users will join Cridora'}
+        </h2>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
+            gap: '1rem',
+            marginTop: '1.1rem',
+          }}
+        >
+          {mobileItems.map((item, i) => (
+            <div
+              key={item.title}
+              className="card"
+              style={{
+                padding: '1.2rem 1.35rem',
+                borderRadius: 20,
+              }}
+            >
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: 28,
+                  height: 28,
+                  borderRadius: 8,
+                  background: mobileAudience === 'jewellers' ? 'var(--silk-10)' : 'var(--gold-soft)',
+                  color: mobileAudience === 'jewellers' ? 'var(--text-silk)' : 'var(--gold-light)',
+                  fontSize: '0.72rem',
+                  fontWeight: 800,
+                  marginBottom: '0.65rem',
+                }}
+              >
+                {i + 1}
+              </span>
+              <h3 style={{ margin: 0, fontSize: '1.02rem', lineHeight: 1.25 }}>{item.title}</h3>
+              <p style={{ margin: '0.55rem 0 0', color: 'var(--text-muted)', fontSize: '0.88rem', lineHeight: 1.55 }}>
+                {item.body}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
   let revealIndex = 0
   const next = () => revealIndex++
 

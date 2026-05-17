@@ -2,8 +2,8 @@ import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { CridoraLogo } from '@/components/CridoraLogo'
 import { PublicHeaderActions, PublicMobileChrome } from '@/components/PublicMobileChrome'
 import { PublicMobileUserMenu } from '@/components/PublicMobileUserMenu'
-import { PublicSegmentNav } from '@/components/PublicSegmentNav'
 import { GoldTickerStrip } from '@/components/GoldTickerStrip'
+import { PublicMobileSegmentBar } from '@/components/PublicMobileSegmentBar'
 import { useAuth, type AuthUser } from '@/context/AuthContext'
 import { dashboardLandingPath } from '@/lib/routes'
 
@@ -92,7 +92,7 @@ export function PublicLayout() {
           </div>
         </header>
         <GoldTickerStrip variant="public" />
-        <PublicSegmentNav />
+        <PublicMobileSegmentBar />
       </div>
       <PublicMobileChrome />
       <main className="public-main">
