@@ -45,6 +45,46 @@ function fmtInrPlain(s: string): string {
   return n.toLocaleString('en-IN', { maximumFractionDigits: 2 })
 }
 
+function formatPortfolioLedgerTxnType(t: string): string {
+  switch (t) {
+    case 'fractional':
+      return 'Fractional'
+    case 'transfer_in':
+      return 'Transfer in'
+    case 'transfer_out':
+      return 'Transfer out'
+    case 'sellback':
+      return 'Redemption'
+    case 'golden_scheme':
+      return 'Golden scheme'
+    case 'deposit':
+      return 'Deposit'
+    case 'personal':
+      return 'Personal'
+    default:
+      return t.replace(/_/g, ' ')
+  }
+}
+
+function portfolioLedgerPillClass(t: string): string {
+  const base = 'pf-ledger-pill'
+  switch (t) {
+    case 'transfer_out':
+    case 'sellback':
+      return `${base} pf-ledger-pill--sell`
+    case 'transfer_in':
+      return `${base} pf-ledger-pill--credit`
+    case 'golden_scheme':
+      return `${base} pf-ledger-pill--fee`
+    case 'deposit':
+    case 'personal':
+      return `${base} pf-ledger-pill--xfer`
+    case 'fractional':
+    default:
+      return `${base} pf-ledger-pill--buy`
+  }
+}
+
 function parseInrNum(s: string): number {
   const n = Number.parseFloat(s)
   return Number.isFinite(n) ? n : 0
@@ -383,7 +423,8 @@ export function CustomerPortfolioPanel() {
               <div>
                 <h3 className="pf-card__title">Portfolio ledger</h3>
                 <p className="pf-card__meta">
-                  Filter by holding type. Personal rows use platform reference ₹/g; vault rows use live marks where applicable.
+                  Credits, vault positions, transfers, and completed redemptions (sellbacks). Filter by row type; redemption rows
+                  show indicative cash from the quote at settlement.
                 </p>
               </div>
             </header>
@@ -394,6 +435,8 @@ export function CustomerPortfolioPanel() {
                   ['fractional', 'Fractional'],
                   ['deposit', 'Deposit'],
                   ['golden_scheme', 'Golden scheme'],
+                  ['transfer', 'Transfers'],
+                  ['sellback', 'Redemptions'],
                   ['personal', 'Personal'],
                 ] as const
               ).map(([id, label]) => (
@@ -427,10 +470,15 @@ export function CustomerPortfolioPanel() {
                   </thead>
                   <tbody>
                     {ledgerEntries.map((row) => (
-                      <tr key={`${row.reference}-${row.occurred_at}`} className="pf-ledger-row">
+                      <tr
+                        key={`${row.reference}-${row.transaction_type}-${row.occurred_at}`}
+                        className="pf-ledger-row"
+                      >
                         <td className="pf-ledger-date">{fmtWhen(row.occurred_at)}</td>
                         <td>
-                          <span className="pf-ledger-pill pf-ledger-pill--buy">{row.transaction_type}</span>
+                          <span className={portfolioLedgerPillClass(row.transaction_type)}>
+                            {formatPortfolioLedgerTxnType(row.transaction_type)}
+                          </span>
                         </td>
                         <td className="tabular">{row.reference}</td>
                         <td>{row.label}</td>

@@ -153,7 +153,12 @@ def customer_portfolio_ledger_payload(user: User, ledger_filter: str = "all") ->
 
     from django.db.models import Prefetch
 
-    from apps.accounts.models import GoldDepositIntake, GoldVault
+    from apps.accounts.models import (
+        GoldDepositIntake,
+        GoldSellbackRequest,
+        GoldTransfer,
+        GoldVault,
+    )
     from apps.accounts.wallet_extras import customer_completed_fractional_ledger
     from apps.marketplace.models import jeweller_profile_for
     from apps.marketplace.pricing import reference_metal_rate_inr_per_gram_for_jeweller
@@ -161,6 +166,14 @@ def customer_portfolio_ledger_payload(user: User, ledger_filter: str = "all") ->
     rate, _ = reference_gold_rate_inr_per_gram()
     cridora_base, _ = resolve_cridora_base_22k_inr()
     rows: list[dict[str, Any]] = []
+
+    def _party_label(u: User) -> str:
+        name = f"{u.first_name} {u.last_name}".strip()
+        if name:
+            return name
+        if u.business_name:
+            return u.business_name.strip()
+        return (u.email or u.cridora_member_id or f"User #{u.id}").strip()
 
     for r in customer_completed_fractional_ledger(user):
         g = Decimal(r["grams"])
@@ -195,6 +208,63 @@ def customer_portfolio_ledger_payload(user: User, ledger_filter: str = "all") ->
                 "label": f"Gold deposit · {jlabel}",
                 "jeweller_name": jlabel,
                 "current_value_inr": str(cur),
+            }
+        )
+
+    for t in (
+        GoldTransfer.objects.filter(Q(from_user=user) | Q(to_user=user))
+        .select_related("from_user", "to_user", "from_custodian", "to_custodian")
+        .order_by("-created_at")
+    ):
+        grams = t.grams
+        if t.from_user_id == user.id:
+            txn_type = "transfer_out"
+            other = t.to_user
+            cust = t.from_custodian
+            label = f"Transfer out · {_party_label(other)}"
+        elif t.to_user_id == user.id:
+            txn_type = "transfer_in"
+            other = t.from_user
+            cust = t.to_custodian
+            label = f"Transfer in · {_party_label(other)}"
+        else:
+            continue
+        jlabel = ""
+        if cust:
+            jlabel = cust.business_name or cust.email or ""
+        cur = (grams * rate).quantize(Decimal("0.01"))
+        rows.append(
+            {
+                "occurred_at": t.created_at.isoformat(),
+                "transaction_type": txn_type,
+                "reference": f"GT-{t.id}",
+                "grams": str(grams),
+                "label": label,
+                "jeweller_name": jlabel,
+                "current_value_inr": str(cur),
+            }
+        )
+
+    for s in (
+        GoldSellbackRequest.objects.filter(
+            customer=user, status=GoldSellbackRequest.STATUS_COMPLETED
+        )
+        .select_related("jeweller")
+        .order_by("-updated_at")
+    ):
+        j = s.jeweller
+        jlabel = j.business_name or j.email or ""
+        occurred = s.updated_at.isoformat()
+        cash = s.cash_estimate_inr.quantize(Decimal("0.01"))
+        rows.append(
+            {
+                "occurred_at": occurred,
+                "transaction_type": "sellback",
+                "reference": f"SB-{s.id}",
+                "grams": str(s.grams),
+                "label": f"Gold redemption · {jlabel}",
+                "jeweller_name": jlabel,
+                "current_value_inr": str(cash),
             }
         )
 
@@ -249,10 +319,25 @@ def customer_portfolio_ledger_payload(user: User, ledger_filter: str = "all") ->
         )
 
     rows.sort(key=lambda x: x["occurred_at"], reverse=True)
-    allowed = {"all", "fractional", "deposit", "golden_scheme", "personal"}
+    allowed = {
+        "all",
+        "fractional",
+        "deposit",
+        "golden_scheme",
+        "personal",
+        "transfer_in",
+        "transfer_out",
+        "transfer",
+        "sellback",
+    }
     lf = (ledger_filter or "all").strip().lower()
     if lf not in allowed:
         lf = "all"
     if lf != "all":
-        rows = [x for x in rows if x["transaction_type"] == lf]
+        if lf == "transfer":
+            rows = [
+                x for x in rows if x["transaction_type"] in ("transfer_in", "transfer_out")
+            ]
+        else:
+            rows = [x for x in rows if x["transaction_type"] == lf]
     return {"entries": rows}
