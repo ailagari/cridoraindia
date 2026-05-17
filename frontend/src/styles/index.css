@@ -2770,94 +2770,104 @@ select.input {
   }
 }
 
-/* Jeweller customer vault — transaction ledger accordion table */
-.jeweller-vault-ledger-acc {
-  border-radius: 14px;
-  border: 1px solid var(--border-soft);
-  overflow: hidden;
+/* Jeweller customer vault — cards + portfolio-style ledger table */
+.jeweller-vault-add-card .pf-card__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.65rem 1rem;
 }
 
-.jeweller-vault-ledger-acc__body {
-  padding-top: 0.85rem;
+.jeweller-vault-add-card .pf-card__head > div:first-child {
+  flex: 1 1 14rem;
+  min-width: 0;
 }
 
-.jeweller-vault-ledger-wrap {
-  width: 100%;
-  max-width: 100%;
-  overflow-x: hidden;
+.jeweller-vault-add-card,
+.jeweller-vault-filter-card {
+  margin-bottom: 1rem;
 }
 
-.jeweller-vault-ledger-table {
-  width: 100%;
-  max-width: 100%;
-  border-collapse: collapse;
-  font-size: 0.78rem;
-  table-layout: fixed;
+.jeweller-vault-customer-grid {
+  display: grid;
+  gap: 1rem;
 }
 
-.jeweller-vault-ledger-table th,
-.jeweller-vault-ledger-table td {
-  padding: 0.55rem 0.45rem;
-  border-bottom: 1px solid var(--border-soft);
-  vertical-align: top;
-  word-wrap: break-word;
-  overflow-wrap: anywhere;
+.jeweller-vault-customer-card__head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  margin-bottom: 0.65rem;
 }
 
-.jeweller-vault-ledger-table th {
-  text-align: left;
-  font-size: 0.55rem;
+.jeweller-vault-customer-card__title {
+  font-size: 1.05rem;
+}
+
+.jeweller-vault-customer-card__grams {
+  text-align: right;
+}
+
+.jeweller-vault-customer-card__grams-label {
+  margin: 0;
+  font-size: 0.62rem;
   font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--text-faint);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-muted);
-  background: rgba(165, 180, 252, 0.06);
 }
 
-.jeweller-vault-ledger-counterparty {
-  display: inline;
+.jeweller-vault-customer-card__grams-value {
+  margin: 0.2rem 0 0;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--text-silk);
+}
+
+.jeweller-vault-customer-card__value-line {
+  margin: 0;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--border-soft);
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.jeweller-vault-customer-card__inr {
+  color: var(--gold-light);
+}
+
+.jeweller-vault-ledger-details {
+  margin-top: 1rem;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  overflow: hidden;
+  background: rgba(0, 8, 20, 0.28);
+}
+
+.jeweller-vault-ledger-details > summary {
+  padding: 0.8rem 1rem;
+}
+
+.jeweller-vault-ledger-details__body {
+  padding: 0 1rem 1.05rem !important;
+}
+
+.jeweller-vault-ledger-details__lede {
+  margin: 0 0 0.85rem !important;
+  line-height: 1.48;
+}
+
+.jeweller-vault-ledger-details .jeweller-vault-ledger-counterparty {
+  display: block;
+  margin-top: 0.32rem;
   font-size: 0.72rem;
   color: var(--text-muted);
   font-weight: 500;
-}
-
-@media (max-width: 767px) {
-  .jeweller-vault-ledger-table thead {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
-  }
-
-  .jeweller-vault-ledger-table tbody tr {
-    display: block;
-    padding: 0.65rem 0;
-    border-bottom: 1px solid var(--border-soft);
-  }
-
-  .jeweller-vault-ledger-table tbody td {
-    display: block;
-    padding: 0.3rem 0;
-    border: none;
-    width: 100%;
-    box-sizing: border-box;
-  }
-
-  .jeweller-vault-ledger-table tbody td::before {
-    content: attr(data-label);
-    display: block;
-    margin-bottom: 0.22rem;
-    font-size: 0.55rem;
-    font-weight: 800;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--text-faint);
-  }
+  letter-spacing: normal;
+  text-transform: none;
+  line-height: 1.35;
 }
 
 .jeweller-sellbacks-wrap {
