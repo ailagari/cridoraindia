@@ -28,6 +28,11 @@ import { mergeJewellerListWithDemos } from '@/lib/jewellerMarketplaceDemos'
 import { LIVE_BALANCE_POLL_MS, LIVE_CATALOG_POLL_MS, LIVE_DIRECTORY_POLL_MS } from '@/lib/liveDeskIntervals'
 import { mergeProductCatalogWithDemos } from '@/lib/productMarketplaceDemos'
 import { MarketplaceProductListSummary, formatInr } from '@/features/marketplace/productPricing'
+import {
+  MarketplaceCartCheckout,
+  MarketplaceCartReview,
+} from '@/features/marketplace/MarketplaceCartViews'
+import { useMarketplaceCart } from '@/features/marketplace/useMarketplaceCart'
 
 function checkoutRedemptionCopy(p: MarketplaceProductDTO, cridoraFee: number): string {
   if (p.is_x_redeem && cridoraFee > 0) {
@@ -549,21 +554,44 @@ export function ProductMarketplacePage() {
   const [checkoutProduct, setCheckoutProduct] = useState<MarketplaceProductDTO | null>(null)
   const [catalog, setCatalog] = useState<MarketplaceProductDTO[]>([])
   const [loadError, setLoadError] = useState('')
-  const [cartQtyById, setCartQtyById] = useState<Record<number, number>>({})
   const [goldWallet, setGoldWallet] = useState<GoldWalletDTO | null>(null)
+  const [cartExtras, setCartExtras] = useState<Record<number, MarketplaceProductDTO>>({})
+  const [cartToast, setCartToast] = useState('')
 
-  const cartItemCount = useMemo(
-    () => Object.values(cartQtyById).reduce((sum, n) => sum + n, 0),
-    [cartQtyById],
-  )
+  const {
+    qtyById,
+    cartItemCount,
+    addToCart,
+    setLineQty,
+    removeLine,
+    clearCart,
+  } = useMarketplaceCart()
 
-  const addToCart = useCallback((product: MarketplaceProductDTO) => {
-    setCartQtyById((prev) => ({ ...prev, [product.id]: (prev[product.id] ?? 0) + 1 }))
-  }, [])
+  useEffect(() => {
+    if (!cartToast) return
+    const t = window.setTimeout(() => setCartToast(''), 2800)
+    return () => window.clearTimeout(t)
+  }, [cartToast])
 
-  const clearCart = useCallback(() => {
-    setCartQtyById({})
-  }, [])
+  const pricingCtxCatalog = useMemo(() => {
+    if (!goldWallet) return undefined
+    return {
+      customerDefaultJewellerId: goldWallet.default_jeweller_id,
+      holdingsJewellerIds: holdingsJewellerIdsFromWallet(goldWallet),
+    }
+  }, [goldWallet])
+
+  const resolvedCartLines = useMemo(() => {
+    const out: { product: MarketplaceProductDTO; qty: number }[] = []
+    for (const idStr of Object.keys(qtyById)) {
+      const id = Number.parseInt(idStr, 10)
+      const qty = qtyById[id]
+      if (!Number.isFinite(id) || !qty || qty < 1) continue
+      const product = catalog.find((c) => c.id === id) ?? cartExtras[id]
+      if (product) out.push({ product, qty })
+    }
+    return out
+  }, [qtyById, catalog, cartExtras])
 
   const refreshCatalog = useCallback(async () => {
     setLoadError('')
@@ -595,7 +623,13 @@ export function ProductMarketplacePage() {
   useLivePoll(refreshVaultBalance, LIVE_BALANCE_POLL_MS, true)
 
   const checkoutParam = searchParams.get('checkout')
+  const cartPageOpen = searchParams.get('cart') === '1'
+
   useEffect(() => {
+    if (checkoutParam === 'cart') {
+      setCheckoutProduct(null)
+      return
+    }
     if (!checkoutParam || !/^\d+$/.test(checkoutParam)) {
       setCheckoutProduct(null)
       return
@@ -611,6 +645,26 @@ export function ProductMarketplacePage() {
       else setCheckoutProduct(null)
     })
   }, [checkoutParam, catalog])
+
+  useEffect(() => {
+    if (checkoutParam !== 'cart') return
+    if (resolvedCartLines.length > 0) return
+    const next = new URLSearchParams(searchParams)
+    next.delete('checkout')
+    setSearchParams(next, { replace: true })
+  }, [checkoutParam, resolvedCartLines.length, searchParams, setSearchParams])
+
+  useEffect(() => {
+    if (!cartPageOpen && checkoutParam !== 'cart') return
+    for (const idStr of Object.keys(qtyById)) {
+      const id = Number.parseInt(idStr, 10)
+      if (!Number.isFinite(id)) continue
+      if (catalog.some((c) => c.id === id)) continue
+      void fetchMarketplaceProduct(id).then((p) => {
+        if (p) setCartExtras((e) => (e[id] ? e : { ...e, [id]: p }))
+      })
+    }
+  }, [cartPageOpen, checkoutParam, qtyById, catalog])
 
   useEffect(() => {
     void refreshCatalog()
@@ -672,11 +726,27 @@ export function ProductMarketplacePage() {
     setSearchParams(next, { replace: true })
   }, [searchParams, setSearchParams])
 
+  const openCartReview = useCallback(() => {
+    const next = new URLSearchParams(searchParams)
+    next.set('cart', '1')
+    next.delete('checkout')
+    setSearchParams(next, { replace: true })
+  }, [searchParams, setSearchParams])
+
+  const handleAddToCart = useCallback(
+    (p: MarketplaceProductDTO) => {
+      const r = addToCart(p, 1)
+      setCartToast(r.message)
+    },
+    [addToCart],
+  )
+
   const openCheckout = useCallback(
     (p: MarketplaceProductDTO) => {
       setCheckoutProduct(p)
       const next = new URLSearchParams(searchParams)
       next.set('checkout', String(p.id))
+      next.delete('cart')
       setSearchParams(next, { replace: true })
     },
     [searchParams, setSearchParams],
@@ -695,8 +765,45 @@ export function ProductMarketplacePage() {
     [searchParams, setSearchParams],
   )
 
+  if (checkoutParam === 'cart') {
+    return (
+      <MarketplaceCartCheckout
+        lines={resolvedCartLines}
+        pricingCtx={pricingCtxCatalog}
+        onBack={() => {
+          const next = new URLSearchParams(searchParams)
+          next.delete('checkout')
+          next.set('cart', '1')
+          setSearchParams(next, { replace: true })
+        }}
+      />
+    )
+  }
+
   if (checkoutProduct) {
     return <CheckoutView product={checkoutProduct} onBack={closeCheckout} />
+  }
+
+  if (cartPageOpen) {
+    return (
+      <MarketplaceCartReview
+        lines={resolvedCartLines}
+        pricingCtx={pricingCtxCatalog}
+        onBack={() => {
+          const next = new URLSearchParams(searchParams)
+          next.delete('cart')
+          setSearchParams(next, { replace: true })
+        }}
+        onProceedToPayment={() => {
+          const next = new URLSearchParams(searchParams)
+          next.set('checkout', 'cart')
+          next.delete('cart')
+          setSearchParams(next, { replace: true })
+        }}
+        onChangeQty={setLineQty}
+        onRemoveLine={removeLine}
+      />
+    )
   }
 
   return (
@@ -884,28 +991,31 @@ export function ProductMarketplacePage() {
             marginBottom: '1.25rem',
           }}
         >
-          <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.88rem' }}>
-            Showing <strong style={{ color: 'var(--text)' }}>{sortedProducts.length}</strong> pieces
-            {activeCategory !== 'All' ? ` · ${activeCategory}` : ''}
-            {jewellerFilterId != null
-              ? ` · jeweller #${jewellerFilterId}`
-              : ''}
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.65rem' }}>
+            <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.88rem' }}>
+              Showing <strong style={{ color: 'var(--text)' }}>{sortedProducts.length}</strong> pieces
+              {activeCategory !== 'All' ? ` · ${activeCategory}` : ''}
+              {jewellerFilterId != null ? ` · jeweller #${jewellerFilterId}` : ''}
+            </p>
+            <button
+              type="button"
+              className="btn btn-primary"
+              style={{ padding: '0.4rem 0.95rem', fontSize: '0.82rem', borderRadius: 12 }}
+              onClick={openCartReview}
+            >
+              {cartItemCount > 0 ? `Cart · ${cartItemCount}` : 'Cart'}
+            </button>
             {cartItemCount > 0 ? (
-              <>
-                {' · '}
-                <span style={{ color: 'var(--gold-light)' }}>Cart {cartItemCount}</span>
-                {' · '}
-                <button
-                  type="button"
-                  className="btn btn-ghost"
-                  style={{ padding: '0.1rem 0.45rem', fontSize: '0.78rem', verticalAlign: 'baseline' }}
-                  onClick={clearCart}
-                >
-                  Clear cart
-                </button>
-              </>
+              <button
+                type="button"
+                className="btn btn-ghost"
+                style={{ padding: '0.35rem 0.55rem', fontSize: '0.78rem', borderRadius: 12 }}
+                onClick={clearCart}
+              >
+                Clear cart
+              </button>
             ) : null}
-          </p>
+          </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.65rem' }}>
             <div
               className="card"
@@ -1024,9 +1134,9 @@ export function ProductMarketplacePage() {
                       type="button"
                       className="btn btn-ghost"
                       style={{ padding: '0.5rem 0.65rem' }}
-                      onClick={() => addToCart(p)}
+                      onClick={() => handleAddToCart(p)}
                     >
-                      Add to cart
+                      {(qtyById[p.id] ?? 0) > 0 ? `In cart · ${qtyById[p.id]}` : 'Add to cart'}
                     </button>
                     <button
                       type="button"
@@ -1085,6 +1195,30 @@ export function ProductMarketplacePage() {
           </Link>
         </p>
       </div>
+
+      {cartToast ? (
+        <div
+          role="status"
+          style={{
+            position: 'fixed',
+            bottom: 24,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 2000,
+            padding: '0.65rem 1.1rem',
+            borderRadius: 14,
+            background: 'var(--veil-90)',
+            border: '1px solid var(--gold)',
+            color: 'var(--text)',
+            fontSize: '0.85rem',
+            boxShadow: 'var(--shadow-card)',
+            maxWidth: 'min(90vw, 380px)',
+            textAlign: 'center',
+          }}
+        >
+          {cartToast}
+        </div>
+      ) : null}
     </div>
   )
 }

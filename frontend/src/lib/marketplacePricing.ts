@@ -183,14 +183,32 @@ export function vaultCanCoverFullGoldWeight(p: MarketplaceProductDTO, vaultBalan
   return w > 0 && v + 1e-9 >= w
 }
 
+/** Max units per line (stock cap when present). */
+export function maxOrderQtyForProduct(p: MarketplaceProductDTO): number {
+  if (p.stock_quantity == null) return 999
+  const s = Number(p.stock_quantity)
+  if (!Number.isFinite(s) || s < 1) return 999
+  return Math.min(9999, Math.floor(s))
+}
+
 export function calculateCheckoutPrice(
   p: MarketplaceProductDTO,
   vaultGramsToApply: number,
   vaultBalanceGrams: number,
   ctx?: CheckoutPricingContext,
+  quantity: number = 1,
 ): PriceBreakdown {
-  const j = jewellerLineParts(p, ctx)
-  const crossPlatformFee = cridoraCrossPlatformFeeInr(p, ctx)
+  const q = Math.max(1, Math.min(9999, Math.floor(Number.isFinite(quantity) ? quantity : 1)))
+  const j0 = jewellerLineParts(p, ctx)
+  const j = {
+    goldValue: j0.goldValue * q,
+    makingCharges: j0.makingCharges * q,
+    gstOnGold: j0.gstOnGold * q,
+    gstOnMaking: j0.gstOnMaking * q,
+    discountAmount: j0.discountAmount * q,
+    jewellerSubtotal: j0.jewellerSubtotal * q,
+  }
+  const crossPlatformFee = cridoraCrossPlatformFeeInr(p, ctx) * q
   const finalAmount = j.jewellerSubtotal + crossPlatformFee
   const metalRate = Number.parseFloat(p.metal_rate_inr_per_gram_used)
   const cappedGrams = Math.max(0, Math.min(vaultGramsToApply, vaultBalanceGrams))
@@ -212,6 +230,23 @@ export function calculateCheckoutPrice(
     goldFromVault,
     discountAmount: j.discountAmount,
   }
+}
+
+/** Weighted listing ₹/g across cart lines (same-jeweller vault credit). */
+export function cartBlendedMetalRateInrPerGram(
+  lines: ReadonlyArray<{ product: MarketplaceProductDTO; qty: number }>,
+): number {
+  let num = 0
+  let den = 0
+  for (const { product: p, qty } of lines) {
+    const w = Number.parseFloat(p.gold_weight_grams) * qty
+    const r = Number.parseFloat(p.metal_rate_inr_per_gram_used)
+    if (w > 0 && r > 0) {
+      num += w * r
+      den += w
+    }
+  }
+  return den > 0 ? num / den : 0
 }
 
 /** Customer-facing line when numeric same-store making is configured (listing copy). */

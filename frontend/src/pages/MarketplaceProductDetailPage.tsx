@@ -24,6 +24,7 @@ import {
   sameStoreMakingExplainer,
   type CheckoutPricingContext,
 } from '@/lib/marketplacePricing'
+import { useMarketplaceCart } from '@/features/marketplace/useMarketplaceCart'
 
 function Row({
   label,
@@ -47,6 +48,8 @@ function Row({
 export function MarketplaceProductDetailPage() {
   const { productId } = useParams<{ productId: string }>()
   const navigate = useNavigate()
+  const { addToCart, cartItemCount, qtyById } = useMarketplaceCart()
+  const [cartToast, setCartToast] = useState('')
   const [product, setProduct] = useState<MarketplaceProductDTO | null>(null)
   const [loadError, setLoadError] = useState('')
   const [pricingContext, setPricingContext] = useState<CheckoutPricingContext | undefined>(undefined)
@@ -99,9 +102,23 @@ export function MarketplaceProductDetailPage() {
 
   useLivePoll(refreshWallet, LIVE_BALANCE_POLL_MS, true)
 
+  useEffect(() => {
+    if (!cartToast) return
+    const t = window.setTimeout(() => setCartToast(''), 2800)
+    return () => window.clearTimeout(t)
+  }, [cartToast])
+
+  const goCart = () => navigate('/marketplace?cart=1')
+
   const goCheckout = () => {
     if (!product) return
     navigate(`/marketplace?checkout=${product.id}`)
+  }
+
+  const handleAddToCart = () => {
+    if (!product) return
+    const r = addToCart(product, 1)
+    setCartToast(r.message)
   }
 
   if (loadError || !product) {
@@ -237,6 +254,12 @@ export function MarketplaceProductDetailPage() {
               <button type="button" className="btn btn-primary" onClick={goCheckout}>
                 Buy now
               </button>
+              <button type="button" className="btn btn-ghost" onClick={handleAddToCart}>
+                {(qtyById[product.id] ?? 0) > 0 ? `In cart · ${qtyById[product.id]} · Add` : 'Add to cart'}
+              </button>
+              <button type="button" className="btn btn-ghost" onClick={goCart}>
+                {cartItemCount > 0 ? `Cart · ${cartItemCount}` : 'Cart'}
+              </button>
               <Link to={`/jewellers/${product.jeweller_id}`} className="btn btn-ghost">
                 View jeweller
               </Link>
@@ -244,6 +267,30 @@ export function MarketplaceProductDetailPage() {
           </div>
         </div>
       </div>
+
+      {cartToast ? (
+        <div
+          role="status"
+          style={{
+            position: 'fixed',
+            bottom: 24,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 2000,
+            padding: '0.65rem 1.1rem',
+            borderRadius: 14,
+            background: 'var(--veil-90)',
+            border: '1px solid var(--gold)',
+            color: 'var(--text)',
+            fontSize: '0.85rem',
+            boxShadow: 'var(--shadow-card)',
+            maxWidth: 'min(90vw, 380px)',
+            textAlign: 'center',
+          }}
+        >
+          {cartToast}
+        </div>
+      ) : null}
     </div>
   )
 }
