@@ -14,7 +14,6 @@ export type PriceBreakdown = {
   discountAmount: number
 }
 
-export const USER_VAULT_BALANCE = 12.45
 /** Fallback when API omits `cross_platform_fee_inr` (legacy clients). */
 export const DEFAULT_CROSS_PLATFORM_FEE_INR = 49
 export const MAKING_FIXED_PER_GRAM = 'fixed_per_gram'
@@ -154,10 +153,11 @@ export function cridoraCrossPlatformFeeInr(p: MarketplaceProductDTO): number {
   return DEFAULT_CROSS_PLATFORM_FEE_INR
 }
 
-/** Demo vault balance is enough to apply vault grams equal to the piece’s gold weight. */
-export function vaultCanCoverFullGoldWeight(p: MarketplaceProductDTO): boolean {
+/** True when the customer’s vaulted balance can cover the piece’s gold weight (before checkout slider). */
+export function vaultCanCoverFullGoldWeight(p: MarketplaceProductDTO, vaultBalanceGrams: number): boolean {
   const w = Number.parseFloat(p.gold_weight_grams)
-  return w > 0 && USER_VAULT_BALANCE + 1e-9 >= w
+  const v = Math.max(0, vaultBalanceGrams)
+  return w > 0 && v + 1e-9 >= w
 }
 
 export function calculateCheckoutPrice(

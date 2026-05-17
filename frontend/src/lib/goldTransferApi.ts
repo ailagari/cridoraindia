@@ -90,6 +90,13 @@ export type GoldWalletDTO = {
   portfolio_totals?: PortfolioTotalsDTO | null
 }
 
+/** Non-negative vaulted grams from wallet API (`balance_grams`). */
+export function walletBalanceGrams(w: GoldWalletDTO | null | undefined): number {
+  if (!w) return 0
+  const n = Number.parseFloat(w.balance_grams ?? '0')
+  return Number.isFinite(n) ? Math.max(0, n) : 0
+}
+
 export type JewellerCustodyVaultRowDTO = {
   customer_id: number
   customer_member_id: string

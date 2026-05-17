@@ -5,7 +5,9 @@ import {
   fetchMarketplaceProduct,
   type MarketplaceProductDTO,
 } from '@/lib/marketplaceApi'
-import { fetchGoldWallet } from '@/lib/goldTransferApi'
+import { useLivePoll } from '@/lib/useLivePoll'
+import { fetchGoldWallet, walletBalanceGrams } from '@/lib/goldTransferApi'
+import { LIVE_BALANCE_POLL_MS } from '@/lib/liveDeskIntervals'
 import {
   MarketplaceProductPricingBreakdown,
   formatInr,
@@ -43,6 +45,7 @@ export function MarketplaceProductDetailPage() {
   const [product, setProduct] = useState<MarketplaceProductDTO | null>(null)
   const [loadError, setLoadError] = useState('')
   const [pricingContext, setPricingContext] = useState<CheckoutPricingContext | undefined>(undefined)
+  const [portfolioVaultGrams, setPortfolioVaultGrams] = useState(0)
 
   const idNum = productId && /^\d+$/.test(productId) ? Number.parseInt(productId, 10) : NaN
 
@@ -66,21 +69,22 @@ export function MarketplaceProductDetailPage() {
     void load()
   }, [load])
 
-  useEffect(() => {
-    let cancelled = false
-    void (async () => {
-      const w = await fetchGoldWallet()
-      if (cancelled) return
-      if (!w) {
-        setPricingContext(undefined)
-        return
-      }
-      setPricingContext({ customerDefaultJewellerId: w.default_jeweller_id })
-    })()
-    return () => {
-      cancelled = true
+  const refreshWallet = useCallback(async () => {
+    const w = await fetchGoldWallet()
+    if (!w) {
+      setPricingContext(undefined)
+      setPortfolioVaultGrams(0)
+      return
     }
+    setPricingContext({ customerDefaultJewellerId: w.default_jeweller_id })
+    setPortfolioVaultGrams(walletBalanceGrams(w))
   }, [])
+
+  useEffect(() => {
+    void refreshWallet()
+  }, [refreshWallet])
+
+  useLivePoll(refreshWallet, LIVE_BALANCE_POLL_MS, true)
 
   const goCheckout = () => {
     if (!product) return
@@ -185,7 +189,11 @@ export function MarketplaceProductDetailPage() {
               ) : null}
             </p>
 
-            <MarketplaceProductPricingBreakdown p={product} pricingContext={pricingContext} />
+            <MarketplaceProductPricingBreakdown
+              p={product}
+              pricingContext={pricingContext}
+              portfolioVaultGrams={portfolioVaultGrams}
+            />
 
             <div
               style={{

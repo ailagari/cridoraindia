@@ -19,13 +19,12 @@ import { useLivePoll } from '@/lib/useLivePoll'
 import {
   calculateCheckoutPrice,
   makingChargesShortLabel,
-  USER_VAULT_BALANCE,
   type CheckoutPricingContext,
   type PriceBreakdown,
 } from '@/lib/marketplacePricing'
-import { fetchGoldWallet } from '@/lib/goldTransferApi'
+import { fetchGoldWallet, walletBalanceGrams } from '@/lib/goldTransferApi'
 import { mergeJewellerListWithDemos } from '@/lib/jewellerMarketplaceDemos'
-import { LIVE_CATALOG_POLL_MS, LIVE_DIRECTORY_POLL_MS } from '@/lib/liveDeskIntervals'
+import { LIVE_BALANCE_POLL_MS, LIVE_CATALOG_POLL_MS, LIVE_DIRECTORY_POLL_MS } from '@/lib/liveDeskIntervals'
 import { mergeProductCatalogWithDemos } from '@/lib/productMarketplaceDemos'
 import { MarketplaceProductListSummary, formatInr } from '@/features/marketplace/productPricing'
 
@@ -73,31 +72,43 @@ function CheckoutView({
   onBack: () => void
 }) {
   const weight = Number.parseFloat(product.gold_weight_grams)
-  const maxVaultGrams = Math.min(weight, USER_VAULT_BALANCE)
   const [payMode, setPayMode] = useState<'cash' | 'vault'>('cash')
   const [vaultGrams, setVaultGrams] = useState(0)
   const [pricingCtx, setPricingCtx] = useState<CheckoutPricingContext | undefined>(undefined)
+  const [portfolioVaultGrams, setPortfolioVaultGrams] = useState(0)
+
+  const refreshWallet = useCallback(async () => {
+    const w = await fetchGoldWallet()
+    if (!w) {
+      setPricingCtx(undefined)
+      setPortfolioVaultGrams(0)
+      return
+    }
+    setPricingCtx({ customerDefaultJewellerId: w.default_jeweller_id })
+    setPortfolioVaultGrams(walletBalanceGrams(w))
+  }, [])
 
   useEffect(() => {
-    let cancelled = false
-    void (async () => {
-      const w = await fetchGoldWallet()
-      if (cancelled) return
-      if (!w) {
-        setPricingCtx(undefined)
-        return
-      }
-      setPricingCtx({ customerDefaultJewellerId: w.default_jeweller_id })
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [])
+    void refreshWallet()
+  }, [refreshWallet])
+
+  useLivePoll(refreshWallet, LIVE_BALANCE_POLL_MS, true)
+
+  const maxVaultGrams = Math.min(weight, portfolioVaultGrams)
+
+  useEffect(() => {
+    setVaultGrams((g) => Math.min(g, maxVaultGrams))
+  }, [maxVaultGrams])
 
   const p: PriceBreakdown = useMemo(
     () =>
-      calculateCheckoutPrice(product, payMode === 'vault' ? vaultGrams : 0, USER_VAULT_BALANCE, pricingCtx),
-    [product, payMode, vaultGrams, pricingCtx],
+      calculateCheckoutPrice(
+        product,
+        payMode === 'vault' ? vaultGrams : 0,
+        portfolioVaultGrams,
+        pricingCtx,
+      ),
+    [product, payMode, vaultGrams, portfolioVaultGrams, pricingCtx],
   )
 
   const payDisplay = Math.max(0, p.payableAmount)
@@ -113,9 +124,9 @@ function CheckoutView({
       <p className="lead lead-tight" style={{ marginBottom: '1.75rem' }}>
         Final amount is shown here only: jeweller metal and making lines, taxes, and — when applicable — a Cridora
         platform fee (never charged by the jeweller). Choose cash / UPI or your Cridora account; with the account you can
-        apply part of your gold balance and pay the rest in cash. Demo vault balance {USER_VAULT_BALANCE.toFixed(3)}g at
-        ₹{formatInr(Number.parseFloat(product.metal_rate_inr_per_gram_used), 2)}/g credit. Sellback notes are storefront
-        disclosures only.
+        apply part of your gold balance and pay the rest in cash. Your vaulted balance from your Cridora account is shown
+        below; gold applied is credited at ₹{formatInr(Number.parseFloat(product.metal_rate_inr_per_gram_used), 2)}/g
+        (this listing’s metal rate). Sellback notes are storefront disclosures only.
       </p>
 
       <div
@@ -320,8 +331,8 @@ function CheckoutView({
               <span style={{ fontSize: '0.88rem' }}>
                 <strong>Cridora account (gold)</strong>
                 <span style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.78rem', marginTop: 4 }}>
-                  Choose how many grams to apply; the rest is paid in cash / UPI. Available {USER_VAULT_BALANCE.toFixed(3)}g
-                  (max {maxVaultGrams.toFixed(3)}g on this piece).
+                  Choose how many grams to apply; the rest is paid in cash / UPI. Available{' '}
+                  {portfolioVaultGrams.toFixed(3)}g (max {maxVaultGrams.toFixed(3)}g on this piece).
                 </span>
               </span>
             </label>
@@ -480,6 +491,7 @@ export function ProductMarketplacePage() {
   const [catalog, setCatalog] = useState<MarketplaceProductDTO[]>([])
   const [loadError, setLoadError] = useState('')
   const [cartQtyById, setCartQtyById] = useState<Record<number, number>>({})
+  const [portfolioVaultGrams, setPortfolioVaultGrams] = useState(0)
 
   const cartItemCount = useMemo(
     () => Object.values(cartQtyById).reduce((sum, n) => sum + n, 0),
@@ -512,6 +524,17 @@ export function ProductMarketplacePage() {
     const list = await fetchVerifiedJewellers()
     setJewellerOptions(mergeJewellerListWithDemos(list))
   }, [])
+
+  const refreshVaultBalance = useCallback(async () => {
+    const w = await fetchGoldWallet()
+    setPortfolioVaultGrams(walletBalanceGrams(w))
+  }, [])
+
+  useEffect(() => {
+    void refreshVaultBalance()
+  }, [refreshVaultBalance])
+
+  useLivePoll(refreshVaultBalance, LIVE_BALANCE_POLL_MS, true)
 
   const checkoutParam = searchParams.get('checkout')
   useEffect(() => {
@@ -568,8 +591,7 @@ export function ProductMarketplacePage() {
 
   const sortedProducts = useMemo(() => {
     const list = [...filteredProducts]
-    const sortPrice = (p: MarketplaceProductDTO) =>
-      calculateCheckoutPrice(p, 0, USER_VAULT_BALANCE).finalAmount
+    const sortPrice = (p: MarketplaceProductDTO) => calculateCheckoutPrice(p, 0, 0).finalAmount
     const weight = (p: MarketplaceProductDTO) => Number.parseFloat(p.gold_weight_grams)
     if (productSort === 'price_asc') {
       list.sort((a, b) => sortPrice(a) - sortPrice(b))
@@ -848,7 +870,7 @@ export function ProductMarketplacePage() {
                 Vault balance
               </p>
               <p style={{ margin: '0.2rem 0 0', fontWeight: 800 }} className="tabular">
-                {USER_VAULT_BALANCE.toFixed(3)}g
+                {portfolioVaultGrams.toFixed(3)}g
               </p>
             </div>
             <div
@@ -925,7 +947,7 @@ export function ProductMarketplacePage() {
                 <div style={{ padding: '1.25rem', flex: 1, display: 'flex', flexDirection: 'column' }}>
                   <h2 style={{ margin: '0 0 0.85rem', fontSize: '1.05rem', lineHeight: 1.25 }}>{p.name}</h2>
                   <div style={{ marginBottom: '0.85rem' }}>
-                    <MarketplaceProductListSummary p={p} />
+                    <MarketplaceProductListSummary p={p} portfolioVaultGrams={portfolioVaultGrams} />
                   </div>
                   <div
                     style={{

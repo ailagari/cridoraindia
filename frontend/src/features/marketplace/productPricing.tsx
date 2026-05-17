@@ -1,7 +1,6 @@
 import type { MarketplaceProductDTO } from '@/lib/marketplaceApi'
 import {
   makingChargesBreakdownLabel,
-  USER_VAULT_BALANCE,
   calculateCheckoutPrice,
   vaultCanCoverFullGoldWeight,
   type CheckoutPricingContext,
@@ -44,9 +43,16 @@ export function hasStoneOrOtherMetal(p: MarketplaceProductDTO): boolean {
 }
 
 /** Grid / list — name, grams, final all-in price only (caller renders title). */
-export function MarketplaceProductListSummary({ p }: { p: MarketplaceProductDTO }) {
+export function MarketplaceProductListSummary({
+  p,
+  portfolioVaultGrams = 0,
+}: {
+  p: MarketplaceProductDTO
+  /** Live Cridora vaulted grams; omit or 0 for cash-only headline. */
+  portfolioVaultGrams?: number
+}) {
   const weightG = Number.parseFloat(p.gold_weight_grams)
-  const final = calculateCheckoutPrice(p, 0, USER_VAULT_BALANCE).finalAmount
+  const final = calculateCheckoutPrice(p, 0, portfolioVaultGrams).finalAmount
 
   return (
     <div>
@@ -76,21 +82,20 @@ export function MarketplaceProductListSummary({ p }: { p: MarketplaceProductDTO 
 export function MarketplaceProductPricingBreakdown({
   p,
   pricingContext,
+  portfolioVaultGrams = 0,
 }: {
   p: MarketplaceProductDTO
   pricingContext?: CheckoutPricingContext
+  portfolioVaultGrams?: number
 }) {
   const weightG = Number.parseFloat(p.gold_weight_grams)
   const metalRate = Number.parseFloat(p.metal_rate_inr_per_gram_used)
   const rateTimesG = metalRate * weightG
-  const base = calculateCheckoutPrice(p, 0, USER_VAULT_BALANCE, pricingContext)
-  const vaultEst = calculateCheckoutPrice(
-    p,
-    Math.min(weightG, USER_VAULT_BALANCE),
-    USER_VAULT_BALANCE,
-    pricingContext,
-  )
-  const fullGoldVaultMatch = vaultCanCoverFullGoldWeight(p) && vaultEst.goldFromVault + 1e-9 >= weightG
+  const vaultCap = Math.max(0, portfolioVaultGrams)
+  const base = calculateCheckoutPrice(p, 0, vaultCap, pricingContext)
+  const vaultEst = calculateCheckoutPrice(p, Math.min(weightG, vaultCap), vaultCap, pricingContext)
+  const fullGoldVaultMatch =
+    vaultCanCoverFullGoldWeight(p, vaultCap) && vaultEst.goldFromVault + 1e-9 >= weightG
   const goldMetal = Number.parseFloat(p.gold_metal_value_inr)
   const stoneComp = Number.parseFloat(p.stone_component_inr)
   const showMetalSplit = hasStoneOrOtherMetal(p)
@@ -191,7 +196,7 @@ export function MarketplaceProductPricingBreakdown({
       <p style={{ margin: 0, fontSize: '0.62rem', color: 'var(--text-muted)', lineHeight: 1.45 }}>
         {fullGoldVaultMatch
           ? 'If vault grams match this piece’s gold weight, cash is mainly making + GST on making, plus other bill lines.'
-          : 'Demo vault may be smaller than this piece — adjust grams at checkout.'}
+          : 'At checkout, apply up to the lesser of your vaulted grams and this piece’s gold weight.'}
       </p>
     </div>
   )
