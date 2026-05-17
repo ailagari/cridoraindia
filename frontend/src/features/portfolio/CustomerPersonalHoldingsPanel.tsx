@@ -370,7 +370,7 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
                 <span className="pf-vault-hero__cta-icon" aria-hidden>
                   +
                 </span>
-                Add personal holding
+                Add Customer Purchase
               </>
             )}
           </button>

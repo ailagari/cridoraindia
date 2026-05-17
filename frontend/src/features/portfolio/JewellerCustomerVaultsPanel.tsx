@@ -89,8 +89,6 @@ export function JewellerCustomerVaultsPanel() {
   const [loadErr, setLoadErr] = useState('')
   const [ledgerByCustomer, setLedgerByCustomer] = useState<Record<number, LedgerRowState>>({})
   const [ledgerFilter, setLedgerFilter] = useState('all')
-  /** Accordion open state — ref only so filter changes do not duplicate effects. */
-  const ledgerOpenCustomersRef = useRef<Record<number, boolean>>({})
   const ledgerFilterRef = useRef(ledgerFilter)
   const [addOpen, setAddOpen] = useState(false)
 
@@ -155,13 +153,10 @@ export function JewellerCustomerVaultsPanel() {
 
   useEffect(() => {
     setLedgerByCustomer({})
-    const ids = Object.entries(ledgerOpenCustomersRef.current)
-      .filter(([, open]) => open)
-      .map(([id]) => Number(id))
-    for (const id of ids) {
-      if (Number.isFinite(id)) void ensureLedger(id)
+    for (const r of rows) {
+      if (Number.isFinite(r.customer_id)) void ensureLedger(r.customer_id)
     }
-  }, [ledgerFilter, ensureLedger])
+  }, [ledgerFilter, rows, ensureLedger])
 
   const sampleRateIso = rows[0]?.jeweller_metal_rate_last_updated_at
 
@@ -194,7 +189,7 @@ export function JewellerCustomerVaultsPanel() {
           <div>
             <h3 className="pf-card__title">Ledger filter</h3>
             <p className="pf-card__meta">
-              Applied when you expand a customer&apos;s transaction ledger (same table styling as the saver portfolio ledger).
+              Applied to every customer&apos;s transaction ledger below (same table styling as the saver portfolio ledger).
             </p>
           </div>
         </header>
@@ -278,23 +273,15 @@ export function JewellerCustomerVaultsPanel() {
                 /g
               </p>
 
-              <details
-                className="jeweller-mkt-acc jeweller-vault-ledger-details"
-                onToggle={(ev) => {
-                  const open = ev.currentTarget.open
-                  ledgerOpenCustomersRef.current[v.customer_id] = open
-                  if (!open) return
-                  void ensureLedger(v.customer_id)
-                }}
-              >
-                <summary>Transaction ledger</summary>
-                <div className="jeweller-mkt-acc__body jeweller-vault-ledger-details__body">
+              <section className="jeweller-vault-ledger-inline" aria-label="Transaction ledger">
+                <h4 className="jeweller-vault-ledger-inline__title">Transaction ledger</h4>
+                <div className="jeweller-vault-ledger-inline__body">
                   {(() => {
                     const st = ledgerByCustomer[v.customer_id] ?? { status: 'idle' as const }
                     if (st.status === 'idle' || st.status === 'loading') {
                       return (
                         <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-muted)' }}>
-                          {st.status === 'loading' ? 'Loading ledger…' : 'Open to load ledger.'}
+                          Loading ledger…
                         </p>
                       )
                     }
@@ -313,7 +300,7 @@ export function JewellerCustomerVaultsPanel() {
                     const payload = st.data
                     return (
                       <>
-                        <p className="pf-card__meta jeweller-vault-ledger-details__lede">
+                        <p className="pf-card__meta jeweller-vault-ledger-inline__lede">
                           Activity at your custodian vault for this customer.{' '}
                           <strong className="tabular">
                             Est. ₹ column uses ₹{formatInrLedger(payload.reference_rate_inr_per_gram)}/g reference (same basis as
@@ -378,7 +365,7 @@ export function JewellerCustomerVaultsPanel() {
                     )
                   })()}
                 </div>
-              </details>
+              </section>
             </article>
           ))}
         </div>
