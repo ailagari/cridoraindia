@@ -217,7 +217,7 @@ export function WhyCridoraPage() {
         </div>
       </section>
 
-      <section style={{ marginTop: '3.25rem' }}>
+      <section id="discover-customers" style={{ marginTop: '3.25rem' }}>
         <h2 className="cridora-section-title cridora-reveal" style={staggerStyle(next())}>
           Why users will join Cridora
         </h2>
@@ -265,7 +265,7 @@ export function WhyCridoraPage() {
         </div>
       </section>
 
-      <section style={{ marginTop: '3.25rem' }}>
+      <section id="discover-jewellers" style={{ marginTop: '3.25rem' }}>
         <h2 className="cridora-section-title cridora-reveal" style={staggerStyle(next())}>
           Why jewellers will join Cridora
         </h2>

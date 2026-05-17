@@ -1,8 +1,9 @@
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { CridoraLogo } from '@/components/CridoraLogo'
 import { PublicHeaderActions, PublicMobileChrome } from '@/components/PublicMobileChrome'
+import { PublicMobileUserMenu } from '@/components/PublicMobileUserMenu'
 import { GoldTickerStrip } from '@/components/GoldTickerStrip'
-import { useAuth } from '@/context/AuthContext'
+import { useAuth, type AuthUser } from '@/context/AuthContext'
 import { dashboardLandingPath } from '@/lib/routes'
 
 const primaryNav = [
@@ -13,77 +14,80 @@ const primaryNav = [
   { to: '/waitlist', label: 'Waitlist' },
 ] as const
 
+function publicDisplayName(user: AuthUser): string {
+  const name = [user.first_name, user.last_name].filter(Boolean).join(' ').trim()
+  return name || user.email
+}
+
 export function PublicLayout() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
 
   const dashboardHref = user ? dashboardLandingPath(user) : '/'
+  const mobileTitle = user ? publicDisplayName(user) : 'Guest'
 
   return (
     <div className="app-shell">
       <div className="public-sticky-stack">
         <header className="public-sticky-stack__header">
-          <div
-            className="container public-sticky-stack__header-inner"
-            style={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '0.85rem 0',
-              gap: '1rem',
-            }}
-          >
-          <Link to="/" style={{ textDecoration: 'none', color: 'inherit' }}>
-            <CridoraLogo size="sm" />
-          </Link>
-          <nav className="nav-links public-nav-desktop" aria-label="Primary">
-            {primaryNav.map((item) => (
-              <NavLink key={item.to} to={item.to} end={item.to === '/'} className="nav-link">
-                {item.label}
-              </NavLink>
-            ))}
-          </nav>
-          <div className="public-header-end">
-            <div className="public-mobile-actions">
-              <PublicHeaderActions />
-            </div>
-            <div className="public-desktop-bell">
-              <PublicHeaderActions />
-            </div>
-            <nav className="nav-links public-nav-desktop public-account-nav" aria-label="Account">
-              {user ? (
-                <>
-                  <NavLink to={dashboardHref} className="nav-link">
-                    Dashboard
-                  </NavLink>
-                  <button
-                    type="button"
-                    className="btn btn-ghost"
-                    style={{ padding: '0.45rem 0.85rem', fontSize: '0.65rem' }}
-                    onClick={async () => {
-                      await logout()
-                      navigate('/')
-                    }}
-                  >
-                    Log out
-                  </button>
-                </>
-              ) : (
-                <>
-                  <NavLink to="/login" className="nav-link">
-                    Login
-                  </NavLink>
-                  <NavLink to="/signup" className="nav-link">
-                    Sign up
-                  </NavLink>
-                  <NavLink to="/jeweller/apply" className="nav-link">
-                    Apply as jeweller
-                  </NavLink>
-                </>
-              )}
+          <div className="container public-sticky-stack__header-inner">
+            <Link to="/" className="public-logo-slot" style={{ textDecoration: 'none', color: 'inherit' }}>
+              <CridoraLogo size="sm" />
+            </Link>
+            <nav className="nav-links public-nav-desktop" aria-label="Primary">
+              {primaryNav.map((item) => (
+                <NavLink key={item.to} to={item.to} end={item.to === '/'} className="nav-link">
+                  {item.label}
+                </NavLink>
+              ))}
             </nav>
-          </div>
+            <span
+              className="public-mobile-username"
+              title={mobileTitle !== 'Guest' ? mobileTitle : undefined}
+            >
+              {mobileTitle}
+            </span>
+            <div className="public-header-end">
+              <div className="public-mobile-actions">
+                <PublicHeaderActions />
+                <PublicMobileUserMenu />
+              </div>
+              <div className="public-desktop-bell">
+                <PublicHeaderActions />
+              </div>
+              <nav className="nav-links public-nav-desktop public-account-nav" aria-label="Account">
+                {user ? (
+                  <>
+                    <NavLink to={dashboardHref} className="nav-link">
+                      Dashboard
+                    </NavLink>
+                    <button
+                      type="button"
+                      className="btn btn-ghost"
+                      style={{ padding: '0.45rem 0.85rem', fontSize: '0.65rem' }}
+                      onClick={async () => {
+                        await logout()
+                        navigate('/')
+                      }}
+                    >
+                      Log out
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <NavLink to="/login" className="nav-link">
+                      Login
+                    </NavLink>
+                    <NavLink to="/signup" className="nav-link">
+                      Sign up
+                    </NavLink>
+                    <NavLink to="/jeweller/apply" className="nav-link">
+                      Apply as jeweller
+                    </NavLink>
+                  </>
+                )}
+              </nav>
+            </div>
           </div>
         </header>
         <GoldTickerStrip variant="public" />

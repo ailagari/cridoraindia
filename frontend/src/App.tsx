@@ -17,6 +17,9 @@ import { JewellerPublicPage } from '@/pages/JewellerPublicPage'
 import { LoginPage } from '@/pages/LoginPage'
 import { SignupPage } from '@/pages/SignupPage'
 import { JewellerApplyPage } from '@/pages/JewellerApplyPage'
+import { DiscoverPage } from '@/pages/DiscoverPage'
+import { ShopHubPage } from '@/pages/ShopHubPage'
+import { JoinHubPage } from '@/pages/JoinHubPage'
 import { AdminDashboardPage } from '@/pages/AdminDashboardPage'
 import { CustomerDashboardPage } from '@/pages/dashboard/CustomerDashboardPage'
 import { JewellerDashboardPage } from '@/pages/dashboard/JewellerDashboardPage'
@@ -33,6 +36,9 @@ export default function App() {
           <Routes>
             <Route element={<PublicLayout />}>
               <Route index element={<HomePage />} />
+              <Route path="discover" element={<DiscoverPage />} />
+              <Route path="shop" element={<ShopHubPage />} />
+              <Route path="join" element={<JoinHubPage />} />
               <Route path="why-cridora" element={<WhyCridoraPage />} />
               <Route path="features" element={<FeaturesPage />} />
               <Route path="how-it-works" element={<HowItWorksPage />} />
