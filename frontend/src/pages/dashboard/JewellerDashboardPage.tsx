@@ -8,6 +8,7 @@ import { JewellerCustomerVaultsPanel } from '@/features/portfolio/JewellerCustom
 import { GoldTransferPanel } from '@/features/gold/GoldTransferPanel'
 import { JewellerMarketplacePanel } from '@/features/marketplace/JewellerMarketplacePanel'
 import { JewellerRatesSchemesPanel } from '@/features/marketplace/JewellerRatesSchemesPanel'
+import { JewellerGoldDepositPanel } from '@/features/invest/JewellerGoldDepositPanel'
 import { JewellerFractionalVerifyPanel } from '@/features/invest/JewellerFractionalVerifyPanel'
 import { JewellerSellbacksPanel } from '@/features/redeem/JewellerSellbacksPanel'
 import { useAuth } from '@/context/AuthContext'
@@ -92,6 +93,11 @@ export function JewellerDashboardPage() {
       {active === 'mkt_policy' ? (
         <div className="dash-panel-max">
           <JewellerRatesSchemesPanel />
+        </div>
+      ) : null}
+      {active === 'txn_deposits' ? (
+        <div className="dash-panel-max">
+          <JewellerGoldDepositPanel />
         </div>
       ) : null}
       {active === 'txn_purchases' ? (

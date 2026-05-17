@@ -527,6 +527,84 @@ class FractionalCounterOtp(models.Model):
         return f"FractionalCounterOtp(purchase={self.purchase_id})"
 
 
+class GoldDepositIntake(models.Model):
+    """Physical gold deposit at jeweller counter; customer OTP confirms before vault credit."""
+
+    AWAITING_CUSTOMER_OTP = "awaiting_customer_otp"
+    COMPLETED = "completed"
+    CANCELLED = "cancelled"
+
+    STATUS_CHOICES = [
+        (AWAITING_CUSTOMER_OTP, "Awaiting customer OTP"),
+        (COMPLETED, "Completed"),
+        (CANCELLED, "Cancelled"),
+    ]
+
+    customer = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="gold_deposit_intakes",
+        limit_choices_to={"user_type": User.CUSTOMER},
+    )
+    jeweller = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="gold_deposit_intakes_as_jeweller",
+        limit_choices_to={"user_type": User.JEWELLER},
+    )
+    grams = models.DecimalField(max_digits=16, decimal_places=6)
+    purity_karat = models.CharField(
+        max_length=32,
+        default="22",
+        help_text="Declared purity (e.g. 22, 916 BIS) after verification.",
+    )
+    reference_metal_inr_per_gram = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        help_text="Jeweller reference 22K metal ₹/g at intake.",
+    )
+    estimated_value_inr = models.DecimalField(
+        max_digits=16,
+        decimal_places=2,
+        help_text="grams × reference rate (indicative).",
+    )
+    jeweller_note = models.CharField(max_length=500, blank=True, default="")
+    status = models.CharField(
+        max_length=32,
+        choices=STATUS_CHOICES,
+        default=AWAITING_CUSTOMER_OTP,
+    )
+    completed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"GoldDepositIntake({self.customer_id}, {self.grams}g, {self.status})"
+
+
+class GoldDepositCounterOtp(models.Model):
+    """In-app OTP for gold deposit intake; jeweller enters plaintext code."""
+
+    intake = models.OneToOneField(
+        GoldDepositIntake,
+        on_delete=models.CASCADE,
+        related_name="counter_otp",
+    )
+    code_hash = models.CharField(max_length=64)
+    expires_at = models.DateTimeField(db_index=True)
+    failed_attempts = models.PositiveSmallIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"GoldDepositCounterOtp(intake={self.intake_id})"
+
+
 class PlatformOperationalSettings(models.Model):
     """Singleton (pk=1): runtime operational limits configurable without redeploy."""
 
@@ -578,9 +656,11 @@ class JewellerLiabilityLedgerEntry(models.Model):
 
     LEDGER_KIND_FRACTIONAL_CREDIT = "fractional_credit"
     LEDGER_KIND_SELLBACK_RELEASE = "sellback_release"
+    LEDGER_KIND_DEPOSIT_CREDIT = "deposit_credit"
     LEDGER_KIND_CHOICES = [
         (LEDGER_KIND_FRACTIONAL_CREDIT, "Fractional credit"),
         (LEDGER_KIND_SELLBACK_RELEASE, "Sellback release"),
+        (LEDGER_KIND_DEPOSIT_CREDIT, "Gold deposit credit"),
     ]
 
     jeweller = models.ForeignKey(
@@ -616,6 +696,13 @@ class JewellerLiabilityLedgerEntry(models.Model):
         null=True,
         blank=True,
         related_name="sellback_liability_entries",
+    )
+    gold_deposit_intake = models.ForeignKey(
+        "GoldDepositIntake",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="liability_entries",
     )
     created_at = models.DateTimeField(auto_now_add=True)
 

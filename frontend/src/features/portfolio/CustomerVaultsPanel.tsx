@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
-import { fetchGoldWallet, type VaultRowDTO } from '@/lib/goldTransferApi'
+import { fetchGoldWallet, vaultRowEstimatedInr, vaultRowTotalGrams, type VaultRowDTO } from '@/lib/goldTransferApi'
 import { LIVE_BALANCE_POLL_MS } from '@/lib/liveDeskIntervals'
 import { useLivePoll } from '@/lib/useLivePoll'
 import { formatJewellerMetalRateAsOf } from '@/features/marketplace/productPricing'
 
-function parseG(s: string): number {
+function parseG(s: string | undefined): number {
+  if (s == null || String(s).trim() === '') return 0
   const n = Number.parseFloat(s)
   return Number.isFinite(n) ? n : 0
 }
@@ -34,13 +35,14 @@ export function CustomerVaultsPanel() {
 
   useLivePoll(refresh, LIVE_BALANCE_POLL_MS, true)
 
-  const rows = vaults.filter((v) => parseG(v.fractional_grams) > 0)
+  const rows = vaults.filter((v) => vaultRowTotalGrams(v) > 0)
 
   return (
     <div className="dash-panel-max">
       <p className="dash-panel-lead">
-        Each row is a <strong>vault</strong> with a partnered jeweller (custodian). Fractional gold you buy at counter is
-        credited here; vault ID appears when your Cridora handle and the jeweller code are both set.
+        Each row is a <strong>vault</strong> with a partnered jeweller (custodian). Counter buys credit <strong>fractional</strong>{' '}
+        grams; verified <strong>gold deposit</strong> and <strong>Golden scheme</strong> balances show here too when present. Vault
+        ID appears when your Cridora handle and the jeweller code are both set.
       </p>
 
       {loadErr ? <p className="form-error">{loadErr}</p> : null}
@@ -55,12 +57,15 @@ export function CustomerVaultsPanel() {
         <div className="pf-kpi pf-kpi--ocean pf-kpi--pulse">
           <span className="pf-kpi__eyebrow">Total vaulted gold</span>
           <p className="pf-kpi__value pf-kpi__value--grams">{totalGrams} g</p>
-          <span className="pf-kpi__hint">Metal held · primary balance</span>
+          <span className="pf-kpi__hint">Fractional + deposit + scheme (all partners)</span>
         </div>
       </div>
 
       {rows.length === 0 ? (
-        <p style={{ color: 'var(--text-muted)' }}>No vault balances yet. Complete a fractional purchase to open a vault.</p>
+        <p style={{ color: 'var(--text-muted)' }}>
+          No vault balances yet. Buy fractional gold at counter, complete a gold deposit with OTP, or join a scheme with a
+          verified jeweller.
+        </p>
       ) : (
         <div style={{ display: 'grid', gap: '1rem' }}>
           {rows.map((v) => (
@@ -74,10 +79,25 @@ export function CustomerVaultsPanel() {
                 </div>
                 <div style={{ textAlign: 'right' }}>
                   <p style={{ margin: 0, fontSize: '0.62rem', fontWeight: 800, letterSpacing: '0.08em', color: 'var(--text-faint)' }}>
-                    GOLD HELD
+                    TOTAL VAULT
                   </p>
-                  <p className="pf-vault-card__grams-glow tabular">{v.fractional_grams} g</p>
+                  <p className="pf-vault-card__grams-glow tabular">{vaultRowTotalGrams(v).toFixed(6)} g</p>
                 </div>
+              </div>
+              <div
+                style={{
+                  marginTop: '0.65rem',
+                  fontSize: '0.8rem',
+                  color: 'var(--text-muted)',
+                  display: 'grid',
+                  gap: '0.25rem',
+                }}
+              >
+                <p style={{ margin: 0 }}>
+                  Fractional <strong className="tabular">{parseG(v.fractional_grams).toFixed(6)} g</strong> · Deposit{' '}
+                  <strong className="tabular">{parseG(v.deposit_grams).toFixed(6)} g</strong> · Golden scheme{' '}
+                  <strong className="tabular">{parseG(v.golden_scheme_grams).toFixed(6)} g</strong>
+                </p>
               </div>
               <div
                 style={{
@@ -97,11 +117,11 @@ export function CustomerVaultsPanel() {
                   </strong>
                 </p>
                 <p style={{ margin: 0 }}>
-                  Board mark ₹{parseG(v.jeweller_metal_rate_inr_per_gram ?? '0').toLocaleString('en-IN', { maximumFractionDigits: 2 })}/g
+                  Board mark ₹{parseG(v.jeweller_metal_rate_inr_per_gram).toLocaleString('en-IN', { maximumFractionDigits: 2 })}/g
                   {' · '}
-                  <span style={{ fontSize: '0.76rem', color: 'var(--text-faint)' }}>Indicative ₹ value</span>{' '}
+                  <span style={{ fontSize: '0.76rem', color: 'var(--text-faint)' }}>Indicative ₹ value (all types)</span>{' '}
                   <strong className="tabular pf-vault-card__inr-value">
-                    ₹{parseG(v.estimated_fractional_value_inr ?? '0').toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                    ₹{vaultRowEstimatedInr(v).toLocaleString('en-IN', { maximumFractionDigits: 0 })}
                   </strong>
                 </p>
                 <p style={{ margin: 0, fontSize: '0.78rem' }}>

@@ -32,6 +32,7 @@ export const JEWELLER_NAV_GROUPS: DashboardNavGroup[] = [
     icon: 'coins',
     items: [
       { sectionKey: 'txn_purchases', label: 'Purchases' },
+      { sectionKey: 'txn_deposits', label: 'Gold deposits' },
       { sectionKey: 'txn_ops', label: 'Redemptions' },
       { sectionKey: 'txn_transfers', label: 'Transfers' },
     ],
@@ -67,6 +68,7 @@ export const JEWELLER_LEGACY_SECTION: Record<string, string> = {
   mkt_rules: 'mkt_policy',
   txn_sellback: 'txn_ops',
   txn_redemptions: 'txn_ops',
+  txn_gold_deposit: 'txn_deposits',
   txn_loans: 'txn_ops',
   txn_settlements: 'txn_ops',
   prof_payouts: 'prof_more',

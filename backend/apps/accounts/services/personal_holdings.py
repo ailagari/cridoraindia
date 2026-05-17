@@ -153,7 +153,7 @@ def customer_portfolio_ledger_payload(user: User, ledger_filter: str = "all") ->
 
     from django.db.models import Prefetch
 
-    from apps.accounts.models import GoldVault
+    from apps.accounts.models import GoldDepositIntake, GoldVault
     from apps.accounts.wallet_extras import customer_completed_fractional_ledger
     from apps.marketplace.models import jeweller_profile_for
     from apps.marketplace.pricing import reference_metal_rate_inr_per_gram_for_jeweller
@@ -173,6 +173,28 @@ def customer_portfolio_ledger_payload(user: User, ledger_filter: str = "all") ->
                 "label": "Fractional purchase",
                 "jeweller_name": r.get("jeweller_name") or "",
                 "current_value_inr": str((g * rate).quantize(Decimal("0.01"))),
+            }
+        )
+
+    for dep in GoldDepositIntake.objects.filter(
+        customer=user, status=GoldDepositIntake.COMPLETED
+    ).select_related("jeweller"):
+        g = dep.grams
+        j = dep.jeweller
+        profile = jeweller_profile_for(j)
+        vrate = reference_metal_rate_inr_per_gram_for_jeweller(profile, cridora_base)
+        jlabel = j.business_name or j.email or ""
+        occurred = dep.completed_at.isoformat() if dep.completed_at else dep.updated_at.isoformat()
+        cur = (g * vrate).quantize(Decimal("0.01"))
+        rows.append(
+            {
+                "occurred_at": occurred,
+                "transaction_type": "deposit",
+                "reference": f"GD-{dep.id}",
+                "grams": str(g),
+                "label": f"Gold deposit · {jlabel}",
+                "jeweller_name": jlabel,
+                "current_value_inr": str(cur),
             }
         )
 

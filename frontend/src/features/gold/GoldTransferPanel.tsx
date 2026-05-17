@@ -6,10 +6,18 @@ import {
   fetchGoldWallet,
   resolveGoldUPI,
   sendGoldTransfer,
+  vaultRowEstimatedInr,
+  vaultRowTotalGrams,
 } from '@/lib/goldTransferApi'
 
 type Props = {
   roleLabel: string
+}
+
+function _vaultGramsPositive(s: string | undefined): boolean {
+  if (s == null || String(s).trim() === '') return false
+  const n = Number.parseFloat(String(s))
+  return Number.isFinite(n) && n > 0
 }
 
 export function GoldTransferPanel({ roleLabel }: Props) {
@@ -133,14 +141,25 @@ export function GoldTransferPanel({ roleLabel }: Props) {
               <div style={{ marginTop: '0.5rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border-soft)' }}>
                 <span style={{ fontSize: '0.65rem', color: 'var(--text-faint)', fontWeight: 800 }}>Vaults</span>
                 <ul style={{ margin: '0.35rem 0 0', padding: 0, listStyle: 'none', display: 'grid', gap: '0.35rem' }}>
-                  {wallet.vaults.slice(0, 6).map((v) => (
-                    <li key={`${v.vault_public_id}-${v.custodian_id}`} style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                      <span style={{ color: 'var(--text)' }}>{v.fractional_grams} g</span>
+                  {wallet.vaults.slice(0, 6).map((v, idx) => (
+                    <li
+                      key={`${v.vault_public_id ?? 'vault'}-${v.custodian_id}-${idx}`}
+                      style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}
+                    >
+                      <span style={{ color: 'var(--text)' }} className="tabular">
+                        {vaultRowTotalGrams(v).toFixed(6)} g
+                      </span>{' '}
+                      <span style={{ color: 'var(--text-faint)', fontSize: '0.72em' }}>vault total</span>
+                      <span style={{ display: 'block', fontSize: '0.72rem', marginTop: 2, color: 'var(--text-faint)' }}>
+                        Fr {v.fractional_grams} g
+                        {_vaultGramsPositive(v.deposit_grams) ? ` · Dep ${v.deposit_grams} g` : ''}
+                        {_vaultGramsPositive(v.golden_scheme_grams) ? ` · Scheme ${v.golden_scheme_grams} g` : ''}
+                      </span>
                       {v.jeweller_metal_rate_inr_per_gram ? (
                         <>
                           {' '}
                           · ~₹
-                          {Number.parseFloat(v.estimated_fractional_value_inr ?? '0').toLocaleString('en-IN', {
+                          {vaultRowEstimatedInr(v).toLocaleString('en-IN', {
                             maximumFractionDigits: 0,
                           })}{' '}
                           @ ₹{Number.parseFloat(v.jeweller_metal_rate_inr_per_gram).toLocaleString('en-IN', {

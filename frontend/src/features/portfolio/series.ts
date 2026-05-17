@@ -10,6 +10,8 @@ export type AdminPortfolioStats = {
   jeweller_custodial_liability_grams_total?: string
   fractional_orders_pending_counter?: number
   fractional_orders_completed?: number
+  gold_deposit_pending_otp?: number
+  gold_deposit_completed?: number
   ledger_note?: string
 }
 

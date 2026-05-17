@@ -28,6 +28,8 @@ function formatLedgerTxnType(t: string): string {
       return 'Cash sellback'
     case 'golden_scheme':
       return 'Golden scheme'
+    case 'deposit':
+      return 'Gold deposit'
     case 'personal':
       return 'Personal holding'
     default:
@@ -61,6 +63,8 @@ function ledgerPillClass(t: string): string {
       return `${base} pf-ledger-pill--credit`
     case 'golden_scheme':
       return `${base} pf-ledger-pill--fee`
+    case 'deposit':
+      return `${base} pf-ledger-pill--xfer`
     case 'personal':
       return `${base} pf-ledger-pill--xfer`
     case 'fractional':
@@ -105,7 +109,7 @@ export function JewellerCustomerVaultsPanel() {
       return
     }
     setRows(payload.results ?? [])
-    setGramsTotal(payload.custodian_fractional_grams_total ?? '0')
+    setGramsTotal(payload.custodian_vault_grams_total ?? payload.custodian_fractional_grams_total ?? '0')
     setInrTotal(payload.custodian_estimated_value_inr_total ?? '0')
   }, [])
 
@@ -163,8 +167,8 @@ export function JewellerCustomerVaultsPanel() {
   return (
     <div className="dash-panel-max pf-scope">
       <p className="dash-panel-lead">
-        Customers with <strong>fractional gold</strong> vaulted under your showroom (custodian). Values use your reference ₹/g marks;
-        Cridora ledger remains authoritative for transfers and redemptions.
+        Customers with <strong>vaulted metal</strong> under your showroom (custodian): fractional, gold deposit, and Golden
+        scheme grams. Values use your reference ₹/g marks; Cridora ledger remains authoritative for transfers and redemptions.
       </p>
 
       {loadErr ? <p className="form-error">{loadErr}</p> : null}
@@ -223,7 +227,7 @@ export function JewellerCustomerVaultsPanel() {
           <span className="pf-kpi__hint">Non-zero fractional vaults here</span>
         </div>
         <div className="pf-kpi pf-kpi--ocean pf-kpi--pulse">
-          <span className="pf-kpi__eyebrow">Total fractional (custody)</span>
+          <span className="pf-kpi__eyebrow">Total vaulted (custody)</span>
           <p className="pf-kpi__value tabular">{gramsTotal} g</p>
           <span className="pf-kpi__hint">Across listed vaults</span>
         </div>
@@ -240,7 +244,8 @@ export function JewellerCustomerVaultsPanel() {
 
       {rows.length === 0 ? (
         <p style={{ color: 'var(--text-muted)' }}>
-          No customer fractional balances custodied here yet. Completed counter purchases will appear after OTP verification.
+          No customer vault balances here yet. Completed counter purchases, verified gold deposits, or scheme credits will appear
+          after they post to the ledger.
         </p>
       ) : (
         <div className="jeweller-vault-customer-grid pf-stagger">
@@ -254,15 +259,30 @@ export function JewellerCustomerVaultsPanel() {
                   </p>
                 </div>
                 <div className="jeweller-vault-customer-card__grams">
-                  <p className="jeweller-vault-customer-card__grams-label">Fractional</p>
-                  <p className="jeweller-vault-customer-card__grams-value tabular">{v.fractional_grams} g</p>
+                  <p className="jeweller-vault-customer-card__grams-label">Total vault</p>
+                  <p className="jeweller-vault-customer-card__grams-value tabular">
+                    {parseG(v.vault_total_grams ?? v.fractional_grams).toFixed(6)} g
+                  </p>
                 </div>
               </header>
+              <p className="jeweller-vault-customer-card__meta-line" style={{ margin: '0 0 0.5rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                Fractional <span className="tabular">{v.fractional_grams} g</span>
+                {parseG(v.deposit_grams ?? '0') > 0 || (v.deposit_grams && v.deposit_grams !== '0') ? (
+                  <>
+                    {' · '}Deposit <span className="tabular">{v.deposit_grams ?? '0'} g</span>
+                  </>
+                ) : null}
+                {parseG(v.golden_scheme_grams ?? '0') > 0 || (v.golden_scheme_grams && v.golden_scheme_grams !== '0') ? (
+                  <>
+                    {' · '}Scheme <span className="tabular">{v.golden_scheme_grams ?? '0'} g</span>
+                  </>
+                ) : null}
+              </p>
               <p className="jeweller-vault-customer-card__value-line">
                 Est. value{' '}
                 <strong className="tabular jeweller-vault-customer-card__inr">
                   ₹
-                  {parseG(v.estimated_fractional_value_inr ?? '0').toLocaleString('en-IN', {
+                  {parseG(v.estimated_total_vault_value_inr ?? v.estimated_fractional_value_inr ?? '0').toLocaleString('en-IN', {
                     maximumFractionDigits: 0,
                   })}
                 </strong>{' '}

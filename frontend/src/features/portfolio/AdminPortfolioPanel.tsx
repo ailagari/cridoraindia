@@ -49,6 +49,8 @@ export function AdminPortfolioPanel({ stats }: { stats: AdminPortfolioStats }) {
 
   const fracPending = stats.fractional_orders_pending_counter ?? 0
   const fracDone = stats.fractional_orders_completed ?? 0
+  const depPending = stats.gold_deposit_pending_otp ?? 0
+  const depDone = stats.gold_deposit_completed ?? 0
 
   return (
     <div className="dash-panel-max pf-scope">
@@ -100,6 +102,16 @@ export function AdminPortfolioPanel({ stats }: { stats: AdminPortfolioStats }) {
           <span className="pf-kpi__eyebrow">Fractional completed</span>
           <p className="pf-kpi__value">{fracDone}</p>
           <span className="pf-kpi__hint">Fully verified purchases</span>
+        </div>
+        <div className="pf-kpi pf-kpi--pulse pf-kpi--ocean">
+          <span className="pf-kpi__eyebrow">Deposit OTP pending</span>
+          <p className="pf-kpi__value">{depPending}</p>
+          <span className="pf-kpi__hint">Gold deposit intakes</span>
+        </div>
+        <div className="pf-kpi pf-kpi--pulse pf-kpi--rose">
+          <span className="pf-kpi__eyebrow">Deposits completed</span>
+          <p className="pf-kpi__value">{depDone}</p>
+          <span className="pf-kpi__hint">Credited vault grams</span>
         </div>
       </div>
 

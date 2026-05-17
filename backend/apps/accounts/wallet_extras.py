@@ -23,7 +23,13 @@ def customer_portfolio_unrealized_summary(
         return None
     market = Decimal("0")
     for row in vaults:
-        market += Decimal(row.get("estimated_fractional_value_inr") or "0")
+        ev = row.get("estimated_vault_value_inr")
+        if ev not in (None, ""):
+            market += Decimal(str(ev))
+        else:
+            market += Decimal(row.get("estimated_fractional_value_inr") or "0")
+            market += Decimal(row.get("estimated_deposit_value_inr") or "0")
+            market += Decimal(row.get("estimated_golden_scheme_value_inr") or "0")
     market_q = market.quantize(Decimal("0.01"))
 
     agg = FractionalGoldPurchase.objects.filter(
@@ -109,7 +115,7 @@ def jeweller_recent_liability_credits(jeweller: User) -> list[dict]:
         return []
     qs = (
         JewellerLiabilityLedgerEntry.objects.filter(jeweller=jeweller)
-        .select_related("customer", "fractional_purchase")
+        .select_related("customer", "fractional_purchase", "gold_deposit_intake")
         .order_by("-created_at")[:25]
     )
     rows = []
@@ -117,6 +123,8 @@ def jeweller_recent_liability_credits(jeweller: User) -> list[dict]:
         ref = ""
         if e.fractional_purchase_id:
             ref = f"FR-{e.fractional_purchase_id}"
+        elif e.gold_deposit_intake_id:
+            ref = f"GD-{e.gold_deposit_intake_id}"
         mid = ""
         cust_label = ""
         if e.customer_id:

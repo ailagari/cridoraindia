@@ -12,14 +12,28 @@ from .models import GoldBalance, GoldVault, VaultHolding
 
 User = get_user_model()
 
+VAULT_TRANSFER_DEBIT_ORDER = (
+    VaultHolding.FRACTIONAL,
+    VaultHolding.DEPOSIT,
+    VaultHolding.GOLDEN_SCHEME,
+)
 
-def _fractional_holding(vault: GoldVault) -> VaultHolding:
+
+def _vault_holding(vault: GoldVault, holding_type: str) -> VaultHolding:
     h, _ = VaultHolding.objects.get_or_create(
         vault=vault,
-        holding_type=VaultHolding.FRACTIONAL,
+        holding_type=holding_type,
         defaults={"balance_grams": Decimal("0")},
     )
     return h
+
+
+def _fractional_holding(vault: GoldVault) -> VaultHolding:
+    return _vault_holding(vault, VaultHolding.FRACTIONAL)
+
+
+def _deposit_holding(vault: GoldVault) -> VaultHolding:
+    return _vault_holding(vault, VaultHolding.DEPOSIT)
 
 
 def compute_vault_public_id(owner: User, custodian: User) -> str | None:
@@ -61,10 +75,9 @@ def sync_customer_aggregate_balance(customer: User) -> None:
     if customer.user_type != User.CUSTOMER:
         return
     total = (
-        VaultHolding.objects.filter(
-            vault__owner=customer,
-            holding_type=VaultHolding.FRACTIONAL,
-        ).aggregate(t=Sum("balance_grams"))["t"]
+        VaultHolding.objects.filter(vault__owner=customer).aggregate(
+            t=Sum("balance_grams")
+        )["t"]
         or Decimal("0")
     )
     GoldBalance.objects.update_or_create(
@@ -76,6 +89,14 @@ def sync_customer_aggregate_balance(customer: User) -> None:
 def credit_customer_fractional(customer: User, custodian: User, grams: Decimal) -> None:
     vault = ensure_vault(customer, custodian)
     VaultHolding.objects.filter(pk=_fractional_holding(vault).pk).update(
+        balance_grams=F("balance_grams") + grams
+    )
+    sync_customer_aggregate_balance(customer)
+
+
+def credit_customer_deposit(customer: User, custodian: User, grams: Decimal) -> None:
+    vault = ensure_vault(customer, custodian)
+    VaultHolding.objects.filter(pk=_deposit_holding(vault).pk).update(
         balance_grams=F("balance_grams") + grams
     )
     sync_customer_aggregate_balance(customer)
@@ -112,6 +133,59 @@ def debit_customer_fractional(customer: User, custodian: User, grams: Decimal) -
     return None
 
 
+def debit_customer_vault_for_transfer(
+    customer: User, custodian: User, grams: Decimal
+) -> tuple[list[tuple[str, Decimal]], str | None]:
+    """
+    Debit vault grams in order: fractional, deposit, golden_scheme.
+    Returns (list of (holding_type, grams) debited, error message or None).
+    """
+    vault = ensure_vault(customer, custodian)
+    holdings = {ht: _vault_holding(vault, ht) for ht in VAULT_TRANSFER_DEBIT_ORDER}
+    lines: list[tuple[str, Decimal]] = []
+    with transaction.atomic():
+        locked_bal: dict[str, Decimal] = {}
+        total_avail = Decimal("0")
+        for ht in VAULT_TRANSFER_DEBIT_ORDER:
+            pk = holdings[ht].pk
+            b = (
+                VaultHolding.objects.select_for_update()
+                .filter(pk=pk)
+                .values_list("balance_grams", flat=True)
+                .first()
+            )
+            bal = b if b is not None else Decimal("0")
+            locked_bal[ht] = bal
+            total_avail += bal
+        if total_avail < grams:
+            return [], "Insufficient gold balance."
+        remaining = grams
+        for ht in VAULT_TRANSFER_DEBIT_ORDER:
+            if remaining <= 0:
+                break
+            take = min(locked_bal[ht], remaining)
+            if take > 0:
+                VaultHolding.objects.filter(pk=holdings[ht].pk).update(
+                    balance_grams=F("balance_grams") - take
+                )
+                lines.append((ht, take))
+                remaining -= take
+    sync_customer_aggregate_balance(customer)
+    return lines, None
+
+
+def credit_customer_vault_lines(
+    customer: User, custodian: User, lines: list[tuple[str, Decimal]]
+) -> None:
+    vault = ensure_vault(customer, custodian)
+    for holding_type, g in lines:
+        if g <= 0:
+            continue
+        hid = _vault_holding(vault, holding_type).pk
+        VaultHolding.objects.filter(pk=hid).update(balance_grams=F("balance_grams") + g)
+    sync_customer_aggregate_balance(customer)
+
+
 def legacy_credit_jeweller_balance(jeweller: User, grams: Decimal) -> None:
     GoldBalance.objects.select_for_update().get_or_create(
         user=jeweller, defaults={"balance_grams": Decimal("0")}
@@ -145,6 +219,8 @@ def migrate_customer_legacy_balance_if_needed(customer: User, custodian: User) -
 
 
 def wallet_vault_payload(customer: User) -> list[dict]:
+    from django.db.models import Prefetch
+
     from apps.marketplace.models import jeweller_profile_for
     from apps.marketplace.pricing import (
         jeweller_rate_effective_updated_at,
@@ -154,29 +230,52 @@ def wallet_vault_payload(customer: User) -> list[dict]:
 
     rows = []
     cridora_base, _ = resolve_cridora_base_22k_inr()
+    holdings_prefetch = Prefetch(
+        "holdings",
+        queryset=VaultHolding.objects.filter(
+            holding_type__in=(
+                VaultHolding.FRACTIONAL,
+                VaultHolding.DEPOSIT,
+                VaultHolding.GOLDEN_SCHEME,
+            )
+        ),
+    )
     qs = (
         GoldVault.objects.filter(owner=customer)
         .select_related("custodian")
+        .prefetch_related(holdings_prefetch)
         .order_by("custodian__business_name", "custodian_id")
     )
     for v in qs:
-        h = VaultHolding.objects.filter(
-            vault=v, holding_type=VaultHolding.FRACTIONAL
-        ).first()
-        g = h.balance_grams if h else Decimal("0")
+        by_type: dict[str, Decimal] = {}
+        for h in v.holdings.all():
+            by_type[h.holding_type] = h.balance_grams
+        g_frac = by_type.get(VaultHolding.FRACTIONAL, Decimal("0"))
+        g_dep = by_type.get(VaultHolding.DEPOSIT, Decimal("0"))
+        g_scheme = by_type.get(VaultHolding.GOLDEN_SCHEME, Decimal("0"))
+        total_g = g_frac + g_dep + g_scheme
         j = v.custodian
         profile = jeweller_profile_for(j)
         metal_rate = reference_metal_rate_inr_per_gram_for_jeweller(profile, cridora_base)
-        est_inr = (g * metal_rate).quantize(Decimal("0.01"))
+        est_frac = (g_frac * metal_rate).quantize(Decimal("0.01"))
+        est_dep = (g_dep * metal_rate).quantize(Decimal("0.01"))
+        est_scheme = (g_scheme * metal_rate).quantize(Decimal("0.01"))
+        est_vault = (total_g * metal_rate).quantize(Decimal("0.01"))
         rate_as_of = jeweller_rate_effective_updated_at(profile)
         rows.append(
             {
                 "vault_public_id": v.vault_public_id or "",
                 "custodian_id": j.id,
                 "custodian_label": j.business_name or j.email or "",
-                "fractional_grams": str(g),
+                "fractional_grams": str(g_frac),
+                "deposit_grams": str(g_dep),
+                "golden_scheme_grams": str(g_scheme),
+                "vault_total_grams": str(total_g),
                 "jeweller_metal_rate_inr_per_gram": str(metal_rate),
-                "estimated_fractional_value_inr": str(est_inr),
+                "estimated_fractional_value_inr": str(est_frac),
+                "estimated_deposit_value_inr": str(est_dep),
+                "estimated_golden_scheme_value_inr": str(est_scheme),
+                "estimated_vault_value_inr": str(est_vault),
                 "jeweller_metal_rate_last_updated_at": rate_as_of.isoformat(),
             }
         )
@@ -184,7 +283,7 @@ def wallet_vault_payload(customer: User) -> list[dict]:
 
 
 def jeweller_custody_vault_payload(jeweller: User) -> list[dict]:
-    """Customer fractional vaults custodied by this jeweller (non-zero balances), with reference ₹/g marks."""
+    """Customer vaults custodied by this jeweller (any non-zero vault balance), with reference ₹/g marks."""
     if jeweller.user_type != User.JEWELLER:
         return []
     from django.db.models import Prefetch
@@ -202,35 +301,51 @@ def jeweller_custody_vault_payload(jeweller: User) -> list[dict]:
     rate_as_of = jeweller_rate_effective_updated_at(profile)
     rate_iso = rate_as_of.isoformat()
 
-    frac_holdings = Prefetch(
+    holdings_prefetch = Prefetch(
         "holdings",
-        queryset=VaultHolding.objects.filter(holding_type=VaultHolding.FRACTIONAL),
+        queryset=VaultHolding.objects.filter(
+            holding_type__in=(
+                VaultHolding.FRACTIONAL,
+                VaultHolding.DEPOSIT,
+                VaultHolding.GOLDEN_SCHEME,
+            )
+        ),
     )
     qs = (
         GoldVault.objects.filter(custodian=jeweller)
         .select_related("owner")
-        .prefetch_related(frac_holdings)
+        .prefetch_related(holdings_prefetch)
         .order_by("owner_id")
     )
     rows: list[dict] = []
     for v in qs:
-        holding = next(iter(v.holdings.all()), None)
-        g = holding.balance_grams if holding else Decimal("0")
-        if g <= 0:
+        by_type: dict[str, Decimal] = {}
+        for h in v.holdings.all():
+            by_type[h.holding_type] = h.balance_grams
+        g_frac = by_type.get(VaultHolding.FRACTIONAL, Decimal("0"))
+        g_dep = by_type.get(VaultHolding.DEPOSIT, Decimal("0"))
+        g_scheme = by_type.get(VaultHolding.GOLDEN_SCHEME, Decimal("0"))
+        total_g = g_frac + g_dep + g_scheme
+        if total_g <= 0:
             continue
         owner = v.owner
-        est_inr = (g * metal_rate).quantize(Decimal("0.01"))
+        est_frac = (g_frac * metal_rate).quantize(Decimal("0.01"))
+        est_total = (total_g * metal_rate).quantize(Decimal("0.01"))
         label = f"{owner.first_name} {owner.last_name}".strip() or "Customer"
         rows.append(
             {
                 "customer_id": owner.id,
                 "customer_member_id": owner.cridora_member_id or "",
                 "customer_label": label,
-                "fractional_grams": str(g),
+                "fractional_grams": str(g_frac),
+                "deposit_grams": str(g_dep),
+                "golden_scheme_grams": str(g_scheme),
+                "vault_total_grams": str(total_g),
                 "jeweller_metal_rate_inr_per_gram": str(metal_rate),
-                "estimated_fractional_value_inr": str(est_inr),
+                "estimated_fractional_value_inr": str(est_frac),
+                "estimated_total_vault_value_inr": str(est_total),
                 "jeweller_metal_rate_last_updated_at": rate_iso,
             }
         )
-    rows.sort(key=lambda r: Decimal(r["fractional_grams"]), reverse=True)
+    rows.sort(key=lambda r: Decimal(r["vault_total_grams"]), reverse=True)
     return rows

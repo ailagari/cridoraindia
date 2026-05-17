@@ -33,7 +33,8 @@ from .services.jeweller_customer_vault_ledger import (
 )
 from .vault_service import (
     credit_customer_fractional,
-    debit_customer_fractional,
+    credit_customer_vault_lines,
+    debit_customer_vault_for_transfer,
     jeweller_custody_vault_payload,
     legacy_credit_jeweller_balance,
     legacy_debit_jeweller_balance,
@@ -157,12 +158,16 @@ class JewellerCustodyVaultsView(APIView):
                 status=status.HTTP_403_FORBIDDEN,
             )
         rows = jeweller_custody_vault_payload(user)
-        total_g = sum(Decimal(r["fractional_grams"]) for r in rows)
-        est_inr_total = sum(Decimal(r["estimated_fractional_value_inr"] or "0") for r in rows)
+        total_vault_g = sum(Decimal(r["vault_total_grams"]) for r in rows)
+        frac_g = sum(Decimal(r["fractional_grams"]) for r in rows)
+        est_inr_total = sum(
+            Decimal(r["estimated_total_vault_value_inr"] or "0") for r in rows
+        )
         return Response(
             {
                 "results": rows,
-                "custodian_fractional_grams_total": str(total_g),
+                "custodian_vault_grams_total": str(total_vault_g),
+                "custodian_fractional_grams_total": str(frac_g),
                 "custodian_estimated_value_inr_total": str(est_inr_total.quantize(Decimal("0.01"))),
             }
         )
@@ -277,11 +282,11 @@ class GoldTransferCreateView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        detail_err = None
+        transfer_lines: list[tuple[str, Decimal]] = []
         try:
             with transaction.atomic():
                 if user.user_type == User.CUSTOMER:
-                    detail_err = debit_customer_fractional(
+                    transfer_lines, detail_err = debit_customer_vault_for_transfer(
                         user, from_custodian, grams
                     )
                 else:
@@ -289,7 +294,10 @@ class GoldTransferCreateView(APIView):
                 if detail_err:
                     raise ValueError(detail_err)
                 if to_user.user_type == User.CUSTOMER:
-                    credit_customer_fractional(to_user, to_custodian, grams)
+                    if transfer_lines:
+                        credit_customer_vault_lines(to_user, to_custodian, transfer_lines)
+                    else:
+                        credit_customer_fractional(to_user, to_custodian, grams)
                 else:
                     legacy_credit_jeweller_balance(to_user, grams)
                 GoldTransfer.objects.create(

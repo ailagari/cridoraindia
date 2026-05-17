@@ -39,6 +39,17 @@ type QueueUser = {
   can_approve_kyb?: boolean
 }
 
+type RecentGoldDeposit = {
+  id: number
+  reference: string
+  status: string
+  grams: string
+  customer_email: string
+  customer_member_id: string
+  jeweller_business: string
+  created_at: string
+}
+
 type OverviewPayload = {
   stats: {
     total_users: number
@@ -52,6 +63,8 @@ type OverviewPayload = {
     jeweller_custodial_liability_grams_total?: string
     fractional_orders_pending_counter?: number
     fractional_orders_completed?: number
+    gold_deposit_pending_otp?: number
+    gold_deposit_completed?: number
     ledger_note?: string
   }
   kyc_queue: QueueUser[]
@@ -59,6 +72,7 @@ type OverviewPayload = {
   payments: unknown[]
   transactions: unknown[]
   recent_users: QueueUser[]
+  recent_gold_deposits?: RecentGoldDeposit[]
 }
 
 type DocInfo = {
@@ -511,7 +525,56 @@ export function AdminDashboardPage() {
                 <p className="admin-dash-stat__value">{data.stats.fractional_orders_completed ?? 0}</p>
                 <p className="admin-dash-stat__sub">Verified purchases on record</p>
               </div>
+              <div className="admin-dash-stat admin-dash-stat--amber">
+                <span className="admin-dash-stat__eyebrow">Deposit OTP pending</span>
+                <p className="admin-dash-stat__value">{data.stats.gold_deposit_pending_otp ?? 0}</p>
+                <p className="admin-dash-stat__sub">Physical gold intakes awaiting saver code</p>
+              </div>
+              <div className="admin-dash-stat admin-dash-stat--emerald">
+                <span className="admin-dash-stat__eyebrow">Deposits completed</span>
+                <p className="admin-dash-stat__value">{data.stats.gold_deposit_completed ?? 0}</p>
+                <p className="admin-dash-stat__sub">Verified gold deposit credits</p>
+              </div>
             </div>
+
+            {data.recent_gold_deposits && data.recent_gold_deposits.length > 0 ? (
+              <div style={{ marginTop: '1.25rem' }}>
+                <h3 style={{ margin: '0 0 0.65rem', fontSize: '1rem' }}>Recent gold deposit intakes</h3>
+                <div className="dash-table-scroll card">
+                  <table className="admin-user-table">
+                    <thead>
+                      <tr>
+                        <th>Reference</th>
+                        <th>Status</th>
+                        <th>Grams</th>
+                        <th>Customer</th>
+                        <th>Jeweller</th>
+                        <th>Created</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.recent_gold_deposits.map((d) => (
+                        <tr key={d.id}>
+                          <td className="tabular">{d.reference}</td>
+                          <td>{d.status.replace(/_/g, ' ')}</td>
+                          <td className="tabular">{d.grams}</td>
+                          <td>
+                            {d.customer_email}
+                            {d.customer_member_id ? (
+                              <span style={{ display: 'block', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                                {d.customer_member_id}
+                              </span>
+                            ) : null}
+                          </td>
+                          <td>{d.jeweller_business}</td>
+                          <td>{fmtDateTime(d.created_at)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : null}
           </>
         ) : null}
 

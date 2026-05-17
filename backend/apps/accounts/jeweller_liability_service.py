@@ -9,6 +9,7 @@ from django.db.models import F
 
 from .models import (
     FractionalGoldPurchase,
+    GoldDepositIntake,
     GoldSellbackRequest,
     JewellerLiabilityBalance,
     JewellerLiabilityLedgerEntry,
@@ -34,6 +35,34 @@ def increment_custodial_liability_for_fractional_sale(
         kind=JewellerLiabilityLedgerEntry.LEDGER_KIND_FRACTIONAL_CREDIT,
         fractional_purchase=purchase,
         gold_sellback=None,
+    )
+    bal, _ = JewellerLiabilityBalance.objects.select_for_update().get_or_create(
+        jeweller=jeweller,
+        defaults={"liability_grams": Decimal("0")},
+    )
+    JewellerLiabilityBalance.objects.filter(pk=bal.pk).update(
+        liability_grams=F("liability_grams") + grams
+    )
+
+
+def increment_custodial_liability_for_gold_deposit(
+    jeweller: User,
+    customer: User,
+    grams: Decimal,
+    intake: GoldDepositIntake,
+) -> None:
+    if jeweller.user_type != User.JEWELLER:
+        raise ValueError("Liability jeweller must be a jeweller user.")
+    if customer.user_type != User.CUSTOMER:
+        raise ValueError("Liability customer must be a customer user.")
+    JewellerLiabilityLedgerEntry.objects.create(
+        jeweller=jeweller,
+        customer=customer,
+        grams=grams,
+        kind=JewellerLiabilityLedgerEntry.LEDGER_KIND_DEPOSIT_CREDIT,
+        fractional_purchase=None,
+        gold_sellback=None,
+        gold_deposit_intake=intake,
     )
     bal, _ = JewellerLiabilityBalance.objects.select_for_update().get_or_create(
         jeweller=jeweller,

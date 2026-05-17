@@ -14,6 +14,7 @@ from .models import (
     AdminNotificationRead,
     BankAccount,
     FractionalGoldPurchase,
+    GoldDepositIntake,
     JewellerLiabilityBalance,
     KYDocument,
     PlatformOperationalSettings,
@@ -141,6 +142,28 @@ class AdminOverviewView(APIView):
             status=FractionalGoldPurchase.COMPLETED,
         ).count()
 
+        gold_deposit_pending_otp = GoldDepositIntake.objects.filter(
+            status=GoldDepositIntake.AWAITING_CUSTOMER_OTP,
+        ).count()
+        gold_deposit_completed = GoldDepositIntake.objects.filter(
+            status=GoldDepositIntake.COMPLETED,
+        ).count()
+        recent_gold_deposits = [
+            {
+                "id": d.id,
+                "reference": f"GD-{d.id}",
+                "status": d.status,
+                "grams": str(d.grams),
+                "customer_email": d.customer.email,
+                "customer_member_id": d.customer.cridora_member_id or "",
+                "jeweller_business": d.jeweller.business_name or d.jeweller.email or "",
+                "created_at": d.created_at.isoformat(),
+            }
+            for d in GoldDepositIntake.objects.select_related("customer", "jeweller").order_by(
+                "-created_at"
+            )[:12]
+        ]
+
         return Response(
             {
                 "stats": {
@@ -156,9 +179,12 @@ class AdminOverviewView(APIView):
                     "jeweller_custodial_liability_grams_total": jeweller_custodial_liability_grams_total,
                     "fractional_orders_pending_counter": fractional_orders_pending_counter,
                     "fractional_orders_completed": fractional_orders_completed,
+                    "gold_deposit_pending_otp": gold_deposit_pending_otp,
+                    "gold_deposit_completed": gold_deposit_completed,
                     "ledger_note": (
-                        "Vault fractional holdings and jeweller custodial liability aggregates reflect "
-                        "completed fractional flows (counter OTP / legacy UPI confirm)."
+                        "Vault fractional holdings total only fractional grams; deposit and scheme vault "
+                        "lines sit in per-customer views. Jeweller liability includes fractional purchases, "
+                        "gold deposits after OTP verify, net of completed sellbacks."
                     ),
                 },
                 "kyc_queue": kyc_queue,
@@ -166,6 +192,7 @@ class AdminOverviewView(APIView):
                 "payments": payments,
                 "transactions": transactions,
                 "recent_users": recent_users,
+                "recent_gold_deposits": recent_gold_deposits,
             }
         )
 

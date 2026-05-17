@@ -5,8 +5,14 @@ export type VaultRowDTO = {
   custodian_id: number
   custodian_label: string
   fractional_grams: string
+  deposit_grams?: string
+  golden_scheme_grams?: string
+  vault_total_grams?: string
   jeweller_metal_rate_inr_per_gram?: string
   estimated_fractional_value_inr?: string
+  estimated_deposit_value_inr?: string
+  estimated_golden_scheme_value_inr?: string
+  estimated_vault_value_inr?: string
   jeweller_metal_rate_last_updated_at?: string
 }
 
@@ -89,13 +95,19 @@ export type JewellerCustodyVaultRowDTO = {
   customer_member_id: string
   customer_label: string
   fractional_grams: string
+  deposit_grams?: string
+  golden_scheme_grams?: string
+  vault_total_grams?: string
   jeweller_metal_rate_inr_per_gram?: string
   estimated_fractional_value_inr?: string
+  estimated_total_vault_value_inr?: string
   jeweller_metal_rate_last_updated_at?: string
 }
 
 export type JewellerCustodyVaultsPayloadDTO = {
   results: JewellerCustodyVaultRowDTO[]
+  /** All vaulted types (fractional + deposit + Golden scheme). */
+  custodian_vault_grams_total?: string
   custodian_fractional_grams_total: string
   custodian_estimated_value_inr_total: string
 }
@@ -369,4 +381,38 @@ export async function sendGoldTransfer(
     return { ok: false, detail: 'Unexpected response' }
   }
   return { ok: true, wallet: data.wallet, detail: data.detail ?? 'Sent.' }
+}
+
+function _parseVaultNum(s: string | undefined): number {
+  if (s == null || String(s).trim() === '') return 0
+  const n = Number.parseFloat(String(s))
+  return Number.isFinite(n) ? Math.max(0, n) : 0
+}
+
+/** Total vaulted metal for one custodian row (fractional + deposit + scheme). */
+export function vaultRowTotalGrams(v: VaultRowDTO): number {
+  const vt = v.vault_total_grams
+  if (vt != null && String(vt).trim() !== '') {
+    const n = Number.parseFloat(String(vt))
+    if (Number.isFinite(n)) return Math.max(0, n)
+  }
+  return (
+    _parseVaultNum(v.fractional_grams) +
+    _parseVaultNum(v.deposit_grams) +
+    _parseVaultNum(v.golden_scheme_grams)
+  )
+}
+
+/** Jeweller mark-to-market ₹ for all holding types in this vault row. */
+export function vaultRowEstimatedInr(v: VaultRowDTO): number {
+  const ev = v.estimated_vault_value_inr
+  if (ev != null && String(ev).trim() !== '') {
+    const n = Number.parseFloat(String(ev))
+    if (Number.isFinite(n)) return Math.max(0, n)
+  }
+  return (
+    _parseVaultNum(v.estimated_fractional_value_inr) +
+    _parseVaultNum(v.estimated_deposit_value_inr) +
+    _parseVaultNum(v.estimated_golden_scheme_value_inr)
+  )
 }

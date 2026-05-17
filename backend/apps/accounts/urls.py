@@ -44,6 +44,13 @@ from .fractional_views import (
     JewellerFractionalPendingView,
     JewellerFractionalVerifyView,
 )
+from .gold_deposit_views import (
+    CustomerGoldDepositCounterOtpIssueView,
+    CustomerGoldDepositIntakesView,
+    JewellerGoldDepositIntakeCreateView,
+    JewellerGoldDepositPendingView,
+    JewellerGoldDepositVerifyView,
+)
 from .sellback_views import (
     GoldSellbackConfirmView,
     GoldSellbackOutstandingView,
@@ -140,6 +147,17 @@ urlpatterns = [
     path("gold/identity/", GoldIdentityUpsertView.as_view()),
     path("gold/default-jeweller/", DefaultJewellerView.as_view()),
     path("gold/pay/<path:gold_upi>/", GoldTransferPublicMetaView.as_view()),
+    path("gold-deposit/intakes/", CustomerGoldDepositIntakesView.as_view()),
+    path(
+        "gold-deposit/intakes/<int:pk>/counter-otp/",
+        CustomerGoldDepositCounterOtpIssueView.as_view(),
+    ),
+    path("jeweller/gold-deposit/intakes/", JewellerGoldDepositIntakeCreateView.as_view()),
+    path("jeweller/gold-deposit/pending/", JewellerGoldDepositPendingView.as_view()),
+    path(
+        "jeweller/gold-deposit/intakes/<int:pk>/verify/",
+        JewellerGoldDepositVerifyView.as_view(),
+    ),
     path("fractional/quote/", FractionalQuoteView.as_view()),
     path("fractional/orders/", FractionalOrdersView.as_view()),
     path(

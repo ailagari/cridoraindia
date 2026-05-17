@@ -1,13 +1,8 @@
 import { useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { GoldTickerPayload, SpotPricesPayload } from '@/lib/marketplaceApi'
-import type { VaultRowDTO } from '@/lib/goldTransferApi'
+import { vaultRowEstimatedInr, vaultRowTotalGrams, type VaultRowDTO } from '@/lib/goldTransferApi'
 import { VaultTrendSparkline } from './PortfolioCharts'
-
-function parseG(s: string): number {
-  const n = Number.parseFloat(s)
-  return Number.isFinite(n) ? n : 0
-}
 
 function fmtInr2(n: number): string {
   return n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -260,19 +255,19 @@ export function PortfolioVaultHoldingsList({
   const heldVaultMarketInr = useMemo(() => {
     let t = 0
     for (const v of vaults) {
-      if (parseG(v.fractional_grams) > 0) {
-        t += parseG(v.estimated_fractional_value_inr ?? '0')
+      if (vaultRowTotalGrams(v) > 0) {
+        t += vaultRowEstimatedInr(v)
       }
     }
     return t
   }, [vaults])
 
   const rows = useMemo(() => {
-    const held = vaults.filter((v) => parseG(v.fractional_grams) > 0)
+    const held = vaults.filter((v) => vaultRowTotalGrams(v) > 0)
     const denom = totalHeldGrams > 0 ? totalHeldGrams : 1
     const out: VaultRowComputed[] = held.map((v) => {
-      const grams = parseG(v.fractional_grams)
-      const market = parseG(v.estimated_fractional_value_inr ?? '0')
+      const grams = vaultRowTotalGrams(v)
+      const market = vaultRowEstimatedInr(v)
       const investedShare =
         allocatedCost > 0 && totalHeldGrams > 0 ? (allocatedCost * grams) / denom : 0
       let trend: VaultRowComputed['trend'] = 'neutral'
@@ -290,7 +285,7 @@ export function PortfolioVaultHoldingsList({
       }
 
       return {
-        key: v.vault_public_id,
+        key: `${v.custodian_id}-${v.vault_public_id || 'vault'}`,
         name: v.custodian_label?.trim() || `Jeweller ${v.custodian_id}`,
         grams,
         market,
@@ -350,7 +345,9 @@ export function PortfolioVaultHoldingsList({
       </div>
 
       {rows.length === 0 ? (
-        <p className="pf-groww-holdings__empty">No vault holdings yet — buy fractional gold from a verified jeweller.</p>
+        <p className="pf-groww-holdings__empty">
+          No vault holdings yet — buy fractional gold or complete a gold deposit with a verified jeweller.
+        </p>
       ) : (
         <ul className="pf-groww-holdings__list">
           {rows.map((r) => (

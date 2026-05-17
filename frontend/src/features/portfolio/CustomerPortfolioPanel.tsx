@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { fetchGoldWallet, type VaultRowDTO } from '@/lib/goldTransferApi'
+import { fetchGoldWallet, vaultRowEstimatedInr, vaultRowTotalGrams, type VaultRowDTO } from '@/lib/goldTransferApi'
 import { fetchPortfolioLedger, type PortfolioLedgerEntryDTO } from '@/lib/personalHoldingsApi'
 import { CustomerPersonalHoldingsPanel } from '@/features/portfolio/CustomerPersonalHoldingsPanel'
 import { fetchGoldTicker, fetchSpotPrices, type GoldTickerPayload, type SpotPricesPayload } from '@/lib/marketplaceApi'
@@ -28,7 +28,7 @@ function parseG(s: string): number {
 function fmtInrSum(vaults: VaultRowDTO[]): number {
   let t = 0
   for (const v of vaults) {
-    t += parseG(v.estimated_fractional_value_inr ?? '0')
+    t += vaultRowEstimatedInr(v)
   }
   return t
 }
@@ -140,12 +140,12 @@ export function CustomerPortfolioPanel() {
   const estInr = fmtInrSum(vaults)
 
   const activeVaultCount = useMemo(
-    () => vaults.filter((v) => parseG(v.fractional_grams) > 0).length,
+    () => vaults.filter((v) => vaultRowTotalGrams(v) > 0).length,
     [vaults],
   )
 
   const heldGramsSum = useMemo(
-    () => vaults.reduce((acc, v) => acc + Math.max(0, parseG(v.fractional_grams)), 0),
+    () => vaults.reduce((acc, v) => acc + Math.max(0, vaultRowTotalGrams(v)), 0),
     [vaults],
   )
 
@@ -153,16 +153,16 @@ export function CustomerPortfolioPanel() {
     if (vaults.length === 0) {
       return [{ pct: 1, color: '#475569', label: 'No vault holdings yet' }]
     }
-    const grams = vaults.map((v) => Math.max(0, parseG(v.fractional_grams)))
+    const grams = vaults.map((v) => Math.max(0, vaultRowTotalGrams(v)))
     const sum = grams.reduce((a, b) => a + b, 0) || 1
     return vaults.map((v, i) => ({
-      pct: Math.max(0, parseG(v.fractional_grams)) / sum,
+      pct: Math.max(0, vaultRowTotalGrams(v)) / sum,
       color: DONUT_COLORS[i % DONUT_COLORS.length]!,
       label: v.custodian_label || `Jeweller ${v.custodian_id}`,
     }))
   }, [vaults])
 
-  const vaultBarVals = useMemo(() => vaults.map((v) => parseG(v.fractional_grams)), [vaults])
+  const vaultBarVals = useMemo(() => vaults.map((v) => vaultRowTotalGrams(v)), [vaults])
   const vaultBarLabels = useMemo(
     () =>
       vaults.map((v) => {
@@ -326,7 +326,7 @@ export function CustomerPortfolioPanel() {
             <article className="pf-card pf-card--lift">
               <header className="pf-card__head">
                 <h3 className="pf-card__title">Grams per jeweller</h3>
-                <p className="pf-card__meta">Fractional holdings by custodian vault</p>
+                <p className="pf-card__meta">All vaulted metal by custodian (fractional, deposit, scheme)</p>
               </header>
               <div className="pf-card__viz">
                 {vaultBarVals.length > 0 && vaultBarVals.some((v) => v > 0) ? (
@@ -334,11 +334,11 @@ export function CustomerPortfolioPanel() {
                     values={vaultBarVals}
                     labels={vaultBarLabels}
                     colors={vaultBarLabels.map((_, i) => DONUT_COLORS[i % DONUT_COLORS.length]!)}
-                    ariaLabel="Bar chart of fractional grams per jeweller vault"
+                    ariaLabel="Bar chart of total vaulted grams per jeweller"
                   />
                 ) : (
                   <p style={{ color: 'var(--text-muted)', margin: 0 }}>
-                    No fractional grams yet — buy gold from a verified jeweller.
+                    No vaulted grams yet — buy fractional gold or complete a gold deposit with a verified jeweller.
                   </p>
                 )}
               </div>
@@ -347,10 +347,10 @@ export function CustomerPortfolioPanel() {
             <article className="pf-card pf-card--lift pf-card--wide">
               <header className="pf-card__head">
                 <h3 className="pf-card__title">Allocation by jeweller</h3>
-                <p className="pf-card__meta">Share of your total fractional grams</p>
+                <p className="pf-card__meta">Share of your total vaulted grams (all holding types)</p>
               </header>
               <div className="pf-donut-wrap">
-                <PortfolioDonut segments={donutSegs} ariaLabel="Fractional gold allocation by jeweller vault" />
+                <PortfolioDonut segments={donutSegs} ariaLabel="Vault metal allocation by jeweller" />
                 <ul className="pf-donut-legend">
                   {donutSegs.map((s) => (
                     <li key={s.label} className="pf-donut-legend__row">

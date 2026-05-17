@@ -12,6 +12,7 @@ from django.utils import timezone
 
 from apps.accounts.models import (
     FractionalGoldPurchase,
+    GoldDepositIntake,
     GoldSellbackRequest,
     GoldTransfer,
     GoldVault,
@@ -52,9 +53,11 @@ def jeweller_can_access_customer_vault_ledger(jeweller: User, customer_id: int) 
         return True
     if GoldSellbackRequest.objects.filter(jeweller=jeweller, customer_id=customer_id).exists():
         return True
-    return PersonalGoldHolding.objects.filter(
+    if PersonalGoldHolding.objects.filter(
         jeweller=jeweller, user_id=customer_id, is_removed=False
-    ).exists()
+    ).exists():
+        return True
+    return GoldDepositIntake.objects.filter(jeweller=jeweller, customer_id=customer_id).exists()
 
 
 def jeweller_customer_vault_ledger_payload(
@@ -90,6 +93,34 @@ def jeweller_customer_vault_ledger_payload(
                 "current_value_inr": str(current_inr),
                 "reference": f"FR-{p.id}",
                 "counterparty_label": "",
+            }
+        )
+
+    deposits = (
+        GoldDepositIntake.objects.filter(
+            customer_id=customer_id,
+            jeweller=jeweller,
+            status=GoldDepositIntake.COMPLETED,
+        )
+        .order_by("-completed_at")[:_MAX_ROWS]
+    )
+    for d in deposits:
+        grams_d = d.grams
+        occurred_dep = d.completed_at or d.updated_at
+        metal_pre_d = (grams_d * d.reference_metal_inr_per_gram).quantize(Decimal("0.01"))
+        current_inr_d = (grams_d * rate).quantize(Decimal("0.01"))
+        purity_l = (d.purity_karat or "").strip()
+        rows.append(
+            {
+                "occurred_at": _occurred_iso(occurred_dep),
+                "transaction_type": "deposit",
+                "grams": str(grams_d),
+                "metal_type": METAL_TYPE_LABEL,
+                "purchase_value_inr": str(metal_pre_d),
+                "invoice_total_inr": None,
+                "current_value_inr": str(current_inr_d),
+                "reference": f"GD-{d.id}",
+                "counterparty_label": purity_l,
             }
         )
 
