@@ -18,7 +18,7 @@ from apps.accounts.jeweller_liability_service import (
 from apps.accounts.models import VaultHolding, VaultProductRedemption
 from apps.accounts.vault_service import debit_customer_vault_for_transfer
 
-from .models import MarketplaceProduct, get_or_create_ticker
+from .models import MarketplaceProduct
 from .redemption_pricing import (
     grams_to_charge_for_invoice,
     invoice_totals_for_vault_redemption,
@@ -64,16 +64,11 @@ def _load_eligible_product(pk: int) -> MarketplaceProduct | None:
 
 
 def _redemption_quote_payload(product: MarketplaceProduct, customer: User) -> dict:
-    final_inr, metal_rate, jeweller_sub, same_store = (
+    final_inr, metal_rate, jeweller_sub, same_store, cross = (
         invoice_totals_for_vault_redemption(product, customer)
     )
     grams_req = grams_to_charge_for_invoice(final_inr, metal_rate)
     available = _vault_grams_available(customer, product.jeweller)
-    cross = Decimal("0")
-    if product.is_x_redeem:
-        cross = get_or_create_ticker().cross_platform_fee_inr or Decimal("0")
-        if cross < 0:
-            cross = Decimal("0")
     j = product.jeweller
     return {
         "product_id": product.id,
@@ -142,7 +137,7 @@ class VaultRedemptionConfirmView(APIView):
                 {"detail": "Product not available."}, status=status.HTTP_404_NOT_FOUND
             )
 
-        final_inr, metal_rate, jeweller_sub, same_store = (
+        final_inr, metal_rate, jeweller_sub, same_store, cross = (
             invoice_totals_for_vault_redemption(product, request.user)
         )
         grams_req = grams_to_charge_for_invoice(final_inr, metal_rate)
@@ -186,11 +181,6 @@ class VaultRedemptionConfirmView(APIView):
                 )
 
         jeweller = product.jeweller
-        cross = Decimal("0")
-        if product.is_x_redeem:
-            cross = get_or_create_ticker().cross_platform_fee_inr or Decimal("0")
-            if cross < 0:
-                cross = Decimal("0")
 
         redemption: VaultProductRedemption | None = None
         try:

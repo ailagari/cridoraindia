@@ -6,7 +6,7 @@ import {
   type MarketplaceProductDTO,
 } from '@/lib/marketplaceApi'
 import { useLivePoll } from '@/lib/useLivePoll'
-import { fetchGoldWallet, walletBalanceGrams } from '@/lib/goldTransferApi'
+import { fetchGoldWallet, holdingsJewellerIdsFromWallet, walletBalanceGrams } from '@/lib/goldTransferApi'
 import { LIVE_BALANCE_POLL_MS } from '@/lib/liveDeskIntervals'
 import {
   MarketplaceProductPricingBreakdown,
@@ -76,7 +76,10 @@ export function MarketplaceProductDetailPage() {
       setPortfolioVaultGrams(0)
       return
     }
-    setPricingContext({ customerDefaultJewellerId: w.default_jeweller_id })
+    setPricingContext({
+      customerDefaultJewellerId: w.default_jeweller_id,
+      holdingsJewellerIds: holdingsJewellerIdsFromWallet(w),
+    })
     setPortfolioVaultGrams(walletBalanceGrams(w))
   }, [])
 

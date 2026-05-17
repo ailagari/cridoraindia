@@ -4,8 +4,9 @@ export function CustomerJewellersBrowsePanel() {
   return (
     <div className="dash-panel-max">
       <p className="dash-panel-lead">
-        KYB-verified jewellers on Cridora: compare indicative metal rates, sellback, and listings. Use <strong>Buy gold</strong>{' '}
-        for counter fractional purchases from your dashboard, or browse their approved catalogue here first.
+        Browse verified jeweller storefronts: metal rates, sellback, and how many SKUs they publish. Open{' '}
+        <strong>Catalogue</strong> in Marketplace to shop admin-approved jewellery pieces (whole-piece checkout like the
+        public site). Use <strong>Buy gold</strong> under Invest for counter fractional purchases.
       </p>
       <JewellerMarketplaceGrid
         variant="customer_dashboard"

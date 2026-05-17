@@ -9,7 +9,7 @@ export const CUSTOMER_NAV_GROUPS: DashboardNavGroup[] = [
     icon: 'shop',
     items: [
       { sectionKey: 'shop_jewellers', label: 'Jewellers' },
-      { sectionKey: 'shop_products', label: 'Products' },
+      { sectionKey: 'shop_products', label: 'Catalogue' },
     ],
   },
   {

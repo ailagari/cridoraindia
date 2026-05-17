@@ -22,7 +22,7 @@ import {
   type CheckoutPricingContext,
   type PriceBreakdown,
 } from '@/lib/marketplacePricing'
-import { fetchGoldWallet, walletBalanceGrams } from '@/lib/goldTransferApi'
+import { fetchGoldWallet, holdingsJewellerIdsFromWallet, walletBalanceGrams } from '@/lib/goldTransferApi'
 import { mergeJewellerListWithDemos } from '@/lib/jewellerMarketplaceDemos'
 import { LIVE_BALANCE_POLL_MS, LIVE_CATALOG_POLL_MS, LIVE_DIRECTORY_POLL_MS } from '@/lib/liveDeskIntervals'
 import { mergeProductCatalogWithDemos } from '@/lib/productMarketplaceDemos'
@@ -32,8 +32,8 @@ function checkoutRedemptionCopy(p: MarketplaceProductDTO, cridoraFee: number): s
   if (p.is_x_redeem && cridoraFee > 0) {
     return `Cross-jeweller settlement: Cridora adds a platform fee of ₹${formatInr(cridoraFee)} on this order. The jeweller does not charge this fee.`
   }
-  if (p.is_x_redeem) {
-    return 'Network redemption listing. Platform fees, if any, are set by Cridora at checkout—not by the jeweller.'
+  if (p.is_x_redeem && cridoraFee <= 0) {
+    return 'No Cridora cross-jeweller platform fee on this order (for example, when you already hold vaulted gold with this jeweller).'
   }
   return 'Same-store purchase: no Cridora cross-jeweller platform fee on this demo order.'
 }
@@ -84,7 +84,10 @@ function CheckoutView({
       setPortfolioVaultGrams(0)
       return
     }
-    setPricingCtx({ customerDefaultJewellerId: w.default_jeweller_id })
+    setPricingCtx({
+      customerDefaultJewellerId: w.default_jeweller_id,
+      holdingsJewellerIds: holdingsJewellerIdsFromWallet(w),
+    })
     setPortfolioVaultGrams(walletBalanceGrams(w))
   }, [])
 

@@ -97,6 +97,23 @@ export function walletBalanceGrams(w: GoldWalletDTO | null | undefined): number 
   return Number.isFinite(n) ? Math.max(0, n) : 0
 }
 
+/** Custodian jeweller IDs where the customer holds any positive vaulted grams. */
+export function holdingsJewellerIdsFromWallet(w: GoldWalletDTO | null | undefined): ReadonlySet<number> {
+  if (!w?.vaults?.length) return new Set<number>()
+  const out = new Set<number>()
+  for (const v of w.vaults) {
+    const id = v.custodian_id
+    if (!Number.isFinite(id) || id <= 0) continue
+    const vt = Number.parseFloat(v.vault_total_grams ?? '0')
+    const fg = Number.parseFloat(v.fractional_grams ?? '0')
+    const dg = Number.parseFloat(v.deposit_grams ?? '0')
+    const gg = Number.parseFloat(v.golden_scheme_grams ?? '0')
+    const grams = Number.isFinite(vt) && vt > 0 ? vt : fg + dg + gg
+    if (Number.isFinite(grams) && grams > 1e-9) out.add(id)
+  }
+  return out
+}
+
 export type JewellerCustodyVaultRowDTO = {
   customer_id: number
   customer_member_id: string

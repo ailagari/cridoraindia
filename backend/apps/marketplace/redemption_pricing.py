@@ -5,6 +5,9 @@ from __future__ import annotations
 from decimal import ROUND_UP, Decimal
 
 from django.contrib.auth import get_user_model
+from django.db.models import Sum
+
+from apps.accounts.models import VaultHolding
 
 from .models import MarketplaceProduct, get_or_create_ticker, jeweller_profile_for
 from .pricing import gold_metal_value_inr, gold_rate_inr_per_gram, stone_component_inr
@@ -13,6 +16,23 @@ from .spot_prices import resolve_cridora_base_22k_inr
 User = get_user_model()
 
 _DISCOUNT_ON_MAKING = Decimal("0.05")
+
+
+def customer_has_vault_holdings_at_jeweller(
+    customer: User | None, jeweller_id: int
+) -> bool:
+    """True if the customer holds any vaulted gold (fractional, deposit, or scheme) at this custodian."""
+    if not customer or customer.user_type != User.CUSTOMER:
+        return False
+    total = (
+        VaultHolding.objects.filter(
+            vault__owner=customer, vault__custodian_id=jeweller_id
+        ).aggregate(t=Sum("balance_grams"))["t"]
+        or Decimal("0")
+    )
+    return total > 0
+
+
 _GST_GOLD = Decimal("0.03")
 _GST_MAKING = Decimal("0.18")
 
@@ -47,9 +67,15 @@ def _raw_making_inr(
 
 def invoice_totals_for_vault_redemption(
     product: MarketplaceProduct, customer: User | None
-) -> tuple[Decimal, Decimal, Decimal, bool]:
+) -> tuple[Decimal, Decimal, Decimal, bool, Decimal]:
     """
-    Returns (final_invoice_inr, metal_rate_inr_per_gram_used, jeweller_subtotal_inr, same_store).
+    Returns (
+        final_invoice_inr,
+        metal_rate_inr_per_gram_used,
+        jeweller_subtotal_inr,
+        same_store,
+        cross_platform_fee_inr,
+    ).
     """
     profile = jeweller_profile_for(product.jeweller)
     cridora_base, _ = resolve_cridora_base_22k_inr()
@@ -74,13 +100,15 @@ def invoice_totals_for_vault_redemption(
     )
 
     cross = Decimal("0")
-    if product.is_x_redeem:
+    if product.is_x_redeem and not customer_has_vault_holdings_at_jeweller(
+        customer, product.jeweller_id
+    ):
         cross = get_or_create_ticker().cross_platform_fee_inr or Decimal("0")
         if cross < 0:
             cross = Decimal("0")
 
     final_invoice = (jeweller_subtotal + cross).quantize(Decimal("0.01"))
-    return final_invoice, metal_rate, jeweller_subtotal, same_store
+    return final_invoice, metal_rate, jeweller_subtotal, same_store, cross
 
 
 def grams_to_charge_for_invoice(final_invoice_inr: Decimal, metal_rate_inr: Decimal) -> Decimal:

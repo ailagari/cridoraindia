@@ -7,10 +7,17 @@ import {
   type JewellerStorefrontDTO,
   type MarketplaceProductDTO,
 } from '@/lib/marketplaceApi'
+import {
+  fetchGoldWallet,
+  holdingsJewellerIdsFromWallet,
+  walletBalanceGrams,
+  type GoldWalletDTO,
+} from '@/lib/goldTransferApi'
 import { mergeProductCatalogWithDemos } from '@/lib/productMarketplaceDemos'
-import { LIVE_CATALOG_POLL_MS } from '@/lib/liveDeskIntervals'
+import { LIVE_BALANCE_POLL_MS, LIVE_CATALOG_POLL_MS } from '@/lib/liveDeskIntervals'
 import { useLivePoll } from '@/lib/useLivePoll'
-import { MarketplaceProductListSummary } from '@/features/marketplace/productPricing'
+import { cridoraCrossPlatformFeeInr, type CheckoutPricingContext } from '@/lib/marketplacePricing'
+import { MarketplaceProductListSummary, formatInr } from '@/features/marketplace/productPricing'
 
 const filterBarInput: CSSProperties = {
   width: '100%',
@@ -36,6 +43,27 @@ export function CustomerProductsBrowsePanel() {
   const [jewellerOptions, setJewellerOptions] = useState<JewellerStorefrontDTO[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [loadError, setLoadError] = useState('')
+  const [wallet, setWallet] = useState<GoldWalletDTO | null>(null)
+
+  const refreshWallet = useCallback(async () => {
+    const w = await fetchGoldWallet()
+    setWallet(w)
+  }, [])
+
+  useEffect(() => {
+    void refreshWallet()
+  }, [refreshWallet])
+
+  useLivePoll(refreshWallet, LIVE_BALANCE_POLL_MS, true)
+
+  const portfolioVaultGrams = useMemo(() => walletBalanceGrams(wallet), [wallet])
+  const checkoutPricingContext = useMemo((): CheckoutPricingContext | undefined => {
+    if (!wallet) return undefined
+    return {
+      customerDefaultJewellerId: wallet.default_jeweller_id,
+      holdingsJewellerIds: holdingsJewellerIdsFromWallet(wallet),
+    }
+  }, [wallet])
 
   const refreshCatalog = useCallback(async () => {
     setLoadError('')
@@ -96,8 +124,10 @@ export function CustomerProductsBrowsePanel() {
   return (
     <div className="dash-panel-max">
       <p className="dash-panel-lead">
-        Admin-approved listings from verified jewellers (same catalogue as the public marketplace). Open a piece for full
-        pricing and imagery, or start a counter fractional purchase with that jeweller from your dashboard.
+        <strong>Jewellery catalogue</strong> — the same admin-approved SKUs as the public product marketplace. Buy a{' '}
+        <strong>whole piece</strong> (cash / UPI / vault grams) from the full checkout; this list is for quick browsing
+        inside your dashboard. <strong>Buy gold</strong> under Invest is only for counter <strong>fractional</strong>{' '}
+        metal, not these ornaments.
       </p>
 
       <div
@@ -176,8 +206,10 @@ export function CustomerProductsBrowsePanel() {
         Showing <strong style={{ color: 'var(--text)' }}>{filtered.length}</strong> listing{filtered.length === 1 ? '' : 's'}
         .{' '}
         <Link to="/marketplace" style={{ color: 'var(--gold-light)' }}>
-          Open full marketplace layout
+          Open full public marketplace
         </Link>
+        . Cross-purchase listings add a Cridora platform fee when you don&apos;t already hold vaulted gold with that
+        jeweller — pricing at checkout reflects your holdings.
       </p>
 
       {filtered.length === 0 ? (
@@ -190,7 +222,9 @@ export function CustomerProductsBrowsePanel() {
             gap: '1rem',
           }}
         >
-          {filtered.map((p) => (
+          {filtered.map((p) => {
+            const crossFee = cridoraCrossPlatformFeeInr(p, checkoutPricingContext)
+            return (
             <article
               key={p.id}
               className="card"
@@ -208,30 +242,44 @@ export function CustomerProductsBrowsePanel() {
               <div style={{ flex: 1 }}>
                 <h3 style={{ margin: '0 0 0.35rem', fontSize: '1rem', lineHeight: 1.3 }}>{p.name}</h3>
                 <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-muted)' }}>{p.jeweller_name}</p>
+                {p.is_x_redeem && crossFee > 0 ? (
+                  <p style={{ margin: '0.35rem 0 0', fontSize: '0.68rem', color: 'var(--text-muted)', lineHeight: 1.35 }}>
+                    Cross-purchase fee <span className="tabular">₹{formatInr(crossFee)}</span> at checkout (waived if you
+                    hold vaulted gold with this jeweller).
+                  </p>
+                ) : null}
                 <div style={{ marginTop: '0.65rem' }}>
-                  <MarketplaceProductListSummary p={p} />
+                  <MarketplaceProductListSummary p={p} portfolioVaultGrams={portfolioVaultGrams} />
                 </div>
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem', marginTop: 'auto' }}>
+                <Link
+                  className="btn btn-primary"
+                  style={{ padding: '0.45rem 0.65rem', borderRadius: 12, fontSize: '0.72rem' }}
+                  to={`/marketplace?checkout=${p.id}`}
+                >
+                  Buy piece
+                </Link>
                 <Link
                   className="btn btn-ghost"
                   style={{ padding: '0.45rem 0.65rem', borderRadius: 12, fontSize: '0.72rem' }}
                   to={`/marketplace/product/${p.id}`}
                 >
-                  Details
+                  Details &amp; rates
                 </Link>
                 {p.jeweller_id > 0 ? (
                   <Link
-                    className="btn btn-primary"
+                    className="btn btn-ghost"
                     style={{ padding: '0.45rem 0.65rem', borderRadius: 12, fontSize: '0.72rem' }}
                     to={`/userdashboard?section=invest_fractional&jeweller_id=${p.jeweller_id}`}
                   >
-                    Buy fractional gold
+                    Fractional gold (Invest)
                   </Link>
                 ) : null}
               </div>
             </article>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>

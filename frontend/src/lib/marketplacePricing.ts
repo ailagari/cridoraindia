@@ -24,6 +24,8 @@ const DISCOUNT_RATE = 0.05
 /** When `customerDefaultJewellerId` equals the product listing jeweller, same-store making applies if configured. */
 export type CheckoutPricingContext = {
   customerDefaultJewellerId?: number | null
+  /** Custodian jewellers where the customer holds vaulted gold; waives Cridora cross-purchase fee for those listings. */
+  holdingsJewellerIds?: ReadonlySet<number>
 }
 
 type JewellerParts = {
@@ -142,9 +144,13 @@ export function jewellerSubtotalInr(p: MarketplaceProductDTO): number {
   return jewellerLineParts(p, undefined).jewellerSubtotal
 }
 
-/** Cridora cross-network fee; jewellers do not charge this. Shown at checkout only. */
-export function cridoraCrossPlatformFeeInr(p: MarketplaceProductDTO): number {
+/** Cridora cross-network fee; jewellers do not charge this. Waived when the customer holds vaulted gold at the listing jeweller. */
+export function cridoraCrossPlatformFeeInr(p: MarketplaceProductDTO, ctx?: CheckoutPricingContext): number {
   if (!p.is_x_redeem) return 0
+  const ids = ctx?.holdingsJewellerIds
+  if (ids && ids.has(p.jeweller_id)) {
+    return 0
+  }
   const raw = p.cross_platform_fee_inr
   if (raw != null && raw !== '') {
     const n = Number.parseFloat(raw)
@@ -167,7 +173,7 @@ export function calculateCheckoutPrice(
   ctx?: CheckoutPricingContext,
 ): PriceBreakdown {
   const j = jewellerLineParts(p, ctx)
-  const crossPlatformFee = cridoraCrossPlatformFeeInr(p)
+  const crossPlatformFee = cridoraCrossPlatformFeeInr(p, ctx)
   const finalAmount = j.jewellerSubtotal + crossPlatformFee
   const metalRate = Number.parseFloat(p.metal_rate_inr_per_gram_used)
   const weight = Number.parseFloat(p.gold_weight_grams)
