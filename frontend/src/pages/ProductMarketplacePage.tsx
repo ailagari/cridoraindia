@@ -361,7 +361,7 @@ function CheckoutView({
 
           {vaultActive ? (
             <div style={{ marginBottom: '1rem' }}>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center', marginBottom: '0.5rem' }}>
+              <div style={{ marginBottom: '0.5rem' }}>
                 <button
                   type="button"
                   className="btn btn-ghost"
@@ -372,15 +372,6 @@ function CheckoutView({
                   disabled={maxVaultGrams <= 0 || !Number.isFinite(gramsSuggestedFullOrder)}
                 >
                   Use suggested — pay full order in gold
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-ghost"
-                  style={{ padding: '0.35rem 0.65rem', fontSize: '0.72rem', borderRadius: 12 }}
-                  onClick={() => setVaultGrams(maxVaultGrams)}
-                  disabled={maxVaultGrams <= 0}
-                >
-                  Apply max available ({maxVaultGrams.toFixed(3)}g)
                 </button>
               </div>
               <label htmlFor="vault-grams" style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)' }}>
