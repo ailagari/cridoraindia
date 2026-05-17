@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { fetchJewellerStorefront, type JewellerStorefrontDTO } from '@/lib/marketplaceApi'
 import { useLiveCridoraBase } from '@/hooks/useLiveCridoraBase'
+import { jewellerStorefrontFeatureChips } from '@/features/marketplace/jewellerMarketplaceShared'
+import { formatJewellerMetalRateAsOf } from '@/features/marketplace/productPricing'
 
 function formatInr(n: number, fractionDigits = 0): string {
   return n.toLocaleString('en-IN', { maximumFractionDigits: fractionDigits })
@@ -121,6 +123,9 @@ export function JewellerPublicPage() {
             <p style={{ margin: '0.35rem 0 0', fontSize: '1.2rem', fontWeight: 800 }} className="tabular">
               ₹{formatInr(parseNum(row.representative_making_charge_inr_per_gram), 0)}/g
             </p>
+            <p style={{ margin: '0.35rem 0 0', fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: 1.45 }}>
+              Showcase rate for comparison — each SKU lists exact making. Same-store discounts may apply (see below).
+            </p>
           </div>
           <div className="card" style={{ padding: '1rem', borderRadius: 20 }}>
             <p style={{ margin: 0, fontSize: '0.6rem', color: 'var(--text-faint)', fontWeight: 800 }}>Indicative buyback</p>
@@ -153,9 +158,148 @@ export function JewellerPublicPage() {
           </div>
         </div>
 
+        <p style={{ marginTop: '1rem', fontSize: '0.82rem', color: 'var(--text-muted)', lineHeight: 1.55 }}>
+          Gold <strong>deposit yield</strong> and <strong>loan</strong> figures above are platform disclosures on this card.
+          Final APR, fees, and eligibility are agreed in the showroom.
+        </p>
+
+        <div className="card" style={{ marginTop: '1.5rem', padding: '1.25rem', borderRadius: 20 }}>
+          <h2 style={{ margin: '0 0 0.85rem', fontSize: '1.05rem' }}>Services &amp; features</h2>
+          {jewellerStorefrontFeatureChips(row).length === 0 ? (
+            <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.88rem', lineHeight: 1.5 }}>
+              No feature badges are published for this partner yet. Ask the showroom about fractional gold, loans, deposits,
+              and redemption rules.
+            </p>
+          ) : (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem' }}>
+              {jewellerStorefrontFeatureChips(row).map((f) => (
+                <span
+                  key={f.key}
+                  style={{
+                    padding: '0.4rem 0.75rem',
+                    borderRadius: 999,
+                    border: '1px solid rgba(180, 130, 48, 0.35)',
+                    background: 'var(--gold-shine-12)',
+                    fontSize: '0.74rem',
+                    fontWeight: 700,
+                    color: 'var(--gold-light)',
+                  }}
+                >
+                  {f.label}
+                </span>
+              ))}
+            </div>
+          )}
+          {row.feat_cross_redemption && (row.cross_redemption_fee_note ?? '').trim() !== '' ? (
+            <p style={{ margin: '0.85rem 0 0', fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: 1.55 }}>
+              <strong style={{ color: 'var(--text)' }}>Cross-jeweller / network fees:</strong> {row.cross_redemption_fee_note}
+            </p>
+          ) : null}
+        </div>
+
+        <div
+          className="card"
+          style={{
+            marginTop: '1.5rem',
+            padding: '1.25rem',
+            borderRadius: 20,
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+            gap: '1.25rem',
+          }}
+        >
+          <div>
+            <h2 style={{ margin: '0 0 0.65rem', fontSize: '1.05rem' }}>Making charges</h2>
+            <p style={{ margin: '0 0 0.5rem', fontSize: '0.88rem', color: 'var(--text-muted)', lineHeight: 1.55 }}>
+              <strong style={{ color: 'var(--text)' }}>Typical making:</strong>{' '}
+              <span className="tabular">₹{formatInr(parseNum(row.representative_making_charge_inr_per_gram), 0)}/g</span>{' '}
+              (directory benchmark). Product pages show per-SKU making (fixed ₹/g or % of metal) and same-shop rates when
+              configured.
+            </p>
+            {(row.same_store_mc_benefit ?? '').trim() !== '' ? (
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: '0.88rem',
+                  color: 'var(--text-muted)',
+                  lineHeight: 1.55,
+                  whiteSpace: 'pre-wrap',
+                }}
+              >
+                <strong style={{ color: 'var(--text)' }}>Same-store benefit:</strong> {row.same_store_mc_benefit}
+              </p>
+            ) : (
+              <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-faint)' }}>
+                No extra same-store making note on file for this storefront.
+              </p>
+            )}
+          </div>
+          <div>
+            <h2 style={{ margin: '0 0 0.65rem', fontSize: '1.05rem' }}>Metal pricing on listings</h2>
+            <ul
+              style={{
+                margin: 0,
+                paddingLeft: '1.1rem',
+                fontSize: '0.88rem',
+                color: 'var(--text-muted)',
+                lineHeight: 1.6,
+              }}
+            >
+              <li>
+                <strong style={{ color: 'var(--text)' }}>Showcase 22K (computed):</strong>{' '}
+                <span className="tabular">₹{formatInr(parseNum(row.jeweller_store_22k_inr_per_gram ?? '0'), 2)}/g</span>
+              </li>
+              <li>
+                <strong style={{ color: 'var(--text)' }}>Reference metal (with default markup):</strong>{' '}
+                <span className="tabular">₹{formatInr(parseNum(row.reference_metal_inr_per_gram), 2)}/g</span>
+              </li>
+              <li>
+                <strong style={{ color: 'var(--text)' }}>Headline markup:</strong>{' '}
+                {formatInr(parseNum(row.default_gold_markup_percent), 2)}% over platform base where applicable
+              </li>
+              {(row.gold_rate_source ?? '').trim() !== '' ? (
+                <li>
+                  <strong style={{ color: 'var(--text)' }}>Rate source:</strong> {row.gold_rate_source}
+                </li>
+              ) : null}
+              <li>
+                <strong style={{ color: 'var(--text)' }}>Rate last updated:</strong>{' '}
+                {formatJewellerMetalRateAsOf(row.jeweller_metal_rate_last_updated_at) ?? '—'}
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        {(row.lock_in_summary ?? '').trim() !== '' || (row.minimum_redeemable_grams ?? '').trim() !== '' ? (
+          <div className="card" style={{ marginTop: '1.5rem', padding: '1.25rem', borderRadius: 20 }}>
+            <h2 style={{ margin: '0 0 0.65rem', fontSize: '1.05rem' }}>Vault &amp; redemption</h2>
+            <ul
+              style={{
+                margin: 0,
+                paddingLeft: '1.1rem',
+                fontSize: '0.88rem',
+                color: 'var(--text-muted)',
+                lineHeight: 1.6,
+              }}
+            >
+              {(row.lock_in_summary ?? '').trim() !== '' ? (
+                <li>
+                  <strong style={{ color: 'var(--text)' }}>Lock-in / tenure:</strong> {row.lock_in_summary}
+                </li>
+              ) : null}
+              {(row.minimum_redeemable_grams ?? '').trim() !== '' ? (
+                <li>
+                  <strong style={{ color: 'var(--text)' }}>Minimum redeemable (grams):</strong>{' '}
+                  <span className="tabular">{row.minimum_redeemable_grams}</span>
+                </li>
+              ) : null}
+            </ul>
+          </div>
+        ) : null}
+
         {row.gold_deposit_note ? (
           <div className="card" style={{ marginTop: '1.5rem', padding: '1.25rem', borderRadius: 20 }}>
-            <h2 style={{ margin: '0 0 0.75rem', fontSize: '1rem' }}>Gold deposit & vault notes</h2>
+            <h2 style={{ margin: '0 0 0.75rem', fontSize: '1rem' }}>Deposit, loan &amp; vault notes</h2>
             <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.9rem', whiteSpace: 'pre-wrap' }}>
               {row.gold_deposit_note}
             </p>

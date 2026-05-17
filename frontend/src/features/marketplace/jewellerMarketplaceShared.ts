@@ -1,3 +1,17 @@
+import type { JewellerStorefrontDTO } from '@/lib/marketplaceApi'
+
+/** Active marketplace features for a jeweller (directory cards + storefront page). */
+export function jewellerStorefrontFeatureChips(j: JewellerStorefrontDTO): { key: string; label: string }[] {
+  const out: { key: string; label: string }[] = []
+  if (j.feat_goldnest_available) out.push({ key: 'fractional', label: 'Fractional gold' })
+  if (j.feat_loan_available) out.push({ key: 'loan', label: 'Gold loans' })
+  if (j.feat_instant_redemption) out.push({ key: 'instant', label: 'Instant redemption' })
+  if (j.feat_zero_mc_same_store) out.push({ key: '0mc', label: '0% MC (same store)' })
+  if (j.feat_emergency_funds) out.push({ key: 'em', label: 'Emergency funds' })
+  if (j.feat_cross_redemption) out.push({ key: 'cross', label: 'Cross-jeweller redemption' })
+  return out
+}
+
 export type SellbackMode = 'percent' | 'fixed'
 
 export function formatInr(n: number, fractionDigits = 2): string {

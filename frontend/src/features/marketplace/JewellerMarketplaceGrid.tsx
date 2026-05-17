@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react'
 import { Link } from 'react-router-dom'
 import { mergeJewellerListWithDemos } from '@/lib/jewellerMarketplaceDemos'
+import { jewellerStorefrontFeatureChips } from '@/features/marketplace/jewellerMarketplaceShared'
 import { LIVE_STOREFRONT_GRID_POLL_MS } from '@/lib/liveDeskIntervals'
 import { fetchVerifiedJewellers, type JewellerStorefrontDTO } from '@/lib/marketplaceApi'
 import { useLiveCridoraBase } from '@/hooks/useLiveCridoraBase'
@@ -72,16 +73,6 @@ function JewellerCardLogo({ businessName, logoUrl }: { businessName: string; log
       {ch}
     </div>
   )
-}
-
-function featureChips(j: JewellerStorefrontDTO): { key: string; label: string }[] {
-  const out: { key: string; label: string }[] = []
-  if (j.feat_instant_redemption) out.push({ key: 'instant', label: 'Instant redemption' })
-  if (j.feat_zero_mc_same_store) out.push({ key: '0mc', label: '0% MC' })
-  if (j.feat_loan_available) out.push({ key: 'loan', label: 'Loan' })
-  if (j.feat_goldnest_available) out.push({ key: 'goldnest', label: 'GoldNest' })
-  if (j.feat_emergency_funds) out.push({ key: 'em', label: 'Emergency funds' })
-  return out
 }
 
 function dashEmpty(s: string): string {
@@ -333,7 +324,7 @@ export function JewellerMarketplaceGrid({ intro, variant = 'public' }: Props) {
           }}
         >
           {filteredSorted.map((j) => {
-            const tags = featureChips(j)
+            const tags = jewellerStorefrontFeatureChips(j)
             const cred =
               j.credibility_score && j.credibility_score.trim() !== ''
                 ? `${j.credibility_score}/100`

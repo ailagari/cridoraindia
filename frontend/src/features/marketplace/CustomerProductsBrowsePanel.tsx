@@ -124,10 +124,9 @@ export function CustomerProductsBrowsePanel() {
   return (
     <div className="dash-panel-max">
       <p className="dash-panel-lead">
-        <strong>Jewellery catalogue</strong> — the same admin-approved SKUs as the public product marketplace. Buy a{' '}
-        <strong>whole piece</strong> (cash / UPI / vault grams) from the full checkout; this list is for quick browsing
-        inside your dashboard. <strong>Buy gold</strong> under Invest is only for counter <strong>fractional</strong>{' '}
-        metal, not these ornaments.
+        <strong>Jewellery catalogue</strong> — the same admin-approved SKUs as the public product marketplace. Each card is
+        for <strong>whole-piece</strong> purchase only (checkout with cash / UPI / vault). To compare jewellers and buy{' '}
+        <strong>fractional</strong> gold at counter, use <strong>Marketplace → Jewellers</strong>.
       </p>
 
       <div
@@ -267,15 +266,6 @@ export function CustomerProductsBrowsePanel() {
                 >
                   Details &amp; rates
                 </Link>
-                {p.jeweller_id > 0 ? (
-                  <Link
-                    className="btn btn-ghost"
-                    style={{ padding: '0.45rem 0.65rem', borderRadius: 12, fontSize: '0.72rem' }}
-                    to={`/userdashboard?section=invest_fractional&jeweller_id=${p.jeweller_id}`}
-                  >
-                    Fractional gold (Invest)
-                  </Link>
-                ) : null}
               </div>
             </article>
             )
