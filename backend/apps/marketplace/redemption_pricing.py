@@ -9,8 +9,18 @@ from django.db.models import Sum
 
 from apps.accounts.models import VaultHolding
 
-from .models import MarketplaceProduct, get_or_create_ticker, jeweller_profile_for
-from .pricing import gold_metal_value_inr, gold_rate_inr_per_gram, stone_component_inr
+from .models import (
+    JewellerPricingProfile,
+    MarketplaceProduct,
+    get_or_create_ticker,
+    jeweller_profile_for,
+)
+from .pricing import (
+    gold_metal_value_inr,
+    gold_rate_inr_per_gram,
+    markup_for_product,
+    stone_component_inr,
+)
 from .spot_prices import resolve_cridora_base_22k_inr
 
 User = get_user_model()
@@ -63,13 +73,35 @@ def _raw_making_inr(
     return (product.gold_weight_grams * per_g).quantize(Decimal("0.01"))
 
 
+def resolve_listing_metal_rate_inr(
+    product: MarketplaceProduct,
+    profile: JewellerPricingProfile | None = None,
+) -> Decimal:
+    """Listing metal ₹/g with fallbacks when live spot or board resolves to zero."""
+    profile = profile or jeweller_profile_for(product.jeweller)
+    cridora_base, _ = resolve_cridora_base_22k_inr()
+    rate = gold_rate_inr_per_gram(product, profile, cridora_base)
+    if rate > 0:
+        return rate
+    manual = product.manual_gold_rate_inr_per_gram
+    if manual is not None and manual > 0:
+        return manual.quantize(Decimal("0.01"))
+    legacy = profile.manual_gold_rate_inr_per_gram
+    if legacy is not None and legacy > 0:
+        return legacy.quantize(Decimal("0.01"))
+    platform = get_or_create_ticker().platform_base_inr_per_gram()
+    if platform > 0:
+        m = markup_for_product(product, profile) / Decimal("100")
+        return (platform * (Decimal("1") + m)).quantize(Decimal("0.01"))
+    return Decimal("0")
+
+
 def _jeweller_line_parts(
     product: MarketplaceProduct, customer: User | None
 ) -> tuple[Decimal, Decimal, Decimal, Decimal, Decimal, bool]:
     """gold_line, making, gst_gold_full, gst_making, discount, same_store."""
     profile = jeweller_profile_for(product.jeweller)
-    cridora_base, _ = resolve_cridora_base_22k_inr()
-    metal_rate = gold_rate_inr_per_gram(product, profile, cridora_base)
+    metal_rate = resolve_listing_metal_rate_inr(product, profile)
     metal_val = gold_metal_value_inr(product, metal_rate)
     stone = stone_component_inr(product)
     gold_line = metal_val + stone
@@ -100,9 +132,7 @@ def checkout_totals_with_vault(
     gold_line, making, gst_gold_full, gst_making, _discount, same_store = _jeweller_line_parts(
         product, customer
     )
-    profile = jeweller_profile_for(product.jeweller)
-    cridora_base, _ = resolve_cridora_base_22k_inr()
-    metal_rate = gold_rate_inr_per_gram(product, profile, cridora_base)
+    metal_rate = resolve_listing_metal_rate_inr(product)
 
     grams = max(Decimal("0"), vault_grams)
     raw_vault_inr = (grams * metal_rate).quantize(Decimal("0.01"))

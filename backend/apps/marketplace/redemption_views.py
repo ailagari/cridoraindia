@@ -132,6 +132,11 @@ class VaultRedemptionQuoteView(APIView):
             return Response(
                 {"detail": "Product not available."}, status=status.HTTP_404_NOT_FOUND
             )
+        if product.gold_weight_grams <= 0:
+            return Response(
+                {"detail": "This SKU has no gold weight configured."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         vg = _parse_vault_grams_param(request.query_params.get("vault_grams"))
         if request.query_params.get("vault_grams") is not None and vg is None:
@@ -139,7 +144,18 @@ class VaultRedemptionQuoteView(APIView):
                 {"detail": "Invalid vault_grams."}, status=status.HTTP_400_BAD_REQUEST
             )
 
-        return Response(_redemption_quote_payload(product, request.user, vg))
+        payload = _redemption_quote_payload(product, request.user, vg)
+        if Decimal(str(payload["metal_rate_inr_per_gram"])) <= 0:
+            return Response(
+                {
+                    "detail": (
+                        "No metal ₹/g for this listing. Set a manual gold rate on the SKU or configure "
+                        "the jeweller's gold pricing."
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return Response(payload)
 
 
 class VaultRedemptionConfirmView(APIView):
@@ -202,9 +218,32 @@ class VaultRedemptionConfirmView(APIView):
         cash_payable = totals["cash_payable_inr"]
         gst_saved = totals["gst_on_gold_saved_inr"]
 
-        if metal_rate <= 0 or final_inr <= 0:
+        if product.gold_weight_grams <= 0:
             return Response(
-                {"detail": "Invalid pricing for this product."},
+                {
+                    "detail": "This SKU has no gold weight — edit the listing weight before checkout."
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if metal_rate <= 0:
+            return Response(
+                {
+                    "detail": (
+                        "No metal ₹/g for this listing. Set a manual gold rate on the SKU or configure "
+                        "the jeweller's gold pricing (Profile · Rates / metal board)."
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if final_inr <= 0 and grams_to_debit <= 0:
+            return Response(
+                {
+                    "detail": (
+                        "Order total is ₹0 — check making charges and gold weight on this SKU."
+                    )
+                },
                 status=status.HTTP_400_BAD_REQUEST,
             )
 

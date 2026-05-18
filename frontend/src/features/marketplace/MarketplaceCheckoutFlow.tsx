@@ -227,6 +227,21 @@ export function useMarketplaceOrderConfirm({
   const runConfirm = useCallback(
     async (cashPaymentMethod: CashPaymentMethod | '') => {
       setError('')
+      if (product.id < 1) {
+        setError(
+          'This is a demo catalogue item. Checkout only works for real SKUs published by a verified jeweller.',
+        )
+        return
+      }
+      const listingRate = Number.parseFloat(product.metal_rate_inr_per_gram_used)
+      if (!Number.isFinite(listingRate) || listingRate <= 0) {
+        setError('This listing has no metal ₹/g. Ask the jeweller to set pricing on the SKU.')
+        return
+      }
+      if (breakdown.finalAmount <= 0) {
+        setError('Order total is ₹0 — check gold weight and making charges on this listing.')
+        return
+      }
       if (user?.kyc_status !== 'verified') {
         setError('Complete KYC before checkout.')
         return

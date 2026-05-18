@@ -344,6 +344,19 @@ export function MarketplaceCartCheckout({
       setError('Checkout supports one piece at a time. Remove extra lines or change quantity to 1.')
       return
     }
+    if (singleLine.product.id < 1) {
+      setError('Demo listings cannot be purchased — remove demo items from the cart.')
+      return
+    }
+    const rate = Number.parseFloat(singleLine.product.metal_rate_inr_per_gram_used)
+    if (!Number.isFinite(rate) || rate <= 0) {
+      setError('This listing has no metal ₹/g. Ask the jeweller to set pricing on the SKU.')
+      return
+    }
+    if ((cartBreakdown?.finalAmount ?? 0) <= 0) {
+      setError('Order total is ₹0 — check gold weight and making charges on this listing.')
+      return
+    }
     if (!kycOk) {
       setError('Complete KYC before checkout.')
       return

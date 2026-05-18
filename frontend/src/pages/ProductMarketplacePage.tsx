@@ -160,6 +160,18 @@ function CheckoutView({
 
   const onPrimaryPay = () => {
     setError('')
+    if (product.id < 1) {
+      setError('Demo listings cannot be purchased — choose a real jeweller SKU from the catalogue.')
+      return
+    }
+    if (!Number.isFinite(metalRate) || metalRate <= 0) {
+      setError('This listing has no metal ₹/g. Ask the jeweller to set pricing on the SKU.')
+      return
+    }
+    if (p.finalAmount <= 0) {
+      setError('Order total is ₹0 — check gold weight and making charges on this listing.')
+      return
+    }
     if (!kycOk) {
       setError('Complete KYC before checkout.')
       return
