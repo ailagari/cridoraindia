@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type SetStateAction } from 'react'
 import { Link } from 'react-router-dom'
+import { FormSubmitFoot } from '@/components/ui/FormSubmitFoot'
 import { authFetch, authUpload } from '@/lib/api'
 import { LIVE_MARKETPLACE_EDITOR_POLL_MS } from '@/lib/liveDeskIntervals'
 import { numOrZero, parseN } from '@/features/marketplace/jewellerMarketplaceShared'
@@ -175,12 +176,6 @@ export function JewellerStorefrontCardPanel() {
       </p>
 
       {loadError ? <p className="form-error">{loadError}</p> : null}
-      {formError ? <p className="form-error">{formError}</p> : null}
-      {successMsg ? (
-        <p className="admin-dash-form-success admin-dash-form-success--block" role="status">
-          {successMsg}
-        </p>
-      ) : null}
 
       <details className="jeweller-mkt-acc card" open>
         <summary>Shop card &amp; highlights</summary>
@@ -385,15 +380,11 @@ export function JewellerStorefrontCardPanel() {
             </div>
           </div>
 
-          <button
-            type="button"
-            className="btn btn-primary"
-            disabled={disableActions}
-            onClick={() => void saveShopCard()}
-            style={{ marginTop: '1rem' }}
-          >
-            Save shop card
-          </button>
+          <FormSubmitFoot error={formError} success={successMsg} className="form-submit-foot--spaced">
+            <button type="button" className="btn btn-primary" disabled={disableActions} onClick={() => void saveShopCard()}>
+              {busy ? 'Saving…' : 'Save shop card'}
+            </button>
+          </FormSubmitFoot>
         </div>
       </details>
     </div>

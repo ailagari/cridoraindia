@@ -17,6 +17,7 @@ import {
   type ProductRow,
   type SkuFormState,
 } from '@/features/marketplace/jewellerSkuForm'
+import { FormSubmitFoot } from '@/components/ui/FormSubmitFoot'
 import { JewellerSkuFormTable } from '@/features/marketplace/JewellerSkuFormTable'
 
 const PRODUCT_IMAGE_MAX_BYTES = 4 * 1024 * 1024
@@ -320,12 +321,6 @@ export function JewellerMarketplacePanel() {
       ) : null}
 
       {loadError ? <p className="form-error">{loadError}</p> : null}
-      {formError ? <p className="form-error">{formError}</p> : null}
-      {successMsg ? (
-        <p className="admin-dash-form-success admin-dash-form-success--block" role="status">
-          {successMsg}
-        </p>
-      ) : null}
 
       {profileMetalIds.length === 0 && catalogMeta ? (
         <p className="form-error" role="status" style={{ marginBottom: '1rem' }}>
@@ -368,15 +363,16 @@ export function JewellerMarketplacePanel() {
             onUploadImage={(f) => void uploadProductImage(f)}
           />
 
-          <button
-            type="button"
-            className="btn btn-primary"
-            disabled={disableActions}
-            onClick={() => void addProduct()}
-            style={{ marginTop: '1rem' }}
-          >
-            Add SKU to catalogue
-          </button>
+          <FormSubmitFoot error={formError} success={successMsg} className="form-submit-foot--spaced">
+            <button
+              type="button"
+              className="btn btn-primary"
+              disabled={disableActions}
+              onClick={() => void addProduct()}
+            >
+              Add SKU to catalogue
+            </button>
+          </FormSubmitFoot>
         </div>
       </details>
 
@@ -397,14 +393,14 @@ export function JewellerMarketplacePanel() {
               skuImageInputRef={editSkuImageInputRef}
               onUploadImage={(f) => void uploadProductImage(f, editingId)}
             />
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', marginTop: '1rem' }}>
+            <FormSubmitFoot error={formError} success={successMsg} className="form-submit-foot--spaced">
               <button type="button" className="btn btn-primary" disabled={disableActions} onClick={() => void saveEdit()}>
                 Save changes
               </button>
               <button type="button" className="btn btn-ghost" disabled={disableActions} onClick={cancelEdit}>
                 Cancel
               </button>
-            </div>
+            </FormSubmitFoot>
           </div>
         </details>
       ) : null}

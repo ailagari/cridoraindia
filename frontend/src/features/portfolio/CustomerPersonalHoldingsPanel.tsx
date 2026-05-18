@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
+import { FormSubmitFoot } from '@/components/ui/FormSubmitFoot'
 import { FileUploadTrigger, type FileUploadTriggerPhase } from '@/components/ui'
 import { fetchVerifiedJewellers, type JewellerStorefrontDTO } from '@/lib/marketplaceApi'
 import {
@@ -609,21 +610,7 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
             <p className="pf-vault-form__mvp">
               <span className="pf-vault-form__mvp-tag">MVP</span> Tracking &amp; records only — not redeemable or transferable on Cridora.
             </p>
-            {addFormError || addFormSuccess ? (
-              <div className="pf-vault-form__inline-feedback" aria-live="polite">
-                {addFormError ? (
-                  <p className="form-error" role="alert">
-                    {addFormError}
-                  </p>
-                ) : null}
-                {addFormSuccess ? (
-                  <p className="form-feedback form-feedback--success" role="status">
-                    {addFormSuccess}
-                  </p>
-                ) : null}
-              </div>
-            ) : null}
-            <div className="pf-vault-form__actions">
+            <FormSubmitFoot error={addFormError} success={addFormSuccess} className="pf-vault-form__actions">
               <button
                 type="button"
                 className="btn btn-ghost"
@@ -643,7 +630,7 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
               >
                 {busy ? 'Saving…' : 'Add to vault'}
               </button>
-            </div>
+            </FormSubmitFoot>
           </footer>
         </form>
       ) : null}
@@ -804,22 +791,11 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
                               <textarea className="input" rows={2} value={eNotes} onChange={(e) => setENotes(e.target.value)} disabled={editBusy} />
                             </label>
                           </div>
-                          <div className="pf-vault-edit__actions">
-                            {editFormError || editFormSuccess ? (
-                              <div className="pf-vault-form__inline-feedback pf-vault-form__inline-feedback--edit" aria-live="polite">
-                                {editFormError ? (
-                                  <p className="form-error" role="alert">
-                                    {editFormError}
-                                  </p>
-                                ) : null}
-                                {editFormSuccess ? (
-                                  <p className="form-feedback form-feedback--success" role="status">
-                                    {editFormSuccess}
-                                  </p>
-                                ) : null}
-                              </div>
-                            ) : null}
-                            <div className="pf-vault-edit__action-btns">
+                          <FormSubmitFoot
+                            error={editFormError}
+                            success={editFormSuccess}
+                            className="pf-vault-edit__actions"
+                          >
                               <button type="button" className="btn btn-ghost btn-sm" onClick={cancelEdit} disabled={editBusy}>
                                 Cancel
                               </button>
@@ -831,8 +807,7 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
                               >
                                 {editBusy ? 'Saving…' : 'Save changes'}
                               </button>
-                            </div>
-                          </div>
+                          </FormSubmitFoot>
                         </div>
                       ) : null}
                       <HoldingDocumentsPanel

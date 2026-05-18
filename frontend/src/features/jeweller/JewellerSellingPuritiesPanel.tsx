@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { FormSubmitFoot } from '@/components/ui/FormSubmitFoot'
 import { formatInrPerGram, liveInrPerGramForPurity, spotRefForPurity } from '@/features/jeweller/catalogPuritySpot'
 import { useJewellerSellingPurities } from '@/features/jeweller/useJewellerSellingPurities'
 
@@ -30,17 +31,6 @@ export function JewellerSellingPuritiesPanel() {
         shown here. Platform defaults cover common India hallmarks; admins can add more in Django admin.
       </p>
 
-      {error ? (
-        <p className="form-error" role="alert">
-          {error}
-        </p>
-      ) : null}
-      {success ? (
-        <p className="form-feedback form-feedback--success" role="status">
-          {success}
-        </p>
-      ) : null}
-
       {catalogLoading ? (
         <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Loading purity catalogue…</p>
       ) : !catalogMeta || catalogMeta.metal_purities.length === 0 ? (
@@ -63,11 +53,11 @@ export function JewellerSellingPuritiesPanel() {
               </label>
             ))}
           </div>
-          <div className="jeweller-selling-purities__actions">
+          <FormSubmitFoot error={error} success={success} className="jeweller-selling-purities__actions">
             <button type="button" className="btn btn-primary" disabled={saveBusy} onClick={() => void savePurities()}>
               {saveBusy ? 'Saving…' : 'Save selling purities'}
             </button>
-          </div>
+          </FormSubmitFoot>
 
           {selectedPurities.length > 0 ? (
             <div className="jeweller-selling-purities__rates">

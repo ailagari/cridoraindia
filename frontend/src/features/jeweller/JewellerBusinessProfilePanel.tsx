@@ -1,6 +1,7 @@
 import { type FormEvent, useCallback, useEffect, useState } from 'react'
 import { authFetch } from '@/lib/api'
 import { useAuth } from '@/context/AuthContext'
+import { FormSubmitFoot } from '@/components/ui/FormSubmitFoot'
 import { JewellerSellingPuritiesPanel } from '@/features/jeweller/JewellerSellingPuritiesPanel'
 import { JewellerStorefrontCardPanel } from '@/features/jeweller/JewellerStorefrontCardPanel'
 
@@ -120,9 +121,6 @@ export function JewellerBusinessProfilePanel() {
         <strong style={{ color: 'var(--text)' }}>15-character GSTIN</strong> here when ready — it was not required at signup.
       </p>
 
-      {message ? <p className="message-success">{message}</p> : null}
-      {error ? <p className="form-error">{error}</p> : null}
-
       <form className="card" onSubmit={onSubmit} style={{ marginTop: '1rem', padding: '1.25rem', display: 'grid', gap: '0.85rem' }}>
         <div className="field">
           <label htmlFor="bp-biz">Registered business / brand name</label>
@@ -163,9 +161,11 @@ export function JewellerBusinessProfilePanel() {
           <label htmlFor="bp-pin">PIN code</label>
           <input id="bp-pin" value={pincode} onChange={(e) => setPincode(e.target.value)} required />
         </div>
-        <button type="submit" className="btn btn-primary" disabled={busy}>
-          {busy ? 'Saving…' : 'Save business profile'}
-        </button>
+        <FormSubmitFoot error={error} success={message}>
+          <button type="submit" className="btn btn-primary" disabled={busy}>
+            {busy ? 'Saving…' : 'Save business profile'}
+          </button>
+        </FormSubmitFoot>
       </form>
     </div>
   )
