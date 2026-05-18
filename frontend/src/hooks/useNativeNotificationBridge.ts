@@ -1,10 +1,6 @@
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import {
-  initNativeNotificationBridge,
-  registerNativePushSubscription,
-  setNativeNotificationNavigator,
-} from '@/lib/nativeNotifications'
+import { initNativeNotificationBridge, setNativeNotificationNavigator } from '@/lib/nativeNotifications'
 import { isNativeAndroid } from '@/lib/capacitorPlatform'
 
 export function useNativeNotificationBridge(): void {
@@ -15,9 +11,8 @@ export function useNativeNotificationBridge(): void {
     setNativeNotificationNavigator((path) => {
       navigate(path.startsWith('/') ? path : `/${path}`)
     })
-    void initNativeNotificationBridge()
-    void registerNativePushSubscription().catch(() => {
-      /* user may deny permission on first launch */
+    void initNativeNotificationBridge().catch(() => {
+      /* non-fatal; user can enable alerts from the bell */
     })
   }, [navigate])
 }

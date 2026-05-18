@@ -9,7 +9,11 @@ import type { AppNotification } from '@/lib/mockNotifications'
 const CHANNEL_ID = 'cridora-alerts'
 const CHANNEL_NAME = 'Cridora alerts'
 
+/** FCM requires google-services.json in android/app/ — off by default to avoid native crashes. */
+const FCM_ENABLED = import.meta.env.VITE_FCM_ENABLED === 'true'
+
 let bridgeReady = false
+let pushListenersAttached = false
 let navigateHandler: ((path: string) => void) | null = null
 const notifiedIds = new Set<string>()
 
@@ -36,26 +40,42 @@ async function ensureAndroidChannel(): Promise<void> {
 
 async function localPermissionGranted(): Promise<boolean> {
   if (!isNativeAndroid()) return false
-  const status = await LocalNotifications.checkPermissions()
-  return status.display === 'granted'
+  try {
+    const status = await LocalNotifications.checkPermissions()
+    return status.display === 'granted'
+  } catch {
+    return false
+  }
 }
 
 async function requestLocalPermission(): Promise<boolean> {
   if (!isNativeAndroid()) return false
-  const status = await LocalNotifications.requestPermissions()
-  return status.display === 'granted'
+  try {
+    const status = await LocalNotifications.requestPermissions()
+    return status.display === 'granted'
+  } catch {
+    return false
+  }
 }
 
 async function pushPermissionGranted(): Promise<boolean> {
-  if (!isNativeAndroid()) return false
-  const status = await PushNotifications.checkPermissions()
-  return status.receive === 'granted'
+  if (!FCM_ENABLED || !isNativeAndroid()) return false
+  try {
+    const status = await PushNotifications.checkPermissions()
+    return status.receive === 'granted'
+  } catch {
+    return false
+  }
 }
 
 async function requestPushPermission(): Promise<boolean> {
-  if (!isNativeAndroid()) return false
-  const status = await PushNotifications.requestPermissions()
-  return status.receive === 'granted'
+  if (!FCM_ENABLED || !isNativeAndroid()) return false
+  try {
+    const status = await PushNotifications.requestPermissions()
+    return status.receive === 'granted'
+  } catch {
+    return false
+  }
 }
 
 async function postNativeSubscribe(token: string): Promise<void> {
@@ -70,11 +90,14 @@ async function postNativeSubscribe(token: string): Promise<void> {
 }
 
 async function registerFcmToken(): Promise<void> {
-  if (!isNativeAndroid()) return
+  if (!FCM_ENABLED || !isNativeAndroid()) return
   await PushNotifications.register()
 }
 
 function attachPushListeners(): void {
+  if (!FCM_ENABLED || pushListenersAttached) return
+  pushListenersAttached = true
+
   PushNotifications.addListener('registration', (token) => {
     void postNativeSubscribe(token.value).catch(() => {
       /* retry on next login */
@@ -82,7 +105,7 @@ function attachPushListeners(): void {
   })
 
   PushNotifications.addListener('registrationError', () => {
-    /* FCM may be unconfigured; local notifications still work */
+    /* FCM misconfigured */
   })
 
   PushNotifications.addListener('pushNotificationReceived', (notification) => {
@@ -124,14 +147,20 @@ export function setNativeNotificationNavigator(navigate: (path: string) => void)
 export async function initNativeNotificationBridge(): Promise<void> {
   if (!isNativeAndroid() || bridgeReady) return
   bridgeReady = true
-  await ensureAndroidChannel()
-  attachPushListeners()
-  attachLocalTapListener()
-  App.addListener('appStateChange', ({ isActive }) => {
-    if (isActive) {
-      void LocalNotifications.removeAllDeliveredNotifications()
+  try {
+    await ensureAndroidChannel()
+    attachLocalTapListener()
+    if (FCM_ENABLED) {
+      attachPushListeners()
     }
-  })
+    App.addListener('appStateChange', ({ isActive }) => {
+      if (isActive) {
+        void LocalNotifications.removeAllDeliveredNotifications().catch(() => undefined)
+      }
+    })
+  } catch {
+    bridgeReady = false
+  }
 }
 
 export async function registerNativePushSubscription(): Promise<void> {
@@ -143,8 +172,7 @@ export async function registerNativePushSubscription(): Promise<void> {
   if (!localOk) {
     throw new Error('Notification permission was not granted.')
   }
-  const pushOk = await requestPushPermission()
-  if (pushOk) {
+  if (FCM_ENABLED && (await requestPushPermission())) {
     await registerFcmToken()
   }
 }
@@ -158,8 +186,12 @@ export async function claimNativePushForLoggedInUser(): Promise<void> {
   if (!isNativeAndroid() || !getStoredAccess()) return
   if (!(await localPermissionGranted())) return
   await initNativeNotificationBridge()
-  if (await pushPermissionGranted()) {
-    await registerFcmToken()
+  if (FCM_ENABLED && (await pushPermissionGranted())) {
+    try {
+      await registerFcmToken()
+    } catch {
+      /* FCM optional */
+    }
   }
 }
 
@@ -173,20 +205,24 @@ export async function showTrayNotification(item: {
   if (!(await localPermissionGranted())) return
   if (notifiedIds.has(item.id)) return
   notifiedIds.add(item.id)
-  await ensureAndroidChannel()
-  await LocalNotifications.schedule({
-    notifications: [
-      {
-        id: notificationIdForItem(item.id),
-        title: item.title,
-        body: item.body,
-        channelId: CHANNEL_ID,
-        smallIcon: 'ic_stat_cridora',
-        iconColor: '#D4AF37',
-        extra: { url: item.link_path ?? '/' },
-      },
-    ],
-  })
+  try {
+    await ensureAndroidChannel()
+    await LocalNotifications.schedule({
+      notifications: [
+        {
+          id: notificationIdForItem(item.id),
+          title: item.title,
+          body: item.body,
+          channelId: CHANNEL_ID,
+          smallIcon: 'ic_stat_cridora',
+          iconColor: '#D4AF37',
+          extra: { url: item.link_path ?? '/' },
+        },
+      ],
+    })
+  } catch {
+    notifiedIds.delete(item.id)
+  }
 }
 
 export function notifyBellFeedUpdates(prev: AppNotification[], next: AppNotification[]): void {
@@ -205,7 +241,7 @@ export function notifyBellFeedUpdates(prev: AppNotification[], next: AppNotifica
 
 export function nativePushSetupHint(): string | null {
   if (!isNativeAndroid()) return null
-  return 'Android app alerts appear in your notification tray. Allow notifications when prompted.'
+  return 'Tap Enable in the bell to allow tray alerts. Server push needs Firebase (optional).'
 }
 
 export function nativePushNotificationsSupported(): boolean {
