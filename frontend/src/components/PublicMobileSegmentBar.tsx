@@ -25,7 +25,7 @@ export function PublicMobileSegmentBar() {
   const discoverJewellersActive =
     pathname === '/why-cridora' ? hash === '#discover-jewellers' : searchParams.get('audience') === 'jewellers'
 
-  const shopJewellers = pathname.startsWith('/jewellers')
+  const shopJewellers = pathname === '/shop' || pathname.startsWith('/jewellers')
   const shopProducts = pathname.startsWith('/marketplace')
 
   return (

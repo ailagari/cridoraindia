@@ -5632,6 +5632,66 @@ select.input {
   background: rgba(212, 168, 92, 0.1);
 }
 
+/* Discover / Shop mobile switcher — visible only below 768px (see media queries) */
+.public-mobile-segment-bar {
+  display: none;
+  border-bottom: 1px solid var(--border-soft);
+  background: var(--public-hub-tabs-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.public-mobile-segment-bar__inner {
+  padding: 0.5rem var(--container-pad, 1rem) 0.65rem;
+}
+
+.public-mobile-segment-bar__pair {
+  display: flex;
+  gap: 0.35rem;
+  padding: 0.28rem;
+  border-radius: 14px;
+  border: 1px solid var(--border-soft);
+  background: var(--veil-35);
+}
+
+.public-mobile-segment-btn {
+  flex: 1;
+  min-width: 0;
+  min-height: 2.65rem;
+  padding: 0.5rem 0.75rem;
+  border: none;
+  border-radius: 11px;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  transition:
+    color 0.2s ease,
+    background 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.public-mobile-segment-btn:active {
+  transform: scale(0.98);
+}
+
+.public-mobile-segment-btn--active {
+  color: var(--gold-light);
+  background: color-mix(in srgb, var(--gold) 14%, transparent);
+  box-shadow: 0 2px 14px color-mix(in srgb, var(--gold) 18%, transparent);
+}
+
+.public-mobile-segment-btn:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
 .public-main {
   padding-bottom: 0;
 }
@@ -5819,10 +5879,20 @@ select.input {
     display: none !important;
   }
 
+  .public-mobile-segment-bar {
+    display: block;
+  }
+
   .public-bottom-item .mobile-tab-label {
     max-width: 3.45rem;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+}
+
+@media (min-width: 768px) {
+  .public-mobile-segment-bar {
+    display: none !important;
   }
 }
 
