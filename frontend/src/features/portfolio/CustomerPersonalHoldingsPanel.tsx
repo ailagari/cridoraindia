@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useMemo, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { FileUploadTrigger, type FileUploadTriggerPhase } from '@/components/ui'
 import { fetchVerifiedJewellers, type JewellerStorefrontDTO } from '@/lib/marketplaceApi'
 import {
@@ -17,6 +17,12 @@ import {
 function parseN(s: string): number {
   const n = Number.parseFloat(s)
   return Number.isFinite(n) ? n : 0
+}
+
+function weightsMatch(a: string, b: string): boolean {
+  const na = parseN(a)
+  const nb = parseN(b)
+  return na > 0 && nb > 0 && Math.abs(na - nb) < 0.000001
 }
 
 const CATS = [
@@ -114,9 +120,13 @@ function PurchaseSourceJewellerField({
 export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () => void }) {
   const [rows, setRows] = useState<PersonalHoldingDTO[]>([])
   const [loadErr, setLoadErr] = useState('')
-  const [vaultSaveSuccess, setVaultSaveSuccess] = useState('')
+  const [addFormError, setAddFormError] = useState('')
+  const [addFormSuccess, setAddFormSuccess] = useState('')
+  const [editFormError, setEditFormError] = useState('')
+  const [editFormSuccess, setEditFormSuccess] = useState('')
   const [busy, setBusy] = useState(false)
   const [editBusy, setEditBusy] = useState(false)
+  const submitInFlightRef = useRef(false)
 
   const [formOpen, setFormOpen] = useState(false)
   const [title, setTitle] = useState('')
@@ -141,15 +151,17 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
   const [ePurchaseDate, setEPurchaseDate] = useState('')
   const [eNotes, setENotes] = useState('')
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (): Promise<PersonalHoldingDTO[]> => {
     setLoadErr('')
     const r = await fetchPersonalHoldings({ documents: true })
     if (!r) {
       setLoadErr('Could not load personal holdings.')
       setRows([])
-      return
+      return []
     }
-    setRows(r.results ?? [])
+    const list = r.results ?? []
+    setRows(list)
+    return list
   }, [])
 
   useEffect(() => {
@@ -197,10 +209,16 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
   }, [])
 
   useEffect(() => {
-    if (!vaultSaveSuccess) return
-    const t = window.setTimeout(() => setVaultSaveSuccess(''), 7000)
+    if (!addFormSuccess) return
+    const t = window.setTimeout(() => setAddFormSuccess(''), 7000)
     return () => window.clearTimeout(t)
-  }, [vaultSaveSuccess])
+  }, [addFormSuccess])
+
+  useEffect(() => {
+    if (!editFormSuccess) return
+    const t = window.setTimeout(() => setEditFormSuccess(''), 7000)
+    return () => window.clearTimeout(t)
+  }, [editFormSuccess])
 
   const openEdit = (h: PersonalHoldingDTO) => {
     const idx = rows.findIndex((r) => r.id === h.id)
@@ -218,11 +236,43 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
     setEPurchaseDate(h.purchase_date?.slice(0, 10) ?? '')
     setENotes(h.notes)
     setLoadErr('')
-    setVaultSaveSuccess('')
+    setEditFormError('')
+    setEditFormSuccess('')
   }
 
   const cancelEdit = () => {
     setEditingId(null)
+    setEditFormError('')
+    setEditFormSuccess('')
+  }
+
+  const resetAddFormFields = () => {
+    setTitle('')
+    setWeight('')
+    setNotes('')
+    setPurchaseSource('')
+    setPurchaseDate('')
+    setPurchasePricePerGram('')
+    setCategory('ornament')
+    setPurity('BIS 916')
+  }
+
+  const finishAddSuccess = async (label: string, newId?: number) => {
+    resetAddFormFields()
+    setFormOpen(false)
+    setVaultOpenIds(new Set())
+    setAddFormError('')
+    setAddFormSuccess(
+      `“${label}” was saved to your vault. Open a card below to attach invoices or photos.`,
+    )
+    const list = await refresh()
+    if (newId != null) {
+      const refreshedIdx = list.findIndex((r) => r.id === newId)
+      if (refreshedIdx >= 0) {
+        setVaultPage(Math.floor(refreshedIdx / VAULT_PAGE_SIZE) + 1)
+      }
+    }
+    onChanged?.()
   }
 
   const saveEdit = async () => {
@@ -241,55 +291,73 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
         notes: eNotes.trim(),
       })
       if (!res.ok) {
-        setLoadErr(res.detail)
+        setEditFormError(res.detail)
         return
       }
-      setEditingId(null)
+      const savedId = editingId
       const label = res.data?.title?.trim() || eTitle.trim() || 'Record'
-      setVaultSaveSuccess(`“${label}” was updated.`)
+      setEditFormError('')
+      setEditFormSuccess(`“${label}” was updated.`)
       await refresh()
       onChanged?.()
+      window.setTimeout(() => {
+        setEditingId((cur) => (cur === savedId ? null : cur))
+        setVaultOpenIds((prev) => {
+          const n = new Set(prev)
+          n.delete(savedId)
+          return n
+        })
+        setEditFormSuccess('')
+      }, 1800)
     } catch {
-      setLoadErr('Could not reach the server. Check your connection and try again.')
+      setEditFormError('Could not reach the server. Check your connection and try again.')
     } finally {
       setEditBusy(false)
     }
   }
 
   const submit = async () => {
-    setLoadErr('')
-    setVaultSaveSuccess('')
+    if (submitInFlightRef.current || busy) return
+    submitInFlightRef.current = true
+    setAddFormError('')
+    setAddFormSuccess('')
     setBusy(true)
+    const payload = {
+      title: title.trim(),
+      category,
+      weight_grams: weight.trim(),
+      purity: purity.trim() || 'BIS 916',
+      purchase_source: purchaseSource.trim() || undefined,
+      purchase_date: purchaseDate.trim() || undefined,
+      purchase_price_inr_per_gram: purchasePricePerGram.trim() || undefined,
+      notes: notes.trim() || undefined,
+    }
     try {
-      const res = await createPersonalHolding({
-        title: title.trim(),
-        category,
-        weight_grams: weight.trim(),
-        purity: purity.trim() || 'BIS 916',
-        purchase_source: purchaseSource.trim() || undefined,
-        purchase_date: purchaseDate.trim() || undefined,
-        purchase_price_inr_per_gram: purchasePricePerGram.trim() || undefined,
-        notes: notes.trim() || undefined,
-      })
+      const res = await createPersonalHolding(payload)
       if (!res.ok) {
-        setLoadErr(res.detail)
+        const snapshot = await fetchPersonalHoldings({ documents: true })
+        const recovered = snapshot?.results?.find(
+          (h) =>
+            h.title === payload.title &&
+            h.category === payload.category &&
+            weightsMatch(h.weight_grams, payload.weight_grams),
+        )
+        if (recovered && snapshot) {
+          setRows(snapshot.results ?? [])
+          await finishAddSuccess(recovered.title, recovered.id)
+          return
+        }
+        setAddFormError(res.detail)
         return
       }
-      setFormOpen(false)
-      setTitle('')
-      setWeight('')
-      setNotes('')
-      setPurchaseSource('')
-      setPurchaseDate('')
-      setPurchasePricePerGram('')
-      const label = res.data?.title?.trim() || title.trim() || 'Record'
-      setVaultSaveSuccess(`“${label}” was saved to your vault. Documents are listed on the same card below.`)
-      await refresh()
-      onChanged?.()
+      const label = res.data?.title?.trim() || payload.title || 'Record'
+      const newId = res.data?.id
+      await finishAddSuccess(label, newId)
     } catch {
-      setLoadErr('Could not reach the server. Check your connection and try again.')
+      setAddFormError('Could not reach the server. Check your connection and try again.')
     } finally {
       setBusy(false)
+      submitInFlightRef.current = false
     }
   }
 
@@ -351,7 +419,8 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
               setFormOpen((o) => {
                 const next = !o
                 if (next) {
-                  setVaultSaveSuccess('')
+                  setAddFormSuccess('')
+                  setAddFormError('')
                   setLoadErr('')
                 }
                 return next
@@ -382,14 +451,17 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
           {loadErr}
         </p>
       ) : null}
-      {vaultSaveSuccess ? (
-        <p className="form-feedback form-feedback--success pf-vault-save-flash" role="status">
-          {vaultSaveSuccess}
-        </p>
-      ) : null}
-
       {formOpen ? (
-        <div className="pf-vault-form" id="pf-vault-add-form" role="region" aria-labelledby="pf-vault-form-title" aria-busy={busy}>
+        <form
+          className="pf-vault-form"
+          id="pf-vault-add-form"
+          aria-labelledby="pf-vault-form-title"
+          aria-busy={busy}
+          onSubmit={(e) => {
+            e.preventDefault()
+            void submit()
+          }}
+        >
           <header className="pf-vault-form__header">
             <span className="pf-vault-form__eyebrow">New record</span>
             <h4 id="pf-vault-form-title" className="pf-vault-form__title">
@@ -537,21 +609,48 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
             <p className="pf-vault-form__mvp">
               <span className="pf-vault-form__mvp-tag">MVP</span> Tracking &amp; records only — not redeemable or transferable on Cridora.
             </p>
+            {addFormError || addFormSuccess ? (
+              <div className="pf-vault-form__inline-feedback" aria-live="polite">
+                {addFormError ? (
+                  <p className="form-error" role="alert">
+                    {addFormError}
+                  </p>
+                ) : null}
+                {addFormSuccess ? (
+                  <p className="form-feedback form-feedback--success" role="status">
+                    {addFormSuccess}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
             <div className="pf-vault-form__actions">
-              <button type="button" className="btn btn-ghost" onClick={() => setFormOpen(false)} disabled={busy}>
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => {
+                  setFormOpen(false)
+                  setAddFormError('')
+                  setAddFormSuccess('')
+                }}
+                disabled={busy}
+              >
                 Cancel
               </button>
               <button
-                type="button"
+                type="submit"
                 className="btn btn-primary pf-vault-form__submit"
                 disabled={busy || !title.trim() || !weight.trim()}
-                onClick={() => void submit()}
               >
                 {busy ? 'Saving…' : 'Add to vault'}
               </button>
             </div>
           </footer>
-        </div>
+        </form>
+      ) : null}
+      {!formOpen && addFormSuccess ? (
+        <p className="form-feedback form-feedback--success pf-vault-save-flash pf-vault-save-flash--hero" role="status">
+          {addFormSuccess}
+        </p>
       ) : null}
 
       {rows.length === 0 ? (
@@ -706,17 +805,33 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
                             </label>
                           </div>
                           <div className="pf-vault-edit__actions">
-                            <button type="button" className="btn btn-ghost btn-sm" onClick={cancelEdit} disabled={editBusy}>
-                              Cancel
-                            </button>
-                            <button
-                              type="button"
-                              className="btn btn-primary btn-sm"
-                              disabled={editBusy || !eTitle.trim() || !eWeight.trim()}
-                              onClick={() => void saveEdit()}
-                            >
-                              {editBusy ? 'Saving…' : 'Save changes'}
-                            </button>
+                            {editFormError || editFormSuccess ? (
+                              <div className="pf-vault-form__inline-feedback pf-vault-form__inline-feedback--edit" aria-live="polite">
+                                {editFormError ? (
+                                  <p className="form-error" role="alert">
+                                    {editFormError}
+                                  </p>
+                                ) : null}
+                                {editFormSuccess ? (
+                                  <p className="form-feedback form-feedback--success" role="status">
+                                    {editFormSuccess}
+                                  </p>
+                                ) : null}
+                              </div>
+                            ) : null}
+                            <div className="pf-vault-edit__action-btns">
+                              <button type="button" className="btn btn-ghost btn-sm" onClick={cancelEdit} disabled={editBusy}>
+                                Cancel
+                              </button>
+                              <button
+                                type="button"
+                                className="btn btn-primary btn-sm"
+                                disabled={editBusy || !eTitle.trim() || !eWeight.trim()}
+                                onClick={() => void saveEdit()}
+                              >
+                                {editBusy ? 'Saving…' : 'Save changes'}
+                              </button>
+                            </div>
                           </div>
                         </div>
                       ) : null}

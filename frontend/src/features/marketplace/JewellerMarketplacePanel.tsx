@@ -4,6 +4,7 @@ import { authFetch, authUpload } from '@/lib/api'
 import { useAuth } from '@/context/AuthContext'
 import { LIVE_MARKETPLACE_EDITOR_POLL_MS } from '@/lib/liveDeskIntervals'
 import { MAKING_FIXED_PER_GRAM, MAKING_PERCENT_OF_METAL } from '@/lib/marketplacePricing'
+import { default916PurityId } from '@/features/jeweller/catalogPuritySpot'
 import {
   fetchMarketplaceCatalogMeta,
   type MarketplaceCatalogMetaDTO,
@@ -32,8 +33,6 @@ export function JewellerMarketplacePanel() {
   const [products, setProducts] = useState<ProductRow[]>([])
   const [catalogMeta, setCatalogMeta] = useState<MarketplaceCatalogMetaDTO | null>(null)
   const [profileMetalIds, setProfileMetalIds] = useState<number[]>([])
-  const [purityDraftIds, setPurityDraftIds] = useState<number[]>([])
-  const [purityOfferBusy, setPurityOfferBusy] = useState(false)
   const [loadError, setLoadError] = useState('')
   const [formError, setFormError] = useState('')
   const [successMsg, setSuccessMsg] = useState('')
@@ -95,27 +94,27 @@ export function JewellerMarketplacePanel() {
     const j = (await res.json()) as { metal_purities_offered?: { id: number }[] }
     const ids = (j.metal_purities_offered ?? []).map((x) => x.id)
     setProfileMetalIds(ids)
-    const bisId = catalogMeta?.metal_purities.find((x) => x.slug === 'bis916')?.id
-    if (ids.length > 0) {
-      setPurityDraftIds(ids)
-    } else if (bisId != null) {
-      setPurityDraftIds([bisId])
-    }
-  }, [catalogMeta])
+  }, [])
 
   useEffect(() => {
     void refreshPricingProfileMetals()
   }, [refreshPricingProfileMetals])
 
   useEffect(() => {
+    const onSaved = () => void refreshPricingProfileMetals()
+    window.addEventListener('jeweller-selling-purities-saved', onSaved)
+    return () => window.removeEventListener('jeweller-selling-purities-saved', onSaved)
+  }, [refreshPricingProfileMetals])
+
+  useEffect(() => {
     if (!catalogMeta || catalogDefaultsDoneRef.current) return
     catalogDefaultsDoneRef.current = true
-    const bis = catalogMeta.metal_purities.find((x) => x.slug === 'bis916')
+    const defaultPurity = default916PurityId(catalogMeta.metal_purities)
     const cat0 = catalogMeta.product_categories[0]
     setForm((f) => ({
       ...f,
       product_category_id: cat0 ? String(cat0.id) : '',
-      metal_purity_id: bis ? String(bis.id) : f.metal_purity_id,
+      metal_purity_id: defaultPurity != null ? String(defaultPurity) : f.metal_purity_id,
     }))
   }, [catalogMeta])
 
@@ -126,7 +125,9 @@ export function JewellerMarketplacePanel() {
       const allow = new Set(profileMetalIds)
       return metals.filter((m) => allow.has(m.id))
     }
-    return metals.filter((m) => m.slug === 'bis916')
+    const defaultId = default916PurityId(metals)
+    if (defaultId == null) return []
+    return metals.filter((m) => m.id === defaultId)
   }, [catalogMeta, profileMetalIds])
 
   const editSkuMetalOptions = useMemo(() => {
@@ -149,31 +150,6 @@ export function JewellerMarketplacePanel() {
     if (editingId == null) return
     editSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }, [editingId])
-
-  const saveMetalPuritiesOffered = async () => {
-    setPurityOfferBusy(true)
-    setFormError('')
-    const res = await authFetch('/api/v1/jeweller/marketplace/profile/', {
-      method: 'PATCH',
-      jsonBody: { metal_purity_ids: purityDraftIds },
-    })
-    setPurityOfferBusy(false)
-    if (!res.ok) {
-      const j = await res.json().catch(() => ({}))
-      setSuccessMsg('')
-      setFormError(JSON.stringify(j))
-      return
-    }
-    await refreshPricingProfileMetals()
-    flashSuccess('Metal purities saved for your storefront.')
-  }
-
-  const togglePurityDraft = (id: number, checked: boolean) => {
-    setPurityDraftIds((prev) => {
-      if (checked) return [...new Set([...prev, id])].sort((a, b) => a - b)
-      return prev.filter((x) => x !== id)
-    })
-  }
 
   const uploadProductImage = async (file: File, productId?: number) => {
     const allowed = ['image/jpeg', 'image/png', 'image/webp']
@@ -331,10 +307,10 @@ export function JewellerMarketplacePanel() {
   return (
     <div className="dash-panel-max jeweller-mkt">
       <p className="dash-panel-lead">
-        Verified jewellers publish SKUs directly (no admin product approval). Categories and hallmark purities are maintained in Django admin; tick which purities you stock below, then list SKUs with weight, purity, and stock.
-        Configure <strong>rates &amp; sellback</strong> under{' '}
-        <Link to="/dashboard/jeweller?section=mkt_policy">Marketplace · Rates &amp; schemes</Link>. Shop card under{' '}
-        <Link to="/dashboard/jeweller?section=prof_more">Profile · Shop &amp; business</Link>.
+        Verified jewellers publish SKUs directly (no admin product approval). Set which purities you sell under{' '}
+        <Link to="/dashboard/jeweller?section=prof_more">Profile · Shop &amp; business</Link>, then list SKUs with category,
+        purity, weight, and stock. Configure <strong>rates &amp; sellback</strong> under{' '}
+        <Link to="/dashboard/jeweller?section=mkt_policy">Marketplace · Rates &amp; schemes</Link>.
       </p>
 
       {user?.user_type === 'jeweller' && user.kyc_status !== 'verified' ? (
@@ -351,49 +327,12 @@ export function JewellerMarketplacePanel() {
         </p>
       ) : null}
 
-      <details className="jeweller-mkt-acc card" style={{ marginBottom: '1rem' }} open>
-        <summary>Metal purities offered at your storefront</summary>
-        <div className="jeweller-mkt-acc__body">
-          <p style={{ marginTop: 0, fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: 1.45 }}>
-            Admin defines hallmark options (Django admin → Marketplace → Metal purities). Customers only see purities you enable here.
-            Leave only <strong>BIS 916</strong> checked if you sell 22K only.
-          </p>
-          {!catalogMeta ? (
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Loading purity catalogue…</p>
-          ) : (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.65rem 1rem', alignItems: 'center' }}>
-              {catalogMeta.metal_purities.map((m) => (
-                <label
-                  key={m.id}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.35rem',
-                    fontSize: '0.82rem',
-                    cursor: 'pointer',
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={purityDraftIds.includes(m.id)}
-                    disabled={purityOfferBusy || disableActions}
-                    onChange={(e) => togglePurityDraft(m.id, e.target.checked)}
-                  />
-                  {m.label}
-                </label>
-              ))}
-              <button
-                type="button"
-                className="btn btn-ghost kyb-btn-sm"
-                disabled={purityOfferBusy || disableActions}
-                onClick={() => void saveMetalPuritiesOffered()}
-              >
-                {purityOfferBusy ? 'Saving…' : 'Save purities'}
-              </button>
-            </div>
-          )}
-        </div>
-      </details>
+      {profileMetalIds.length === 0 && catalogMeta ? (
+        <p className="form-error" role="status" style={{ marginBottom: '1rem' }}>
+          Choose selling purities under{' '}
+          <Link to="/dashboard/jeweller?section=prof_more">Profile · Shop &amp; business</Link> before adding catalogue SKUs.
+        </p>
+      ) : null}
 
       <input
         ref={catalogImageInputRef}

@@ -9,7 +9,7 @@ class GoldTickerReferenceHistoryAdmin(admin.ModelAdmin):
     ordering = ("-recorded_at",)
 @admin.register(MetalPurity)
 class MetalPurityAdmin(admin.ModelAdmin):
-    list_display = ("label", "slug", "fine_fraction", "sort_order", "is_active")
+    list_display = ("label", "slug", "fine_fraction", "spot_family", "spot_key", "sort_order", "is_active")
     list_filter = ("is_active",)
     search_fields = ("label", "slug")
     ordering = ("sort_order", "id")

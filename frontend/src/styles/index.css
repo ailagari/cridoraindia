@@ -2496,6 +2496,43 @@ select.input {
   padding: 1.25rem;
 }
 
+.jeweller-selling-purities__checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.jeweller-selling-purities__check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.jeweller-selling-purities__actions {
+  margin-bottom: 1.25rem;
+}
+
+.jeweller-selling-purities__rates-title {
+  margin: 0 0 0.35rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.jeweller-selling-purities__rates-hint {
+  margin: 0 0 0.75rem;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.jeweller-selling-purities__table {
+  width: 100%;
+  max-width: 32rem;
+}
+
 .jeweller-mkt-subacc {
   margin-top: 1rem;
   border-radius: 14px;
@@ -6857,8 +6894,18 @@ select.input {
   font-weight: 650;
 }
 
+.pf-scope .pf-vault-form__inline-feedback {
+  width: 100%;
+  margin: 0 0 0.35rem;
+}
+.pf-scope .pf-vault-form__inline-feedback p {
+  margin: 0;
+}
 .pf-scope .pf-vault-save-flash {
   max-width: none;
+}
+.pf-scope .pf-vault-save-flash--hero {
+  margin: 0 0 1rem;
 }
 
 .pf-scope .pf-vault-field span {
@@ -7120,10 +7167,16 @@ select.input {
 }
 .pf-scope .pf-vault-edit__actions {
   display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+.pf-scope .pf-vault-edit__action-btns {
+  display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
   justify-content: flex-end;
-  margin-top: 0.75rem;
 }
 .pf-scope .pf-vault-docs--inline {
   margin-top: 1rem;

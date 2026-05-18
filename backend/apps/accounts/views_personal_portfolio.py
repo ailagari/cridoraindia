@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import logging
 from decimal import Decimal
+
+logger = logging.getLogger(__name__)
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -342,13 +345,20 @@ class PersonalHoldingsListCreateView(APIView):
                 holding=h,
                 metadata={"title": title},
             )
-        create_portfolio_notification(
-            user=request.user,
-            kind=PortfolioUserNotification.KIND_HOLDING_ADDED,
-            title="Personal holding added",
-            body=f"{title} ({weight_grams} g) is now in your Gold Records Vault.",
-            link_path="/userdashboard?section=portfolio_overview&portfolio_tab=personal",
-        )
+        try:
+            create_portfolio_notification(
+                user=request.user,
+                kind=PortfolioUserNotification.KIND_HOLDING_ADDED,
+                title="Personal holding added",
+                body=f"{title} ({weight_grams} g) is now in your Gold Records Vault.",
+                link_path="/userdashboard?section=portfolio_overview&portfolio_tab=personal",
+            )
+        except Exception:
+            logger.exception(
+                "portfolio notification failed after personal holding create user_id=%s holding_id=%s",
+                request.user.pk,
+                h.pk,
+            )
         h = customer_personal_holdings_qs(request.user).get(pk=h.pk)
         return Response(_holding_detail_dict(h, include_documents=True), status=status.HTTP_201_CREATED)
 

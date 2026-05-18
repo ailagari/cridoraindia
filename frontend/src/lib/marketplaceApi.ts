@@ -128,7 +128,14 @@ export type JewellerStorefrontDTO = {
   gold_loan_jeweller_deduction_inr_per_gram?: string
 }
 
-export type CatalogMetalPurityDTO = { id: number; slug: string; label: string }
+export type CatalogMetalPurityDTO = {
+  id: number
+  slug: string
+  label: string
+  fine_fraction?: string
+  spot_family?: string
+  spot_key?: string
+}
 export type CatalogProductCategoryDTO = { id: number; slug: string; label: string }
 
 export type MarketplaceCatalogMetaDTO = {

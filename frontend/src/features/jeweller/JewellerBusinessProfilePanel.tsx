@@ -1,6 +1,7 @@
 import { type FormEvent, useCallback, useEffect, useState } from 'react'
 import { authFetch } from '@/lib/api'
 import { useAuth } from '@/context/AuthContext'
+import { JewellerSellingPuritiesPanel } from '@/features/jeweller/JewellerSellingPuritiesPanel'
 import { JewellerStorefrontCardPanel } from '@/features/jeweller/JewellerStorefrontCardPanel'
 
 function formatApiErrorPayload(data: Record<string, unknown>): string {
@@ -111,6 +112,7 @@ export function JewellerBusinessProfilePanel() {
   return (
     <div className="dash-panel-max">
       <JewellerStorefrontCardPanel />
+      <JewellerSellingPuritiesPanel />
       <span className="pill">Registered business</span>
       <h2 className="dash-panel-title">Showroom &amp; GST details</h2>
       <p className="dash-panel-lead">

@@ -152,6 +152,13 @@ class GoldTickerReferenceHistory(models.Model):
 class MetalPurity(models.Model):
     """Admin-managed hallmark / fineness options (Django admin). Jewellers enable subsets on their pricing profile."""
 
+    SPOT_FAMILY_GOLD = "gold"
+    SPOT_FAMILY_SILVER = "silver"
+    SPOT_FAMILY_CHOICES = [
+        (SPOT_FAMILY_GOLD, "Gold"),
+        (SPOT_FAMILY_SILVER, "Silver"),
+    ]
+
     slug = models.SlugField(max_length=48, unique=True)
     label = models.CharField(max_length=120)
     fine_fraction = models.DecimalField(
@@ -159,6 +166,17 @@ class MetalPurity(models.Model):
         decimal_places=4,
         default=Decimal("0.9160"),
         help_text="Fine gold fraction vs gross ornament weight (916 → 0.916). Metal quote remains 22K board ₹/g.",
+    )
+    spot_family = models.CharField(
+        max_length=8,
+        choices=SPOT_FAMILY_CHOICES,
+        default=SPOT_FAMILY_GOLD,
+        help_text="Which live ticker ladder to use (gold 22K/24K/… or silver 999/925).",
+    )
+    spot_key = models.CharField(
+        max_length=8,
+        default="22K",
+        help_text="Key in public spot payload, e.g. 22K, 24K, 999.",
     )
     sort_order = models.PositiveSmallIntegerField(default=0)
     is_active = models.BooleanField(default=True)

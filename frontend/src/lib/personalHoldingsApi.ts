@@ -14,6 +14,26 @@ async function readResponseJson<T extends object>(res: Response): Promise<T | nu
   }
 }
 
+function parseApiDetail(parsed: Record<string, unknown> | null, fallback: string): string {
+  if (!parsed) return fallback
+  const detail = parsed.detail
+  if (typeof detail === 'string' && detail.trim()) return detail
+  const parts: string[] = []
+  for (const v of Object.values(parsed)) {
+    if (Array.isArray(v) && v.length > 0) parts.push(String(v[0]))
+    else if (typeof v === 'string' && v) parts.push(v)
+  }
+  return parts.join(' ') || fallback
+}
+
+function parsePersonalHoldingId(parsed: Record<string, unknown> | null): number | null {
+  if (!parsed) return null
+  const id = parsed.id
+  if (typeof id === 'number' && Number.isFinite(id)) return id
+  if (typeof id === 'string' && /^\d+$/.test(id)) return Number.parseInt(id, 10)
+  return null
+}
+
 export type PersonalHoldingDTO = {
   id: number
   holding_type: string
@@ -115,14 +135,11 @@ export async function createPersonalHolding(body: {
   })
   const parsed = await readResponseJson<PersonalHoldingDTO & { detail?: string }>(res)
   if (!res.ok) {
-    const detail =
-      parsed && typeof parsed.detail === 'string' && parsed.detail.trim()
-        ? parsed.detail
-        : 'Could not create holding.'
-    return { ok: false, detail }
+    return { ok: false, detail: parseApiDetail(parsed, 'Could not create holding.') }
   }
-  if (parsed && typeof (parsed as PersonalHoldingDTO).id === 'number') {
-    return { ok: true, data: parsed as PersonalHoldingDTO }
+  const id = parsePersonalHoldingId(parsed)
+  if (id != null && parsed) {
+    return { ok: true, data: { ...parsed, id } as PersonalHoldingDTO }
   }
   return { ok: true, data: null }
 }
@@ -148,14 +165,11 @@ export async function updatePersonalHolding(
   })
   const parsed = await readResponseJson<PersonalHoldingDTO & { detail?: string }>(res)
   if (!res.ok) {
-    const detail =
-      parsed && typeof parsed.detail === 'string' && parsed.detail.trim()
-        ? parsed.detail
-        : 'Could not update holding.'
-    return { ok: false, detail }
+    return { ok: false, detail: parseApiDetail(parsed, 'Could not update holding.') }
   }
-  if (parsed && typeof (parsed as PersonalHoldingDTO).id === 'number') {
-    return { ok: true, data: parsed as PersonalHoldingDTO }
+  const parsedId = parsePersonalHoldingId(parsed)
+  if (parsedId != null && parsed) {
+    return { ok: true, data: { ...parsed, id: parsedId } as PersonalHoldingDTO }
   }
   return { ok: true, data: null }
 }

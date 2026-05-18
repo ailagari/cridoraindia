@@ -110,7 +110,17 @@ class MarketplaceCatalogMetaView(APIView):
         cats = ProductCategory.objects.filter(is_active=True).order_by("sort_order", "id")
         return Response(
             {
-                "metal_purities": [{"id": m.id, "slug": m.slug, "label": m.label} for m in metals],
+                "metal_purities": [
+                    {
+                        "id": m.id,
+                        "slug": m.slug,
+                        "label": m.label,
+                        "fine_fraction": str(m.fine_fraction),
+                        "spot_family": m.spot_family,
+                        "spot_key": m.spot_key,
+                    }
+                    for m in metals
+                ],
                 "product_categories": [{"id": c.id, "slug": c.slug, "label": c.label} for c in cats],
             }
         )
