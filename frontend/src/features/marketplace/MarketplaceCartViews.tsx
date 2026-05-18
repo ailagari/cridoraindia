@@ -584,7 +584,14 @@ export function MarketplaceCartCheckout({
                 {gstOnGoldSaved > 0 ? (
                   <Row label="GST on gold (vault relief)" value={<strong style={{ color: 'var(--success)' }}>-₹{formatInr(gstOnGoldSaved)}</strong>} muted />
                 ) : null}
-                <Row label="Grams debited" value={<strong className="tabular">{goldFromVault.toFixed(3)}g</strong>} muted />
+                <Row label="Grams debited from vault" value={<strong className="tabular">{goldFromVault.toFixed(3)}g</strong>} muted />
+                {cartBreakdown ? (
+                  <Row
+                    label="Credited on bill (vault rate)"
+                    value={<strong className="tabular">{cartBreakdown.gramsCreditedOnBill.toFixed(3)}g</strong>}
+                    muted
+                  />
+                ) : null}
               </div>
             ) : (
               <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-muted)' }}>

@@ -196,15 +196,28 @@ def grams_to_charge_for_invoice(final_invoice_inr: Decimal, metal_rate_inr: Deci
 def suggested_vault_grams_for_full_order(
     product: MarketplaceProduct, customer: User | None, vault_available: Decimal
 ) -> Decimal:
-    """Grams needed to bring cash payable to zero (iterative, matches frontend)."""
+    """Minimum grams to bring cash payable to zero (GST relief on vaulted metal included)."""
     cash = checkout_totals_with_vault(product, customer, Decimal("0"))
     metal_rate = cash["metal_rate_inr_per_gram"]
-    if metal_rate <= 0 or vault_available <= 0:
+    final_inr = cash["final_invoice_inr"]
+    if metal_rate <= 0 or vault_available <= 0 or final_inr <= 0:
         return Decimal("0")
-    grams = grams_to_charge_for_invoice(cash["final_invoice_inr"], metal_rate)
-    for _ in range(10):
-        bd = checkout_totals_with_vault(product, customer, grams)
-        if bd["cash_payable_inr"] <= Decimal("0.01"):
-            return min(grams, vault_available)
-        grams += (bd["cash_payable_inr"] / metal_rate).quantize(Decimal("0.000001"))
-    return min(grams, vault_available)
+
+    hi = min(
+        vault_available,
+        grams_to_charge_for_invoice(final_inr, metal_rate) * Decimal("1.05"),
+    )
+    lo = Decimal("0")
+    if checkout_totals_with_vault(product, customer, hi)["cash_payable_inr"] > Decimal(
+        "0.01"
+    ):
+        return hi
+
+    for _ in range(24):
+        mid = ((lo + hi) / 2).quantize(Decimal("0.000001"))
+        payable = checkout_totals_with_vault(product, customer, mid)["cash_payable_inr"]
+        if payable <= Decimal("0.01"):
+            hi = mid
+        else:
+            lo = mid
+    return min(hi, vault_available)

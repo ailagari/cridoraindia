@@ -76,7 +76,12 @@ export function MarketplaceCheckoutReceiptCard({
       >
         <BillRow label="Order total" value={`₹${formatInr(parseG(redemption.final_invoice_inr))}`} strong />
         {grams > 0 ? (
-          <BillRow label="Paid from vault" value={`${grams.toFixed(3)} g`} />
+          <>
+            <BillRow label="Grams debited from vault" value={`${grams.toFixed(3)} g`} />
+            {p.gramsCreditedOnBill > 0 && Math.abs(p.gramsCreditedOnBill - grams) > 0.001 ? (
+              <BillRow label="Credited on bill (vault rate)" value={`${p.gramsCreditedOnBill.toFixed(3)} g`} muted />
+            ) : null}
+          </>
         ) : null}
         {cash > 0 ? (
           <BillRow

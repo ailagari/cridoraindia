@@ -13,6 +13,10 @@ export type PriceBreakdown = {
   gstOnGoldSaved: number
   payableAmount: number
   goldFromVault: number
+  /** Grams whose ₹ value is credited toward the invoice (after GST relief on vaulted metal). */
+  gramsCreditedOnBill: number
+  /** Grams of fine metal on the gold line covered by vault (≤ grams debited). */
+  gramsMetalPortion: number
   discountAmount: number
 }
 
@@ -167,7 +171,7 @@ export function vaultGramsAtListingRateForOrderInr(finalOrderInr: number, metalR
   return finalOrderInr / metalRateInrPerGram
 }
 
-/** Vault grams to bring payable to zero (includes GST relief on vaulted gold metal). */
+/** Minimum vault grams to bring cash payable to zero (accounts for GST relief on vaulted metal). */
 export function suggestedVaultGramsForFullOrder(
   p: MarketplaceProductDTO,
   vaultBalanceGrams: number,
@@ -177,13 +181,20 @@ export function suggestedVaultGramsForFullOrder(
   const metalRate = Number.parseFloat(p.metal_rate_inr_per_gram_used)
   if (!(metalRate > 0) || vaultBalanceGrams <= 0) return 0
   const cashOnly = calculateCheckoutPrice(p, 0, 0, ctx, quantity)
-  let grams = vaultGramsAtListingRateForOrderInr(cashOnly.finalAmount, metalRate)
-  for (let i = 0; i < 10; i++) {
-    const bd = calculateCheckoutPrice(p, grams, vaultBalanceGrams, ctx, quantity)
-    if (bd.payableAmount <= 0.01) return Math.min(grams, vaultBalanceGrams)
-    grams += bd.payableAmount / metalRate
+  if (cashOnly.finalAmount <= 0) return 0
+
+  let hi = Math.min(vaultBalanceGrams, vaultGramsAtListingRateForOrderInr(cashOnly.finalAmount, metalRate) * 1.05)
+  let lo = 0
+  if (calculateCheckoutPrice(p, hi, vaultBalanceGrams, ctx, quantity).payableAmount > 0.01) {
+    return hi
   }
-  return Math.min(grams, vaultBalanceGrams)
+  for (let i = 0; i < 24; i++) {
+    const mid = (lo + hi) / 2
+    const payable = calculateCheckoutPrice(p, mid, vaultBalanceGrams, ctx, quantity).payableAmount
+    if (payable <= 0.01) hi = mid
+    else lo = mid
+  }
+  return Math.min(hi, vaultBalanceGrams)
 }
 
 /** True when vaulted grams at this custodian are enough to cover the full order at the listing vault rate. */
@@ -241,6 +252,8 @@ export function calculateCheckoutPrice(
   const vaultValueOffset = Math.min(rawVaultInr, finalAmount)
   const payableAmount = Math.max(0, finalAmount - vaultValueOffset - gstOnGoldSaved)
   const goldFromVault = cappedGrams
+  const gramsCreditedOnBill = metalRate > 0 ? vaultValueOffset / metalRate : 0
+  const gramsMetalPortion = metalRate > 0 ? vaultMetalCredit / metalRate : 0
   const jewellerSubtotal = j.jewellerSubtotal
 
   return {
@@ -256,6 +269,8 @@ export function calculateCheckoutPrice(
     gstOnGoldSaved,
     payableAmount,
     goldFromVault,
+    gramsCreditedOnBill,
+    gramsMetalPortion,
     discountAmount: j.discountAmount,
   }
 }

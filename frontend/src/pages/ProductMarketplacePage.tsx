@@ -411,9 +411,9 @@ function CheckoutView({
               <span style={{ fontSize: '0.88rem' }}>
                 <strong>Cridora account (gold)</strong>
                 <span style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.78rem', marginTop: 4 }}>
-                  <strong>Vault rate:</strong> ₹{formatInr(metalRate, 2)}/g · <strong>Suggested for full order:</strong>{' '}
-                  <span className="tabular">{gramsSuggestedFullOrder.toFixed(3)}g</span> (covers ₹
-                  {formatInr(cashOnlyBreakdown.finalAmount)} incl. taxes &amp; platform fee). You hold{' '}
+                  <strong>Vault rate:</strong> ₹{formatInr(metalRate, 2)}/g ·                   <strong>Suggested for full order:</strong>{' '}
+                  <span className="tabular">{gramsSuggestedFullOrder.toFixed(3)}g</span> (after GST relief on vaulted
+                  gold — not the higher pre-relief gram count). You hold{' '}
                   <span className="tabular">{eligibleGramsAtSeller.toFixed(3)}g</span> with {product.jeweller_name}. Total
                   vaulted (all partners): <span className="tabular">{totalVaultedAllPartners.toFixed(3)}g</span>.
                 </span>
@@ -507,7 +507,17 @@ function CheckoutView({
                   borderRadius: 14,
                 }}
               >
-                <Row label="Grams selected (vault rate)" value={<strong>{vaultGrams.toFixed(3)}g</strong>} muted />
+                <Row label="Grams debited from vault" value={<strong className="tabular">{p.goldFromVault.toFixed(3)}g</strong>} muted />
+                <Row
+                  label="Credited on bill (vault rate)"
+                  value={<strong className="tabular">{p.gramsCreditedOnBill.toFixed(3)}g</strong>}
+                  muted
+                />
+                <Row
+                  label="Of which · metal line only"
+                  value={<strong className="tabular">{p.gramsMetalPortion.toFixed(3)}g</strong>}
+                  muted
+                />
                 <Row
                   label="Vault metal credit"
                   value={<strong style={{ color: 'var(--success)' }}>₹{formatInr(p.vaultMetalCredit)}</strong>}
@@ -520,11 +530,6 @@ function CheckoutView({
                     muted
                   />
                 ) : null}
-                <Row
-                  label="Grams debited"
-                  value={<strong className="tabular">{p.goldFromVault.toFixed(3)}g</strong>}
-                  muted
-                />
                 {vaultGrams * metalRate > p.finalAmount + 1e-6 ? (
                   <p style={{ margin: 0, fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: 1.45 }}>
                     Invoice fully covered — credit stops at ₹{formatInr(p.finalAmount)}; extra gram selection is not needed

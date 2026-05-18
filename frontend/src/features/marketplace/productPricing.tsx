@@ -3,6 +3,7 @@ import {
   makingChargesBreakdownLabel,
   calculateCheckoutPrice,
   vaultCanCoverFullOrder,
+  suggestedVaultGramsForFullOrder,
   vaultGramsAtListingRateForOrderInr,
   type CheckoutPricingContext,
 } from '@/lib/marketplacePricing'
@@ -94,7 +95,8 @@ export function MarketplaceProductPricingBreakdown({
   const rateTimesG = metalRate * weightG
   const vaultCap = Math.max(0, portfolioVaultGrams)
   const base = calculateCheckoutPrice(p, 0, vaultCap, pricingContext)
-  const needGramsAtVaultRate = vaultGramsAtListingRateForOrderInr(base.finalAmount, metalRate)
+  const needGramsAtVaultRate = suggestedVaultGramsForFullOrder(p, vaultCap, pricingContext)
+  const gramsPreRelief = vaultGramsAtListingRateForOrderInr(base.finalAmount, metalRate)
   const gramsToApplyForFullCashCover = Math.min(vaultCap, needGramsAtVaultRate)
   const vaultEst = calculateCheckoutPrice(p, gramsToApplyForFullCashCover, vaultCap, pricingContext)
   const fullGoldVaultMatch = vaultCanCoverFullOrder(p, vaultCap, pricingContext)
@@ -169,9 +171,15 @@ export function MarketplaceProductPricingBreakdown({
         </span>
       </div>
       <CardPriceRow
-        label={`Suggested vault grams (full order @ ₹${formatInr(metalRate, 2)}/g)`}
+        label={`Suggested vault grams (after GST relief @ ₹${formatInr(metalRate, 2)}/g)`}
         value={`${needGramsAtVaultRate.toFixed(3)} g`}
       />
+      {gramsPreRelief > needGramsAtVaultRate + 0.001 ? (
+        <CardPriceRow
+          label="Pre-relief equivalent (incl. GST on gold)"
+          value={`${gramsPreRelief.toFixed(3)} g`}
+        />
+      ) : null}
       <div
         style={{
           display: 'flex',
