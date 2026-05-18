@@ -120,3 +120,24 @@ class Phase1MvpAlignmentTests(TestCase):
         self.assertEqual(inc.recipient.pk, c.pk)
         self.assertEqual(inc.destination_custodian.pk, j_b.pk)
         self.assertEqual(inc.routing_kind, ROUTING_CUSTOMER_VAULT_UPI)
+
+    def test_single_vault_auto_sets_primary_jeweller(self):
+        j = User.objects.create_user(
+            "j3@test.com",
+            "pw",
+            user_type=User.JEWELLER,
+            kyc_status=User.KYC_VERIFIED,
+            jeweller_code="solo-shop",
+            gold_handle_local="solo_j",
+        )
+        c = User.objects.create_user(
+            "c3@test.com",
+            "pw",
+            user_type=User.CUSTOMER,
+            kyc_status=User.KYC_VERIFIED,
+            gold_handle_local="solo_c",
+        )
+        self.assertIsNone(c.default_jeweller_id)
+        ensure_vault(c, j)
+        c.refresh_from_db()
+        self.assertEqual(c.default_jeweller_id, j.id)

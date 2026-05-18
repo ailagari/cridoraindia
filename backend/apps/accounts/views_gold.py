@@ -39,6 +39,7 @@ from .vault_service import (
     migrate_customer_legacy_balance_if_needed,
     refresh_vault_public_ids_for_owner,
     sync_customer_aggregate_balance,
+    sync_default_jeweller_if_single_vault,
     wallet_vault_payload,
 )
 from .vault_routing_codes import ensure_user_primary_routing_code, format_routing_address
@@ -49,6 +50,7 @@ User = get_user_model()
 def _wallet_payload(user: User) -> dict:
     if user.user_type == User.CUSTOMER:
         sync_customer_aggregate_balance(user)
+        sync_default_jeweller_if_single_vault(user)
         ensure_user_primary_routing_code(user)
     bal = getattr(user, "gold_balance", None)
     grams = bal.balance_grams if bal else Decimal("0")

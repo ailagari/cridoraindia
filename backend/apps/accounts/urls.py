@@ -70,6 +70,9 @@ from .views_platform_notifications import (
     PlatformNotificationsMarkReadView,
 )
 from .views_push import (
+    NativePushStatusView,
+    NativePushSubscribeView,
+    NativePushUnsubscribeView,
     WebPushAdminSelfTestView,
     WebPushSubscribeView,
     WebPushUnsubscribeView,
@@ -142,6 +145,9 @@ urlpatterns = [
     path("push/vapid-public-key/", WebPushVapidPublicKeyView.as_view()),
     path("push/subscribe/", WebPushSubscribeView.as_view()),
     path("push/unsubscribe/", WebPushUnsubscribeView.as_view()),
+    path("push/native-status/", NativePushStatusView.as_view()),
+    path("push/native-subscribe/", NativePushSubscribeView.as_view()),
+    path("push/native-unsubscribe/", NativePushUnsubscribeView.as_view()),
     path("notifications/", PlatformNotificationsListView.as_view()),
     path("notifications/mark-read/", PlatformNotificationsMarkReadView.as_view()),
     path("admin/push/test/", WebPushAdminSelfTestView.as_view()),

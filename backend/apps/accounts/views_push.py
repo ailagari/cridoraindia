@@ -5,9 +5,10 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import WebPushSubscription
+from .models import WebPushSubscription, NativePushToken
 from .services.admin_access import user_is_platform_admin
 from .webpush_service import send_push_to_user, webpush_configured
+from . import fcm_service
 
 User = get_user_model()
 
@@ -86,9 +87,9 @@ class WebPushAdminSelfTestView(APIView):
         err = _require_admin(request)
         if err:
             return err
-        if not webpush_configured():
+        if not webpush_configured() and not fcm_service.fcm_configured():
             return Response(
-                {"detail": "Web Push is not configured (VAPID keys missing)."},
+                {"detail": "Push is not configured (VAPID keys or Firebase missing)."},
                 status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
         title = str(request.data.get("title") or "Cridora")
@@ -104,3 +105,44 @@ class WebPushAdminSelfTestView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
         return Response({"sent": count})
+
+
+class NativePushStatusView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        return Response({"configured": fcm_service.fcm_configured()})
+
+
+class NativePushSubscribeView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        token = str(request.data.get("token") or "").strip()
+        platform = str(request.data.get("platform") or NativePushToken.PLATFORM_ANDROID).strip()
+        if not token:
+            return Response({"detail": "token is required."}, status=status.HTTP_400_BAD_REQUEST)
+        if platform not in {NativePushToken.PLATFORM_ANDROID, NativePushToken.PLATFORM_IOS}:
+            return Response({"detail": "Unsupported platform."}, status=status.HTTP_400_BAD_REQUEST)
+        ua = (request.META.get("HTTP_USER_AGENT") or "")[:512]
+        owner = request.user if request.user.is_authenticated else None
+        NativePushToken.objects.update_or_create(
+            token=token,
+            defaults={
+                "user": owner,
+                "platform": platform,
+                "user_agent": ua,
+            },
+        )
+        return Response({"ok": True}, status=status.HTTP_200_OK)
+
+
+class NativePushUnsubscribeView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        token = str(request.data.get("token") or "").strip()
+        if not token:
+            return Response({"detail": "token is required."}, status=status.HTTP_400_BAD_REQUEST)
+        NativePushToken.objects.filter(token=token).delete()
+        return Response({"ok": True}, status=status.HTTP_200_OK)

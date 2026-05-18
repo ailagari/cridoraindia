@@ -25,12 +25,14 @@ import { CustomerDashboardPage } from '@/pages/dashboard/CustomerDashboardPage'
 import { JewellerDashboardPage } from '@/pages/dashboard/JewellerDashboardPage'
 import { DashboardIndexRedirect } from '@/pages/dashboard/DashboardIndexRedirect'
 import { RedirectPreserveSearch } from '@/pages/dashboard/RedirectPreserveSearch'
+import { NativeNotificationBridge } from '@/components/NativeNotificationBridge'
 import '@/styles/index.css'
 
 export default function App() {
   return (
     <BrowserRouter>
       <ScrollToTop />
+      <NativeNotificationBridge />
       <ThemeProvider>
         <AuthProvider>
           <Routes>

@@ -12,6 +12,7 @@ import {
   registerWebPushSubscription,
 } from '@/lib/webPushApi'
 import { CRIDORA_PUSH_REFRESH_MESSAGE_TYPE } from '@/lib/cridoraSwMessages'
+import { notifyBellFeedUpdates } from '@/lib/nativeNotifications'
 
 /** Faster poll while panel open so badges/lists stay fresh without reloading the page. */
 const FEED_POLL_MS_PANEL_OPEN = 2000
@@ -143,7 +144,11 @@ export function NotificationBell({
       return
     }
     const rows = Array.isArray(body.results) ? body.results.map(mapAdminApiRow) : []
-    setAdminItems((prev) => mergeFeedWithPriorRead(rows, prev))
+    setAdminItems((prev) => {
+      const merged = mergeFeedWithPriorRead(rows, prev)
+      notifyBellFeedUpdates(prev, merged)
+      return merged
+    })
   }, [useAdminFeed, mergeFeedWithPriorRead])
 
   const loadPlatformFeed = useCallback(async () => {
@@ -159,7 +164,11 @@ export function NotificationBell({
       return
     }
     const rows = Array.isArray(body.results) ? body.results.map(mapAdminApiRow) : []
-    setPlatformItems((prev) => mergeFeedWithPriorRead(rows, prev))
+    setPlatformItems((prev) => {
+      const merged = mergeFeedWithPriorRead(rows, prev)
+      notifyBellFeedUpdates(prev, merged)
+      return merged
+    })
   }, [usePlatformFeed, mergeFeedWithPriorRead])
 
   const refreshPushState = useCallback(async () => {

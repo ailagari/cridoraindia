@@ -191,7 +191,7 @@ SIMPLE_JWT = {
 CORS_ALLOWED_ORIGINS = [
     o.strip()
     for o in os.environ.get(
-        "CORS_ALLOWED_ORIGINS", "http://127.0.0.1:5173,http://localhost:5173"
+        "CORS_ALLOWED_ORIGINS", "http://127.0.0.1:5173,http://localhost:5173,https://localhost,capacitor://localhost"
     ).split(",")
     if o.strip()
 ]
@@ -219,3 +219,6 @@ WEB_PUSH_VAPID_PRIVATE_KEY = (
 WEB_PUSH_VAPID_CONTACT = (
     os.environ.get("WEB_PUSH_VAPID_CONTACT") or "mailto:ops@cridora.in"
 ).strip()
+
+# Firebase Cloud Messaging for Capacitor Android/iOS (JSON service account string).
+FIREBASE_SERVICE_ACCOUNT_JSON = (os.environ.get("FIREBASE_SERVICE_ACCOUNT_JSON") or "").strip()

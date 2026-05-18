@@ -1151,6 +1151,36 @@ class WebPushSubscription(models.Model):
         return "WebPushSubscription(anonymous)" if self.user_id is None else f"WebPushSubscription(user={self.user_id})"
 
 
+class NativePushToken(models.Model):
+    """FCM/APNs device token for Capacitor native apps."""
+
+    PLATFORM_ANDROID = "android"
+    PLATFORM_IOS = "ios"
+    PLATFORM_CHOICES = [
+        (PLATFORM_ANDROID, "Android"),
+        (PLATFORM_IOS, "iOS"),
+    ]
+
+    user = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="native_push_tokens",
+    )
+    platform = models.CharField(max_length=16, choices=PLATFORM_CHOICES)
+    token = models.TextField(unique=True)
+    user_agent = models.CharField(max_length=512, blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-updated_at"]
+
+    def __str__(self):
+        return f"NativePushToken({self.platform}, user={self.user_id})"
+
+
 class AdminNotification(models.Model):
     """In-app admin feed + source for push metadata (KYC/KYB review prompts)."""
 

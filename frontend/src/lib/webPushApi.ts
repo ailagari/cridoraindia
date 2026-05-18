@@ -1,4 +1,11 @@
 import { apiFetch, authFetch, getStoredAccess } from '@/lib/api'
+import {
+  claimNativePushForLoggedInUser,
+  getNativePushActive,
+  nativePushNotificationsSupported,
+  nativePushSetupHint,
+  registerNativePushSubscription,
+} from '@/lib/nativeNotifications'
 
 async function postPushSubscribe(jsonBody: Record<string, unknown>): Promise<Response> {
   if (getStoredAccess()) {
@@ -32,6 +39,9 @@ export type WebPushServerStatus = {
 }
 
 export async function fetchWebPushServerStatus(): Promise<WebPushServerStatus> {
+  if (nativePushNotificationsSupported()) {
+    return { configured: true, publicKey: null }
+  }
   const res = await apiFetch('/api/v1/push/vapid-public-key/', { cache: 'no-store' })
   const data = (await res.json().catch(() => ({}))) as {
     public_key?: string | null
@@ -46,6 +56,7 @@ export async function fetchWebPushServerStatus(): Promise<WebPushServerStatus> {
 }
 
 export function pushNotificationsSupported(): boolean {
+  if (nativePushNotificationsSupported()) return true
   if (typeof window === 'undefined') return false
   if (!window.isSecureContext) return false
   return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window
@@ -70,6 +81,8 @@ export function displayModeStandalone(): boolean {
  * Short guidance when Push API is unavailable or unlikely to work (helps iOS Add-to-HS flow).
  */
 export function pushSetupHint(): string | null {
+  const nativeHint = nativePushSetupHint()
+  if (nativeHint) return nativeHint
   if (typeof window === 'undefined') return null
   if (!window.isSecureContext) {
     return 'Open Cridora over HTTPS — insecure origins cannot receive push notifications.'
@@ -98,6 +111,10 @@ async function refreshServiceWorkerRegistration(): Promise<ServiceWorkerRegistra
 }
 
 export async function registerWebPushSubscription(): Promise<void> {
+  if (nativePushNotificationsSupported()) {
+    await registerNativePushSubscription()
+    return
+  }
   const { configured, publicKey: pub } = await fetchWebPushServerStatus()
   if (!configured || !pub) {
     throw new Error(
@@ -140,6 +157,10 @@ export async function unregisterWebPushSubscription(): Promise<void> {
 
 /** Associate the current browser Push subscription with the logged-in account (after sign-in). */
 export async function claimPushSubscriptionForLoggedInUser(): Promise<void> {
+  if (nativePushNotificationsSupported()) {
+    await claimNativePushForLoggedInUser()
+    return
+  }
   if (!getStoredAccess()) return
   if (!pushNotificationsSupported()) return
   if (Notification.permission !== 'granted') return
@@ -152,6 +173,9 @@ export async function claimPushSubscriptionForLoggedInUser(): Promise<void> {
 }
 
 export async function getBrowserPushActive(): Promise<boolean> {
+  if (nativePushNotificationsSupported()) {
+    return getNativePushActive()
+  }
   if (!pushNotificationsSupported()) return false
   if (Notification.permission !== 'granted') return false
   const reg = await navigator.serviceWorker.ready

@@ -53,7 +53,42 @@ def ensure_vault(owner: User, custodian: User) -> GoldVault:
     ensure_vault_routing_address(vault)
     ensure_user_primary_routing_code(owner)
     _fractional_holding(vault)
+    sync_default_jeweller_if_single_vault(owner)
     return vault
+
+
+def sync_default_jeweller_if_single_vault(customer: User) -> bool:
+    """When a customer has exactly one vault custodian, that jeweller becomes primary."""
+    if customer.user_type != User.CUSTOMER:
+        return False
+    custodian_ids = list(
+        GoldVault.objects.filter(owner=customer)
+        .values_list("custodian_id", flat=True)
+        .distinct()
+    )
+    if len(custodian_ids) != 1:
+        return False
+    only_id = custodian_ids[0]
+    if customer.default_jeweller_id == only_id:
+        return False
+    jeweller = User.objects.filter(
+        pk=only_id,
+        user_type=User.JEWELLER,
+        kyc_status=User.KYC_VERIFIED,
+    ).first()
+    if not jeweller:
+        return False
+    from .gold_identity import compute_gold_upi
+
+    User.objects.filter(pk=customer.pk).update(default_jeweller_id=only_id)
+    customer.default_jeweller_id = only_id
+    customer.default_jeweller = jeweller
+    upi = compute_gold_upi(customer)
+    upi_str = upi if upi else None
+    User.objects.filter(pk=customer.pk).update(gold_upi=upi_str)
+    customer.gold_upi = upi_str
+    migrate_customer_legacy_balance_if_needed(customer, jeweller)
+    return True
 
 
 def customer_has_vault_at_custodian(customer: User, custodian: User) -> bool:

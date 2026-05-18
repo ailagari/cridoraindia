@@ -7,6 +7,7 @@ from django.db.models import Q
 from pywebpush import WebPushException, webpush
 
 from .models import WebPushSubscription
+from . import fcm_service
 
 logger = logging.getLogger(__name__)
 
@@ -39,25 +40,25 @@ def send_push_payload(subscription: WebPushSubscription, payload: dict[str, Any]
 
 def send_push_to_user(user, payload: dict[str, Any]) -> int:
     """Send payload to all stored subscriptions; drop endpoints that return 410."""
-    if not webpush_configured():
-        return 0
     n = 0
-    for sub in WebPushSubscription.objects.filter(user=user):
-        try:
-            send_push_payload(sub, payload)
-            n += 1
-        except WebPushException as exc:
-            status = getattr(getattr(exc, "response", None), "status_code", None)
-            if status == 410:
-                sub.delete()
-            else:
-                logger.warning(
-                    "Web Push delivery failed for user_id=%s endpoint_prefix=%s status=%s error=%s",
-                    sub.user_id,
-                    (sub.endpoint[:64] + "…") if len(sub.endpoint) > 64 else sub.endpoint,
-                    status,
-                    exc,
-                )
+    if webpush_configured():
+        for sub in WebPushSubscription.objects.filter(user=user):
+            try:
+                send_push_payload(sub, payload)
+                n += 1
+            except WebPushException as exc:
+                status = getattr(getattr(exc, "response", None), "status_code", None)
+                if status == 410:
+                    sub.delete()
+                else:
+                    logger.warning(
+                        "Web Push delivery failed for user_id=%s endpoint_prefix=%s status=%s error=%s",
+                        sub.user_id,
+                        (sub.endpoint[:64] + "…") if len(sub.endpoint) > 64 else sub.endpoint,
+                        status,
+                        exc,
+                    )
+    n += fcm_service.send_fcm_to_user(user, payload)
     return n
 
 
@@ -68,32 +69,32 @@ def send_push_broadcast(payload: dict[str, Any]) -> int:
     and has a row in ``WebPushSubscription``. Each browser/profile yields at most one
     subscription (extra tabs do not create separate endpoints).
     """
-    if not webpush_configured():
-        return 0
     n = 0
-    for sub in WebPushSubscription.objects.all().iterator(chunk_size=200):
-        try:
-            send_push_payload(sub, payload)
-            n += 1
-        except WebPushException as exc:
-            status = getattr(getattr(exc, "response", None), "status_code", None)
-            if status == 410:
-                sub.delete()
-            else:
+    if webpush_configured():
+        for sub in WebPushSubscription.objects.all().iterator(chunk_size=200):
+            try:
+                send_push_payload(sub, payload)
+                n += 1
+            except WebPushException as exc:
+                status = getattr(getattr(exc, "response", None), "status_code", None)
+                if status == 410:
+                    sub.delete()
+                else:
+                    logger.warning(
+                        "Web Push broadcast failed for user_id=%s endpoint_prefix=%s status=%s error=%s",
+                        sub.user_id,
+                        (sub.endpoint[:64] + "…") if len(sub.endpoint) > 64 else sub.endpoint,
+                        status,
+                        exc,
+                    )
+            except Exception as exc:
                 logger.warning(
-                    "Web Push broadcast failed for user_id=%s endpoint_prefix=%s status=%s error=%s",
+                    "Web Push broadcast unexpected error for user_id=%s endpoint_prefix=%s error=%s",
                     sub.user_id,
                     (sub.endpoint[:64] + "…") if len(sub.endpoint) > 64 else sub.endpoint,
-                    status,
                     exc,
                 )
-        except Exception as exc:
-            logger.warning(
-                "Web Push broadcast unexpected error for user_id=%s endpoint_prefix=%s error=%s",
-                sub.user_id,
-                (sub.endpoint[:64] + "…") if len(sub.endpoint) > 64 else sub.endpoint,
-                exc,
-            )
+    n += fcm_service.send_fcm_broadcast(payload)
     return n
 
 
