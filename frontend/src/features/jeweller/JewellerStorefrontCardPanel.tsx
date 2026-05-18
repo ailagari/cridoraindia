@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type SetStateAction } from 'react'
 import { Link } from 'react-router-dom'
 import { authFetch, authUpload } from '@/lib/api'
 import { LIVE_MARKETPLACE_EDITOR_POLL_MS } from '@/lib/liveDeskIntervals'
@@ -9,6 +9,8 @@ type ProfileApi = Record<string, unknown>
 
 export function JewellerStorefrontCardPanel() {
   const logoInputRef = useRef<HTMLInputElement>(null)
+  /** Avoid clobbering in-progress edits when marketplace profile is polled every few seconds. */
+  const storefrontDraftDirtyRef = useRef(false)
 
   const [loadError, setLoadError] = useState('')
   const [formError, setFormError] = useState('')
@@ -31,6 +33,11 @@ export function JewellerStorefrontCardPanel() {
     feat_emergency_funds: false,
   })
 
+  const commitCardDraft = useCallback((updater: SetStateAction<typeof cardDraft>) => {
+    storefrontDraftDirtyRef.current = true
+    setCardDraft(updater)
+  }, [])
+
   const flashSuccess = useCallback((msg: string) => {
     setSuccessMsg(msg)
     setFormError('')
@@ -51,6 +58,9 @@ export function JewellerStorefrontCardPanel() {
       return
     }
     const pJson = (await pr.json()) as ProfileApi
+    if (storefrontDraftDirtyRef.current) {
+      return
+    }
     setCardDraft({
       logo_url: String(pJson.logo_url ?? ''),
       credibility_score:
@@ -149,6 +159,7 @@ export function JewellerStorefrontCardPanel() {
       setFormError(JSON.stringify(j))
       return
     }
+    storefrontDraftDirtyRef.current = false
     await refreshProfile()
     flashSuccess('Shop card saved.')
   }
@@ -228,7 +239,7 @@ export function JewellerStorefrontCardPanel() {
                   <label className="field" style={{ margin: 0 }}>
                     <input
                       value={cardDraft.logo_url}
-                      onChange={(e) => setCardDraft((p) => ({ ...p, logo_url: e.target.value }))}
+                      onChange={(e) => commitCardDraft((p) => ({ ...p, logo_url: e.target.value }))}
                       placeholder="Set automatically after upload, or paste https://…"
                     />
                   </label>
@@ -249,7 +260,7 @@ export function JewellerStorefrontCardPanel() {
                     <input
                       inputMode="decimal"
                       value={cardDraft.minimum_redeemable_grams}
-                      onChange={(e) => setCardDraft((p) => ({ ...p, minimum_redeemable_grams: e.target.value }))}
+                      onChange={(e) => commitCardDraft((p) => ({ ...p, minimum_redeemable_grams: e.target.value }))}
                       placeholder="e.g. 0.25"
                     />
                   </label>
@@ -261,7 +272,7 @@ export function JewellerStorefrontCardPanel() {
                   <label className="field" style={{ margin: 0 }}>
                     <input
                       value={cardDraft.same_store_mc_benefit}
-                      onChange={(e) => setCardDraft((p) => ({ ...p, same_store_mc_benefit: e.target.value }))}
+                      onChange={(e) => commitCardDraft((p) => ({ ...p, same_store_mc_benefit: e.target.value }))}
                       placeholder="e.g. 0% MC same store"
                     />
                   </label>
@@ -274,7 +285,7 @@ export function JewellerStorefrontCardPanel() {
                     <input
                       inputMode="numeric"
                       value={cardDraft.metric_active_users}
-                      onChange={(e) => setCardDraft((p) => ({ ...p, metric_active_users: e.target.value }))}
+                      onChange={(e) => commitCardDraft((p) => ({ ...p, metric_active_users: e.target.value }))}
                     />
                   </label>
                 </td>
@@ -287,7 +298,7 @@ export function JewellerStorefrontCardPanel() {
                       inputMode="decimal"
                       value={cardDraft.metric_total_redeemed_gold_grams}
                       onChange={(e) =>
-                        setCardDraft((p) => ({ ...p, metric_total_redeemed_gold_grams: e.target.value }))
+                        commitCardDraft((p) => ({ ...p, metric_total_redeemed_gold_grams: e.target.value }))
                       }
                     />
                   </label>
@@ -300,7 +311,7 @@ export function JewellerStorefrontCardPanel() {
                     <input
                       inputMode="decimal"
                       value={cardDraft.metric_years_active}
-                      onChange={(e) => setCardDraft((p) => ({ ...p, metric_years_active: e.target.value }))}
+                      onChange={(e) => commitCardDraft((p) => ({ ...p, metric_years_active: e.target.value }))}
                     />
                   </label>
                 </td>
@@ -320,7 +331,7 @@ export function JewellerStorefrontCardPanel() {
                 <input
                   type="checkbox"
                   checked={cardDraft.feat_instant_redemption}
-                  onChange={(e) => setCardDraft((p) => ({ ...p, feat_instant_redemption: e.target.checked }))}
+                  onChange={(e) => commitCardDraft((p) => ({ ...p, feat_instant_redemption: e.target.checked }))}
                 />
                 <span>
                   Instant redemption
@@ -331,7 +342,7 @@ export function JewellerStorefrontCardPanel() {
                 <input
                   type="checkbox"
                   checked={cardDraft.feat_zero_mc_same_store}
-                  onChange={(e) => setCardDraft((p) => ({ ...p, feat_zero_mc_same_store: e.target.checked }))}
+                  onChange={(e) => commitCardDraft((p) => ({ ...p, feat_zero_mc_same_store: e.target.checked }))}
                 />
                 <span>
                   0% MC (same store)
@@ -342,7 +353,7 @@ export function JewellerStorefrontCardPanel() {
                 <input
                   type="checkbox"
                   checked={cardDraft.feat_loan_available}
-                  onChange={(e) => setCardDraft((p) => ({ ...p, feat_loan_available: e.target.checked }))}
+                  onChange={(e) => commitCardDraft((p) => ({ ...p, feat_loan_available: e.target.checked }))}
                 />
                 <span>
                   Loan available
@@ -353,7 +364,7 @@ export function JewellerStorefrontCardPanel() {
                 <input
                   type="checkbox"
                   checked={cardDraft.feat_goldnest_available}
-                  onChange={(e) => setCardDraft((p) => ({ ...p, feat_goldnest_available: e.target.checked }))}
+                  onChange={(e) => commitCardDraft((p) => ({ ...p, feat_goldnest_available: e.target.checked }))}
                 />
                 <span>
                   GoldNest
@@ -364,7 +375,7 @@ export function JewellerStorefrontCardPanel() {
                 <input
                   type="checkbox"
                   checked={cardDraft.feat_emergency_funds}
-                  onChange={(e) => setCardDraft((p) => ({ ...p, feat_emergency_funds: e.target.checked }))}
+                  onChange={(e) => commitCardDraft((p) => ({ ...p, feat_emergency_funds: e.target.checked }))}
                 />
                 <span>
                   Emergency funds
