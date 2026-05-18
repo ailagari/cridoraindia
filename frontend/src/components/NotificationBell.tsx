@@ -108,6 +108,7 @@ export function NotificationBell({
   /** Bottom sheet on narrow viewports (PWA / mobile dashboards). */
   const [useSheetLayout, setUseSheetLayout] = useState(false)
   const autoMarkedOnOpenRef = useRef(false)
+  const prevMockItemsRef = useRef<AppNotification[]>([])
 
   const mergeFeedWithPriorRead = useCallback(
     (rows: AppNotification[], prev: AppNotification[]): AppNotification[] => {
@@ -188,8 +189,14 @@ export function NotificationBell({
 
   useEffect(() => {
     if (!open) return
-    void refreshPushState()
-  }, [open, refreshPushState])
+    void refreshPushState().then(() => {
+      if (!nativePushNotificationsSupported() || useLiveFeed) return
+      void getBrowserPushActive().then((active) => {
+        if (!active) return
+        notifyBellFeedUpdates([], mockItems)
+      })
+    })
+  }, [open, refreshPushState, useLiveFeed, mockItems])
 
   useEffect(() => {
     if (!open) {
@@ -309,18 +316,26 @@ export function NotificationBell({
     }
   }, [useAdminFeed, usePlatformFeed, user?.id])
 
+  useEffect(() => {
+    if (useAdminFeed || usePlatformFeed) return
+    notifyBellFeedUpdates(prevMockItemsRef.current, mockItems)
+    prevMockItemsRef.current = mockItems
+  }, [useAdminFeed, usePlatformFeed, mockItems])
+
   const enablePush = useCallback(async () => {
     setPushBusy(true)
     setPushError('')
     try {
       await registerWebPushSubscription()
       setPushActive(true)
+      const feed = useAdminFeed ? adminItems : usePlatformFeed ? platformItems : mockItems
+      notifyBellFeedUpdates([], feed)
     } catch (e) {
       setPushError(e instanceof Error ? e.message : 'Could not enable push.')
     } finally {
       setPushBusy(false)
     }
-  }, [])
+  }, [useAdminFeed, usePlatformFeed, adminItems, platformItems, mockItems])
 
   const sendAdminTestPush = useCallback(async () => {
     setPushTestBusy(true)

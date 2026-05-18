@@ -21,6 +21,12 @@ const config: CapacitorConfig = {
     backgroundColor: '#000814',
     webContentsDebuggingEnabled: true,
   },
+  plugins: {
+    LocalNotifications: {
+      smallIcon: 'ic_stat_cridora',
+      iconColor: '#D4AF37',
+    },
+  },
   server: {
     androidScheme: 'https',
     ...(liveUrl

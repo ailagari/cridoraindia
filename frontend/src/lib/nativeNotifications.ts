@@ -1,4 +1,3 @@
-import { App } from '@capacitor/app'
 import { Capacitor } from '@capacitor/core'
 import { LocalNotifications } from '@capacitor/local-notifications'
 import { PushNotifications } from '@capacitor/push-notifications'
@@ -8,6 +7,7 @@ import type { AppNotification } from '@/lib/mockNotifications'
 
 const CHANNEL_ID = 'cridora-alerts'
 const CHANNEL_NAME = 'Cridora alerts'
+const TRAY_NOTIFIED_KEY = 'cridora_tray_notified_ids_v1'
 
 /** FCM requires google-services.json in android/app/ — off by default to avoid native crashes. */
 const FCM_ENABLED = import.meta.env.VITE_FCM_ENABLED === 'true'
@@ -15,7 +15,27 @@ const FCM_ENABLED = import.meta.env.VITE_FCM_ENABLED === 'true'
 let bridgeReady = false
 let pushListenersAttached = false
 let navigateHandler: ((path: string) => void) | null = null
-const notifiedIds = new Set<string>()
+const notifiedIds = loadNotifiedIds()
+
+function loadNotifiedIds(): Set<string> {
+  try {
+    const raw = sessionStorage.getItem(TRAY_NOTIFIED_KEY)
+    if (!raw) return new Set()
+    const parsed = JSON.parse(raw) as unknown
+    if (!Array.isArray(parsed)) return new Set()
+    return new Set(parsed.filter((x): x is string => typeof x === 'string'))
+  } catch {
+    return new Set()
+  }
+}
+
+function persistNotifiedIds(): void {
+  try {
+    sessionStorage.setItem(TRAY_NOTIFIED_KEY, JSON.stringify([...notifiedIds]))
+  } catch {
+    /* private mode / quota */
+  }
+}
 
 function notificationIdForItem(id: string): number {
   let hash = 0
@@ -153,11 +173,6 @@ export async function initNativeNotificationBridge(): Promise<void> {
     if (FCM_ENABLED) {
       attachPushListeners()
     }
-    App.addListener('appStateChange', ({ isActive }) => {
-      if (isActive) {
-        void LocalNotifications.removeAllDeliveredNotifications().catch(() => undefined)
-      }
-    })
   } catch {
     bridgeReady = false
   }
@@ -205,6 +220,7 @@ export async function showTrayNotification(item: {
   if (!(await localPermissionGranted())) return
   if (notifiedIds.has(item.id)) return
   notifiedIds.add(item.id)
+  persistNotifiedIds()
   try {
     await ensureAndroidChannel()
     await LocalNotifications.schedule({
@@ -216,12 +232,14 @@ export async function showTrayNotification(item: {
           channelId: CHANNEL_ID,
           smallIcon: 'ic_stat_cridora',
           iconColor: '#D4AF37',
+          schedule: { at: new Date(Date.now() + 300) },
           extra: { url: item.link_path ?? '/' },
         },
       ],
     })
   } catch {
     notifiedIds.delete(item.id)
+    persistNotifiedIds()
   }
 }
 
