@@ -30,7 +30,9 @@ import { NativeAppDiagnostics } from '@/components/NativeAppDiagnostics'
 import { isNativePlatform } from '@/lib/capacitorPlatform'
 import '@/styles/index.css'
 
-const AppRouter = isNativePlatform() ? HashRouter : BrowserRouter
+const useHashRouter =
+  import.meta.env.VITE_CAPACITOR_BUILD === 'true' || isNativePlatform()
+const AppRouter = useHashRouter ? HashRouter : BrowserRouter
 
 export default function App() {
   return (

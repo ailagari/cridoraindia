@@ -12,6 +12,7 @@ export function NativeAppDiagnostics() {
   const [testBusy, setTestBusy] = useState(false)
 
   const apiBase = getApiBaseUrl()
+  const liveUrl = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '') ?? ''
 
   const runHealthCheck = useCallback(async () => {
     setHealth('checking')
@@ -74,6 +75,10 @@ export function NativeAppDiagnostics() {
           ? 'Failed'
           : '—'
 
+  const androidMatch =
+    typeof navigator !== 'undefined' ? navigator.userAgent.match(/Android\s([0-9.]+)/) : null
+  const webViewHint = androidMatch ? ` · Android ${androidMatch[1]}` : ''
+
   return (
     <div className="native-diag-bar" role="status" aria-live="polite">
       <div className="native-diag-bar__row">
@@ -81,9 +86,10 @@ export function NativeAppDiagnostics() {
         <span className={`native-diag-bar__pill native-diag-bar__pill--${health}`}>{healthLabel}</span>
       </div>
       <p className="native-diag-bar__meta">
-        API: {apiBase || '(not set — rebuild required)'}
+        {liveUrl ? `Live: ${liveUrl}` : `API: ${apiBase || '(same origin)'}`}
         {healthDetail ? ` · ${healthDetail}` : ''}
         {pushActive != null ? ` · Notifications ${pushActive ? 'on' : 'off'}` : ''}
+        {webViewHint}
       </p>
       <div className="native-diag-bar__actions">
         <button type="button" className="btn btn-ghost native-diag-bar__btn" onClick={() => void runHealthCheck()}>

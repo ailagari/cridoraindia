@@ -15,21 +15,22 @@ function showBootError(message: string): void {
   `
 }
 
-window.addEventListener('error', (event) => {
+function rootStillEmpty(): boolean {
   const root = document.getElementById('root')
-  if (!root || root.querySelector('.home-hero, .app-shell, .native-diag-bar')) return
-  if (root.textContent?.includes('Loading Cridora')) {
-    showBootError(event.message || 'Unknown startup error')
-  }
+  if (!root) return false
+  if (root.querySelector('.home-hero, .app-shell, .native-diag-bar')) return false
+  return root.childElementCount === 0
+}
+
+window.addEventListener('error', (event) => {
+  if (!rootStillEmpty()) return
+  showBootError(event.message || 'Unknown startup error')
 })
 
 window.addEventListener('unhandledrejection', (event) => {
-  const root = document.getElementById('root')
-  if (!root || root.querySelector('.home-hero, .app-shell, .native-diag-bar')) return
-  if (root.textContent?.includes('Loading Cridora')) {
-    const reason = event.reason
-    showBootError(reason instanceof Error ? reason.message : String(reason))
-  }
+  if (!rootStillEmpty()) return
+  const reason = event.reason
+  showBootError(reason instanceof Error ? reason.message : String(reason))
 })
 
 function BootShell({ children }: { children: ReactNode }) {

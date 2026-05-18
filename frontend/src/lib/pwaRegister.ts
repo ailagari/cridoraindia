@@ -1,6 +1,6 @@
 import { Capacitor } from '@capacitor/core'
 
-const isNative = Capacitor.isNativePlatform()
+const isNative = Capacitor.isNativePlatform() || import.meta.env.VITE_CAPACITOR_BUILD === 'true'
 
 const listeners = new Set<() => void>()
 

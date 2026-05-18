@@ -32,6 +32,10 @@ if (!apiBase || apiBase.includes('your-service')) {
 }
 
 console.log(`[android:check] API base: ${apiBase}`)
+if (apiBase.includes('cridora.in') && !apiBase.includes('railway.app')) {
+  console.warn('[android:check] Using cridora.in — if blank on device, set Railway URL in .env.production.local')
+}
+console.log('[android:check] Capacitor will load live site:', apiBase || '(bundled dist only)')
 
 const localProps = path.join(root, '..', 'android', 'local.properties')
 if (!fs.existsSync(localProps)) {

@@ -1,4 +1,16 @@
+import { existsSync, readFileSync } from 'fs'
+import { join } from 'path'
 import type { CapacitorConfig } from '@capacitor/cli'
+
+function readProductionApiBase(): string {
+  const envPath = join(process.cwd(), '.env.production.local')
+  if (!existsSync(envPath)) return ''
+  const match = readFileSync(envPath, 'utf8').match(/^VITE_API_BASE_URL=(.+)$/m)
+  return match?.[1]?.trim().replace(/\/$/, '') ?? ''
+}
+
+const liveUrl = readProductionApiBase()
+const liveHost = liveUrl ? new URL(liveUrl).hostname : ''
 
 const config: CapacitorConfig = {
   appId: 'in.cridora.app',
@@ -11,6 +23,13 @@ const config: CapacitorConfig = {
   },
   server: {
     androidScheme: 'https',
+    ...(liveUrl
+      ? {
+          url: liveUrl,
+          cleartext: false,
+          allowNavigation: [liveHost],
+        }
+      : {}),
   },
 }
 
