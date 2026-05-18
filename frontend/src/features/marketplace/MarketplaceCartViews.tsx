@@ -20,6 +20,14 @@ import { useLivePoll } from '@/lib/useLivePoll'
 import { LIVE_BALANCE_POLL_MS } from '@/lib/liveDeskIntervals'
 import type { MarketplaceProductDTO } from '@/lib/marketplaceApi'
 import { formatInr } from '@/features/marketplace/productPricing'
+import { suggestedVaultGramsForFullOrder } from '@/lib/marketplacePricing'
+import { useAuth } from '@/context/AuthContext'
+import {
+  MarketplaceCashPayStep,
+  MarketplaceCheckoutReceiptCard,
+  useMarketplaceOrderConfirm,
+  type MarketplaceCheckoutReceipt,
+} from '@/features/marketplace/MarketplaceCheckoutFlow'
 
 function Row({
   label,
@@ -243,10 +251,14 @@ export function MarketplaceCartCheckout({
   pricingCtx?: CheckoutPricingContext
   onBack: () => void
 }) {
+  const { user } = useAuth()
   const [payMode, setPayMode] = useState<'cash' | 'vault'>('cash')
   const [vaultGrams, setVaultGrams] = useState(0)
   const [goldWallet, setGoldWallet] = useState<GoldWalletDTO | null>(null)
   const [totalVaultedAllPartners, setTotalVaultedAllPartners] = useState(0)
+  const [checkoutStep, setCheckoutStep] = useState<'pay' | 'cash' | 'receipt'>('pay')
+  const [receipt, setReceipt] = useState<MarketplaceCheckoutReceipt | null>(null)
+  const singleLine = lines.length === 1 && lines[0].qty === 1 ? lines[0] : null
 
   const jewellerIds = useMemo(() => {
     const s = new Set<number>()
@@ -295,13 +307,53 @@ export function MarketplaceCartCheckout({
 
   const blendRate = useMemo(() => cartBlendedMetalRateInrPerGram(lines), [lines])
 
-  const vaultValueOffset =
-    payMode === 'vault' && vaultAllowed && blendRate > 0
-      ? Math.min(Math.max(0, Math.min(vaultGrams, maxVaultGrams)) * blendRate, sumFinal)
-      : 0
-  const payableAmount = Math.max(0, sumFinal - vaultValueOffset)
-  const goldFromVault = blendRate > 0 ? vaultValueOffset / blendRate : 0
-  const gramsSuggestedFullOrder = vaultGramsAtListingRateForOrderInr(sumFinal, blendRate)
+  const cartBreakdown =
+    singleLine != null
+      ? calculateCheckoutPrice(
+          singleLine.product,
+          payMode === 'vault' ? vaultGrams : 0,
+          eligibleGramsAtSeller,
+          pricingCtx,
+          singleLine.qty,
+        )
+      : null
+  const payableAmount = cartBreakdown?.payableAmount ?? sumFinal
+  const vaultValueOffset = cartBreakdown?.vaultValueOffset ?? 0
+  const goldFromVault = cartBreakdown?.goldFromVault ?? 0
+  const gstOnGoldSaved = cartBreakdown?.gstOnGoldSaved ?? 0
+  const gramsSuggestedFullOrder =
+    singleLine != null
+      ? suggestedVaultGramsForFullOrder(singleLine.product, eligibleGramsAtSeller, pricingCtx, singleLine.qty)
+      : vaultGramsAtListingRateForOrderInr(sumFinal, blendRate)
+  const kycOk = user?.kyc_status === 'verified'
+
+  const { busy, error, setError, runConfirm } = useMarketplaceOrderConfirm({
+    product: singleLine?.product ?? lines[0].product,
+    vaultGrams,
+    payMode,
+    breakdown: cartBreakdown ?? lineBreakdowns[0].bd,
+    onSuccess: (r) => {
+      setReceipt(r)
+      setCheckoutStep('receipt')
+    },
+  })
+
+  const onPrimaryPay = () => {
+    setError('')
+    if (!singleLine) {
+      setError('Checkout supports one piece at a time. Remove extra lines or change quantity to 1.')
+      return
+    }
+    if (!kycOk) {
+      setError('Complete KYC before checkout.')
+      return
+    }
+    if (payableAmount <= 0 && (payMode === 'vault' ? vaultGrams > 0 : true)) {
+      void runConfirm('')
+      return
+    }
+    if (payableAmount > 0) setCheckoutStep('cash')
+  }
 
   const firstName = lines[0]?.product.jeweller_name ?? 'jeweller'
 
@@ -311,6 +363,14 @@ export function MarketplaceCartCheckout({
 
   if (lines.length === 0) {
     return null
+  }
+
+  if (checkoutStep === 'receipt' && receipt) {
+    return (
+      <div className="container page" style={{ paddingBottom: '4rem' }}>
+        <MarketplaceCheckoutReceiptCard receipt={receipt} onDone={onBack} />
+      </div>
+    )
   }
 
   return (
@@ -506,8 +566,11 @@ export function MarketplaceCartCheckout({
           >
             {payMode === 'vault' && vaultAllowed && vaultGrams > 0 ? (
               <div style={{ fontSize: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                <Row label="Credit toward order (blended rate)" value={<strong style={{ color: 'var(--success)' }}>₹{formatInr(vaultValueOffset)}</strong>} muted />
-                <Row label="≈ Gold on bill" value={<strong className="tabular">{goldFromVault.toFixed(3)}g</strong>} muted />
+                <Row label="Vault metal credit" value={<strong style={{ color: 'var(--success)' }}>₹{formatInr(cartBreakdown?.vaultMetalCredit ?? vaultValueOffset)}</strong>} muted />
+                {gstOnGoldSaved > 0 ? (
+                  <Row label="GST on gold (vault relief)" value={<strong style={{ color: 'var(--success)' }}>-₹{formatInr(gstOnGoldSaved)}</strong>} muted />
+                ) : null}
+                <Row label="Grams debited" value={<strong className="tabular">{goldFromVault.toFixed(3)}g</strong>} muted />
               </div>
             ) : (
               <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-muted)' }}>
@@ -535,19 +598,46 @@ export function MarketplaceCartCheckout({
             </p>
           </div>
 
-          <button type="button" className="btn btn-primary" style={{ width: '100%' }}>
-            {payableAmount <= 0 && payMode === 'vault' && vaultGrams > 0
-              ? 'Confirm — vault covers this order'
-              : payableAmount <= 0
-                ? 'Confirm payment'
-                : payMode === 'vault' && vaultGrams > 0
-                  ? `Pay ₹${formatInr(payableAmount)} cash + vault`
-                  : `Pay ₹${formatInr(payableAmount)} with cash / UPI`}
-          </button>
-          <p className="form-footnote" style={{ marginTop: '1rem', textAlign: 'center', fontSize: '0.72rem' }}>
-            Demo checkout · {lines.length} line(s)
-            {payMode === 'vault' && vaultGrams > 0 ? ` · ~${goldFromVault.toFixed(3)}g toward bill` : ''}
-          </p>
+          {checkoutStep === 'cash' && singleLine ? (
+            <MarketplaceCashPayStep
+              amountInr={payableAmount}
+              jewellerName={singleLine.product.jeweller_name}
+              busy={busy}
+              error={error}
+              onBack={() => setCheckoutStep('pay')}
+              onPaid={(method) => void runConfirm(method)}
+            />
+          ) : (
+            <>
+              {error ? (
+                <p className="form-error" role="alert" style={{ marginBottom: '0.75rem' }}>
+                  {error}
+                </p>
+              ) : null}
+              {!singleLine ? (
+                <p className="form-footnote" style={{ marginBottom: '0.75rem' }}>
+                  One piece per checkout (qty 1, single SKU). Adjust your cart or buy from the product page.
+                </p>
+              ) : null}
+              <button
+                type="button"
+                className="btn btn-primary"
+                style={{ width: '100%' }}
+                disabled={busy || !kycOk}
+                onClick={onPrimaryPay}
+              >
+                {busy
+                  ? 'Processing…'
+                  : payableAmount <= 0 && payMode === 'vault' && vaultGrams > 0
+                    ? 'Confirm — vault covers this order'
+                    : payableAmount <= 0
+                      ? 'Confirm payment'
+                      : payMode === 'vault' && vaultGrams > 0
+                        ? `Pay ₹${formatInr(payableAmount)} cash + vault`
+                        : `Pay ₹${formatInr(payableAmount)} with cash / UPI`}
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>

@@ -636,6 +636,24 @@ class VaultProductRedemption(models.Model):
     cross_platform_fee_inr = models.DecimalField(
         max_digits=12, decimal_places=2, default=0
     )
+    cash_paid_inr = models.DecimalField(
+        max_digits=16,
+        decimal_places=2,
+        default=0,
+        help_text="Cash/UPI collected at checkout (balance after vault grams).",
+    )
+    cash_payment_method = models.CharField(
+        max_length=32,
+        blank=True,
+        default="",
+        help_text="counter_cash, counter_upi, card_demo, etc.",
+    )
+    gst_on_gold_saved_inr = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+        help_text="GST on gold not charged because metal was paid from taxed vault.",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

@@ -107,8 +107,12 @@ export function CustomerVaultRedemptionShopPanel() {
     setQuoteErr('')
     try {
       const out = await confirmVaultRedemptionPurchase(selected.id, {
-        final_invoice_inr: quote.final_invoice_inr,
-        grams_required: quote.grams_required,
+        vaultGrams: parseG(quote.grams_required),
+        expected: {
+          final_invoice_inr: quote.final_invoice_inr,
+          cash_payable_inr: quote.cash_payable_inr,
+          grams_charged: quote.grams_required,
+        },
       })
       if (!out.ok) {
         if (out.staleQuote) {

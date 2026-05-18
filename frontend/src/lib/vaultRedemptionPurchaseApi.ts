@@ -7,21 +7,44 @@ export type VaultRedemptionQuoteDTO = {
   jeweller_name: string
   stock_quantity: number
   final_invoice_inr: string
+  cash_payable_inr: string
   jeweller_subtotal_inr: string
   metal_rate_inr_per_gram: string
   grams_required: string
+  grams_suggested_full_order: string
   vault_grams_available: string
   sufficient_vault: boolean
+  vault_covers_full_order: boolean
   same_store: boolean
   cross_platform_fee_inr: string
+  vault_metal_credit_inr: string
+  gst_on_gold_saved_inr: string
+  cash_only_final_invoice_inr: string
 }
+
+export type VaultRedemptionResultDTO = {
+  id: number
+  reference: string
+  grams_charged: string
+  final_invoice_inr: string
+  cash_paid_inr: string
+  cash_payment_method: string
+  gst_on_gold_saved_inr: string
+  product_name: string
+  jeweller_name: string
+}
+
+export type CashPaymentMethod = 'counter_cash' | 'counter_upi' | 'card_demo'
 
 export async function fetchVaultRedemptionQuote(
   productId: number,
+  vaultGrams?: number,
 ): Promise<{ ok: true; data: VaultRedemptionQuoteDTO } | { ok: false; detail: string }> {
-  const res = await authFetch(
-    `/api/v1/marketplace/redemption/quote/?product_id=${encodeURIComponent(String(productId))}`,
-  )
+  const params = new URLSearchParams({ product_id: String(productId) })
+  if (vaultGrams != null && Number.isFinite(vaultGrams)) {
+    params.set('vault_grams', String(vaultGrams))
+  }
+  const res = await authFetch(`/api/v1/marketplace/redemption/quote/?${params.toString()}`)
   const data = (await res.json().catch(() => ({}))) as VaultRedemptionQuoteDTO & { detail?: string }
   if (!res.ok) {
     return {
@@ -37,26 +60,30 @@ export async function fetchVaultRedemptionQuote(
 
 export async function confirmVaultRedemptionPurchase(
   productId: number,
-  expected?: { final_invoice_inr: string; grams_required: string },
-): Promise<
-  | {
-      ok: true
-      detail: string
-      redemption: {
-        id: number
-        reference: string
-        grams_charged: string
-        final_invoice_inr: string
-        product_name: string
-        jeweller_name: string
-      }
+  opts: {
+    vaultGrams: number
+    expected?: {
+      final_invoice_inr: string
+      cash_payable_inr: string
+      grams_charged: string
     }
+    cashPaymentMethod?: CashPaymentMethod | ''
+  },
+): Promise<
+  | { ok: true; detail: string; redemption: VaultRedemptionResultDTO }
   | { ok: false; detail: string; staleQuote?: VaultRedemptionQuoteDTO }
 > {
-  const jsonBody: Record<string, unknown> = { product_id: productId }
-  if (expected) {
-    jsonBody.expected_final_invoice_inr = expected.final_invoice_inr
-    jsonBody.expected_grams_required = expected.grams_required
+  const jsonBody: Record<string, unknown> = {
+    product_id: productId,
+    vault_grams: opts.vaultGrams,
+  }
+  if (opts.expected) {
+    jsonBody.expected_final_invoice_inr = opts.expected.final_invoice_inr
+    jsonBody.expected_cash_payable_inr = opts.expected.cash_payable_inr
+    jsonBody.expected_grams_charged = opts.expected.grams_charged
+  }
+  if (opts.cashPaymentMethod) {
+    jsonBody.cash_payment_method = opts.cashPaymentMethod
   }
   const res = await authFetch('/api/v1/marketplace/redemption/confirm/', {
     method: 'POST',
@@ -65,14 +92,7 @@ export async function confirmVaultRedemptionPurchase(
   const data = (await res.json().catch(() => ({}))) as {
     detail?: string
     quote?: VaultRedemptionQuoteDTO
-    redemption?: {
-      id: number
-      reference: string
-      grams_charged: string
-      final_invoice_inr: string
-      product_name: string
-      jeweller_name: string
-    }
+    redemption?: VaultRedemptionResultDTO
   }
   if (!res.ok) {
     const staleQuote =
@@ -81,7 +101,7 @@ export async function confirmVaultRedemptionPurchase(
         : undefined
     return {
       ok: false,
-      detail: data.detail != null ? String(data.detail) : 'Redemption failed.',
+      detail: data.detail != null ? String(data.detail) : 'Order could not be confirmed.',
       staleQuote,
     }
   }

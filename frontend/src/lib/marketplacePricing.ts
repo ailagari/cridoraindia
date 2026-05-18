@@ -9,6 +9,8 @@ export type PriceBreakdown = {
   crossPlatformFee: number
   finalAmount: number
   vaultValueOffset: number
+  vaultMetalCredit: number
+  gstOnGoldSaved: number
   payableAmount: number
   goldFromVault: number
   discountAmount: number
@@ -165,6 +167,25 @@ export function vaultGramsAtListingRateForOrderInr(finalOrderInr: number, metalR
   return finalOrderInr / metalRateInrPerGram
 }
 
+/** Vault grams to bring payable to zero (includes GST relief on vaulted gold metal). */
+export function suggestedVaultGramsForFullOrder(
+  p: MarketplaceProductDTO,
+  vaultBalanceGrams: number,
+  ctx?: CheckoutPricingContext,
+  quantity: number = 1,
+): number {
+  const metalRate = Number.parseFloat(p.metal_rate_inr_per_gram_used)
+  if (!(metalRate > 0) || vaultBalanceGrams <= 0) return 0
+  const cashOnly = calculateCheckoutPrice(p, 0, 0, ctx, quantity)
+  let grams = vaultGramsAtListingRateForOrderInr(cashOnly.finalAmount, metalRate)
+  for (let i = 0; i < 10; i++) {
+    const bd = calculateCheckoutPrice(p, grams, vaultBalanceGrams, ctx, quantity)
+    if (bd.payableAmount <= 0.01) return Math.min(grams, vaultBalanceGrams)
+    grams += bd.payableAmount / metalRate
+  }
+  return Math.min(grams, vaultBalanceGrams)
+}
+
 /** True when vaulted grams at this custodian are enough to cover the full order at the listing vault rate. */
 export function vaultCanCoverFullOrder(
   p: MarketplaceProductDTO,
@@ -209,23 +230,30 @@ export function calculateCheckoutPrice(
     jewellerSubtotal: j0.jewellerSubtotal * q,
   }
   const crossPlatformFee = cridoraCrossPlatformFeeInr(p, ctx) * q
-  const finalAmount = j.jewellerSubtotal + crossPlatformFee
   const metalRate = Number.parseFloat(p.metal_rate_inr_per_gram_used)
   const cappedGrams = Math.max(0, Math.min(vaultGramsToApply, vaultBalanceGrams))
   const rawVaultInr = cappedGrams * metalRate
+  const vaultMetalCredit = Math.min(rawVaultInr, j.goldValue)
+  const gstOnGoldFull = j.gstOnGold
+  const gstOnGold = Math.max(0, (j.goldValue - vaultMetalCredit) * 0.03)
+  const gstOnGoldSaved = Math.max(0, gstOnGoldFull - gstOnGold)
+  const jewellerSubtotal = j.goldValue - vaultMetalCredit + j.makingCharges + gstOnGold + j.gstOnMaking
+  const finalAmount = jewellerSubtotal + crossPlatformFee
   const vaultValueOffset = Math.min(rawVaultInr, finalAmount)
   const payableAmount = Math.max(0, finalAmount - vaultValueOffset)
-  const goldFromVault = metalRate > 0 ? vaultValueOffset / metalRate : 0
+  const goldFromVault = cappedGrams
 
   return {
     goldValue: j.goldValue,
     makingCharges: j.makingCharges,
-    gstOnGold: j.gstOnGold,
+    gstOnGold,
     gstOnMaking: j.gstOnMaking,
-    jewellerSubtotal: j.jewellerSubtotal,
+    jewellerSubtotal,
     crossPlatformFee,
     finalAmount,
     vaultValueOffset,
+    vaultMetalCredit,
+    gstOnGoldSaved,
     payableAmount,
     goldFromVault,
     discountAmount: j.discountAmount,

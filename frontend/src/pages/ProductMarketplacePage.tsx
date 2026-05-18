@@ -19,10 +19,17 @@ import { useLivePoll } from '@/lib/useLivePoll'
 import {
   calculateCheckoutPrice,
   makingChargesShortLabel,
-  vaultGramsAtListingRateForOrderInr,
+  suggestedVaultGramsForFullOrder,
   type CheckoutPricingContext,
   type PriceBreakdown,
 } from '@/lib/marketplacePricing'
+import {
+  MarketplaceCashPayStep,
+  MarketplaceCheckoutReceiptCard,
+  useMarketplaceOrderConfirm,
+  type MarketplaceCheckoutReceipt,
+} from '@/features/marketplace/MarketplaceCheckoutFlow'
+import { useAuth } from '@/context/AuthContext'
 import { fetchGoldWallet, holdingsJewellerIdsFromWallet, vaultCheckoutEligibleGramsAtJeweller, walletBalanceGrams, type GoldWalletDTO } from '@/lib/goldTransferApi'
 import { mergeJewellerListWithDemos } from '@/lib/jewellerMarketplaceDemos'
 import { LIVE_BALANCE_POLL_MS, LIVE_CATALOG_POLL_MS, LIVE_DIRECTORY_POLL_MS } from '@/lib/liveDeskIntervals'
@@ -77,10 +84,12 @@ function CheckoutView({
   product: MarketplaceProductDTO
   onBack: () => void
 }) {
-  const weight = Number.parseFloat(product.gold_weight_grams)
+  const { user } = useAuth()
   const [payMode, setPayMode] = useState<'cash' | 'vault'>('cash')
   const [vaultGrams, setVaultGrams] = useState(0)
   const [pricingCtx, setPricingCtx] = useState<CheckoutPricingContext | undefined>(undefined)
+  const [checkoutStep, setCheckoutStep] = useState<'pay' | 'cash' | 'receipt'>('pay')
+  const [receipt, setReceipt] = useState<MarketplaceCheckoutReceipt | null>(null)
   /** Spendable vaulted grams custodied with this listing's jeweller (fractional + deposit + scheme). */
   const [eligibleGramsAtSeller, setEligibleGramsAtSeller] = useState(0)
   const [totalVaultedAllPartners, setTotalVaultedAllPartners] = useState(0)
@@ -112,9 +121,10 @@ function CheckoutView({
     () => calculateCheckoutPrice(product, 0, 0, pricingCtx),
     [product, pricingCtx],
   )
-  const gramsSuggestedFullOrder = vaultGramsAtListingRateForOrderInr(
-    cashOnlyBreakdown.finalAmount,
-    metalRate,
+  const gramsSuggestedFullOrder = suggestedVaultGramsForFullOrder(
+    product,
+    eligibleGramsAtSeller,
+    pricingCtx,
   )
   const maxVaultGrams = eligibleGramsAtSeller
 
@@ -135,6 +145,41 @@ function CheckoutView({
 
   const payDisplay = Math.max(0, p.payableAmount)
   const vaultActive = payMode === 'vault'
+  const kycOk = user?.kyc_status === 'verified'
+
+  const { busy, error, setError, runConfirm } = useMarketplaceOrderConfirm({
+    product,
+    vaultGrams,
+    payMode,
+    breakdown: p,
+    onSuccess: (r) => {
+      setReceipt(r)
+      setCheckoutStep('receipt')
+    },
+  })
+
+  const onPrimaryPay = () => {
+    setError('')
+    if (!kycOk) {
+      setError('Complete KYC before checkout.')
+      return
+    }
+    if (payDisplay <= 0 && (vaultActive ? vaultGrams > 0 : true)) {
+      void runConfirm('')
+      return
+    }
+    if (payDisplay > 0) {
+      setCheckoutStep('cash')
+    }
+  }
+
+  if (checkoutStep === 'receipt' && receipt) {
+    return (
+      <div className="container page" style={{ paddingBottom: '4rem' }}>
+        <MarketplaceCheckoutReceiptCard receipt={receipt} onDone={onBack} />
+      </div>
+    )
+  }
 
   return (
     <div className="container page" style={{ paddingBottom: '4rem' }}>
@@ -452,12 +497,19 @@ function CheckoutView({
               >
                 <Row label="Grams selected (vault rate)" value={<strong>{vaultGrams.toFixed(3)}g</strong>} muted />
                 <Row
-                  label="Credit toward order (capped at invoice)"
-                  value={<strong style={{ color: 'var(--success)' }}>₹{formatInr(p.vaultValueOffset)}</strong>}
+                  label="Vault metal credit"
+                  value={<strong style={{ color: 'var(--success)' }}>₹{formatInr(p.vaultMetalCredit)}</strong>}
                   muted
                 />
+                {p.gstOnGoldSaved > 0 ? (
+                  <Row
+                    label="GST on gold (already taxed in vault)"
+                    value={<strong style={{ color: 'var(--success)' }}>-₹{formatInr(p.gstOnGoldSaved)}</strong>}
+                    muted
+                  />
+                ) : null}
                 <Row
-                  label="Grams counted on this bill"
+                  label="Grams debited"
                   value={<strong className="tabular">{p.goldFromVault.toFixed(3)}g</strong>}
                   muted
                 />
@@ -494,22 +546,47 @@ function CheckoutView({
             </p>
           </div>
 
-          <button type="button" className="btn btn-primary" style={{ width: '100%' }}>
-            {payDisplay <= 0 && vaultActive && vaultGrams > 0
-              ? 'Confirm — vault covers this order'
-              : payDisplay <= 0
-                ? 'Confirm payment'
-                : vaultActive && vaultGrams > 0
-                  ? `Pay ₹${formatInr(payDisplay)} cash + vault`
-                  : `Pay ₹${formatInr(payDisplay)} with cash / UPI`}
-          </button>
-
-          <p className="form-footnote" style={{ marginTop: '1rem', textAlign: 'center', fontSize: '0.72rem' }}>
-            Demo checkout · piece {weight.toFixed(3)}g
-            {vaultActive && vaultGrams > 0
-              ? ` · ~${p.goldFromVault.toFixed(3)}g valued toward this bill at confirm`
-              : ''}
-          </p>
+          {checkoutStep === 'cash' ? (
+            <MarketplaceCashPayStep
+              amountInr={payDisplay}
+              jewellerName={product.jeweller_name}
+              busy={busy}
+              error={error}
+              onBack={() => setCheckoutStep('pay')}
+              onPaid={(method) => void runConfirm(method)}
+            />
+          ) : (
+            <>
+              {!kycOk ? (
+                <p className="form-error" style={{ marginBottom: '0.75rem' }}>
+                  Complete KYC before checkout.{' '}
+                  <Link to="/userdashboard?section=profile_kyc">Open KYC</Link>
+                </p>
+              ) : null}
+              {error ? (
+                <p className="form-error" role="alert" style={{ marginBottom: '0.75rem' }}>
+                  {error}
+                </p>
+              ) : null}
+              <button
+                type="button"
+                className="btn btn-primary"
+                style={{ width: '100%' }}
+                disabled={busy || !kycOk}
+                onClick={onPrimaryPay}
+              >
+                {busy
+                  ? 'Processing…'
+                  : payDisplay <= 0 && vaultActive && vaultGrams > 0
+                    ? 'Confirm — vault covers this order'
+                    : payDisplay <= 0
+                      ? 'Confirm payment'
+                      : vaultActive && vaultGrams > 0
+                        ? `Pay ₹${formatInr(payDisplay)} cash + vault`
+                        : `Pay ₹${formatInr(payDisplay)} with cash / UPI`}
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>

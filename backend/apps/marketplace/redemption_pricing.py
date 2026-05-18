@@ -16,6 +16,8 @@ from .spot_prices import resolve_cridora_base_22k_inr
 User = get_user_model()
 
 _DISCOUNT_ON_MAKING = Decimal("0.05")
+_GST_GOLD = Decimal("0.03")
+_GST_MAKING = Decimal("0.18")
 
 
 def customer_has_vault_holdings_at_jeweller(
@@ -31,10 +33,6 @@ def customer_has_vault_holdings_at_jeweller(
         or Decimal("0")
     )
     return total > 0
-
-
-_GST_GOLD = Decimal("0.03")
-_GST_MAKING = Decimal("0.18")
 
 
 def _effective_making_percent(product: MarketplaceProduct, same_store: bool) -> Decimal:
@@ -65,18 +63,10 @@ def _raw_making_inr(
     return (product.gold_weight_grams * per_g).quantize(Decimal("0.01"))
 
 
-def invoice_totals_for_vault_redemption(
+def _jeweller_line_parts(
     product: MarketplaceProduct, customer: User | None
-) -> tuple[Decimal, Decimal, Decimal, bool, Decimal]:
-    """
-    Returns (
-        final_invoice_inr,
-        metal_rate_inr_per_gram_used,
-        jeweller_subtotal_inr,
-        same_store,
-        cross_platform_fee_inr,
-    ).
-    """
+) -> tuple[Decimal, Decimal, Decimal, Decimal, Decimal, bool]:
+    """gold_line, making, gst_gold_full, gst_making, discount, same_store."""
     profile = jeweller_profile_for(product.jeweller)
     cridora_base, _ = resolve_cridora_base_22k_inr()
     metal_rate = gold_rate_inr_per_gram(product, profile, cridora_base)
@@ -93,11 +83,35 @@ def invoice_totals_for_vault_redemption(
     raw_making = _raw_making_inr(product, metal_val, same_store)
     discount = (raw_making * _DISCOUNT_ON_MAKING).quantize(Decimal("0.01"))
     making = (raw_making - discount).quantize(Decimal("0.01"))
-    gst_gold = (gold_line * _GST_GOLD).quantize(Decimal("0.01"))
+    gst_gold_full = (gold_line * _GST_GOLD).quantize(Decimal("0.01"))
     gst_making = (making * _GST_MAKING).quantize(Decimal("0.01"))
-    jeweller_subtotal = (gold_line + making + gst_gold + gst_making).quantize(
-        Decimal("0.01")
+    return gold_line, making, gst_gold_full, gst_making, discount, same_store
+
+
+def checkout_totals_with_vault(
+    product: MarketplaceProduct,
+    customer: User | None,
+    vault_grams: Decimal,
+) -> dict[str, Decimal | bool]:
+    """
+    Checkout totals when applying up to `vault_grams` from the customer's vault at the listing jeweller.
+    GST on gold is waived on the metal portion paid from vault (already taxed when vaulted).
+    """
+    gold_line, making, gst_gold_full, gst_making, _discount, same_store = _jeweller_line_parts(
+        product, customer
     )
+    profile = jeweller_profile_for(product.jeweller)
+    cridora_base, _ = resolve_cridora_base_22k_inr()
+    metal_rate = gold_rate_inr_per_gram(product, profile, cridora_base)
+
+    grams = max(Decimal("0"), vault_grams)
+    raw_vault_inr = (grams * metal_rate).quantize(Decimal("0.01"))
+    vault_metal_credit = min(raw_vault_inr, gold_line)
+    gst_on_gold = ((gold_line - vault_metal_credit) * _GST_GOLD).quantize(Decimal("0.01"))
+    gst_on_gold_saved = max(Decimal("0"), gst_gold_full - gst_on_gold)
+    jeweller_subtotal = (
+        gold_line - vault_metal_credit + making + gst_on_gold + gst_making
+    ).quantize(Decimal("0.01"))
 
     cross = Decimal("0")
     if product.is_x_redeem and not customer_has_vault_holdings_at_jeweller(
@@ -108,7 +122,36 @@ def invoice_totals_for_vault_redemption(
             cross = Decimal("0")
 
     final_invoice = (jeweller_subtotal + cross).quantize(Decimal("0.01"))
-    return final_invoice, metal_rate, jeweller_subtotal, same_store, cross
+    vault_value_offset = min(raw_vault_inr, final_invoice)
+    cash_payable = max(Decimal("0"), final_invoice - vault_value_offset).quantize(
+        Decimal("0.01")
+    )
+
+    return {
+        "final_invoice_inr": final_invoice,
+        "metal_rate_inr_per_gram": metal_rate,
+        "jeweller_subtotal_inr": jeweller_subtotal,
+        "same_store": same_store,
+        "cross_platform_fee_inr": cross,
+        "vault_metal_credit_inr": vault_metal_credit,
+        "gst_on_gold_saved_inr": gst_on_gold_saved,
+        "cash_payable_inr": cash_payable,
+        "grams_applied": grams,
+    }
+
+
+def invoice_totals_for_vault_redemption(
+    product: MarketplaceProduct, customer: User | None
+) -> tuple[Decimal, Decimal, Decimal, bool, Decimal]:
+    """Cash-only invoice (no vault grams applied)."""
+    totals = checkout_totals_with_vault(product, customer, Decimal("0"))
+    return (
+        totals["final_invoice_inr"],
+        totals["metal_rate_inr_per_gram"],
+        totals["jeweller_subtotal_inr"],
+        totals["same_store"],
+        totals["cross_platform_fee_inr"],
+    )
 
 
 def grams_to_charge_for_invoice(final_invoice_inr: Decimal, metal_rate_inr: Decimal) -> Decimal:
@@ -117,3 +160,20 @@ def grams_to_charge_for_invoice(final_invoice_inr: Decimal, metal_rate_inr: Deci
     return (final_invoice_inr / metal_rate_inr).quantize(
         Decimal("0.000001"), rounding=ROUND_UP
     )
+
+
+def suggested_vault_grams_for_full_order(
+    product: MarketplaceProduct, customer: User | None, vault_available: Decimal
+) -> Decimal:
+    """Grams needed to bring cash payable to zero (iterative, matches frontend)."""
+    cash = checkout_totals_with_vault(product, customer, Decimal("0"))
+    metal_rate = cash["metal_rate_inr_per_gram"]
+    if metal_rate <= 0 or vault_available <= 0:
+        return Decimal("0")
+    grams = grams_to_charge_for_invoice(cash["final_invoice_inr"], metal_rate)
+    for _ in range(10):
+        bd = checkout_totals_with_vault(product, customer, grams)
+        if bd["cash_payable_inr"] <= Decimal("0.01"):
+            return min(grams, vault_available)
+        grams += (bd["cash_payable_inr"] / metal_rate).quantize(Decimal("0.000001"))
+    return min(grams, vault_available)

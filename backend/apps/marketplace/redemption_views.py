@@ -20,8 +20,8 @@ from apps.accounts.vault_service import debit_customer_vault_for_transfer
 
 from .models import MarketplaceProduct
 from .redemption_pricing import (
-    grams_to_charge_for_invoice,
-    invoice_totals_for_vault_redemption,
+    checkout_totals_with_vault,
+    suggested_vault_grams_for_full_order,
 )
 
 User = get_user_model()
@@ -63,32 +63,57 @@ def _load_eligible_product(pk: int) -> MarketplaceProduct | None:
         return None
 
 
-def _redemption_quote_payload(product: MarketplaceProduct, customer: User) -> dict:
-    final_inr, metal_rate, jeweller_sub, same_store, cross = (
-        invoice_totals_for_vault_redemption(product, customer)
-    )
-    grams_req = grams_to_charge_for_invoice(final_inr, metal_rate)
+def _parse_vault_grams_param(raw: str | None) -> Decimal | None:
+    if raw is None or str(raw).strip() == "":
+        return None
+    try:
+        g = Decimal(str(raw).strip())
+    except InvalidOperation:
+        return None
+    if g < 0:
+        return None
+    return g.quantize(Decimal("0.000001"))
+
+
+def _redemption_quote_payload(
+    product: MarketplaceProduct, customer: User, vault_grams: Decimal | None
+) -> dict:
     available = _vault_grams_available(customer, product.jeweller)
+    if vault_grams is None:
+        grams = suggested_vault_grams_for_full_order(product, customer, available)
+    else:
+        grams = min(vault_grams, available)
+
+    totals = checkout_totals_with_vault(product, customer, grams)
+    cash_only = checkout_totals_with_vault(product, customer, Decimal("0"))
+    suggested = suggested_vault_grams_for_full_order(product, customer, available)
     j = product.jeweller
+
     return {
         "product_id": product.id,
         "product_name": product.name,
         "jeweller_id": j.id,
         "jeweller_name": j.business_name or j.email or "",
         "stock_quantity": product.stock_quantity,
-        "final_invoice_inr": str(final_inr),
-        "jeweller_subtotal_inr": str(jeweller_sub),
-        "metal_rate_inr_per_gram": str(metal_rate),
-        "grams_required": str(grams_req),
+        "final_invoice_inr": str(totals["final_invoice_inr"]),
+        "cash_payable_inr": str(totals["cash_payable_inr"]),
+        "jeweller_subtotal_inr": str(totals["jeweller_subtotal_inr"]),
+        "metal_rate_inr_per_gram": str(totals["metal_rate_inr_per_gram"]),
+        "grams_required": str(grams),
+        "grams_suggested_full_order": str(suggested),
         "vault_grams_available": str(available),
-        "sufficient_vault": available >= grams_req,
-        "same_store": same_store,
-        "cross_platform_fee_inr": str(cross),
+        "sufficient_vault": grams <= 0 or available >= grams,
+        "vault_covers_full_order": totals["cash_payable_inr"] <= 0 and grams > 0,
+        "same_store": totals["same_store"],
+        "cross_platform_fee_inr": str(totals["cross_platform_fee_inr"]),
+        "vault_metal_credit_inr": str(totals["vault_metal_credit_inr"]),
+        "gst_on_gold_saved_inr": str(totals["gst_on_gold_saved_inr"]),
+        "cash_only_final_invoice_inr": str(cash_only["final_invoice_inr"]),
     }
 
 
 class VaultRedemptionQuoteView(APIView):
-    """GET ?product_id= — server-side checkout aligned with marketplace pricing."""
+    """GET ?product_id=&vault_grams= — server-side checkout aligned with marketplace pricing."""
 
     permission_classes = [IsAuthenticated]
 
@@ -108,7 +133,13 @@ class VaultRedemptionQuoteView(APIView):
                 {"detail": "Product not available."}, status=status.HTTP_404_NOT_FOUND
             )
 
-        return Response(_redemption_quote_payload(product, request.user))
+        vg = _parse_vault_grams_param(request.query_params.get("vault_grams"))
+        if request.query_params.get("vault_grams") is not None and vg is None:
+            return Response(
+                {"detail": "Invalid vault_grams."}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        return Response(_redemption_quote_payload(product, request.user, vg))
 
 
 class VaultRedemptionConfirmView(APIView):
@@ -137,50 +168,91 @@ class VaultRedemptionConfirmView(APIView):
                 {"detail": "Product not available."}, status=status.HTTP_404_NOT_FOUND
             )
 
-        final_inr, metal_rate, jeweller_sub, same_store, cross = (
-            invoice_totals_for_vault_redemption(product, request.user)
-        )
-        grams_req = grams_to_charge_for_invoice(final_inr, metal_rate)
-        if grams_req <= 0 or metal_rate <= 0:
+        vault_grams_raw = body.get("vault_grams")
+        if vault_grams_raw is None or str(vault_grams_raw).strip() == "":
+            vault_grams = Decimal("0")
+        else:
+            try:
+                vault_grams = Decimal(str(vault_grams_raw).strip()).quantize(
+                    Decimal("0.000001")
+                )
+            except InvalidOperation:
+                return Response(
+                    {"detail": "Invalid vault_grams."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            if vault_grams < 0:
+                return Response(
+                    {"detail": "vault_grams must be non-negative."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+        cash_method = str(body.get("cash_payment_method") or "").strip()[:32]
+
+        jeweller = product.jeweller
+        available = _vault_grams_available(request.user, jeweller)
+        grams_to_debit = min(vault_grams, available)
+        totals = checkout_totals_with_vault(product, request.user, grams_to_debit)
+
+        final_inr = totals["final_invoice_inr"]
+        metal_rate = totals["metal_rate_inr_per_gram"]
+        jeweller_sub = totals["jeweller_subtotal_inr"]
+        same_store = totals["same_store"]
+        cross = totals["cross_platform_fee_inr"]
+        cash_payable = totals["cash_payable_inr"]
+        gst_saved = totals["gst_on_gold_saved_inr"]
+
+        if metal_rate <= 0 or final_inr <= 0:
             return Response(
                 {"detail": "Invalid pricing for this product."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        exp_fin_raw = body.get("expected_final_invoice_inr")
-        exp_g_raw = body.get("expected_grams_required")
-        exp_fin_set = exp_fin_raw is not None and str(exp_fin_raw).strip() != ""
-        exp_g_set = exp_g_raw is not None and str(exp_g_raw).strip() != ""
-        if exp_fin_set ^ exp_g_set:
+        if grams_to_debit <= 0 and cash_payable <= 0:
             return Response(
-                {
-                    "detail": "Send both expected_final_invoice_inr and expected_grams_required, or omit both."
-                },
+                {"detail": "Specify vault grams or a cash payment amount."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        if exp_fin_set and exp_g_set:
+
+        if grams_to_debit > 0 and available < grams_to_debit:
+            return Response(
+                {"detail": "Insufficient vaulted gold at this jeweller."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if cash_payable > 0 and not cash_method:
+            return Response(
+                {"detail": "cash_payment_method required when cash is due."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        exp_fin = body.get("expected_final_invoice_inr")
+        exp_cash = body.get("expected_cash_payable_inr")
+        exp_g = body.get("expected_grams_charged")
+        if any(x is not None and str(x).strip() != "" for x in (exp_fin, exp_cash, exp_g)):
             try:
-                exp_fin = Decimal(str(exp_fin_raw).strip())
-                exp_g = Decimal(str(exp_g_raw).strip())
+                exp_fin_d = Decimal(str(exp_fin).strip()).quantize(Decimal("0.01"))
+                exp_cash_d = Decimal(str(exp_cash).strip()).quantize(Decimal("0.01"))
+                exp_g_d = Decimal(str(exp_g).strip()).quantize(Decimal("0.000001"))
             except InvalidOperation:
                 return Response(
                     {"detail": "Invalid expected quote fields."},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
-            fin_snap = final_inr.quantize(Decimal("0.01"))
-            g_snap = grams_req.quantize(Decimal("0.000001"))
-            exp_fin_q = exp_fin.quantize(Decimal("0.01"))
-            exp_g_q = exp_g.quantize(Decimal("0.000001"))
-            if fin_snap != exp_fin_q or g_snap != exp_g_q:
+            if (
+                exp_fin_d != final_inr.quantize(Decimal("0.01"))
+                or exp_cash_d != cash_payable.quantize(Decimal("0.01"))
+                or exp_g_d != grams_to_debit.quantize(Decimal("0.000001"))
+            ):
                 return Response(
                     {
                         "detail": "Pricing changed since quote. Refresh and try again.",
-                        "quote": _redemption_quote_payload(product, request.user),
+                        "quote": _redemption_quote_payload(
+                            product, request.user, grams_to_debit
+                        ),
                     },
                     status=status.HTTP_409_CONFLICT,
                 )
-
-        jeweller = product.jeweller
 
         redemption: VaultProductRedemption | None = None
         try:
@@ -203,41 +275,37 @@ class VaultRedemptionConfirmView(APIView):
                         )
                     )
 
-                avail = _vault_grams_available(request.user, jeweller)
-                if avail < grams_req:
-                    raise _RedemptionFlowError(
-                        Response(
-                            {"detail": "Insufficient vaulted gold at this jeweller."},
-                            status=status.HTTP_400_BAD_REQUEST,
-                        )
+                if grams_to_debit > 0:
+                    _lines, debit_err = debit_customer_vault_for_transfer(
+                        request.user, jeweller, grams_to_debit
                     )
-
-                _lines, debit_err = debit_customer_vault_for_transfer(
-                    request.user, jeweller, grams_req
-                )
-                if debit_err:
-                    raise _RedemptionFlowError(
-                        Response(
-                            {"detail": debit_err},
-                            status=status.HTTP_400_BAD_REQUEST,
+                    if debit_err:
+                        raise _RedemptionFlowError(
+                            Response(
+                                {"detail": debit_err},
+                                status=status.HTTP_400_BAD_REQUEST,
+                            )
                         )
-                    )
 
                 redemption = VaultProductRedemption.objects.create(
                     customer=request.user,
                     jeweller=jeweller,
                     product=locked,
                     product_name=locked.name,
-                    grams_charged=grams_req,
+                    grams_charged=grams_to_debit,
                     final_invoice_inr=final_inr,
                     jeweller_subtotal_inr=jeweller_sub,
                     metal_rate_inr_per_gram=metal_rate,
                     same_store_checkout=same_store,
                     cross_platform_fee_inr=cross,
+                    cash_paid_inr=cash_payable,
+                    cash_payment_method=cash_method,
+                    gst_on_gold_saved_inr=gst_saved,
                 )
-                release_custodial_liability_for_redemption_purchase(
-                    jeweller, request.user, grams_req, redemption
-                )
+                if grams_to_debit > 0:
+                    release_custodial_liability_for_redemption_purchase(
+                        jeweller, request.user, grams_to_debit, redemption
+                    )
 
                 MarketplaceProduct.objects.filter(pk=locked.pk).update(
                     stock_quantity=F("stock_quantity") - 1
@@ -248,12 +316,15 @@ class VaultRedemptionConfirmView(APIView):
         assert redemption is not None
         return Response(
             {
-                "detail": "Redemption recorded. Collect your order at the jeweller showroom.",
+                "detail": "Order confirmed. Collect your piece at the jeweller showroom.",
                 "redemption": {
                     "id": redemption.id,
                     "reference": f"RP-{redemption.id}",
                     "grams_charged": str(redemption.grams_charged),
                     "final_invoice_inr": str(redemption.final_invoice_inr),
+                    "cash_paid_inr": str(redemption.cash_paid_inr),
+                    "cash_payment_method": redemption.cash_payment_method,
+                    "gst_on_gold_saved_inr": str(redemption.gst_on_gold_saved_inr),
                     "product_name": redemption.product_name,
                     "jeweller_name": jeweller.business_name or jeweller.email or "",
                 },
