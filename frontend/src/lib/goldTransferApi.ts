@@ -4,6 +4,7 @@ export type VaultRowDTO = {
   vault_public_id: string
   custodian_id: number
   custodian_label: string
+  is_primary_custodian?: boolean
   fractional_grams: string
   deposit_grams?: string
   golden_scheme_grams?: string
@@ -181,6 +182,15 @@ export type GoldResolveRecipient = {
   user_type: string
   kyc_status: string
   jeweller_label: string
+}
+
+export type GoldResolveResponse = {
+  found: boolean
+  recipient?: GoldResolveRecipient
+  detail?: string
+  gold_upi?: string
+  routing_kind?: string
+  destination_custodian_id?: number
 }
 
 export async function fetchGoldWallet(): Promise<GoldWalletDTO | null> {
@@ -376,22 +386,12 @@ export async function postJewellerSellbackComplete(
   return { ok: true, detail: data.detail ?? 'Completed.' }
 }
 
-export async function resolveGoldUPI(gold_upi: string): Promise<{
-  found: boolean
-  recipient?: GoldResolveRecipient
-  detail?: string
-  gold_upi?: string
-}> {
+export async function resolveGoldUPI(gold_upi: string): Promise<GoldResolveResponse> {
   const res = await authFetch('/api/v1/gold/resolve/', {
     method: 'POST',
     jsonBody: { gold_upi: gold_upi.trim() },
   })
-  const data = (await res.json()) as {
-    found?: boolean
-    recipient?: GoldResolveRecipient
-    detail?: string
-    gold_upi?: string
-  }
+  const data = (await res.json()) as GoldResolveResponse
   if (!res.ok) {
     return {
       found: false,
@@ -399,21 +399,21 @@ export async function resolveGoldUPI(gold_upi: string): Promise<{
         (data.detail != null ? String(data.detail) : null) ?? 'Could not resolve GoldUPI.',
     }
   }
-  return data as {
-    found: boolean
-    recipient?: GoldResolveRecipient
-    detail?: string
-    gold_upi?: string
-  }
+  return data
 }
 
 export async function sendGoldTransfer(
   gold_upi: string,
   grams: string,
+  from_custodian_id?: number | null,
 ): Promise<{ ok: true; wallet: GoldWalletDTO; detail: string } | { ok: false; detail: string }> {
+  const body: Record<string, unknown> = { gold_upi: gold_upi.trim(), grams }
+  if (from_custodian_id != null && Number.isFinite(from_custodian_id)) {
+    body.from_custodian_id = from_custodian_id
+  }
   const res = await authFetch('/api/v1/gold/transfers/', {
     method: 'POST',
-    jsonBody: { gold_upi: gold_upi.trim(), grams },
+    jsonBody: body,
   })
   const data = (await res.json()) as {
     detail?: string

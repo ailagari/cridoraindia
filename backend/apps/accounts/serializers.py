@@ -352,6 +352,7 @@ class VaultRowSerializer(serializers.Serializer):
     vault_public_id = serializers.CharField(allow_blank=True)
     custodian_id = serializers.IntegerField()
     custodian_label = serializers.CharField(allow_blank=True)
+    is_primary_custodian = serializers.BooleanField(required=False, default=False)
     fractional_grams = serializers.CharField()
     deposit_grams = serializers.CharField(required=False, allow_blank=True, default="0")
     golden_scheme_grams = serializers.CharField(required=False, allow_blank=True, default="0")

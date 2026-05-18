@@ -71,6 +71,14 @@ def ensure_vault(owner: User, custodian: User) -> GoldVault:
     return vault
 
 
+def customer_has_vault_at_custodian(customer: User, custodian: User) -> bool:
+    if customer.user_type != User.CUSTOMER:
+        return False
+    if custodian.user_type != User.JEWELLER:
+        return False
+    return GoldVault.objects.filter(owner=customer, custodian=custodian).exists()
+
+
 def sync_customer_aggregate_balance(customer: User) -> None:
     if customer.user_type != User.CUSTOMER:
         return
@@ -307,6 +315,10 @@ def wallet_vault_payload(customer: User) -> list[dict]:
                 "vault_public_id": v.vault_public_id or "",
                 "custodian_id": j.id,
                 "custodian_label": j.business_name or j.email or "",
+                "is_primary_custodian": bool(
+                    customer.default_jeweller_id
+                    and j.id == customer.default_jeweller_id
+                ),
                 "fractional_grams": str(g_frac),
                 "deposit_grams": str(g_dep),
                 "golden_scheme_grams": str(g_scheme),

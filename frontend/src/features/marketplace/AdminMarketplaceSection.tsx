@@ -161,7 +161,7 @@ function formatMaybeStrInr(s: unknown, fractionDigits = 2): string {
 
 function useTimedSuccessMessage(durationMs = 3400) {
   const [message, setMessage] = useState<string | null>(null)
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const timerRef = useRef<number | null>(null)
 
   useEffect(() => {
     return () => {

@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { DashboardLayout } from '@/components/DashboardLayout'
 import { CustomerJewellersBrowsePanel } from '@/features/marketplace/CustomerJewellersBrowsePanel'
 import { CustomerProductsBrowsePanel } from '@/features/marketplace/CustomerProductsBrowsePanel'
+import { CustomerVaultAddressesPanel } from '@/features/gold/CustomerVaultAddressesPanel'
 import { GoldTransferPanel } from '@/features/gold/GoldTransferPanel'
 import { CustomerDepositInfoPanel } from '@/features/invest/CustomerDepositInfoPanel'
 import { FractionalPurchasePanel } from '@/features/invest/FractionalPurchasePanel'
@@ -109,6 +110,7 @@ export function CustomerDashboardPage() {
     >
       {active === 'portfolio_overview' ? <CustomerPortfolioPanel /> : null}
       {active === 'portfolio_holdings' ? <CustomerVaultsPanel /> : null}
+      {active === 'portfolio_vault_ids' ? <CustomerVaultAddressesPanel /> : null}
       {active === 'shop_jewellers' ? <CustomerJewellersBrowsePanel /> : null}
       {active === 'shop_products' ? <CustomerProductsBrowsePanel /> : null}
       {active === 'invest_fractional' ? <FractionalPurchasePanel /> : null}

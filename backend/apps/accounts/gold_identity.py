@@ -14,6 +14,11 @@ JEWELLER_CODE_RE = re.compile(r"^[a-z0-9][a-z0-9-]{1,31}$")
 CRIDORA_VAULT_ID_RE = re.compile(
     r"^([a-z0-9_]{3,32})\.([a-z0-9][a-z0-9-]{1,31})@cridora$"
 )
+CRIDORA_PRIMARY_HANDLE_RE = re.compile(r"^([a-z0-9_]{3,32})@cridora$")
+ROUTING_VAULT_PUBLIC = "vault_public_id"
+ROUTING_PRIMARY_CRIDORA = "primary_cridora"
+ROUTING_CUSTOMER_VAULT_UPI = "customer_vault_upi"
+ROUTING_JEWELLER_UPI = "jeweller_upi"
 
 MIN_TRANSFER_GRAMS = Decimal("0.000001")
 MAX_TRANSFER_GRAMS = Decimal("999999.999999")
@@ -26,17 +31,21 @@ def normalize_cridora_vault_public_id(raw: str) -> str | None:
     return None
 
 
-def resolve_owner_by_vault_public_id(raw: str) -> User | None:
+def resolve_vault_by_public_id(raw: str):
     from .models import GoldVault
 
     key = normalize_cridora_vault_public_id(raw)
     if not key:
         return None
-    v = (
+    return (
         GoldVault.objects.filter(vault_public_id__iexact=key)
-        .select_related("owner")
+        .select_related("owner", "custodian")
         .first()
     )
+
+
+def resolve_owner_by_vault_public_id(raw: str) -> User | None:
+    v = resolve_vault_by_public_id(raw)
     return v.owner if v else None
 
 
@@ -132,3 +141,134 @@ def validate_handle_local(handle: str) -> tuple[str | None, str | None]:
     if not h or not GOLD_HANDLE_LOCAL_RE.match(h):
         return None, "Handle must be 3–32 chars: letters, digits, underscore."
     return h, None
+
+
+class InboundTransferTarget:
+    """Recipient user, custodian vault that receives grams, and normalized routing string."""
+
+    __slots__ = ("recipient", "destination_custodian", "resolved_address", "routing_kind")
+
+    def __init__(
+        self,
+        recipient: User,
+        destination_custodian: User,
+        resolved_address: str,
+        routing_kind: str,
+    ) -> None:
+        self.recipient = recipient
+        self.destination_custodian = destination_custodian
+        self.resolved_address = resolved_address
+        self.routing_kind = routing_kind
+
+
+def resolve_inbound_transfer_target(raw: str) -> InboundTransferTarget | None:
+    """
+    Resolve who receives a transfer and which custodian vault is credited.
+
+    Forms:
+    - handle.jewellercode@cridora — specific customer vault at one jeweller
+    - handle@cridora — primary (default jeweller) vault for that customer
+    - handle@jewellercode — customer vault at that jeweller, or jeweller's own GoldUPI
+    - exact stored gold_upi (legacy)
+    """
+    s = (raw or "").strip()
+    if not s:
+        return None
+
+    v = resolve_vault_by_public_id(s)
+    if v:
+        return InboundTransferTarget(
+            v.owner,
+            v.custodian,
+            v.vault_public_id or normalize_cridora_vault_public_id(s) or s.lower(),
+            ROUTING_VAULT_PUBLIC,
+        )
+
+    lo = s.lower()
+    m_primary = CRIDORA_PRIMARY_HANDLE_RE.match(lo)
+    if m_primary:
+        local = m_primary.group(1)
+        cust = (
+            User.objects.filter(
+                gold_handle_local__iexact=local, user_type=User.CUSTOMER
+            )
+            .select_related("default_jeweller")
+            .first()
+        )
+        if not cust or not cust.default_jeweller_id:
+            return None
+        dj = cust.default_jeweller
+        if dj is None:
+            return None
+        return InboundTransferTarget(
+            cust,
+            dj,
+            f"{local}@cridora",
+            ROUTING_PRIMARY_CRIDORA,
+        )
+
+    normalized_upi = normalize_gold_upi(s)
+    if normalized_upi:
+        local, _, code = normalized_upi.partition("@")
+        jeweller = (
+            User.objects.filter(
+                user_type=User.JEWELLER,
+                jeweller_code__iexact=code,
+                kyc_status=User.KYC_VERIFIED,
+            )
+            .first()
+        )
+        if not jeweller:
+            return None
+        j_self = (
+            User.objects.filter(
+                user_type=User.JEWELLER,
+                gold_handle_local__iexact=local,
+                jeweller_code__iexact=code,
+            )
+            .first()
+        )
+        if j_self:
+            return InboundTransferTarget(
+                j_self,
+                j_self,
+                normalized_upi,
+                ROUTING_JEWELLER_UPI,
+            )
+        cust = (
+            User.objects.filter(
+                user_type=User.CUSTOMER,
+                gold_handle_local__iexact=local,
+            )
+            .select_related("default_jeweller")
+            .first()
+        )
+        if cust:
+            return InboundTransferTarget(
+                cust,
+                jeweller,
+                normalized_upi,
+                ROUTING_CUSTOMER_VAULT_UPI,
+            )
+        stored = (
+            User.objects.filter(gold_upi__iexact=normalized_upi)
+            .select_related("default_jeweller")
+            .first()
+        )
+        if stored:
+            if stored.user_type == User.JEWELLER:
+                return InboundTransferTarget(
+                    stored,
+                    stored,
+                    normalized_upi,
+                    ROUTING_JEWELLER_UPI,
+                )
+            dj = stored.default_jeweller
+            if dj:
+                return InboundTransferTarget(
+                    stored,
+                    dj,
+                    normalized_upi,
+                    ROUTING_CUSTOMER_VAULT_UPI,
+                )
+    return None

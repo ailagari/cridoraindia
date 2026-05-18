@@ -16,15 +16,12 @@ from .wallet_extras import (
 from .gold_identity import (
     compute_gold_upi,
     effective_custodian,
-    normalize_cridora_vault_public_id,
-    normalize_gold_upi,
     parse_grams,
-    resolve_owner_by_vault_public_id,
-    resolve_user_by_gold_upi,
+    resolve_inbound_transfer_target,
     validate_handle_local,
     validate_jeweller_code,
 )
-from .models import GoldBalance, GoldTransfer
+from .models import GoldBalance, GoldTransfer, GoldVault
 from .serializers import GoldTransferNotifySerializer, GoldWalletSerializer
 from .services.personal_holdings import customer_portfolio_totals_payload
 from .services.jeweller_customer_vault_ledger import (
@@ -34,6 +31,7 @@ from .services.jeweller_customer_vault_ledger import (
 from .vault_service import (
     credit_customer_fractional,
     credit_customer_vault_lines,
+    customer_has_vault_at_custodian,
     debit_customer_vault_for_transfer,
     jeweller_custody_vault_payload,
     legacy_credit_jeweller_balance,
@@ -102,12 +100,17 @@ def _wallet_payload(user: User) -> dict:
 
 
 def _resolve_preview_user(
-    to_user: User, *, destination_handle: str | None = None
+    to_user: User,
+    *,
+    destination_handle: str | None = None,
+    credit_custodian: User | None = None,
 ) -> dict:
     dj = to_user.default_jeweller
     jeweller_label = ""
     if to_user.user_type == User.JEWELLER:
         jeweller_label = to_user.business_name or to_user.email
+    elif credit_custodian:
+        jeweller_label = credit_custodian.business_name or credit_custodian.email
     elif dj:
         jeweller_label = dj.business_name or dj.email
     return {
@@ -118,16 +121,6 @@ def _resolve_preview_user(
         "kyc_status": to_user.kyc_status,
         "jeweller_label": jeweller_label,
     }
-
-
-def _resolve_transfer_recipient(raw: str) -> tuple[User | None, str | None]:
-    vault_key = normalize_cridora_vault_public_id(raw)
-    if vault_key:
-        return resolve_owner_by_vault_public_id(vault_key), vault_key
-    normalized = normalize_gold_upi(raw)
-    if not normalized:
-        return None, None
-    return resolve_user_by_gold_upi(normalized), normalized
 
 
 class GoldWalletView(APIView):
@@ -203,15 +196,20 @@ class GoldUPIResolveView(APIView):
 
     def post(self, request):
         raw = (request.data.get("gold_upi") or "").strip()
-        to_user, dest_handle = _resolve_transfer_recipient(raw)
-        if not dest_handle:
+        inbound = resolve_inbound_transfer_target(raw)
+        if not inbound:
             return Response(
                 {
                     "found": False,
-                    "detail": "Enter username@jewellercode or handle.jewellercode@cridora.",
+                    "detail": (
+                        "Enter handle.jewellercode@cridora, handle@cridora (primary), "
+                        "or user@jewellercode."
+                    ),
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        to_user = inbound.recipient
+        dest_handle = inbound.resolved_address
         if not to_user:
             return Response({"found": False, "gold_upi": dest_handle})
         if to_user.pk == request.user.pk:
@@ -226,7 +224,13 @@ class GoldUPIResolveView(APIView):
             )
         data = {
             "found": True,
-            "recipient": _resolve_preview_user(to_user, destination_handle=dest_handle),
+            "recipient": _resolve_preview_user(
+                to_user,
+                destination_handle=dest_handle,
+                credit_custodian=inbound.destination_custodian,
+            ),
+            "routing_kind": inbound.routing_kind,
+            "destination_custodian_id": inbound.destination_custodian.id,
         }
         return Response(data)
 
@@ -247,14 +251,72 @@ class GoldTransferCreateView(APIView):
                 status=status.HTTP_403_FORBIDDEN,
             )
         raw_upi = (request.data.get("gold_upi") or "").strip()
-        to_user, dest_handle = _resolve_transfer_recipient(raw_upi)
-        if not dest_handle or not to_user:
+        inbound = resolve_inbound_transfer_target(raw_upi)
+        if not inbound:
             return Response(
                 {
-                    "detail": "Recipient not found. Use username@jewellercode or handle.jewellercode@cridora.",
+                    "detail": (
+                        "Recipient not found. Use handle.jewellercode@cridora, handle@cridora, "
+                        "or user@jewellercode."
+                    ),
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        to_user = inbound.recipient
+        dest_handle = inbound.resolved_address
+        to_custodian = inbound.destination_custodian
+
+        grams, err = parse_grams(request.data.get("grams"))
+        if err:
+            return Response({"detail": err}, status=status.HTTP_400_BAD_REQUEST)
+
+        from_custodian = effective_custodian(user)
+        if user.user_type == User.CUSTOMER:
+            raw_fc = request.data.get("from_custodian_id")
+            if raw_fc not in (None, ""):
+                try:
+                    fid = int(raw_fc)
+                except (TypeError, ValueError):
+                    return Response(
+                        {"detail": "from_custodian_id must be an integer."},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                from_j = User.objects.filter(
+                    pk=fid,
+                    user_type=User.JEWELLER,
+                    kyc_status=User.KYC_VERIFIED,
+                ).first()
+                if not from_j:
+                    return Response(
+                        {"detail": "Send-from jeweller not found."},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                if not customer_has_vault_at_custodian(user, from_j):
+                    return Response(
+                        {
+                            "detail": (
+                                "Transfers can only be sent from custodians where you hold vaulted gold."
+                            ),
+                        },
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                from_custodian = from_j
+            if from_custodian is None:
+                return Response(
+                    {"detail": "Set a primary jeweller or choose a vault to send from."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            if not customer_has_vault_at_custodian(user, from_custodian):
+                return Response(
+                    {
+                        "detail": (
+                            "You have no vaulted gold with the send-from jeweller. "
+                            "Pick another vault or add gold there first."
+                        ),
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
         if to_user.pk == user.pk:
             return Response(
                 {"detail": "Cannot send gold to yourself."},
@@ -265,24 +327,9 @@ class GoldTransferCreateView(APIView):
                 {"detail": "Recipient is not verified."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        grams, err = parse_grams(request.data.get("grams"))
-        if err:
-            return Response({"detail": err}, status=status.HTTP_400_BAD_REQUEST)
-
-        from_custodian = effective_custodian(user)
-        to_custodian = effective_custodian(to_user)
-        if user.user_type == User.CUSTOMER and from_custodian is None:
-            return Response(
-                {"detail": "Set a default jeweller before sending gold."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        if to_user.user_type == User.CUSTOMER and to_custodian is None:
-            return Response(
-                {"detail": "Recipient must set a default jeweller to receive transfers."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
 
         transfer_lines: list[tuple[str, Decimal]] = []
+        detail_err: str | None = None
         try:
             with transaction.atomic():
                 if user.user_type == User.CUSTOMER:
@@ -295,7 +342,9 @@ class GoldTransferCreateView(APIView):
                     raise ValueError(detail_err)
                 if to_user.user_type == User.CUSTOMER:
                     if transfer_lines:
-                        credit_customer_vault_lines(to_user, to_custodian, transfer_lines)
+                        credit_customer_vault_lines(
+                            to_user, to_custodian, transfer_lines
+                        )
                     else:
                         credit_customer_fractional(to_user, to_custodian, grams)
                 else:
@@ -323,7 +372,9 @@ class GoldTransferCreateView(APIView):
                         "grams": str(grams),
                         "to_gold_upi": dest_handle,
                         "to_display_name": _resolve_preview_user(
-                            to_user, destination_handle=dest_handle
+                            to_user,
+                            destination_handle=dest_handle,
+                            credit_custodian=inbound.destination_custodian,
                         )["display_name"],
                     }
                 ).data,
@@ -432,6 +483,18 @@ class DefaultJewellerView(APIView):
                     {"detail": "Verified jeweller not found."},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
+            has_any_vault = GoldVault.objects.filter(owner=user).exists()
+            has_at_j = GoldVault.objects.filter(owner=user, custodian=jeweller).exists()
+            if has_any_vault and not has_at_j:
+                return Response(
+                    {
+                        "detail": (
+                            "Primary jeweller must be one where you already hold a vault "
+                            "(fractional, deposit, or scheme)."
+                        ),
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
             user.default_jeweller = jeweller
             update_fields.append("default_jeweller")
             migrate_customer_legacy_balance_if_needed(user, jeweller)
@@ -481,18 +544,16 @@ class GoldTransferPublicMetaView(APIView):
 
     def get(self, request, gold_upi: str):
         raw = gold_upi.replace("-", "@") if "@" not in gold_upi else gold_upi
-        vu = resolve_owner_by_vault_public_id(raw)
-        if vu and vu.kyc_status == User.KYC_VERIFIED:
-            return Response(
-                {
-                    "found": True,
-                    "recipient": _resolve_preview_user(vu, destination_handle=raw.strip().lower()),
-                }
-            )
-        normalized = normalize_gold_upi(raw)
-        if not normalized:
+        inbound = resolve_inbound_transfer_target(raw)
+        if not inbound or inbound.recipient.kyc_status != User.KYC_VERIFIED:
             return Response({"found": False}, status=status.HTTP_404_NOT_FOUND)
-        to_user = resolve_user_by_gold_upi(normalized)
-        if not to_user or to_user.kyc_status != User.KYC_VERIFIED:
-            return Response({"found": False}, status=status.HTTP_404_NOT_FOUND)
-        return Response({"found": True, "recipient": _resolve_preview_user(to_user)})
+        return Response(
+            {
+                "found": True,
+                "recipient": _resolve_preview_user(
+                    inbound.recipient,
+                    destination_handle=inbound.resolved_address,
+                    credit_custodian=inbound.destination_custodian,
+                ),
+            }
+        )

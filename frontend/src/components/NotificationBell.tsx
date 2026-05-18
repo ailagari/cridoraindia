@@ -105,6 +105,15 @@ export function NotificationBell({
   const rootRef = useRef<HTMLDivElement>(null)
   /** Bottom sheet on narrow viewports (PWA / mobile dashboards). */
   const [useSheetLayout, setUseSheetLayout] = useState(false)
+  const autoMarkedOnOpenRef = useRef(false)
+
+  const mergeFeedWithPriorRead = useCallback(
+    (rows: AppNotification[], prev: AppNotification[]): AppNotification[] => {
+      const wasRead = new Map(prev.map((x) => [x.id, x.read]))
+      return rows.map((r) => ({ ...r, read: r.read || wasRead.get(r.id) === true }))
+    },
+    [],
+  )
 
   const setupHint = pushSetupHint()
 
@@ -134,8 +143,8 @@ export function NotificationBell({
       return
     }
     const rows = Array.isArray(body.results) ? body.results.map(mapAdminApiRow) : []
-    setAdminItems(rows)
-  }, [useAdminFeed])
+    setAdminItems((prev) => mergeFeedWithPriorRead(rows, prev))
+  }, [useAdminFeed, mergeFeedWithPriorRead])
 
   const loadPlatformFeed = useCallback(async () => {
     if (!usePlatformFeed) return
@@ -150,8 +159,8 @@ export function NotificationBell({
       return
     }
     const rows = Array.isArray(body.results) ? body.results.map(mapAdminApiRow) : []
-    setPlatformItems(rows)
-  }, [usePlatformFeed])
+    setPlatformItems((prev) => mergeFeedWithPriorRead(rows, prev))
+  }, [usePlatformFeed, mergeFeedWithPriorRead])
 
   const refreshPushState = useCallback(async () => {
     if (!pushNotificationsSupported()) {
@@ -333,9 +342,29 @@ export function NotificationBell({
 
   const pushSupported = pushNotificationsSupported()
 
+  const setItemsReadLocal = useCallback(
+    (ids?: string[]) => {
+      const markAll = ids == null
+      const idSet = markAll ? null : new Set(ids)
+      const apply = (prev: AppNotification[]) =>
+        prev.map((x) => (markAll || idSet?.has(x.id) ? { ...x, read: true } : x))
+      if (useAdminFeed) {
+        setAdminItems(apply)
+      } else if (usePlatformFeed) {
+        setPlatformItems(apply)
+      } else if (user?.id != null) {
+        if (markAll) {
+          persistAllMockNotificationsRead(user.id)
+        }
+        setMockItems(apply)
+      }
+    },
+    [useAdminFeed, usePlatformFeed, user?.id],
+  )
+
   const markAllRead = useCallback(async () => {
     if (useAdminFeed) {
-      setAdminItems((prev) => prev.map((x) => ({ ...x, read: true })))
+      setItemsReadLocal()
       const res = await authFetch('/api/v1/admin/notifications/mark-read/', {
         method: 'POST',
         jsonBody: { all: true },
@@ -351,7 +380,7 @@ export function NotificationBell({
       return
     }
     if (usePlatformFeed) {
-      setPlatformItems((prev) => prev.map((x) => ({ ...x, read: true })))
+      setItemsReadLocal()
       const res = await authFetch('/api/v1/notifications/mark-read/', {
         method: 'POST',
         jsonBody: { all: true },
@@ -367,14 +396,32 @@ export function NotificationBell({
       return
     }
     if (user?.id == null) return
-    persistAllMockNotificationsRead(user.id)
-    setMockItems(hydrateMockNotificationsForAccount(user.id))
+    setItemsReadLocal()
     setShowHistory(false)
-  }, [useAdminFeed, usePlatformFeed, loadAdminFeed, loadPlatformFeed, user?.id])
+  }, [useAdminFeed, usePlatformFeed, loadAdminFeed, loadPlatformFeed, user?.id, setItemsReadLocal])
+
+  useEffect(() => {
+    if (!open) {
+      autoMarkedOnOpenRef.current = false
+      return
+    }
+    if (autoMarkedOnOpenRef.current) return
+    if (!items.some((i) => !i.read)) return
+    autoMarkedOnOpenRef.current = true
+    void markAllRead()
+  }, [open, items, markAllRead])
 
   const onFeedItemActivate = useCallback(
     async (n: AppNotification) => {
-      if (!useLiveFeed) return
+      if (!useLiveFeed) {
+        if (user?.id != null && !n.read) {
+          setItemsReadLocal([n.id])
+        }
+        return
+      }
+      if (!n.read) {
+        setItemsReadLocal([n.id])
+      }
       const nid = Number.parseInt(n.id, 10)
       if (!Number.isNaN(nid)) {
         const url = useAdminFeed
@@ -399,7 +446,7 @@ export function NotificationBell({
         setOpen(false)
       }
     },
-    [navigate, useLiveFeed, useAdminFeed, loadAdminFeed, loadPlatformFeed],
+    [navigate, useLiveFeed, useAdminFeed, loadAdminFeed, loadPlatformFeed, setItemsReadLocal, user?.id],
   )
 
   const hintPrimary = useAdminFeed ? (

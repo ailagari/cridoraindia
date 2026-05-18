@@ -30,6 +30,7 @@ export const CUSTOMER_NAV_GROUPS: DashboardNavGroup[] = [
     items: [
       { sectionKey: 'portfolio_overview', label: 'Overview' },
       { sectionKey: 'portfolio_holdings', label: 'Vaults' },
+      { sectionKey: 'portfolio_vault_ids', label: 'Vault IDs' },
     ],
   },
   {
@@ -70,6 +71,7 @@ export const CUSTOMER_LEGACY_SECTION: Record<string, string> = {
   portfolio_pnl: 'portfolio_holdings',
   portfolio_locked: 'portfolio_holdings',
   portfolio_activity: 'portfolio_holdings',
+  portfolio_vaults: 'portfolio_vault_ids',
   redeem_ornament: 'redeem_vault_shop',
   redeem_cash: 'redeem_hub',
   redeem_loan: 'redeem_hub',
