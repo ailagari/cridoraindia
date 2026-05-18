@@ -12,6 +12,7 @@ import { JewellerGoldDepositPanel } from '@/features/invest/JewellerGoldDepositP
 import { JewellerFractionalVerifyPanel } from '@/features/invest/JewellerFractionalVerifyPanel'
 import { JewellerCrossRedemptionInboxPanel } from '@/features/crossRedemption/JewellerCrossRedemptionInboxPanel'
 import { JewellerSellbacksPanel } from '@/features/redeem/JewellerSellbacksPanel'
+import { JewellerOrnamentRedemptionsPanel } from '@/features/marketplace/JewellerOrnamentRedemptionsPanel'
 import { useAuth } from '@/context/AuthContext'
 import { authFetch } from '@/lib/api'
 import { LIVE_PROFILE_POLL_MS } from '@/lib/liveDeskIntervals'
@@ -34,17 +35,6 @@ type MeJson = {
   gstin?: string
   city?: string
   shop_address?: string
-}
-
-function Coming({ title, body }: { title: string; body: string }) {
-  return (
-    <div className="dash-panel-max">
-      <div className="dash-coming dash-coming--catalog">
-        <h2 className="dash-coming__title">{title}</h2>
-        <p className="dash-coming__text">{body}</p>
-      </div>
-    </div>
-  )
 }
 
 export function JewellerDashboardPage() {
@@ -110,10 +100,7 @@ export function JewellerDashboardPage() {
         <>
           <JewellerSellbacksPanel />
           <JewellerCrossRedemptionInboxPanel />
-          <Coming
-            title="Ornament redemption & loans"
-            body="Catalog-backed ornament redemption and loan workflows will join this operations hub."
-          />
+          <JewellerOrnamentRedemptionsPanel />
         </>
       ) : null}
       {active === 'txn_transfers' ? <GoldTransferPanel roleLabel="jeweller" /> : null}

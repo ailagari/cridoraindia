@@ -10,7 +10,6 @@ import {
   pushNotificationsSupported,
   pushSetupHint,
   registerWebPushSubscription,
-  unregisterWebPushSubscription,
 } from '@/lib/webPushApi'
 import { CRIDORA_PUSH_REFRESH_MESSAGE_TYPE } from '@/lib/cridoraSwMessages'
 
@@ -304,20 +303,6 @@ export function NotificationBell({
     }
   }, [])
 
-  const disablePush = useCallback(async () => {
-    setPushBusy(true)
-    setPushError('')
-    try {
-      await unregisterWebPushSubscription()
-      setPushActive(false)
-      setPushTestMsg('')
-    } catch (e) {
-      setPushError(e instanceof Error ? e.message : 'Could not disable push.')
-    } finally {
-      setPushBusy(false)
-    }
-  }, [])
-
   const sendAdminTestPush = useCallback(async () => {
     setPushTestBusy(true)
     setPushTestMsg('')
@@ -417,46 +402,34 @@ export function NotificationBell({
     [navigate, useLiveFeed, useAdminFeed, loadAdminFeed, loadPlatformFeed],
   )
 
-  const hintPrimary =
-    useAdminFeed ? (
+  const hintPrimary = useAdminFeed ? (
+    pushServerReady === false ? (
       <>
-        Uploads awaiting KYC or KYB review appear here.
-        {pushServerReady === false ? (
-          <span>
-            {' '}
-            <strong>Unavailable on this deployment:</strong> Web Push needs VAPID keys on the server (hosting env vars). Enable
-            still appears once keys are set.
-          </span>
-        ) : (
-          ' Enable device notifications for festival and platform broadcasts — delivery is the same for every account role.'
-        )}
+        Uploads awaiting KYC or KYB review appear here. <strong>Tray alerts unavailable</strong> until Web Push is configured on
+        the server.
       </>
-    ) : usePlatformFeed ? (
-      <>
-        Festival and platform alerts appear in this feed.
-        {pushServerReady === false ? (
-          <span>
-            {' '}
-            <strong>Device alerts unavailable:</strong> Web Push needs VAPID keys on the server (hosting env vars). You can still
-            read messages here; tray notifications will work once keys are configured.
-          </span>
-        ) : (
-          ' Turn on device notifications below for system / tray alerts on this phone or computer—the same for customers, jewellers, and admins.'
-        )}
-      </>
-    ) : pushServerReady === false ? (
+    ) : (
+      'Uploads awaiting KYC or KYB review appear here.'
+    )
+  ) : usePlatformFeed ? (
+    pushServerReady === false ? (
+      <strong>Tray alerts unavailable</strong>
+    ) : null
+  ) : pushServerReady === false ? (
     <>
-      <strong>Unavailable on this deployment.</strong> Web Push needs VAPID keys on the server (hosting env vars:
-      WEB_PUSH_VAPID_PUBLIC_KEY, WEB_PUSH_VAPID_PRIVATE_KEY, WEB_PUSH_VAPID_CONTACT). Sample alerts below still appear here for
-      UI preview — they are not live notifications.
+      <strong>Unavailable on this deployment.</strong> Sample alerts below are for UI preview only.
     </>
-  ) : (
-    <>
-      Signed-out visitors see sample alerts below. Sign in on customer or jeweller dashboard for real broadcast history in this
-      bell. Turn on browser notifications for festival and platform broadcasts (HTTPS; Android: Chrome or Edge from the home-screen
-      PWA helps reliability).
-    </>
-  )
+  ) : null
+
+  const showPushEnableToggle =
+    !hidePushRowInBell &&
+    pushSupported &&
+    !pushActive &&
+    Notification.permission !== 'denied' &&
+    pushServerReady === true
+
+  const showPushBlockedHint =
+    !hidePushRowInBell && pushSupported && Notification.permission === 'denied'
 
   const feedError = adminFeedError || platformFeedError
 
@@ -466,64 +439,35 @@ export function NotificationBell({
         <h2 className="notif-panel-title" id="notif-panel-heading">
           Alerts
         </h2>
-        {(useLiveFeed || user?.id != null) && unread > 0 ? (
-          <button type="button" className="btn btn-ghost notif-panel-clear" onClick={() => void markAllRead()}>
-            Mark read
-          </button>
-        ) : null}
-      </div>
-      {setupHint ? (
-        <p className="notif-panel-hint" style={{ marginTop: '-0.35rem', color: 'var(--gold-light)' }}>
-          {setupHint}
-        </p>
-      ) : null}
-      {hintPrimary ? <p className="notif-panel-hint">{hintPrimary}</p> : null}
-      {feedError ? <p className="form-error notif-panel-hint">{feedError}</p> : null}
-      {!hidePushRowInBell ? (
-        <div className="notif-push-row">
-          <div className="notif-push-copy">
-            <span className="notif-push-label">Device notifications</span>
-            {!pushSupported ? (
-              <span className="notif-push-status">Not supported in this browser or context.</span>
-            ) : Notification.permission === 'denied' ? (
-              <span className="notif-push-status">Blocked in browser settings — allow notifications for this site.</span>
-            ) : pushActive ? (
-              <span className="notif-push-status notif-push-status--on">On for this device</span>
-            ) : pushServerReady === false ? (
-              <>
-                <span className="notif-push-status">Unavailable on this deployment</span>
-                <span className="notif-push-detail">See the note above — VAPID env vars are missing on the server.</span>
-              </>
-            ) : pushServerReady === null ? (
-              <span className="notif-push-status">Checking server setup…</span>
-            ) : (
-              <span className="notif-push-status">Off</span>
-            )}
-            {pushError ? <span className="notif-push-err">{pushError}</span> : null}
-          </div>
-          {pushSupported && Notification.permission !== 'denied' ? (
-            pushActive ? (
-              <button
-                type="button"
-                className="btn btn-ghost notif-push-btn"
-                disabled={pushBusy}
-                onClick={() => void disablePush()}
-              >
-                Turn off
-              </button>
-            ) : pushServerReady === true ? (
-              <button
-                type="button"
-                className="btn btn-primary notif-push-btn"
-                disabled={pushBusy}
-                onClick={() => void enablePush()}
-              >
-                Enable
-              </button>
-            ) : null
+        <div className="notif-panel-head-actions">
+          {showPushEnableToggle ? (
+            <button
+              type="button"
+              className="notif-push-toggle"
+              disabled={pushBusy}
+              aria-label="Turn on device notifications"
+              title="Device notifications"
+              onClick={() => void enablePush()}
+            >
+              <span className="notif-push-toggle-track" aria-hidden="true">
+                <span className="notif-push-toggle-knob" />
+              </span>
+            </button>
+          ) : null}
+          {(useLiveFeed || user?.id != null) && unread > 0 ? (
+            <button type="button" className="btn btn-ghost notif-panel-clear" onClick={() => void markAllRead()}>
+              Mark read
+            </button>
           ) : null}
         </div>
+      </div>
+      {setupHint ? <p className="notif-panel-hint notif-panel-hint--setup">{setupHint}</p> : null}
+      {hintPrimary ? <p className="notif-panel-hint">{hintPrimary}</p> : null}
+      {showPushBlockedHint ? (
+        <p className="notif-panel-hint">Notifications blocked — allow them in your browser or system settings.</p>
       ) : null}
+      {pushError ? <p className="form-error notif-panel-hint">{pushError}</p> : null}
+      {feedError ? <p className="form-error notif-panel-hint">{feedError}</p> : null}
       {useAdminFeed && user && pushActive && pushServerReady === true ? (
         <div className="notif-push-row" style={{ marginTop: '0.5rem', flexWrap: 'wrap' }}>
           <button

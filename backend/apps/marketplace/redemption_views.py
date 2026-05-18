@@ -370,3 +370,46 @@ class VaultRedemptionConfirmView(APIView):
             },
             status=status.HTTP_201_CREATED,
         )
+
+
+class JewellerOrnamentRedemptionListView(APIView):
+    """Catalog ornament orders paid via vault and/or cash at checkout."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if request.user.user_type != User.JEWELLER:
+            return Response(
+                {"detail": "Jewellers only."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        qs = (
+            VaultProductRedemption.objects.filter(jeweller=request.user)
+            .select_related("customer")
+            .order_by("-created_at")[:200]
+        )
+        out = []
+        for r in qs:
+            c = r.customer
+            out.append(
+                {
+                    "id": r.id,
+                    "reference": f"RP-{r.id}",
+                    "product_name": r.product_name,
+                    "customer": {
+                        "email": c.email or "",
+                        "name": f"{c.first_name} {c.last_name}".strip(),
+                        "cridora_member_id": c.cridora_member_id or "",
+                    },
+                    "grams_charged": str(r.grams_charged),
+                    "final_invoice_inr": str(r.final_invoice_inr),
+                    "cash_paid_inr": str(r.cash_paid_inr),
+                    "cash_payment_method": r.cash_payment_method or "",
+                    "gst_on_gold_saved_inr": str(r.gst_on_gold_saved_inr),
+                    "metal_rate_inr_per_gram": str(r.metal_rate_inr_per_gram),
+                    "same_store_checkout": r.same_store_checkout,
+                    "cross_platform_fee_inr": str(r.cross_platform_fee_inr),
+                    "created_at": r.created_at.isoformat(),
+                }
+            )
+        return Response({"results": out})

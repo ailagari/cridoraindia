@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useState, type ReactNode } from 'react'
 import { useAuth } from '@/context/AuthContext'
 import { formatInr } from '@/features/marketplace/productPricing'
 import type { PriceBreakdown } from '@/lib/marketplacePricing'
@@ -132,6 +132,64 @@ function BillRow({
       >
         {value}
       </span>
+    </div>
+  )
+}
+
+export function MarketplaceCashPayPage({
+  amountInr,
+  jewellerName,
+  productLabel,
+  vaultNote,
+  onBack,
+  onPaid,
+  busy,
+  error,
+}: {
+  amountInr: number
+  jewellerName: string
+  productLabel: string
+  vaultNote?: ReactNode
+  onBack: () => void
+  onPaid: (method: CashPaymentMethod) => void
+  busy: boolean
+  error: string
+}) {
+  return (
+    <div className="container page" style={{ paddingBottom: '4rem' }}>
+      <button type="button" className="btn btn-ghost" onClick={onBack} style={{ marginBottom: '1.25rem' }}>
+        ← Back to checkout
+      </button>
+      <h1 className="h1-page">Complete payment</h1>
+      <p className="lead lead-tight" style={{ marginBottom: '1.5rem', fontSize: '0.95rem' }}>
+        {productLabel} · {jewellerName}
+      </p>
+      {vaultNote ? (
+        <div
+          className="card"
+          style={{
+            padding: '1rem 1.15rem',
+            borderRadius: 16,
+            marginBottom: '1.25rem',
+            maxWidth: 520,
+            fontSize: '0.85rem',
+            border: '1px solid var(--border-soft)',
+            background: 'var(--veil-35)',
+          }}
+        >
+          {vaultNote}
+        </div>
+      ) : null}
+      <div style={{ maxWidth: 520 }}>
+        <MarketplaceCashPayStep
+          amountInr={amountInr}
+          jewellerName={jewellerName}
+          onBack={onBack}
+          onPaid={onPaid}
+          busy={busy}
+          error={error}
+        />
+      </div>
     </div>
   )
 }

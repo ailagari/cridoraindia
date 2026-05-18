@@ -23,7 +23,7 @@ import { formatInr } from '@/features/marketplace/productPricing'
 import { suggestedVaultGramsForFullOrder } from '@/lib/marketplacePricing'
 import { useAuth } from '@/context/AuthContext'
 import {
-  MarketplaceCashPayStep,
+  MarketplaceCashPayPage,
   MarketplaceCheckoutReceiptCard,
   useMarketplaceOrderConfirm,
   type MarketplaceCheckoutReceipt,
@@ -387,6 +387,28 @@ export function MarketplaceCartCheckout({
     )
   }
 
+  if (checkoutStep === 'cash' && singleLine) {
+    return (
+      <MarketplaceCashPayPage
+        amountInr={payableAmount}
+        jewellerName={singleLine.product.jeweller_name}
+        productLabel={singleLine.product.name}
+        vaultNote={
+          payMode === 'vault' && vaultGrams > 0 ? (
+            <p style={{ margin: 0, lineHeight: 1.5 }}>
+              <strong className="tabular">{vaultGrams.toFixed(3)} g</strong> from your Cridora vault will be debited when
+              you complete cash payment.
+            </p>
+          ) : undefined
+        }
+        busy={busy}
+        error={error}
+        onBack={() => setCheckoutStep('pay')}
+        onPaid={(method) => void runConfirm(method)}
+      />
+    )
+  }
+
   return (
     <div className="container page" style={{ paddingBottom: '4rem' }}>
       <button type="button" className="btn btn-ghost" onClick={onBack} style={{ marginBottom: '1.25rem' }}>
@@ -602,63 +624,52 @@ export function MarketplaceCartCheckout({
             )}
           </div>
 
-          <div
-            style={{
-              padding: '1rem',
-              borderRadius: 16,
-              border: '1px solid var(--border-soft)',
-              background: 'var(--veil-35)',
-              marginBottom: '1rem',
-            }}
-          >
-            <p style={{ margin: '0 0 0.35rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-              {payMode === 'vault' && vaultGrams > 0 ? 'Remaining (cash / UPI)' : 'Due now (cash / UPI)'}
-            </p>
-            <p style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800 }} className="tabular">
-              ₹{formatInr(payableAmount)}
-            </p>
-          </div>
+          {payableAmount > 0 ? (
+            <div
+              style={{
+                padding: '1rem',
+                borderRadius: 16,
+                border: '1px solid var(--border-soft)',
+                background: 'var(--veil-35)',
+                marginBottom: '1rem',
+              }}
+            >
+              <p style={{ margin: '0 0 0.35rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                {payMode === 'vault' && vaultGrams > 0 ? 'Remaining (cash / UPI)' : 'Due now (cash / UPI)'}
+              </p>
+              <p style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800 }} className="tabular">
+                ₹{formatInr(payableAmount)}
+              </p>
+            </div>
+          ) : null}
 
-          {checkoutStep === 'cash' && singleLine ? (
-            <MarketplaceCashPayStep
-              amountInr={payableAmount}
-              jewellerName={singleLine.product.jeweller_name}
-              busy={busy}
-              error={error}
-              onBack={() => setCheckoutStep('pay')}
-              onPaid={(method) => void runConfirm(method)}
-            />
-          ) : (
-            <>
-              {error ? (
-                <p className="form-error" role="alert" style={{ marginBottom: '0.75rem' }}>
-                  {error}
-                </p>
-              ) : null}
-              {!singleLine ? (
-                <p className="form-footnote" style={{ marginBottom: '0.75rem' }}>
-                  One piece per checkout (qty 1, single SKU). Adjust your cart or buy from the product page.
-                </p>
-              ) : null}
-              <button
-                type="button"
-                className="btn btn-primary"
-                style={{ width: '100%' }}
-                disabled={busy || !kycOk}
-                onClick={onPrimaryPay}
-              >
-                {busy
-                  ? 'Processing…'
-                  : payableAmount <= 0 && payMode === 'vault' && vaultGrams > 0
-                    ? 'Confirm — vault covers this order'
-                    : payableAmount <= 0
-                      ? 'Confirm payment'
-                      : payMode === 'vault' && vaultGrams > 0
-                        ? `Pay ₹${formatInr(payableAmount)} cash + vault`
-                        : `Pay ₹${formatInr(payableAmount)} with cash / UPI`}
-              </button>
-            </>
-          )}
+          {error ? (
+            <p className="form-error" role="alert" style={{ marginBottom: '0.75rem' }}>
+              {error}
+            </p>
+          ) : null}
+          {!singleLine ? (
+            <p className="form-footnote" style={{ marginBottom: '0.75rem' }}>
+              One piece per checkout (qty 1, single SKU). Adjust your cart or buy from the product page.
+            </p>
+          ) : null}
+          <button
+            type="button"
+            className="btn btn-primary"
+            style={{ width: '100%' }}
+            disabled={busy || !kycOk}
+            onClick={onPrimaryPay}
+          >
+            {busy
+              ? 'Processing…'
+              : payableAmount <= 0 && payMode === 'vault' && vaultGrams > 0
+                ? 'Confirm — vault covers this order'
+                : payableAmount <= 0
+                  ? 'Confirm payment'
+                  : payMode === 'vault' && vaultGrams > 0
+                    ? 'Continue to cash payment →'
+                    : 'Continue to payment →'}
+          </button>
         </div>
       </div>
     </div>
