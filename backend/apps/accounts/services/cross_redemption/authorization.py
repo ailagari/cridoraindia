@@ -21,6 +21,8 @@ from apps.accounts.models import (
 )
 from apps.accounts.services.cross_redemption.events import log_event
 from apps.accounts.services.cross_redemption.exceptions import CrossRedemptionError
+from apps.accounts.services.cross_redemption.limits import classify_auth_tier
+from apps.accounts.services.cross_redemption.reference import cross_redemption_public_reference
 
 User = get_user_model()
 
@@ -28,6 +30,12 @@ _DEFAULT_POLICY = {
     "require_source_approval": False,
     "instant_enabled": False,
     "allow_cross_redemption": True,
+    "auto_cross_grams_per_day": Decimal("20"),
+    "auto_cross_inr_per_day": Decimal("200000"),
+    "single_txn_gram_limit": Decimal("10"),
+    "single_txn_inr_limit": Decimal("100000"),
+    "daily_txn_count_limit": 25,
+    "auth_expiry_minutes": 15,
     "trust_tier": 0,
     "settlement_delay_hours": 24,
     "max_daily_exposure_inr": Decimal("500000"),
@@ -94,10 +102,12 @@ def authorize_cross_redemption(
     destination_jeweller_id: int,
     grams: Decimal,
     estimated_value_inr: Decimal,
+    initiated_by: User | None = None,
 ) -> dict:
     """
     Creates CrossRedemptionRequest in AUTH + ACTIVE ExposureReservation.
-    Returns: status APPROVE|REJECT, request_id, ux_lane instant|delayed, reason_codes.
+    Source jeweller owns approval (Tier 1 auto or Tier 2 manual pending).
+    Returns: status APPROVE|PENDING|REJECT, request_id, auth_tier, public_reference, ux_lane, reason_codes.
     """
     if customer.user_type != User.CUSTOMER:
         raise CrossRedemptionError("invalid_actor", "Customers only.")
@@ -115,16 +125,16 @@ def authorize_cross_redemption(
 
     available = _vault_spendable_grams(customer, src)
     if available + Decimal("0.0000001") < grams:
-        return {"status": "REJECT", "request_id": None, "ux_lane": "", "reason_codes": ["insufficient_grams"]}
+        return {"status": "REJECT", "request_id": None, "auth_tier": "", "public_reference": "", "ux_lane": "", "reason_codes": ["insufficient_grams"]}
 
     policy_a = _policy(src)
     policy_b = _policy(dst)
     if not policy_a.allow_cross_redemption or not policy_b.allow_cross_redemption:
-        return {"status": "REJECT", "request_id": None, "ux_lane": "", "reason_codes": ["cross_disabled"]}
+        return {"status": "REJECT", "request_id": None, "auth_tier": "", "public_reference": "", "ux_lane": "", "reason_codes": ["cross_disabled"]}
 
     dest_today = _active_reservation_sum_dest_today(dst.id)
     if dest_today + estimated_value_inr > policy_b.max_daily_exposure_inr:
-        return {"status": "REJECT", "request_id": None, "ux_lane": "", "reason_codes": ["dest_daily_cap"]}
+        return {"status": "REJECT", "request_id": None, "auth_tier": "", "public_reference": "", "ux_lane": "", "reason_codes": ["dest_daily_cap"]}
 
     pending_src = (
         _active_reservation_sum_source(src.id)
@@ -132,7 +142,16 @@ def authorize_cross_redemption(
         + estimated_value_inr
     )
     if pending_src > _max_exposure_inr(policy_a):
-        return {"status": "REJECT", "request_id": None, "ux_lane": "", "reason_codes": ["source_exposure_cap"]}
+        return {"status": "REJECT", "request_id": None, "auth_tier": "", "public_reference": "", "ux_lane": "", "reason_codes": ["source_exposure_cap"]}
+
+    tier, tier_reasons = classify_auth_tier(
+        policy_a,
+        grams=grams,
+        inr=estimated_value_inr,
+        source_jeweller_id=src.id,
+    )
+    if tier == "reject":
+        return {"status": "REJECT", "request_id": None, "auth_tier": "", "public_reference": "", "ux_lane": "", "reason_codes": tier_reasons}
 
     instant_ok = (
         policy_a.instant_enabled
@@ -141,8 +160,9 @@ def authorize_cross_redemption(
         and policy_b.trust_tier >= 1
     )
     ux_lane = "instant" if instant_ok else "delayed"
-    delay_h = policy_b.settlement_delay_hours
-    deadline = timezone.now() + timedelta(hours=int(delay_h))
+    settlement_due = timezone.now() + timedelta(hours=int(policy_b.settlement_delay_hours))
+    auth_expires = timezone.now() + timedelta(minutes=int(policy_a.auth_expiry_minutes or 15))
+    auth_tier = CrossRedemptionRequest.AuthTier.AUTO if tier == "auto" else CrossRedemptionRequest.AuthTier.MANUAL
 
     with transaction.atomic():
         req = CrossRedemptionRequest.objects.create(
@@ -152,11 +172,20 @@ def authorize_cross_redemption(
             grams=grams,
             estimated_value_snapshot_inr=estimated_value_inr,
             lifecycle_stage=CrossRedemptionRequest.LifecycleStage.AUTH,
-            workflow_state=CrossRedemptionRequest.WorkflowState.AWAITING_DESTINATION,
+            workflow_state=CrossRedemptionRequest.WorkflowState.AWAITING_SOURCE,
+            auth_tier=auth_tier,
+            auth_expires_at=auth_expires,
             ux_lane=ux_lane,
-            deadline_at=deadline,
-            metadata={"authorize_at": timezone.now().isoformat()},
+            deadline_at=settlement_due,
+            metadata={
+                "authorize_at": timezone.now().isoformat(),
+                "tier_reasons": tier_reasons,
+                "initiated_by_id": initiated_by.pk if initiated_by else None,
+            },
         )
+        ref = cross_redemption_public_reference(req.pk)
+        CrossRedemptionRequest.objects.filter(pk=req.pk).update(public_reference=ref)
+        req.public_reference = ref
         ExposureReservation.objects.create(
             request=req,
             source_jeweller=src,
@@ -164,11 +193,42 @@ def authorize_cross_redemption(
             reserved_value_inr=estimated_value_inr,
             status=ExposureReservation.Status.ACTIVE,
         )
+        actor = CrossRedemptionEvent.Actor.SYSTEM
+        if initiated_by and initiated_by.user_type == User.JEWELLER:
+            actor = CrossRedemptionEvent.Actor.JEWELLER_DEST
+        elif initiated_by and initiated_by.pk == customer.pk:
+            actor = CrossRedemptionEvent.Actor.USER
         log_event(
             req,
-            actor=CrossRedemptionEvent.Actor.SYSTEM,
+            actor=actor,
             event_type="authorized",
-            payload={"ux_lane": ux_lane, "deadline_at": deadline.isoformat()},
+            payload={
+                "auth_tier": auth_tier,
+                "ux_lane": ux_lane,
+                "auth_expires_at": auth_expires.isoformat(),
+                "deadline_at": settlement_due.isoformat(),
+            },
         )
 
-    return {"status": "APPROVE", "request_id": req.pk, "ux_lane": ux_lane, "reason_codes": []}
+    if auth_tier == CrossRedemptionRequest.AuthTier.AUTO:
+        from apps.accounts.services.cross_redemption.transitions import auto_commit_after_authorize
+
+        auto_commit_after_authorize(req.pk)
+        req = CrossRedemptionRequest.objects.get(pk=req.pk)
+        return {
+            "status": "APPROVE",
+            "request_id": req.pk,
+            "auth_tier": auth_tier,
+            "public_reference": req.public_reference,
+            "ux_lane": ux_lane,
+            "reason_codes": [],
+        }
+
+    return {
+        "status": "PENDING",
+        "request_id": req.pk,
+        "auth_tier": auth_tier,
+        "public_reference": req.public_reference,
+        "ux_lane": ux_lane,
+        "reason_codes": tier_reasons,
+    }

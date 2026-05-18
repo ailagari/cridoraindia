@@ -662,6 +662,13 @@ class VaultProductRedemption(models.Model):
         default=0,
         help_text="GST on gold not charged because metal was paid from taxed vault.",
     )
+    cross_redemption_request = models.ForeignKey(
+        "CrossRedemptionRequest",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="vault_product_redemptions",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -812,9 +819,36 @@ class JewellerCrossPolicy(models.Model):
         related_name="cross_redemption_policy",
         limit_choices_to={"user_type": User.JEWELLER},
     )
-    require_source_approval = models.BooleanField(default=False)
+    require_source_approval = models.BooleanField(
+        default=False,
+        help_text="When true, every cross-redemption from this jeweller needs manual source approval.",
+    )
     instant_enabled = models.BooleanField(default=False)
     allow_cross_redemption = models.BooleanField(default=True)
+    auto_cross_grams_per_day = models.DecimalField(
+        max_digits=12, decimal_places=4, default=20,
+        help_text="Max grams/day auto-approved at source (0 = no auto cap).",
+    )
+    auto_cross_inr_per_day = models.DecimalField(
+        max_digits=18, decimal_places=2, default=200_000,
+        help_text="Max INR/day auto-approved at source (0 = no auto cap).",
+    )
+    single_txn_gram_limit = models.DecimalField(
+        max_digits=12, decimal_places=4, default=10,
+        help_text="Above this grams per txn → manual approval (0 = off).",
+    )
+    single_txn_inr_limit = models.DecimalField(
+        max_digits=18, decimal_places=2, default=100_000,
+        help_text="Above this INR per txn → manual approval (0 = off).",
+    )
+    daily_txn_count_limit = models.PositiveIntegerField(
+        default=25,
+        help_text="Above this count/day → manual approval (0 = off).",
+    )
+    auth_expiry_minutes = models.PositiveIntegerField(
+        default=15,
+        help_text="Minutes before pending source approval expires.",
+    )
     trust_tier = models.PositiveSmallIntegerField(default=0)
     settlement_delay_hours = models.PositiveIntegerField(default=24)
     max_daily_exposure_inr = models.DecimalField(max_digits=18, decimal_places=2, default=500_000)
@@ -863,6 +897,10 @@ class CrossRedemptionRequest(models.Model):
         SAGA_PENDING = "saga_pending", "Saga pending"
         SAGA_DONE = "saga_done", "Saga done"
 
+    class AuthTier(models.TextChoices):
+        AUTO = "auto", "Auto"
+        MANUAL = "manual", "Manual"
+
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
@@ -883,6 +921,13 @@ class CrossRedemptionRequest(models.Model):
     )
     grams = models.DecimalField(max_digits=16, decimal_places=6)
     estimated_value_snapshot_inr = models.DecimalField(max_digits=18, decimal_places=2)
+    public_reference = models.CharField(max_length=32, blank=True, db_index=True)
+    auth_tier = models.CharField(
+        max_length=16,
+        choices=AuthTier.choices,
+        default=AuthTier.MANUAL,
+    )
+    auth_expires_at = models.DateTimeField(null=True, blank=True)
     lifecycle_stage = models.CharField(
         max_length=16,
         choices=LifecycleStage.choices,
@@ -903,7 +948,7 @@ class CrossRedemptionRequest(models.Model):
     workflow_state = models.CharField(
         max_length=32,
         choices=WorkflowState.choices,
-        default=WorkflowState.AWAITING_DESTINATION,
+        default=WorkflowState.AWAITING_SOURCE,
     )
     ux_lane = models.CharField(
         max_length=16,
@@ -935,7 +980,25 @@ class CrossRedemptionRequest(models.Model):
         ]
 
     def __str__(self):
-        return f"CrossRedemptionRequest({self.pk}, {self.lifecycle_stage})"
+        ref = self.public_reference or f"#{self.pk}"
+        return f"CrossRedemptionRequest({ref}, {self.lifecycle_stage})"
+
+
+class CrossRedemptionApprovalOtp(models.Model):
+    """One active OTP per cross-redemption request for manual source approval."""
+
+    request = models.OneToOneField(
+        CrossRedemptionRequest,
+        on_delete=models.CASCADE,
+        related_name="source_approval_otp",
+    )
+    code_hash = models.CharField(max_length=64)
+    expires_at = models.DateTimeField()
+    failed_attempts = models.PositiveSmallIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Cross-redemption source approval OTP"
 
 
 class CrossRedemptionEvent(models.Model):

@@ -197,16 +197,23 @@ def suggested_vault_grams_for_full_order(
     product: MarketplaceProduct, customer: User | None, vault_available: Decimal
 ) -> Decimal:
     """Minimum grams to bring cash payable to zero (GST relief on vaulted metal included)."""
+    target = order_vault_grams_target(product, customer)
+    if vault_available <= 0 or target <= 0:
+        return Decimal("0")
+    return min(target, vault_available)
+
+
+def order_vault_grams_target(
+    product: MarketplaceProduct, customer: User | None
+) -> Decimal:
+    """Grams needed at the listing jeweller to cover the order from vault (ignores current balance)."""
     cash = checkout_totals_with_vault(product, customer, Decimal("0"))
     metal_rate = cash["metal_rate_inr_per_gram"]
     final_inr = cash["final_invoice_inr"]
-    if metal_rate <= 0 or vault_available <= 0 or final_inr <= 0:
+    if metal_rate <= 0 or final_inr <= 0:
         return Decimal("0")
 
-    hi = min(
-        vault_available,
-        grams_to_charge_for_invoice(final_inr, metal_rate) * Decimal("1.05"),
-    )
+    hi = grams_to_charge_for_invoice(final_inr, metal_rate) * Decimal("1.05")
     lo = Decimal("0")
     if checkout_totals_with_vault(product, customer, hi)["cash_payable_inr"] > Decimal(
         "0.01"
@@ -220,4 +227,4 @@ def suggested_vault_grams_for_full_order(
             hi = mid
         else:
             lo = mid
-    return min(hi, vault_available)
+    return hi

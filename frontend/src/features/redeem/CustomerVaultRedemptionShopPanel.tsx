@@ -11,6 +11,7 @@ import {
 import { LIVE_CATALOG_POLL_MS } from '@/lib/liveDeskIntervals'
 import { useLivePoll } from '@/lib/useLivePoll'
 import {
+  authorizeVaultRedemptionCross,
   confirmVaultRedemptionPurchase,
   fetchVaultRedemptionQuote,
   type VaultRedemptionQuoteDTO,
@@ -37,6 +38,9 @@ export function CustomerVaultRedemptionShopPanel() {
   const [quote, setQuote] = useState<VaultRedemptionQuoteDTO | null>(null)
   const [quoteErr, setQuoteErr] = useState('')
   const [busy, setBusy] = useState(false)
+  const [crossBusy, setCrossBusy] = useState(false)
+  const [crossMsg, setCrossMsg] = useState('')
+  const [crossRequestId, setCrossRequestId] = useState<number | null>(null)
   const [okMsg, setOkMsg] = useState('')
 
   const refreshJewellers = useCallback(async () => {
@@ -70,35 +74,71 @@ export function CustomerVaultRedemptionShopPanel() {
 
   const loadQuote = useCallback(async (p: MarketplaceProductDTO) => {
     setQuoteErr('')
-    setQuote(null)
     setOkMsg('')
     const q = await fetchVaultRedemptionQuote(p.id)
     if (!q.ok) {
+      setQuote(null)
       setQuoteErr(q.detail)
       return
     }
     setQuote(q.data)
+    const active = q.data.cross_redemption?.active_request
+    if (active?.id) {
+      setCrossRequestId(active.id)
+      setCrossMsg(active.funded ? 'Gold move complete — you can confirm checkout.' : `${active.public_reference}: ${active.checkout_status}`)
+    }
   }, [])
 
   useEffect(() => {
     if (!selected) {
       setQuote(null)
       setQuoteErr('')
+      setCrossMsg('')
+      setCrossRequestId(null)
       return
     }
     void loadQuote(selected)
   }, [selected, loadQuote])
 
-  const filteredProducts = useMemo(() => {
-    const t = search.trim().toLowerCase()
-    if (!t) return products
-    return products.filter(
-      (p) =>
-        p.name.toLowerCase().includes(t) ||
-        p.jeweller_name.toLowerCase().includes(t) ||
-        p.category.toLowerCase().includes(t),
-    )
-  }, [products, search])
+  const crossPending = Boolean(selected && quote?.cross_redemption?.needed && !quote.sufficient_vault)
+
+  useLivePoll(
+    () => {
+      if (selected && crossPending) void loadQuote(selected)
+    },
+    4000,
+    Boolean(selected && crossPending),
+  )
+
+  const onCrossAuthorize = async () => {
+    if (!selected || !quote?.cross_redemption) return
+    setCrossBusy(true)
+    setCrossMsg('')
+    setQuoteErr('')
+    try {
+      const out = await authorizeVaultRedemptionCross(
+        selected.id,
+        quote.cross_redemption.source_jeweller_id,
+      )
+      if (!out.ok) {
+        setQuoteErr(out.detail)
+        return
+      }
+      if (out.request_id) setCrossRequestId(out.request_id)
+      const ref = out.public_reference ?? 'Request'
+      if (out.funded) {
+        setCrossMsg(`${ref} complete — you can confirm checkout.`)
+      } else if (out.status === 'PENDING') {
+        setCrossMsg(`${ref} submitted. Source jeweller (${quote.cross_redemption.source_label}) must approve.`)
+      } else {
+        setCrossMsg(`${ref}: ${out.checkout_status ?? 'Processing'}`)
+      }
+      if (out.quote) setQuote(out.quote)
+      else await loadQuote(selected)
+    } finally {
+      setCrossBusy(false)
+    }
+  }
 
   const onConfirm = async () => {
     if (!selected || !quote?.sufficient_vault) return
@@ -108,6 +148,7 @@ export function CustomerVaultRedemptionShopPanel() {
     try {
       const out = await confirmVaultRedemptionPurchase(selected.id, {
         vaultGrams: parseG(quote.grams_required),
+        crossRedemptionRequestId: crossRequestId ?? undefined,
         expected: {
           final_invoice_inr: quote.final_invoice_inr,
           cash_payable_inr: quote.cash_payable_inr,
@@ -131,6 +172,17 @@ export function CustomerVaultRedemptionShopPanel() {
       setBusy(false)
     }
   }
+
+  const filteredProducts = useMemo(() => {
+    const t = search.trim().toLowerCase()
+    if (!t) return products
+    return products.filter(
+      (p) =>
+        p.name.toLowerCase().includes(t) ||
+        p.jeweller_name.toLowerCase().includes(t) ||
+        p.category.toLowerCase().includes(t),
+    )
+  }, [products, search])
 
   return (
     <div className="dash-panel-max">
@@ -324,9 +376,39 @@ export function CustomerVaultRedemptionShopPanel() {
                 Your vault at this jeweller:{' '}
                 <strong className="tabular">{quote.vault_grams_available} g</strong>
               </p>
-              {!quote.sufficient_vault ? (
+              {!quote.sufficient_vault && quote.cross_redemption?.needed ? (
+                <div
+                  style={{
+                    marginTop: '0.85rem',
+                    padding: '0.75rem 0.85rem',
+                    borderRadius: 12,
+                    border: '1px solid var(--border-soft)',
+                    background: 'var(--veil)',
+                  }}
+                >
+                  <p style={{ margin: '0 0 0.5rem', fontSize: '0.85rem' }}>
+                    Your gold is at <strong>{quote.cross_redemption.source_label}</strong>. Move{' '}
+                    <strong>{quote.cross_redemption.grams_to_move} g</strong> to{' '}
+                    <strong>{quote.jeweller_name}</strong> to checkout here.
+                  </p>
+                  {crossMsg ? (
+                    <p style={{ margin: '0 0 0.5rem', fontSize: '0.82rem', color: 'var(--success)' }}>
+                      {crossMsg}
+                    </p>
+                  ) : null}
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    disabled={!kycOk || crossBusy}
+                    onClick={() => void onCrossAuthorize()}
+                  >
+                    {crossBusy ? 'Starting…' : 'Move gold to this jeweller'}
+                  </button>
+                </div>
+              ) : null}
+              {!quote.sufficient_vault && !quote.cross_redemption?.needed ? (
                 <p className="form-error" style={{ marginTop: '0.75rem' }}>
-                  Not enough vaulted gold with this jeweller. Transfer or buy gold custodied here first.
+                  Not enough vaulted gold with this jeweller and no other vault can cover the shortfall.
                 </p>
               ) : null}
               <div style={{ marginTop: '1rem', display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>

@@ -22,6 +22,7 @@ from .views import (
 from .redemption_views import (
     JewellerOrnamentRedemptionListView,
     VaultRedemptionConfirmView,
+    VaultRedemptionCrossAuthorizeView,
     VaultRedemptionQuoteView,
 )
 
@@ -37,6 +38,10 @@ urlpatterns = [
     path(
         "marketplace/redemption/quote/",
         VaultRedemptionQuoteView.as_view(),
+    ),
+    path(
+        "marketplace/redemption/cross-authorize/",
+        VaultRedemptionCrossAuthorizeView.as_view(),
     ),
     path(
         "marketplace/redemption/confirm/",

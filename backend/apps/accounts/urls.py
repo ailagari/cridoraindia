@@ -106,7 +106,9 @@ from .cross_redemption_views import (
     JewellerCrossRedemptionDestRejectView,
     JewellerCrossRedemptionFulfillmentHeartbeatView,
     JewellerCrossRedemptionInboxView,
+    JewellerCrossRedemptionInitiateView,
     JewellerCrossRedemptionSourceApproveView,
+    JewellerCrossRedemptionSourceOtpView,
     JewellerCrossRedemptionSourceRejectView,
 )
 urlpatterns = [
@@ -243,6 +245,7 @@ urlpatterns = [
     path("cross-redemption/", CustomerCrossRedemptionListView.as_view()),
     path("cross-redemption/<int:pk>/cancel/", CustomerCrossRedemptionCancelView.as_view()),
     path("jeweller/cross-redemption/inbox/", JewellerCrossRedemptionInboxView.as_view()),
+    path("jeweller/cross-redemption/initiate/", JewellerCrossRedemptionInitiateView.as_view()),
     path(
         "jeweller/cross-redemption/<int:pk>/destination/accept/",
         JewellerCrossRedemptionDestAcceptView.as_view(),
@@ -250,6 +253,10 @@ urlpatterns = [
     path(
         "jeweller/cross-redemption/<int:pk>/destination/reject/",
         JewellerCrossRedemptionDestRejectView.as_view(),
+    ),
+    path(
+        "jeweller/cross-redemption/<int:pk>/source/request-otp/",
+        JewellerCrossRedemptionSourceOtpView.as_view(),
     ),
     path(
         "jeweller/cross-redemption/<int:pk>/source/approve/",

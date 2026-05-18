@@ -15,12 +15,18 @@ from rest_framework.views import APIView
 from apps.accounts.jeweller_liability_service import (
     release_custodial_liability_for_redemption_purchase,
 )
-from apps.accounts.models import VaultHolding, VaultProductRedemption
+from apps.accounts.models import CrossRedemptionRequest, VaultHolding, VaultProductRedemption
 from apps.accounts.vault_service import debit_customer_vault_for_transfer
 
 from .models import MarketplaceProduct
+from .redemption_cross_bridge import (
+    authorize_cross_for_ornament_checkout,
+    build_cross_redemption_quote_addon,
+    cross_redemption_funded,
+)
 from .redemption_pricing import (
     checkout_totals_with_vault,
+    order_vault_grams_target,
     suggested_vault_grams_for_full_order,
 )
 
@@ -87,7 +93,16 @@ def _redemption_quote_payload(
     totals = checkout_totals_with_vault(product, customer, grams)
     cash_only = checkout_totals_with_vault(product, customer, Decimal("0"))
     suggested = suggested_vault_grams_for_full_order(product, customer, available)
+    target = order_vault_grams_target(product, customer)
     j = product.jeweller
+    metal_rate = totals["metal_rate_inr_per_gram"]
+    cross_addon = build_cross_redemption_quote_addon(
+        customer,
+        listing_jeweller=j,
+        grams_target=target,
+        grams_available_at_listing=available,
+        metal_rate_inr=metal_rate,
+    )
 
     return {
         "product_id": product.id,
@@ -101,6 +116,7 @@ def _redemption_quote_payload(
         "metal_rate_inr_per_gram": str(totals["metal_rate_inr_per_gram"]),
         "grams_required": str(grams),
         "grams_suggested_full_order": str(suggested),
+        "grams_target_full_order": str(target),
         "vault_grams_available": str(available),
         "sufficient_vault": grams <= 0 or available >= grams,
         "vault_covers_full_order": totals["cash_payable_inr"] <= 0 and grams > 0,
@@ -109,6 +125,7 @@ def _redemption_quote_payload(
         "vault_metal_credit_inr": str(totals["vault_metal_credit_inr"]),
         "gst_on_gold_saved_inr": str(totals["gst_on_gold_saved_inr"]),
         "cash_only_final_invoice_inr": str(cash_only["final_invoice_inr"]),
+        "cross_redemption": cross_addon,
     }
 
 
@@ -158,6 +175,65 @@ class VaultRedemptionQuoteView(APIView):
         return Response(payload)
 
 
+class VaultRedemptionCrossAuthorizeView(APIView):
+    """POST { product_id, source_jeweller_id? } — start cross-redemption for ornament checkout."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        if request.user.user_type != User.CUSTOMER:
+            return Response(
+                {"detail": "Customers only."}, status=status.HTTP_403_FORBIDDEN
+            )
+        body = request.data if isinstance(request.data, dict) else {}
+        raw = str(body.get("product_id") or "").strip()
+        if not raw.isdigit():
+            return Response(
+                {"detail": "product_id required."}, status=status.HTTP_400_BAD_REQUEST
+            )
+        product = _load_eligible_product(int(raw))
+        if not product:
+            return Response(
+                {"detail": "Product not available."}, status=status.HTTP_404_NOT_FOUND
+            )
+        available = _vault_grams_available(request.user, product.jeweller)
+        target = order_vault_grams_target(product, request.user)
+        totals = checkout_totals_with_vault(product, request.user, Decimal("0"))
+        metal_rate = totals["metal_rate_inr_per_gram"]
+        if metal_rate <= 0:
+            return Response(
+                {"detail": "No metal rate for this listing."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        src_raw = body.get("source_jeweller_id")
+        source_id = None
+        if src_raw is not None and str(src_raw).strip() != "":
+            try:
+                source_id = int(src_raw)
+            except (TypeError, ValueError):
+                return Response(
+                    {"detail": "Invalid source_jeweller_id."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+        out = authorize_cross_for_ornament_checkout(
+            request.user,
+            product_id=product.id,
+            listing_jeweller=product.jeweller,
+            grams_target=target,
+            grams_available_at_listing=available,
+            metal_rate_inr=metal_rate,
+            source_jeweller_id=source_id,
+        )
+        if out.get("status") == "REJECT":
+            return Response(
+                {"detail": out.get("detail", "Cross-redemption not available.")},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        quote = _redemption_quote_payload(product, request.user, None)
+        out["quote"] = quote
+        return Response(out)
+
+
 class VaultRedemptionConfirmView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -204,6 +280,36 @@ class VaultRedemptionConfirmView(APIView):
                 )
 
         cash_method = str(body.get("cash_payment_method") or "").strip()[:32]
+        cr_raw = body.get("cross_redemption_request_id")
+        cross_req: CrossRedemptionRequest | None = None
+        if cr_raw is not None and str(cr_raw).strip() != "":
+            try:
+                cr_id = int(cr_raw)
+            except (TypeError, ValueError):
+                return Response(
+                    {"detail": "Invalid cross_redemption_request_id."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            cross_req = CrossRedemptionRequest.objects.filter(
+                pk=cr_id, user=request.user
+            ).first()
+            if not cross_req:
+                return Response(
+                    {"detail": "Cross-redemption request not found."},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+            if cross_req.destination_jeweller_id != product.jeweller_id:
+                return Response(
+                    {"detail": "Cross-redemption destination does not match listing jeweller."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            if not cross_redemption_funded(cross_req):
+                return Response(
+                    {
+                        "detail": "Cross-redemption not complete yet. Wait for approval and processing, then refresh.",
+                    },
+                    status=status.HTTP_409_CONFLICT,
+                )
 
         jeweller = product.jeweller
         available = _vault_grams_available(request.user, jeweller)
@@ -340,6 +446,7 @@ class VaultRedemptionConfirmView(APIView):
                     cash_paid_inr=cash_payable,
                     cash_payment_method=cash_method,
                     gst_on_gold_saved_inr=gst_saved,
+                    cross_redemption_request=cross_req,
                 )
                 if grams_to_debit > 0:
                     release_custodial_liability_for_redemption_purchase(

@@ -8,6 +8,7 @@ from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.utils import timezone
 
+from apps.accounts.cross_redemption_otp import verify_cross_redemption_source_otp
 from apps.accounts.models import CrossRedemptionEvent, CrossRedemptionRequest, ExposureReservation, JewellerCrossPolicy
 from apps.accounts.services.cross_redemption.authorization import _DEFAULT_POLICY
 from apps.accounts.services.cross_redemption.events import log_event
@@ -43,6 +44,52 @@ def _close_failure(req: CrossRedemptionRequest, reason: str) -> None:
     ExposureReservation.objects.filter(request=req).update(status=ExposureReservation.Status.RELEASED)
 
 
+def _commit_source_and_run_saga(
+    req: CrossRedemptionRequest,
+    actor_user: User | None,
+    *,
+    lease_holder: str,
+    otp: str | None = None,
+) -> CrossRedemptionRequest:
+    if req.workflow_state != CrossRedemptionRequest.WorkflowState.AWAITING_SOURCE:
+        raise CrossRedemptionError("invalid_state", "Invalid workflow state.")
+    if req.auth_tier == CrossRedemptionRequest.AuthTier.MANUAL:
+        if actor_user is None or actor_user.id != req.source_jeweller_id:
+            raise CrossRedemptionError("forbidden", "Source jeweller only.")
+        ok, err = verify_cross_redemption_source_otp(req, otp or "")
+        if not ok:
+            raise CrossRedemptionError("otp_invalid", err)
+    elif actor_user is not None and actor_user.id != req.source_jeweller_id:
+        raise CrossRedemptionError("forbidden", "Source jeweller only.")
+
+    req.workflow_state = CrossRedemptionRequest.WorkflowState.SAGA_PENDING
+    req.save(update_fields=["workflow_state", "updated_at"])
+    actor = CrossRedemptionEvent.Actor.SYSTEM
+    if actor_user is not None:
+        actor = CrossRedemptionEvent.Actor.JEWELLER_SOURCE
+    log_event(req, actor=actor, event_type="source_approve", payload={"auth_tier": req.auth_tier})
+    lock_vault_holdings_for_customer(req.user_id, req.source_jeweller_id, req.destination_jeweller_id)
+    holder = lease_holder or (f"src:{actor_user.id}" if actor_user else "system:auto")
+    run_forward_saga(req, lease_holder=holder)
+    return req
+
+
+def auto_commit_after_authorize(request_id: int) -> CrossRedemptionRequest:
+    req_ref = CrossRedemptionRequest.objects.filter(pk=request_id).first()
+    if not req_ref:
+        raise CrossRedemptionError("not_found", "Request not found.")
+    if req_ref.auth_tier != CrossRedemptionRequest.AuthTier.AUTO:
+        return req_ref
+    ja, jb = sorted_jeweller_pair(req_ref.source_jeweller_id, req_ref.destination_jeweller_id)
+    with transaction.atomic():
+        req, _policies = acquire_request_and_policies(request_id, ja, jb, skip_locked=False)
+        if req is None:
+            raise CrossRedemptionError("lock_busy", "Request lock unavailable.")
+        if req.lifecycle_stage == CrossRedemptionRequest.LifecycleStage.CLOSED:
+            return req
+        return _commit_source_and_run_saga(req, None, lease_holder="system:auto")
+
+
 def transition_request(
     request_id: int,
     action: str,
@@ -50,8 +97,9 @@ def transition_request(
     *,
     lease_holder: str = "",
     skip_locked: bool = False,
+    otp: str | None = None,
 ) -> CrossRedemptionRequest:
-    if action not in (SYSTEM_TIMEOUT,) and actor_user is None:
+    if action not in (SYSTEM_TIMEOUT, "auto_commit") and actor_user is None:
         raise CrossRedemptionError("actor_required", "Actor required for this action.")
 
     req_ref = CrossRedemptionRequest.objects.filter(pk=request_id).first()
@@ -101,11 +149,12 @@ def transition_request(
                 CrossRedemptionRequest.LifecycleStage.SETTLEMENT,
             ):
                 return req
-            if not req.deadline_at or now <= req.deadline_at:
-                return req
             if req.workflow_state == CrossRedemptionRequest.WorkflowState.SAGA_PENDING:
                 return req
             if req.lifecycle_stage != CrossRedemptionRequest.LifecycleStage.AUTH:
+                return req
+            expiry = req.auth_expires_at if req.workflow_state == CrossRedemptionRequest.WorkflowState.AWAITING_SOURCE else req.deadline_at
+            if not expiry or now <= expiry:
                 return req
             _close_failure(req, CrossRedemptionRequest.CloseReason.TIMEOUT)
             log_event(req, actor=CrossRedemptionEvent.Actor.SYSTEM, event_type="timeout_release", payload={})
@@ -199,36 +248,23 @@ def transition_request(
                 raise CrossRedemptionError("forbidden", "Destination jeweller only.")
             if req.workflow_state != CrossRedemptionRequest.WorkflowState.AWAITING_DESTINATION:
                 raise CrossRedemptionError("invalid_state", "Invalid workflow state.")
-            pol, _ = JewellerCrossPolicy.objects.get_or_create(
-                jeweller_id=req.source_jeweller_id,
-                defaults=_DEFAULT_POLICY.copy(),
-            )
-            if pol.require_source_approval:
-                req.workflow_state = CrossRedemptionRequest.WorkflowState.AWAITING_SOURCE
-                req.save(update_fields=["workflow_state", "updated_at"])
-                log_event(
-                    req,
-                    actor=CrossRedemptionEvent.Actor.JEWELLER_DEST,
-                    event_type="dest_accept_pending_source",
-                    payload={},
-                )
-                return req
-            req.workflow_state = CrossRedemptionRequest.WorkflowState.SAGA_PENDING
+            req.workflow_state = CrossRedemptionRequest.WorkflowState.AWAITING_SOURCE
             req.save(update_fields=["workflow_state", "updated_at"])
-            log_event(req, actor=CrossRedemptionEvent.Actor.JEWELLER_DEST, event_type="dest_accept", payload={})
-            lock_vault_holdings_for_customer(req.user_id, req.source_jeweller_id, req.destination_jeweller_id)
-            run_forward_saga(req, lease_holder=lease_holder or f"dest:{actor_user.id}")
+            log_event(
+                req,
+                actor=CrossRedemptionEvent.Actor.JEWELLER_DEST,
+                event_type="dest_accept_pending_source",
+                payload={},
+            )
             return req
         if action == SOURCE_APPROVE:
             assert actor_user is not None
             if actor_user.id != req.source_jeweller_id:
                 raise CrossRedemptionError("forbidden", "Source jeweller only.")
-            if req.workflow_state != CrossRedemptionRequest.WorkflowState.AWAITING_SOURCE:
-                raise CrossRedemptionError("invalid_state", "Invalid workflow state.")
-            req.workflow_state = CrossRedemptionRequest.WorkflowState.SAGA_PENDING
-            req.save(update_fields=["workflow_state", "updated_at"])
-            log_event(req, actor=CrossRedemptionEvent.Actor.JEWELLER_SOURCE, event_type="source_approve", payload={})
-            lock_vault_holdings_for_customer(req.user_id, req.source_jeweller_id, req.destination_jeweller_id)
-            run_forward_saga(req, lease_holder=lease_holder or f"src:{actor_user.id}")
-            return req
+            return _commit_source_and_run_saga(
+                req,
+                actor_user,
+                lease_holder=lease_holder or f"src:{actor_user.id}",
+                otp=otp,
+            )
         raise CrossRedemptionError("unknown_action", action)

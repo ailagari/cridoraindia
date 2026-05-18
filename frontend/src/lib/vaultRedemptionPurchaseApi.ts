@@ -1,5 +1,24 @@
 import { authFetch } from '@/lib/api'
 
+export type CrossRedemptionQuoteAddon = {
+  needed: boolean
+  grams_to_move: string
+  estimated_value_inr: string
+  source_jeweller_id: number
+  source_label: string
+  destination_jeweller_id: number
+  destination_label: string
+  source_vault_grams: string
+  active_request?: {
+    id: number
+    public_reference: string
+    checkout_status: string
+    auth_tier: string
+    funded: boolean
+    grams: string
+  } | null
+}
+
 export type VaultRedemptionQuoteDTO = {
   product_id: number
   product_name: string
@@ -12,6 +31,7 @@ export type VaultRedemptionQuoteDTO = {
   metal_rate_inr_per_gram: string
   grams_required: string
   grams_suggested_full_order: string
+  grams_target_full_order?: string
   vault_grams_available: string
   sufficient_vault: boolean
   vault_covers_full_order: boolean
@@ -20,6 +40,7 @@ export type VaultRedemptionQuoteDTO = {
   vault_metal_credit_inr: string
   gst_on_gold_saved_inr: string
   cash_only_final_invoice_inr: string
+  cross_redemption?: CrossRedemptionQuoteAddon | null
 }
 
 export type VaultRedemptionResultDTO = {
@@ -58,10 +79,59 @@ export async function fetchVaultRedemptionQuote(
   return { ok: true, data: data as VaultRedemptionQuoteDTO }
 }
 
+export async function authorizeVaultRedemptionCross(
+  productId: number,
+  sourceJewellerId?: number,
+): Promise<
+  | {
+      ok: true
+      status: string
+      public_reference?: string
+      request_id?: number
+      checkout_status?: string
+      funded?: boolean
+      detail?: string
+      quote?: VaultRedemptionQuoteDTO
+    }
+  | { ok: false; detail: string }
+> {
+  const jsonBody: Record<string, unknown> = { product_id: productId }
+  if (sourceJewellerId != null) {
+    jsonBody.source_jeweller_id = sourceJewellerId
+  }
+  const res = await authFetch('/api/v1/marketplace/redemption/cross-authorize/', {
+    method: 'POST',
+    jsonBody,
+  })
+  const data = (await res.json().catch(() => ({}))) as {
+    detail?: string
+    status?: string
+    public_reference?: string
+    request_id?: number
+    checkout_status?: string
+    funded?: boolean
+    quote?: VaultRedemptionQuoteDTO
+  }
+  if (!res.ok) {
+    return { ok: false, detail: data.detail != null ? String(data.detail) : 'Cross-redemption failed.' }
+  }
+  return {
+    ok: true,
+    status: String(data.status ?? ''),
+    public_reference: data.public_reference,
+    request_id: data.request_id,
+    checkout_status: data.checkout_status,
+    funded: data.funded,
+    detail: data.detail,
+    quote: data.quote,
+  }
+}
+
 export async function confirmVaultRedemptionPurchase(
   productId: number,
   opts: {
     vaultGrams: number
+    crossRedemptionRequestId?: number
     expected?: {
       final_invoice_inr: string
       cash_payable_inr: string
@@ -76,6 +146,9 @@ export async function confirmVaultRedemptionPurchase(
   const jsonBody: Record<string, unknown> = {
     product_id: productId,
     vault_grams: opts.vaultGrams,
+  }
+  if (opts.crossRedemptionRequestId != null) {
+    jsonBody.cross_redemption_request_id = opts.crossRedemptionRequestId
   }
   if (opts.expected) {
     jsonBody.expected_final_invoice_inr = opts.expected.final_invoice_inr
