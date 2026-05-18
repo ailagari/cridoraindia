@@ -230,6 +230,7 @@ export function calculateCheckoutPrice(
     jewellerSubtotal: j0.jewellerSubtotal * q,
   }
   const crossPlatformFee = cridoraCrossPlatformFeeInr(p, ctx) * q
+  const finalAmount = j.jewellerSubtotal + crossPlatformFee
   const metalRate = Number.parseFloat(p.metal_rate_inr_per_gram_used)
   const cappedGrams = Math.max(0, Math.min(vaultGramsToApply, vaultBalanceGrams))
   const rawVaultInr = cappedGrams * metalRate
@@ -237,11 +238,10 @@ export function calculateCheckoutPrice(
   const gstOnGoldFull = j.gstOnGold
   const gstOnGold = Math.max(0, (j.goldValue - vaultMetalCredit) * 0.03)
   const gstOnGoldSaved = Math.max(0, gstOnGoldFull - gstOnGold)
-  const jewellerSubtotal = j.goldValue - vaultMetalCredit + j.makingCharges + gstOnGold + j.gstOnMaking
-  const finalAmount = jewellerSubtotal + crossPlatformFee
   const vaultValueOffset = Math.min(rawVaultInr, finalAmount)
-  const payableAmount = Math.max(0, finalAmount - vaultValueOffset)
+  const payableAmount = Math.max(0, finalAmount - vaultValueOffset - gstOnGoldSaved)
   const goldFromVault = cappedGrams
+  const jewellerSubtotal = j.jewellerSubtotal
 
   return {
     goldValue: j.goldValue,

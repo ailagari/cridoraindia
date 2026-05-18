@@ -238,7 +238,7 @@ export function useMarketplaceOrderConfirm({
         setError('This listing has no metal ₹/g. Ask the jeweller to set pricing on the SKU.')
         return
       }
-      if (breakdown.finalAmount <= 0) {
+      if (breakdown.finalAmount <= 0 && gramsToSend <= 0) {
         setError('Order total is ₹0 — check gold weight and making charges on this listing.')
         return
       }

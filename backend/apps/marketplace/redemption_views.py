@@ -237,7 +237,7 @@ class VaultRedemptionConfirmView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        if final_inr <= 0 and grams_to_debit <= 0:
+        if final_inr <= 0:
             return Response(
                 {
                     "detail": (
@@ -247,7 +247,7 @@ class VaultRedemptionConfirmView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        if grams_to_debit <= 0 and cash_payable <= 0:
+        if cash_payable <= 0 and grams_to_debit <= 0:
             return Response(
                 {"detail": "Specify vault grams or a cash payment amount."},
                 status=status.HTTP_400_BAD_REQUEST,

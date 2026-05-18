@@ -168,7 +168,7 @@ function CheckoutView({
       setError('This listing has no metal ₹/g. Ask the jeweller to set pricing on the SKU.')
       return
     }
-    if (p.finalAmount <= 0) {
+    if (cashOnlyBreakdown.finalAmount <= 0) {
       setError('Order total is ₹0 — check gold weight and making charges on this listing.')
       return
     }

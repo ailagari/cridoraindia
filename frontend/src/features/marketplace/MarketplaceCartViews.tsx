@@ -353,7 +353,8 @@ export function MarketplaceCartCheckout({
       setError('This listing has no metal ₹/g. Ask the jeweller to set pricing on the SKU.')
       return
     }
-    if ((cartBreakdown?.finalAmount ?? 0) <= 0) {
+    const cashOnly = calculateCheckoutPrice(singleLine.product, 0, 0, pricingCtx, singleLine.qty)
+    if (cashOnly.finalAmount <= 0) {
       setError('Order total is ₹0 — check gold weight and making charges on this listing.')
       return
     }

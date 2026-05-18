@@ -134,14 +134,9 @@ def checkout_totals_with_vault(
     )
     metal_rate = resolve_listing_metal_rate_inr(product)
 
-    grams = max(Decimal("0"), vault_grams)
-    raw_vault_inr = (grams * metal_rate).quantize(Decimal("0.01"))
-    vault_metal_credit = min(raw_vault_inr, gold_line)
-    gst_on_gold = ((gold_line - vault_metal_credit) * _GST_GOLD).quantize(Decimal("0.01"))
-    gst_on_gold_saved = max(Decimal("0"), gst_gold_full - gst_on_gold)
-    jeweller_subtotal = (
-        gold_line - vault_metal_credit + making + gst_on_gold + gst_making
-    ).quantize(Decimal("0.01"))
+    full_jeweller_subtotal = (gold_line + making + gst_gold_full + gst_making).quantize(
+        Decimal("0.01")
+    )
 
     cross = Decimal("0")
     if product.is_x_redeem and not customer_has_vault_holdings_at_jeweller(
@@ -151,16 +146,22 @@ def checkout_totals_with_vault(
         if cross < 0:
             cross = Decimal("0")
 
-    final_invoice = (jeweller_subtotal + cross).quantize(Decimal("0.01"))
+    final_invoice = (full_jeweller_subtotal + cross).quantize(Decimal("0.01"))
+
+    grams = max(Decimal("0"), vault_grams)
+    raw_vault_inr = (grams * metal_rate).quantize(Decimal("0.01"))
+    vault_metal_credit = min(raw_vault_inr, gold_line)
+    gst_on_gold = ((gold_line - vault_metal_credit) * _GST_GOLD).quantize(Decimal("0.01"))
+    gst_on_gold_saved = max(Decimal("0"), gst_gold_full - gst_on_gold)
     vault_value_offset = min(raw_vault_inr, final_invoice)
-    cash_payable = max(Decimal("0"), final_invoice - vault_value_offset).quantize(
-        Decimal("0.01")
-    )
+    cash_payable = max(
+        Decimal("0"), final_invoice - vault_value_offset - gst_on_gold_saved
+    ).quantize(Decimal("0.01"))
 
     return {
         "final_invoice_inr": final_invoice,
         "metal_rate_inr_per_gram": metal_rate,
-        "jeweller_subtotal_inr": jeweller_subtotal,
+        "jeweller_subtotal_inr": full_jeweller_subtotal,
         "same_store": same_store,
         "cross_platform_fee_inr": cross,
         "vault_metal_credit_inr": vault_metal_credit,
