@@ -3,6 +3,7 @@ import { fetchGoldWallet, vaultRowEstimatedInr, vaultRowTotalGrams, type VaultRo
 import { LIVE_BALANCE_POLL_MS } from '@/lib/liveDeskIntervals'
 import { useLivePoll } from '@/lib/useLivePoll'
 import { formatJewellerMetalRateAsOf } from '@/features/marketplace/productPricing'
+import { formatVaultCardDisplay } from '@/lib/vaultRoutingDisplay'
 
 function parseG(s: string | undefined): number {
   if (s == null || String(s).trim() === '') return 0
@@ -113,7 +114,7 @@ export function CustomerVaultsPanel() {
                 <p style={{ margin: 0 }}>
                   Vault ID{' '}
                   <strong style={{ color: 'var(--text)', wordBreak: 'break-all' }}>
-                    {v.vault_public_id?.trim() ? v.vault_public_id : '— (set handle & jeweller code)'}
+                    {v.vault_public_id?.trim() ? formatVaultCardDisplay(v.vault_public_id) : '— (card pending)'}
                   </strong>
                 </p>
                 <p style={{ margin: 0 }}>

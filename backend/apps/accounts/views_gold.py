@@ -41,6 +41,7 @@ from .vault_service import (
     sync_customer_aggregate_balance,
     wallet_vault_payload,
 )
+from .vault_routing_codes import ensure_user_primary_routing_code, format_routing_address
 
 User = get_user_model()
 
@@ -48,11 +49,15 @@ User = get_user_model()
 def _wallet_payload(user: User) -> dict:
     if user.user_type == User.CUSTOMER:
         sync_customer_aggregate_balance(user)
+        ensure_user_primary_routing_code(user)
     bal = getattr(user, "gold_balance", None)
     grams = bal.balance_grams if bal else Decimal("0")
     handle = (user.gold_handle_local or "").strip().lower()
     code = (user.jeweller_code or "").strip().lower()
-    cridora_global = f"{handle}@cridora" if handle else ""
+    if user.user_type == User.CUSTOMER and user.gold_routing_code:
+        cridora_global = format_routing_address(user.gold_routing_code)
+    else:
+        cridora_global = f"{handle}@cridora" if handle else ""
     merchant_id = f"{code}@cridora" if code else ""
     vaults = wallet_vault_payload(user) if user.user_type == User.CUSTOMER else []
     liability_s = ""
@@ -202,7 +207,7 @@ class GoldUPIResolveView(APIView):
                 {
                     "found": False,
                     "detail": (
-                        "Enter handle.jewellercode@cridora, handle@cridora (primary), "
+                        "Enter a 10-digit vault card (1234567890@cridora), "
                         "or user@jewellercode."
                     ),
                 },
@@ -256,7 +261,7 @@ class GoldTransferCreateView(APIView):
             return Response(
                 {
                     "detail": (
-                        "Recipient not found. Use handle.jewellercode@cridora, handle@cridora, "
+                        "Recipient not found. Use a 10-digit vault card (1234567890@cridora) "
                         "or user@jewellercode."
                     ),
                 },

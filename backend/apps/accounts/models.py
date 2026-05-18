@@ -59,6 +59,14 @@ class User(AbstractUser):
         blank=True,
         help_text="GoldUPI local part before @ (alphanumeric / underscore).",
     )
+    gold_routing_code = models.CharField(
+        max_length=10,
+        unique=True,
+        null=True,
+        blank=True,
+        editable=False,
+        help_text="Random 10-digit primary vault routing code (share as code@cridora).",
+    )
     gold_upi = models.CharField(
         max_length=130,
         unique=True,
@@ -257,7 +265,7 @@ class GoldBalance(models.Model):
 
 
 class GoldVault(models.Model):
-    """Customer gold held with a specific custodian jeweller (vault ID: handle.jewellercode@cridora)."""
+    """Customer gold held with a specific custodian jeweller (random vault card ID)."""
 
     owner = models.ForeignKey(
         User,
@@ -276,7 +284,7 @@ class GoldVault(models.Model):
         unique=True,
         null=True,
         blank=True,
-        help_text="Public routing ID, e.g. rahul4821.goldhousekochi@cridora",
+        help_text="Public routing ID, e.g. 8472910536@cridora (random, not derived from handle).",
     )
     created_at = models.DateTimeField(auto_now_add=True)
 

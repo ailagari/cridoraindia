@@ -7,18 +7,21 @@ import {
   type GoldWalletDTO,
   type VaultRowDTO,
 } from '@/lib/goldTransferApi'
+import { formatVaultCardDisplay, vaultCardCopyValue } from '@/lib/vaultRoutingDisplay'
 
 function QrBlock({ value, label }: { value: string; label: string }) {
   const [src, setSrc] = useState('')
   const [copyMsg, setCopyMsg] = useState('')
+  const copyValue = vaultCardCopyValue(value)
+  const displayValue = formatVaultCardDisplay(value)
 
   useEffect(() => {
-    if (!value.trim()) {
+    if (!copyValue) {
       setSrc('')
       return
     }
     let cancelled = false
-    void QRCode.toDataURL(value.trim(), { margin: 1, width: 168, errorCorrectionLevel: 'M' }).then(
+    void QRCode.toDataURL(copyValue, { margin: 1, width: 168, errorCorrectionLevel: 'M' }).then(
       (u) => {
         if (!cancelled) setSrc(u)
       },
@@ -26,21 +29,21 @@ function QrBlock({ value, label }: { value: string; label: string }) {
     return () => {
       cancelled = true
     }
-  }, [value])
+  }, [copyValue])
 
   const onCopy = useCallback(async () => {
-    if (!value.trim()) return
+    if (!copyValue) return
     try {
-      await navigator.clipboard.writeText(value.trim())
+      await navigator.clipboard.writeText(copyValue)
       setCopyMsg('Copied')
       window.setTimeout(() => setCopyMsg(''), 2000)
     } catch {
       setCopyMsg('Copy failed')
       window.setTimeout(() => setCopyMsg(''), 2000)
     }
-  }, [value])
+  }, [copyValue])
 
-  if (!value.trim()) {
+  if (!copyValue) {
     return (
       <div style={{ padding: '0.5rem 0' }}>
         <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{label} — not available yet.</span>
@@ -82,7 +85,10 @@ function QrBlock({ value, label }: { value: string; label: string }) {
             color: 'var(--text)',
           }}
         >
-          {value.trim()}
+          {displayValue}
+          <span style={{ display: 'block', marginTop: 4, fontSize: '0.72rem', color: 'var(--text-faint)' }}>
+            {copyValue}
+          </span>
         </p>
         <button type="button" className="btn btn-ghost" style={{ marginTop: '0.5rem' }} onClick={() => void onCopy()}>
           Copy ID
@@ -128,11 +134,10 @@ export function CustomerVaultAddressesPanel() {
   return (
     <div className="dash-panel-max">
       <p className="dash-panel-lead">
-        <strong>Vault IDs</strong> — each jeweller where you hold fractional gold, deposits, or scheme grams is a{' '}
-        <em>secondary vault</em> with its own routing ID (like a bank account). Your <em>primary</em> jeweller receives
-        transfers sent to <strong className="tabular">yourhandle@cridora</strong> when someone does not specify a
-        jeweller. Share the QR or copied ID for gifts and transfers; senders must use your full vault ID to credit a
-        specific jeweller vault.
+        <strong>Vault card IDs</strong> — each jeweller vault gets a random 10-digit number (like a card). Your{' '}
+        <em>primary</em> card routes gifts to your default jeweller when senders omit a specific vault. Share the QR or
+        copy the full ID (digits + <strong className="tabular">@cridora</strong>). IDs are not guessable from your name
+        or jeweller.
       </p>
 
       {!kycOk ? (
@@ -167,7 +172,7 @@ export function CustomerVaultAddressesPanel() {
             <strong>{wallet.vaults?.find((v) => v.is_primary_custodian)?.custodian_label ?? 'your primary jeweller'}</strong>
             . Set primary under jeweller preferences when you have multiple vaults.
           </p>
-          <QrBlock value={primaryGlobal} label="handle@cridora" />
+          <QrBlock value={primaryGlobal} label="Primary vault card" />
         </div>
       ) : null}
 
@@ -190,11 +195,11 @@ export function CustomerVaultAddressesPanel() {
                 </p>
                 <QrBlock
                   value={v.vault_public_id}
-                  label={v.vault_public_id ? 'handle.jewellercode@cridora' : 'Vault ID pending'}
+                  label={v.vault_public_id ? 'Jeweller vault card' : 'Vault card pending'}
                 />
                 {!v.vault_public_id ? (
                   <p style={{ margin: '0.5rem 0 0', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                    IDs appear once your Cridora handle and the jeweller&apos;s storefront code are both set.
+                    Cards are issued automatically when your vault opens at this jeweller.
                   </p>
                 ) : null}
               </li>

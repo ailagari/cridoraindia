@@ -9,6 +9,7 @@ import {
   vaultRowEstimatedInr,
   vaultRowTotalGrams,
 } from '@/lib/goldTransferApi'
+import { formatVaultCardDisplay } from '@/lib/vaultRoutingDisplay'
 
 type Props = {
   roleLabel: string
@@ -125,9 +126,10 @@ export function GoldTransferPanel({ roleLabel }: Props) {
     <div className="dash-panel-max">
       <p className="dash-panel-lead">
         Send from one of your vaulted jewellers to a recipient&apos;s{' '}
-        <strong className="tabular">handle.jewellercode@cridora</strong>, <strong className="tabular">handle@cridora</strong>{' '}
-        (their primary vault), or <strong>handle@jewellercode</strong>. Customers must hold gold at the send-from
-        jeweller. <span style={{ color: 'var(--text-faint)' }}>({roleLabel})</span>
+        <strong className="tabular">10-digit vault card</strong> (
+        <strong className="tabular">1234567890@cridora</strong>) or legacy{' '}
+        <strong>handle@jewellercode</strong>. Customers must hold gold at the send-from jeweller.{' '}
+        <span style={{ color: 'var(--text-faint)' }}>({roleLabel})</span>
       </p>
 
       {loadErr ? <p className="form-error">{loadErr}</p> : null}
@@ -146,8 +148,10 @@ export function GoldTransferPanel({ roleLabel }: Props) {
               <p style={{ margin: '0.15rem 0 0', fontWeight: 800 }}>{wallet.cridora_member_id || '—'}</p>
             </div>
             <div>
-              <span style={{ fontSize: '0.65rem', color: 'var(--text-faint)', fontWeight: 800 }}>Primary routing</span>
-              <p style={{ margin: '0.15rem 0 0', fontWeight: 700 }}>{wallet.cridora_global_id || '—'}</p>
+              <span style={{ fontSize: '0.65rem', color: 'var(--text-faint)', fontWeight: 800 }}>Your primary vault card</span>
+              <p style={{ margin: '0.15rem 0 0', fontWeight: 700 }} className="tabular">
+                {wallet.cridora_global_id ? formatVaultCardDisplay(wallet.cridora_global_id) : '—'}
+              </p>
             </div>
             <div>
               <span style={{ fontSize: '0.65rem', color: 'var(--text-faint)', fontWeight: 800 }}>Routing (GoldUPI)</span>
@@ -220,7 +224,7 @@ export function GoldTransferPanel({ roleLabel }: Props) {
                       {v.vault_public_id ? (
                         <>
                           {' · '}
-                          <span className="tabular">{v.vault_public_id}</span>
+                          <span className="tabular">{formatVaultCardDisplay(v.vault_public_id)}</span>
                         </>
                       ) : null}
                       {v.custodian_label ? ` · ${v.custodian_label}` : null}
@@ -250,7 +254,7 @@ export function GoldTransferPanel({ roleLabel }: Props) {
               id="gold-transfer-recipient-upi"
               value={goldUpiInput}
               onChange={(e) => setGoldUpiInput(e.target.value)}
-              placeholder="rahul4821.goldhouse@cridora · rahul@cridora · user@jewellercode"
+              placeholder="8472910536@cridora or user@jewellercode"
               autoComplete="off"
             />
           </div>
@@ -268,7 +272,9 @@ export function GoldTransferPanel({ roleLabel }: Props) {
               }}
             >
               <p style={{ margin: 0, fontSize: '0.85rem', fontWeight: 700 }}>{recipient.display_name}</p>
-              <p style={{ margin: '0.35rem 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>{recipient.gold_upi}</p>
+              <p style={{ margin: '0.35rem 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }} className="tabular">
+                {formatVaultCardDisplay(recipient.gold_upi)}
+              </p>
               {routingKind ? (
                 <p style={{ margin: '0.25rem 0 0', fontSize: '0.72rem', color: 'var(--text-faint)' }}>
                   Routing: {routingKind.replace(/_/g, ' ')}

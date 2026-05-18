@@ -35,25 +35,13 @@ def _fractional_holding(vault: GoldVault) -> VaultHolding:
 def _deposit_holding(vault: GoldVault) -> VaultHolding:
     return _vault_holding(vault, VaultHolding.DEPOSIT)
 
-
-def compute_vault_public_id(owner: User, custodian: User) -> str | None:
-    handle = (owner.gold_handle_local or "").strip().lower()
-    code = (custodian.jeweller_code or "").strip().lower()
-    if not handle or not code:
-        return None
-    return f"{handle}.{code}@cridora"
-
-
-def refresh_vault_public_ids_for_owner(owner: User) -> None:
-    """Recompute vault_public_id rows after handle or jeweller code changes."""
-    if owner.user_type != User.CUSTOMER:
-        return
-    for vault in GoldVault.objects.filter(owner=owner).select_related("custodian"):
-        new_id = compute_vault_public_id(vault.owner, vault.custodian)
-        nv = new_id if new_id else None
-        if vault.vault_public_id != nv:
-            vault.vault_public_id = nv
-            vault.save(update_fields=["vault_public_id"])
+from .vault_routing_codes import (
+    ensure_user_primary_routing_code,
+    ensure_vault_routing_address,
+    ensure_vault_routing_codes_for_owner,
+    format_routing_address,
+    refresh_vault_public_ids_for_owner,
+)
 
 
 def ensure_vault(owner: User, custodian: User) -> GoldVault:
@@ -62,11 +50,8 @@ def ensure_vault(owner: User, custodian: User) -> GoldVault:
     if custodian.user_type != User.JEWELLER:
         raise ValueError("Vault custodian must be a jeweller.")
     vault, _ = GoldVault.objects.get_or_create(owner=owner, custodian=custodian)
-    vid = compute_vault_public_id(owner, custodian)
-    nv = vid if vid else None
-    if vault.vault_public_id != nv:
-        vault.vault_public_id = nv
-        vault.save(update_fields=["vault_public_id"])
+    ensure_vault_routing_address(vault)
+    ensure_user_primary_routing_code(owner)
     _fractional_holding(vault)
     return vault
 

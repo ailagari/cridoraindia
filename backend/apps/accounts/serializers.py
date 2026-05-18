@@ -310,6 +310,12 @@ class UserMeSerializer(serializers.ModelSerializer):
         grams = bal.balance_grams if bal else Decimal("0")
         handle = (obj.gold_handle_local or "").strip().lower()
         code = (obj.jeweller_code or "").strip().lower()
+        if obj.user_type == User.CUSTOMER and obj.gold_routing_code:
+            from .vault_routing_codes import format_routing_address
+
+            cridora_primary = format_routing_address(obj.gold_routing_code)
+        else:
+            cridora_primary = f"{handle}@cridora" if handle else ""
         liability_s = ""
         if obj.user_type == User.JEWELLER:
             liability_s = str(jeweller_liability_grams(obj))
@@ -324,7 +330,7 @@ class UserMeSerializer(serializers.ModelSerializer):
         )
         data = {
             "cridora_member_id": obj.cridora_member_id or "",
-            "cridora_global_id": f"{handle}@cridora" if handle else "",
+            "cridora_global_id": cridora_primary,
             "merchant_cridora_id": f"{code}@cridora" if code else "",
             "gold_upi": obj.gold_upi or "",
             "gold_handle_local": obj.gold_handle_local or "",
