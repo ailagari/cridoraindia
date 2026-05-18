@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
-import { MOCK_NOTIFICATIONS, hydrateMockNotificationsForAccount, persistAllMockNotificationsRead, type AppNotification } from '@/lib/mockNotifications'
+import { hydrateMockNotificationsForAccount, hydrateMockNotificationsForGuest, persistAllMockNotificationsRead, persistMockNotificationReadIds, type AppNotification } from '@/lib/mockNotifications'
 import { useAuth } from '@/context/AuthContext'
 import { authFetch } from '@/lib/api'
 import {
@@ -93,7 +93,7 @@ export function NotificationBell({
 
   const [open, setOpen] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
-  const [mockItems, setMockItems] = useState<AppNotification[]>(() => [...MOCK_NOTIFICATIONS])
+  const [mockItems, setMockItems] = useState<AppNotification[]>(() => hydrateMockNotificationsForGuest())
   const [adminItems, setAdminItems] = useState<AppNotification[]>([])
   const [platformItems, setPlatformItems] = useState<AppNotification[]>([])
   const [adminFeedError, setAdminFeedError] = useState('')
@@ -305,7 +305,7 @@ export function NotificationBell({
     if (user?.id != null) {
       setMockItems(hydrateMockNotificationsForAccount(user.id))
     } else {
-      setMockItems([...MOCK_NOTIFICATIONS])
+      setMockItems(hydrateMockNotificationsForGuest())
     }
   }, [useAdminFeed, usePlatformFeed, user?.id])
 
@@ -352,6 +352,7 @@ export function NotificationBell({
 
   const pushSupported = pushNotificationsSupported()
   const browserNotifPerm = browserNotificationPermission()
+  const mockAccountId = user?.id ?? null
 
   const setItemsReadLocal = useCallback(
     (ids?: string[]) => {
@@ -363,14 +364,16 @@ export function NotificationBell({
         setAdminItems(apply)
       } else if (usePlatformFeed) {
         setPlatformItems(apply)
-      } else if (user?.id != null) {
+      } else {
         if (markAll) {
-          persistAllMockNotificationsRead(user.id)
+          persistAllMockNotificationsRead(mockAccountId)
+        } else if (ids?.length) {
+          persistMockNotificationReadIds(mockAccountId, ids)
         }
         setMockItems(apply)
       }
     },
-    [useAdminFeed, usePlatformFeed, user?.id],
+    [useAdminFeed, usePlatformFeed, mockAccountId],
   )
 
   const markAllRead = useCallback(async () => {
@@ -406,10 +409,9 @@ export function NotificationBell({
       await loadPlatformFeed()
       return
     }
-    if (user?.id == null) return
     setItemsReadLocal()
     setShowHistory(false)
-  }, [useAdminFeed, usePlatformFeed, loadAdminFeed, loadPlatformFeed, user?.id, setItemsReadLocal])
+  }, [useAdminFeed, usePlatformFeed, loadAdminFeed, loadPlatformFeed, setItemsReadLocal])
 
   useEffect(() => {
     if (!open) {
@@ -425,7 +427,7 @@ export function NotificationBell({
   const onFeedItemActivate = useCallback(
     async (n: AppNotification) => {
       if (!useLiveFeed) {
-        if (user?.id != null && !n.read) {
+        if (!n.read) {
           setItemsReadLocal([n.id])
         }
         return

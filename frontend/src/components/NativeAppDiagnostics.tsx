@@ -5,23 +5,23 @@ import { getNativePushActive, registerNativePushSubscription, showTrayNotificati
 
 type HealthState = 'idle' | 'checking' | 'ok' | 'error'
 
+function apiLabel(): string {
+  const base = getApiBaseUrl()
+  if (base) return base
+  if (typeof window !== 'undefined') return window.location.origin
+  return 'same origin'
+}
+
 export function NativeAppDiagnostics() {
   const [health, setHealth] = useState<HealthState>('idle')
   const [healthDetail, setHealthDetail] = useState('')
   const [pushActive, setPushActive] = useState<boolean | null>(null)
   const [testBusy, setTestBusy] = useState(false)
-
-  const apiBase = getApiBaseUrl()
-  const liveUrl = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '') ?? ''
+  const [dismissed, setDismissed] = useState(false)
 
   const runHealthCheck = useCallback(async () => {
     setHealth('checking')
     setHealthDetail('')
-    if (!apiBase) {
-      setHealth('error')
-      setHealthDetail('VITE_API_BASE_URL missing — rebuild APK with .env.production.local')
-      return
-    }
     try {
       const res = await apiFetch('/api/v1/health/', { cache: 'no-store' })
       const body = (await res.json().catch(() => ({}))) as { status?: string; detail?: string }
@@ -36,7 +36,7 @@ export function NativeAppDiagnostics() {
       setHealth('error')
       setHealthDetail(e instanceof Error ? e.message : 'Network error')
     }
-  }, [apiBase])
+  }, [])
 
   useEffect(() => {
     if (!isNativeAndroid()) return
@@ -46,6 +46,7 @@ export function NativeAppDiagnostics() {
 
   const sendTestNotification = useCallback(async () => {
     setTestBusy(true)
+    setHealthDetail('')
     try {
       if (!(await getNativePushActive())) {
         await registerNativePushSubscription()
@@ -57,6 +58,7 @@ export function NativeAppDiagnostics() {
         link_path: '/',
       })
       setPushActive(await getNativePushActive())
+      setHealthDetail('Test alert sent — check the notification tray.')
     } catch (e) {
       setHealthDetail(e instanceof Error ? e.message : 'Notification test failed')
     } finally {
@@ -64,7 +66,7 @@ export function NativeAppDiagnostics() {
     }
   }, [])
 
-  if (!isNativeAndroid()) return null
+  if (!isNativeAndroid() || dismissed) return null
 
   const healthLabel =
     health === 'checking'
@@ -84,13 +86,19 @@ export function NativeAppDiagnostics() {
       <div className="native-diag-bar__row">
         <span className="native-diag-bar__label">Android app</span>
         <span className={`native-diag-bar__pill native-diag-bar__pill--${health}`}>{healthLabel}</span>
+        <button type="button" className="btn btn-ghost native-diag-bar__btn" onClick={() => setDismissed(true)}>
+          Hide
+        </button>
       </div>
       <p className="native-diag-bar__meta">
-        {liveUrl ? `Live: ${liveUrl}` : `API: ${apiBase || '(same origin)'}`}
+        API: {apiLabel()}
         {healthDetail ? ` · ${healthDetail}` : ''}
         {pushActive != null ? ` · Notifications ${pushActive ? 'on' : 'off'}` : ''}
         {webViewHint}
       </p>
+      {pushActive === false ? (
+        <p className="native-diag-bar__meta">Tap Test tray alert or Enable in the bell to allow notifications.</p>
+      ) : null}
       <div className="native-diag-bar__actions">
         <button type="button" className="btn btn-ghost native-diag-bar__btn" onClick={() => void runHealthCheck()}>
           Retry API

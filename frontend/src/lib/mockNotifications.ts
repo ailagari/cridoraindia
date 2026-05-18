@@ -44,13 +44,15 @@ export const MOCK_NOTIFICATIONS: AppNotification[] = [
   },
 ]
 
+const GUEST_READ_KEY = 'cridora_mock_notification_read_ids_v1:guest'
+
 function readIdsStorageKey(accountId: number): string {
   return `cridora_mock_notification_read_ids_v1:${accountId}`
 }
 
-function loadReadIdSet(accountId: number): Set<string> {
+function loadReadIdSet(key: string): Set<string> {
   try {
-    const raw = localStorage.getItem(readIdsStorageKey(accountId))
+    const raw = localStorage.getItem(key)
     if (!raw) return new Set()
     const parsed = JSON.parse(raw) as unknown
     if (!Array.isArray(parsed)) return new Set()
@@ -60,20 +62,45 @@ function loadReadIdSet(accountId: number): Set<string> {
   }
 }
 
-/** Merge demo rows with “mark read” choices persisted for this signed-in account (sample bell feed). */
-export function hydrateMockNotificationsForAccount(accountId: number): AppNotification[] {
-  const readIds = loadReadIdSet(accountId)
+function mergeMockWithReadIds(readIds: Set<string>): AppNotification[] {
   return MOCK_NOTIFICATIONS.map((n) => ({
     ...n,
     read: n.read || readIds.has(n.id),
   }))
 }
 
-/** Persist that every demo notification id is read for this account. */
-export function persistAllMockNotificationsRead(accountId: number): void {
+/** Public / guest bell — restore read state from localStorage. */
+export function hydrateMockNotificationsForGuest(): AppNotification[] {
+  return mergeMockWithReadIds(loadReadIdSet(GUEST_READ_KEY))
+}
+
+/** Merge demo rows with “mark read” choices persisted for this signed-in account (sample bell feed). */
+export function hydrateMockNotificationsForAccount(accountId: number): AppNotification[] {
+  return mergeMockWithReadIds(loadReadIdSet(readIdsStorageKey(accountId)))
+}
+
+function persistReadIds(key: string, ids: string[]): void {
+  try {
+    const prev = loadReadIdSet(key)
+    for (const id of ids) prev.add(id)
+    localStorage.setItem(key, JSON.stringify([...prev]))
+  } catch {
+    /* quota / private mode */
+  }
+}
+
+/** Persist read ids for guest or signed-in preview feed. */
+export function persistMockNotificationReadIds(accountId: number | null, ids: string[]): void {
+  const key = accountId == null ? GUEST_READ_KEY : readIdsStorageKey(accountId)
+  persistReadIds(key, ids)
+}
+
+/** Persist that every demo notification id is read for this account or guest. */
+export function persistAllMockNotificationsRead(accountId: number | null): void {
   try {
     const ids = MOCK_NOTIFICATIONS.map((n) => n.id)
-    localStorage.setItem(readIdsStorageKey(accountId), JSON.stringify(ids))
+    const key = accountId == null ? GUEST_READ_KEY : readIdsStorageKey(accountId)
+    localStorage.setItem(key, JSON.stringify(ids))
   } catch {
     /* quota / private mode */
   }
