@@ -1,4 +1,4 @@
-import { mkdir } from 'node:fs/promises'
+import { mkdir, unlink } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import sharp from 'sharp'
@@ -62,6 +62,7 @@ for (const { folder, launcher, foreground } of DENSITIES) {
 
 const drawableDir = join(androidRes, 'drawable')
 await mkdir(drawableDir, { recursive: true })
+await unlink(join(drawableDir, 'ic_stat_cridora.xml')).catch(() => undefined)
 await sharp({
   create: {
     width: 24,
