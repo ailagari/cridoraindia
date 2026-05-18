@@ -1,4 +1,4 @@
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, HashRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { ScrollToTop } from '@/components/ScrollToTop'
 import { AuthProvider } from '@/context/AuthContext'
 import { ThemeProvider } from '@/context/ThemeContext'
@@ -26,13 +26,18 @@ import { JewellerDashboardPage } from '@/pages/dashboard/JewellerDashboardPage'
 import { DashboardIndexRedirect } from '@/pages/dashboard/DashboardIndexRedirect'
 import { RedirectPreserveSearch } from '@/pages/dashboard/RedirectPreserveSearch'
 import { NativeNotificationBridge } from '@/components/NativeNotificationBridge'
+import { NativeAppDiagnostics } from '@/components/NativeAppDiagnostics'
+import { isNativePlatform } from '@/lib/capacitorPlatform'
 import '@/styles/index.css'
+
+const AppRouter = isNativePlatform() ? HashRouter : BrowserRouter
 
 export default function App() {
   return (
-    <BrowserRouter>
+    <AppRouter>
       <ScrollToTop />
       <NativeNotificationBridge />
+      <NativeAppDiagnostics />
       <ThemeProvider>
         <AuthProvider>
           <Routes>
@@ -93,6 +98,6 @@ export default function App() {
           </Routes>
         </AuthProvider>
       </ThemeProvider>
-    </BrowserRouter>
+    </AppRouter>
   )
 }

@@ -1,0 +1,2 @@
+# Copy to local.properties (gitignored). Use a path with NO spaces.
+sdk.dir=C\:\\Android\\Sdk

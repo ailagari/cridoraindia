@@ -1,12 +1,27 @@
 import path from 'node:path'
-import { defineConfig } from 'vite'
+import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
+/** Capacitor Android WebView rejects module scripts with crossorigin on local assets. */
+function stripCrossoriginForCapacitor(): Plugin {
+  return {
+    name: 'strip-crossorigin-for-capacitor',
+    transformIndexHtml(html) {
+      return html.replace(/\s+crossorigin(="[^"]*")?/g, '')
+    },
+  }
+}
+
 export default defineConfig({
   base: './',
+  build: {
+    /** Capacitor WebView fails to load module scripts tagged crossorigin. */
+    modulePreload: false,
+  },
   plugins: [
     react(),
+    stripCrossoriginForCapacitor(),
     VitePWA({
       strategies: 'injectManifest',
       srcDir: 'src',
