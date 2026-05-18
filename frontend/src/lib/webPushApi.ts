@@ -59,7 +59,13 @@ export function pushNotificationsSupported(): boolean {
   if (nativePushNotificationsSupported()) return true
   if (typeof window === 'undefined') return false
   if (!window.isSecureContext) return false
-  return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window
+  return 'serviceWorker' in navigator && 'PushManager' in window && typeof Notification !== 'undefined'
+}
+
+/** Browser Notification API permission, or null when unavailable (Capacitor WebView). */
+export function browserNotificationPermission(): NotificationPermission | null {
+  if (typeof window === 'undefined' || typeof Notification === 'undefined') return null
+  return Notification.permission
 }
 
 /** iPad/iPhone/iPod (excludes desktop Safari). */
@@ -121,6 +127,9 @@ export async function registerWebPushSubscription(): Promise<void> {
       'Browser alerts are not turned on for this deployment yet (missing VAPID keys on the server). Your admin can add WEB_PUSH_VAPID_PUBLIC_KEY / WEB_PUSH_VAPID_PRIVATE_KEY.',
     )
   }
+  if (typeof Notification === 'undefined') {
+    throw new Error('Browser notifications are not available in this app shell.')
+  }
   const perm = await Notification.requestPermission()
   if (perm !== 'granted') {
     throw new Error('Notification permission was not granted.')
@@ -163,7 +172,7 @@ export async function claimPushSubscriptionForLoggedInUser(): Promise<void> {
   }
   if (!getStoredAccess()) return
   if (!pushNotificationsSupported()) return
-  if (Notification.permission !== 'granted') return
+  if (browserNotificationPermission() !== 'granted') return
   const reg = await navigator.serviceWorker.ready
   const sub = await reg.pushManager.getSubscription()
   if (!sub) return
@@ -177,7 +186,7 @@ export async function getBrowserPushActive(): Promise<boolean> {
     return getNativePushActive()
   }
   if (!pushNotificationsSupported()) return false
-  if (Notification.permission !== 'granted') return false
+  if (browserNotificationPermission() !== 'granted') return false
   const reg = await navigator.serviceWorker.ready
   const sub = await reg.pushManager.getSubscription()
   return sub !== null

@@ -7,12 +7,13 @@ import { authFetch } from '@/lib/api'
 import {
   fetchWebPushServerStatus,
   getBrowserPushActive,
+  browserNotificationPermission,
   pushNotificationsSupported,
   pushSetupHint,
   registerWebPushSubscription,
 } from '@/lib/webPushApi'
 import { CRIDORA_PUSH_REFRESH_MESSAGE_TYPE } from '@/lib/cridoraSwMessages'
-import { notifyBellFeedUpdates } from '@/lib/nativeNotifications'
+import { notifyBellFeedUpdates, nativePushNotificationsSupported } from '@/lib/nativeNotifications'
 
 /** Faster poll while panel open so badges/lists stay fresh without reloading the page. */
 const FEED_POLL_MS_PANEL_OPEN = 2000
@@ -350,6 +351,7 @@ export function NotificationBell({
   }, [])
 
   const pushSupported = pushNotificationsSupported()
+  const browserNotifPerm = browserNotificationPermission()
 
   const setItemsReadLocal = useCallback(
     (ids?: string[]) => {
@@ -481,11 +483,14 @@ export function NotificationBell({
     !hidePushRowInBell &&
     pushSupported &&
     !pushActive &&
-    Notification.permission !== 'denied' &&
-    pushServerReady === true
+    pushServerReady === true &&
+    (nativePushNotificationsSupported() || browserNotifPerm !== 'denied')
 
   const showPushBlockedHint =
-    !hidePushRowInBell && pushSupported && Notification.permission === 'denied'
+    !hidePushRowInBell &&
+    pushSupported &&
+    !nativePushNotificationsSupported() &&
+    browserNotifPerm === 'denied'
 
   const feedError = adminFeedError || platformFeedError
 
