@@ -96,8 +96,3 @@
   --dens-ts: var(--ts-body);
 }
 
-/* ── Semantic surface tokens (light theme overrides in index.css) */
-[data-theme='light'] {
-  --warning: #b45309;
-  --info: #1d4ed8;
-}

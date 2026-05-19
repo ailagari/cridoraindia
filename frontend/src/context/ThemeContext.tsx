@@ -1,17 +1,12 @@
-import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useState } from 'react'
+import { createContext, useContext, useLayoutEffect, useMemo } from 'react'
 
-/** Applied to `data-theme` on `<html>` — follows OS / browser color scheme only. */
-export type ThemeMode = 'dark' | 'light'
+export type ThemeMode = 'dark'
 
-function getSystemPrefersLight(): boolean {
-  return window.matchMedia('(prefers-color-scheme: light)').matches
-}
-
-function applyDom(theme: ThemeMode): void {
-  document.documentElement.dataset.theme = theme
+function applyDarkTheme(): void {
+  document.documentElement.dataset.theme = 'dark'
   const meta = document.querySelector('meta[name="theme-color"]')
   if (meta) {
-    meta.setAttribute('content', theme === 'light' ? '#e8ecf6' : '#000814')
+    meta.setAttribute('content', '#000814')
   }
 }
 
@@ -21,23 +16,13 @@ type ThemeContextValue = {
 
 const ThemeContext = createContext<ThemeContextValue | null>(null)
 
+/** Cridora uses dark mode only on all devices. */
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [systemPrefersLight, setSystemPrefersLight] = useState(() => getSystemPrefersLight())
-
-  useEffect(() => {
-    const mq = window.matchMedia('(prefers-color-scheme: light)')
-    const onChange = () => setSystemPrefersLight(mq.matches)
-    mq.addEventListener('change', onChange)
-    return () => mq.removeEventListener('change', onChange)
+  useLayoutEffect(() => {
+    applyDarkTheme()
   }, [])
 
-  const theme: ThemeMode = systemPrefersLight ? 'light' : 'dark'
-
-  useLayoutEffect(() => {
-    applyDom(theme)
-  }, [theme])
-
-  const value = useMemo(() => ({ theme }), [theme])
+  const value = useMemo(() => ({ theme: 'dark' as const }), [])
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
 }
