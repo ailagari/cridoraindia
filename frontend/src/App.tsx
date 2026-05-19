@@ -4,7 +4,7 @@ import { AuthProvider } from '@/context/AuthContext'
 import { ThemeProvider } from '@/context/ThemeContext'
 import { PublicLayout } from '@/components/PublicLayout'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
-import { HomeOrDashboardRedirect } from '@/pages/HomeOrDashboardRedirect'
+import { HomePage } from '@/pages/HomePage'
 import { WhyCridoraPage } from '@/pages/WhyCridoraPage'
 import { FeaturesPage } from '@/pages/FeaturesPage'
 import { HowItWorksPage } from '@/pages/HowItWorksPage'
@@ -50,7 +50,7 @@ export default function App() {
           <NativeAppEntryRoute />
           <Routes>
             <Route element={<PublicLayout />}>
-              <Route index element={<HomeOrDashboardRedirect />} />
+              <Route index element={<HomePage />} />
               <Route path="discover" element={<DiscoverPage />} />
               <Route path="shop" element={<ShopHubPage />} />
               <Route path="join" element={<JoinHubPage />} />

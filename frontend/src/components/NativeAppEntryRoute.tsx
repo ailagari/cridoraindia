@@ -1,14 +1,14 @@
 import { useEffect } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { App } from '@capacitor/app'
-import type { PluginListenerHandle } from '@capacitor/core'
 import { useAuth } from '@/context/AuthContext'
 import { dashboardLandingPath } from '@/lib/routes'
 import { isNativeAndroid } from '@/lib/capacitorPlatform'
 
+const SESSION_BOOT_REDIRECT_KEY = 'cridora_boot_portfolio_redirect'
+
 /**
- * On Android cold start the WebView often loads `#/` before any saved deep link.
- * After auth bootstrap, send signed-in users to portfolio if they are still on app entry.
+ * Android cold start only: first load at `/` sends signed-in users to portfolio once per session.
+ * Later visits to `/` (e.g. “Public site”) show the marketing home — see HomePage on index route.
  */
 export function NativeAppEntryRoute() {
   const { user, loading } = useAuth()
@@ -16,28 +16,11 @@ export function NativeAppEntryRoute() {
   const navigate = useNavigate()
 
   useEffect(() => {
-    if (!isNativeAndroid() || loading || !user) return
+    if (!isNativeAndroid() || loading || !user || pathname !== '/') return
+    if (sessionStorage.getItem(SESSION_BOOT_REDIRECT_KEY) === '1') return
 
-    let cancelled = false
-    let listener: PluginListenerHandle | undefined
-
-    const goPortfolioIfEntry = () => {
-      if (cancelled || pathname !== '/') return
-      navigate(dashboardLandingPath(user), { replace: true })
-    }
-
-    goPortfolioIfEntry()
-
-    void App.addListener('appStateChange', ({ isActive }) => {
-      if (isActive) goPortfolioIfEntry()
-    }).then((handle) => {
-      listener = handle
-    })
-
-    return () => {
-      cancelled = true
-      void listener?.remove()
-    }
+    sessionStorage.setItem(SESSION_BOOT_REDIRECT_KEY, '1')
+    navigate(dashboardLandingPath(user), { replace: true })
   }, [loading, user, pathname, navigate])
 
   return null
