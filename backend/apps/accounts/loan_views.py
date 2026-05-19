@@ -28,6 +28,7 @@ from .loan_service import (
     regenerate_customer_loan_repayment_otp,
 )
 from .models import GoldLoanOtp, GoldLoanRepaymentOtp, GoldLoanRequest
+from .services.jeweller_loan_dashboard import jeweller_loan_dashboard
 
 User = get_user_model()
 
@@ -297,6 +298,18 @@ class GoldLoanOtpRegenerateView(APIView):
         otp_obj = GoldLoanOtp.objects.filter(loan_id=pk).first()
         exp = otp_obj.expires_at.isoformat() if otp_obj else ""
         return Response({"otp_code": code, "otp_expires_at": exp})
+
+
+class JewellerLoanDashboardView(APIView):
+    """Full loan book: disbursements, repayments, balances, completed loans."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        if user.user_type != User.JEWELLER:
+            return Response({"detail": "Jewellers only."}, status=status.HTTP_403_FORBIDDEN)
+        return Response(jeweller_loan_dashboard(user))
 
 
 class JewellerLoanListView(APIView):
