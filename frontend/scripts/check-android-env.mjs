@@ -35,7 +35,16 @@ console.log(`[android:check] API base: ${apiBase}`)
 if (apiBase.includes('cridora.in') && !apiBase.includes('railway.app')) {
   console.warn('[android:check] Using cridora.in — if blank on device, set Railway URL in .env.production.local')
 }
-console.log('[android:check] Capacitor will load live site:', apiBase || '(bundled dist only)')
+const capEnvPath = path.join(root, '..', '.env.capacitor')
+let liveWebView = false
+if (fs.existsSync(capEnvPath)) {
+  const capMatch = fs.readFileSync(capEnvPath, 'utf8').match(/^VITE_CAPACITOR_LIVE_WEBVIEW=(.+)$/m)
+  liveWebView = capMatch?.[1]?.trim() === 'true'
+}
+console.log(
+  '[android:check] WebView UI:',
+  liveWebView ? `live from ${apiBase}` : 'bundled from dist/ (rebuild APK to ship UI changes)',
+)
 
 const localProps = path.join(root, '..', 'android', 'local.properties')
 if (!fs.existsSync(localProps)) {
