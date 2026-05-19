@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { CridoraPayPastTable } from '@/features/corridorapay/CridoraPayPastTable'
 import {
   customerCridoraPayAccept,
   customerCridoraPayIssueVaultOtp,
   customerCridoraPayList,
   customerCridoraPayQuote,
   fetchCustomerCridoraPayLedger,
+  pastCridoraPayLedgerEntries,
   type CridoraPayBillDTO,
   type CridoraPayLedgerEntryDTO,
   type CridoraPayQuote,
@@ -67,12 +69,6 @@ function OtpLive({ otp, expiresAt }: { otp: string; expiresAt: string }) {
   )
 }
 
-function formatLedgerWhen(iso: string): string {
-  const t = Date.parse(iso)
-  if (Number.isNaN(t)) return iso.slice(0, 10)
-  return new Date(t).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })
-}
-
 type PayMode = 'vault' | 'upi'
 
 export function CustomerCridoraPayPanel() {
@@ -89,7 +85,7 @@ export function CustomerCridoraPayPanel() {
   const [otpPolicySeconds, setOtpPolicySeconds] = useState<number | null>(null)
 
   const load = useCallback(async () => {
-    const [bills, led] = await Promise.all([customerCridoraPayList('all'), fetchCustomerCridoraPayLedger()])
+    const [bills, led] = await Promise.all([customerCridoraPayList('active'), fetchCustomerCridoraPayLedger()])
     setRows(bills.ok ? bills.results : [])
     if (led.ok) {
       setLedger(led.entries)
@@ -113,7 +109,7 @@ export function CustomerCridoraPayPanel() {
   }, [])
 
   const refreshQuote = async (bill: CridoraPayBillDTO, vaultGrams?: string) => {
-    const vg = vaultGrams ?? vaultGramsById[bill.id] ?? bill.quote.vault_grams_max
+    const vg = vaultGrams ?? vaultGramsById[bill.id] ?? bill.quote?.vault_grams_max
     const out = await customerCridoraPayQuote(bill.id, vg)
     if (out.ok) {
       setQuoteById((m) => ({ ...m, [bill.id]: out.data }))
@@ -176,6 +172,7 @@ export function CustomerCridoraPayPanel() {
   }
 
   const kycVerified = user?.kyc_status === 'verified'
+  const pastEntries = pastCridoraPayLedgerEntries(ledger)
 
   return (
     <div className="dash-panel-max">
@@ -208,12 +205,15 @@ export function CustomerCridoraPayPanel() {
         </p>
       ) : null}
 
+      <h3 style={{ fontSize: '1rem', margin: '0 0 0.75rem' }}>Bills to pay</h3>
+
       {rows.length === 0 ? (
-        <p style={{ color: 'var(--text-muted)' }}>No CridoraPay bills yet.</p>
+        <p style={{ color: 'var(--text-muted)', marginBottom: '0.5rem' }}>No bills waiting for your action.</p>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {rows.map((r) => {
             const quote = quoteById[r.id] ?? r.quote
+            if (!quote) return null
             const mode = payModeById[r.id] ?? 'vault'
             const vaultAvail = Number.parseFloat(quote.vault_grams_available)
             const canVault = vaultAvail > 0
@@ -347,14 +347,6 @@ export function CustomerCridoraPayPanel() {
                       Pay ₹{formatInr(r.cash_payable_inr)} at the counter. Jeweller will mark complete.
                     </p>
                   ) : null}
-
-                  {r.status === 'completed' ? (
-                    <p style={{ color: 'var(--success)', fontWeight: 650 }}>
-                      Recorded in{' '}
-                      <Link to="/userdashboard?section=portfolio_overview&portfolio_tab=personal">Personal holdings</Link>
-                      {r.personal_holding_id ? ` (#${r.personal_holding_id})` : ''}.
-                    </p>
-                  ) : null}
                 </div>
               </article>
             )
@@ -362,47 +354,13 @@ export function CustomerCridoraPayPanel() {
         </div>
       )}
 
-      <article className="pf-card pf-card--lift pf-card--wide pf-card--ledger-table-wrap" style={{ marginTop: '1.5rem' }}>
-        <header className="pf-card__head pf-ledger-head">
-          <div>
-            <h3 className="pf-card__title">CridoraPay ledger</h3>
-            <p className="pf-card__meta">All counter bills — completed purchases also appear under Portfolio → Personal.</p>
-          </div>
-        </header>
-        {ledgerErr ? <p className="form-error">{ledgerErr}</p> : null}
-        {ledger.length === 0 ? (
-          <p style={{ color: 'var(--text-muted)', padding: '0 1rem 1rem', margin: 0 }}>No ledger entries yet.</p>
-        ) : (
-          <div className="pf-ledger-scroll">
-            <table className="pf-ledger-table">
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Reference</th>
-                  <th>Item</th>
-                  <th>Jeweller</th>
-                  <th>Status</th>
-                  <th className="tabular">Grams</th>
-                  <th className="tabular">₹</th>
-                </tr>
-              </thead>
-              <tbody>
-                {ledger.map((row) => (
-                  <tr key={`${row.reference}-${row.occurred_at}`} className="pf-ledger-row">
-                    <td className="pf-ledger-date">{formatLedgerWhen(row.occurred_at)}</td>
-                    <td className="tabular">{row.reference}</td>
-                    <td>{row.label}</td>
-                    <td>{row.counterparty_label || '—'}</td>
-                    <td>{statusLabel(row.status)}</td>
-                    <td className="tabular pf-ledger-grams">{row.grams} g</td>
-                    <td className="tabular pf-ledger-inr">₹{formatInr(row.total_inr)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </article>
+      <CridoraPayPastTable
+        entries={pastEntries}
+        counterpartyHeader="Jeweller"
+        emptyMessage="No past CridoraPay bills yet."
+        error={ledgerErr || undefined}
+        meta="Completed, cancelled, and expired bills. Completed purchases also appear under Portfolio → Personal."
+      />
     </div>
   )
 }

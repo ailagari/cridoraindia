@@ -295,6 +295,16 @@ export type CridoraPayLedgerEntryDTO = {
   counterparty_label: string
 }
 
+const PAST_CRIDORAPAY_STATUSES = new Set(['completed', 'cancelled', 'expired'])
+
+export function isPastCridoraPayStatus(status: string): boolean {
+  return PAST_CRIDORAPAY_STATUSES.has(status)
+}
+
+export function pastCridoraPayLedgerEntries(entries: CridoraPayLedgerEntryDTO[]): CridoraPayLedgerEntryDTO[] {
+  return entries.filter((e) => isPastCridoraPayStatus(e.status))
+}
+
 export async function fetchCustomerCridoraPayLedger(): Promise<
   { ok: true; entries: CridoraPayLedgerEntryDTO[] } | { ok: false; detail: string }
 > {

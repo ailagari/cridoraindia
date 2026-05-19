@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { CridoraPayPastTable } from '@/features/corridorapay/CridoraPayPastTable'
 import {
   fetchJewellerCridoraPayLedger,
   jewellerCridoraPayCreate,
@@ -6,6 +7,7 @@ import {
   jewellerCridoraPayMarkCashPaid,
   jewellerCridoraPayMarkUpiPaid,
   jewellerCridoraPayVerifyVaultOtp,
+  pastCridoraPayLedgerEntries,
   type CridoraPayBillDTO,
   type CridoraPayLedgerEntryDTO,
 } from '@/lib/cridorapayApi'
@@ -62,12 +64,6 @@ function CustomerOtpExpiryHint({ expiresAt }: { expiresAt?: string | null }) {
         : `OTP valid ${labelMmSs} remaining · ends ${formatExpiryShort(expiresAt)}`}
     </p>
   )
-}
-
-function formatLedgerWhen(iso: string): string {
-  const t = Date.parse(iso)
-  if (Number.isNaN(t)) return iso.slice(0, 10)
-  return new Date(t).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })
 }
 
 export function JewellerCridoraPayPanel() {
@@ -230,6 +226,8 @@ export function JewellerCridoraPayPanel() {
       successRef.current.focus()
     }
   }, [doneBanner])
+
+  const pastEntries = pastCridoraPayLedgerEntries(ledger)
 
   return (
     <div className="dash-panel-max jeweller-counter-verify-panel">
@@ -403,47 +401,13 @@ export function JewellerCridoraPayPanel() {
         </div>
       )}
 
-      <article className="pf-card pf-card--lift pf-card--wide pf-card--ledger-table-wrap" style={{ marginTop: '1.5rem' }}>
-        <header className="pf-card__head pf-ledger-head">
-          <div>
-            <h3 className="pf-card__title">CridoraPay ledger</h3>
-            <p className="pf-card__meta">All bills raised through CridoraPay, including completed counter purchases.</p>
-          </div>
-        </header>
-        {ledgerErr ? <p className="form-error">{ledgerErr}</p> : null}
-        {ledger.length === 0 ? (
-          <p style={{ color: 'var(--text-muted)', padding: '0 1rem 1rem', margin: 0 }}>No ledger entries yet.</p>
-        ) : (
-          <div className="pf-ledger-scroll">
-            <table className="pf-ledger-table">
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Reference</th>
-                  <th>Item</th>
-                  <th>Customer</th>
-                  <th>Status</th>
-                  <th className="tabular">Grams</th>
-                  <th className="tabular">₹</th>
-                </tr>
-              </thead>
-              <tbody>
-                {ledger.map((row) => (
-                  <tr key={`${row.reference}-${row.occurred_at}`} className="pf-ledger-row">
-                    <td className="pf-ledger-date">{formatLedgerWhen(row.occurred_at)}</td>
-                    <td className="tabular">{row.reference}</td>
-                    <td>{row.label}</td>
-                    <td>{row.counterparty_label || '—'}</td>
-                    <td>{statusLabel(row.status)}</td>
-                    <td className="tabular pf-ledger-grams">{row.grams} g</td>
-                    <td className="tabular pf-ledger-inr">₹{formatInr(row.total_inr)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </article>
+      <CridoraPayPastTable
+        entries={pastEntries}
+        counterpartyHeader="Customer"
+        emptyMessage="No past CridoraPay bills yet."
+        error={ledgerErr || undefined}
+        meta="Completed, cancelled, and expired counter bills. Open bills stay in the table above."
+      />
     </div>
   )
 }
