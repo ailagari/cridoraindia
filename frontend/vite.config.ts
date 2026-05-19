@@ -28,12 +28,24 @@ function stripCrossoriginForCapacitor(): Plugin {
 }
 
 export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, process.cwd(), '')
+  const modeEnv = loadEnv(mode, process.cwd(), '')
+  const productionEnv = mode === 'capacitor' ? loadEnv('production', process.cwd(), '') : {}
+  const env = mode === 'capacitor' ? { ...productionEnv, ...modeEnv } : modeEnv
   const isCapacitorBuild = env.VITE_CAPACITOR_BUILD === 'true'
+
+  const viteEnvDefines =
+    mode === 'capacitor'
+      ? Object.fromEntries(
+          Object.entries(env)
+            .filter(([key]) => key.startsWith('VITE_'))
+            .map(([key, value]) => [`import.meta.env.${key}`, JSON.stringify(value)]),
+        )
+      : {}
 
   return {
     /** Relative base breaks BrowserRouter on hard refresh (e.g. /dashboard/admin → ./assets → 404). */
     base: isCapacitorBuild ? './' : '/',
+    define: viteEnvDefines,
     build: {
       /** Capacitor WebView fails to load module scripts tagged crossorigin. */
       modulePreload: false,

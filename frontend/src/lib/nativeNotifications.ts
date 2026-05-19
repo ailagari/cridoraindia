@@ -18,6 +18,7 @@ function isFcmEnabled(): boolean {
 let bridgeReady = false
 let pushListenersAttached = false
 let navigateHandler: ((path: string) => void) | null = null
+let lastFcmToken: string | null = null
 const notifiedIds = loadNotifiedIds()
 
 function loadNotifiedIds(): Set<string> {
@@ -123,8 +124,9 @@ function attachPushListeners(): void {
   pushListenersAttached = true
 
   PushNotifications.addListener('registration', (token) => {
+    lastFcmToken = token.value
     void postNativeSubscribe(token.value).catch(() => {
-      /* retry on next login */
+      /* retry on next login via claimNativePushForLoggedInUser */
     })
   })
 
@@ -207,6 +209,11 @@ export async function claimNativePushForLoggedInUser(): Promise<void> {
   if (!isNativeAndroid() || !getStoredAccess()) return
   if (!(await localPermissionGranted())) return
   await initNativeNotificationBridge()
+  if (lastFcmToken) {
+    await postNativeSubscribe(lastFcmToken).catch(() => {
+      /* FCM may re-fire registration after ensureFcmRegistered */
+    })
+  }
   await ensureFcmRegistered()
 }
 
