@@ -23,7 +23,7 @@ function parseApiDetail(parsed: Record<string, unknown> | null, res: Response, f
     if (parts.length > 0) return parts.join(' ')
   }
   if (res.status === 404) {
-    return 'CridoraPay is not available on this server yet. Deploy the latest backend and run migration 0038_corridorapay.'
+    return 'CridoraPay bills API was not found (404). Refresh the page after the latest backend deploy.'
   }
   if (res.status === 403) return 'You do not have access to CridoraPay bills.'
   if (res.status >= 500) return `Server error loading bills (${res.status}). Try again shortly.`
