@@ -4,6 +4,7 @@ import {
   jewellerCridoraPayList,
   jewellerCridoraPayMarkCashPaid,
   jewellerCridoraPayMarkUpiPaid,
+  jewellerCridoraPayResendNotify,
   jewellerCridoraPayVerifyVaultOtp,
   type CridoraPayBillDTO,
 } from '@/lib/cridorapayApi'
@@ -78,19 +79,49 @@ export function JewellerCridoraPayPanel() {
   const [title, setTitle] = useState('Shop purchase')
   const [note, setNote] = useState('')
   const [formBusy, setFormBusy] = useState(false)
+  const [listBusy, setListBusy] = useState(false)
+  const [resendMsg, setResendMsg] = useState('')
   const successRef = useRef<HTMLDivElement | null>(null)
   const [doneBanner, setDoneBanner] = useState<{ reference: string; label: string } | null>(null)
 
   const load = useCallback(async () => {
     setErr('')
-    setRows(await jewellerCridoraPayList('open'))
+    setListBusy(true)
+    try {
+      const out = await jewellerCridoraPayList('open')
+      if (!out.ok) {
+        setErr(out.detail)
+        setRows([])
+        return
+      }
+      setRows(out.results)
+    } finally {
+      setListBusy(false)
+    }
   }, [])
 
   useEffect(() => {
     void load()
   }, [load])
 
-  useLivePoll(load, LIVE_BALANCE_POLL_MS, busyId == null && !formBusy)
+  useLivePoll(load, LIVE_BALANCE_POLL_MS, busyId == null && !formBusy && !listBusy)
+
+  const resendNotify = async (id: number) => {
+    setResendMsg('')
+    setErr('')
+    setBusyId(id)
+    try {
+      const out = await jewellerCridoraPayResendNotify(id)
+      if (!out.ok) {
+        setErr(out.detail)
+        return
+      }
+      setResendMsg(`Reminder sent to customer for ${out.data.reference}.`)
+      await load()
+    } finally {
+      setBusyId(null)
+    }
+  }
 
   const runLookup = async () => {
     setLookupErr('')
@@ -284,7 +315,24 @@ export function JewellerCridoraPayPanel() {
         </div>
       </article>
 
-      <h3 style={{ fontSize: '1rem', margin: '0 0 0.75rem' }}>Open bills</h3>
+      <div
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '0.5rem',
+          marginBottom: '0.75rem',
+        }}
+      >
+        <h3 style={{ fontSize: '1rem', margin: 0 }}>Open bills</h3>
+        <button type="button" className="btn btn-ghost btn-sm" disabled={listBusy} onClick={() => void load()}>
+          {listBusy ? 'Retrying…' : 'Retry'}
+        </button>
+      </div>
+      {resendMsg ? (
+        <p style={{ margin: '0 0 0.75rem', fontSize: '0.88rem', color: 'var(--success)' }}>{resendMsg}</p>
+      ) : null}
       {err ? (
         <p className="form-error" role="alert">
           {err}
@@ -369,7 +417,17 @@ export function JewellerCridoraPayPanel() {
                         </button>
                       ) : null}
                       {r.status === 'awaiting_customer' ? (
-                        <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Waiting for customer</span>
+                        <span style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-start' }}>
+                          <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Waiting for customer</span>
+                          <button
+                            type="button"
+                            className="btn btn-ghost btn-sm"
+                            disabled={busyId === r.id || listBusy}
+                            onClick={() => void resendNotify(r.id)}
+                          >
+                            Notify customer again
+                          </button>
+                        </span>
                       ) : null}
                     </td>
                   </tr>

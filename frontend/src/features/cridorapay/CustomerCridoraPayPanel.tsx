@@ -71,6 +71,8 @@ export function CustomerCridoraPayPanel() {
   const { user } = useAuth()
   const [rows, setRows] = useState<CridoraPayBillDTO[]>([])
   const [msg, setMsg] = useState('')
+  const [loadErr, setLoadErr] = useState('')
+  const [listBusy, setListBusy] = useState(false)
   const [busyId, setBusyId] = useState<number | null>(null)
   const [payModeById, setPayModeById] = useState<Record<number, PayMode>>({})
   const [vaultGramsById, setVaultGramsById] = useState<Record<number, string>>({})
@@ -79,14 +81,26 @@ export function CustomerCridoraPayPanel() {
   const [otpPolicySeconds, setOtpPolicySeconds] = useState<number | null>(null)
 
   const load = useCallback(async () => {
-    setRows(await customerCridoraPayList())
+    setLoadErr('')
+    setListBusy(true)
+    try {
+      const out = await customerCridoraPayList('all')
+      if (!out.ok) {
+        setLoadErr(out.detail)
+        setRows([])
+        return
+      }
+      setRows(out.results)
+    } finally {
+      setListBusy(false)
+    }
   }, [])
 
   useEffect(() => {
     void load()
   }, [load])
 
-  useLivePoll(load, LIVE_BALANCE_POLL_MS, busyId == null)
+  useLivePoll(load, LIVE_BALANCE_POLL_MS, busyId == null && !listBusy)
 
   useEffect(() => {
     void fetchFractionalCounterOtpPolicy().then((p) => {
@@ -180,9 +194,17 @@ export function CustomerCridoraPayPanel() {
         </p>
       ) : null}
 
-      <button type="button" className="btn btn-ghost" style={{ marginBottom: '1rem' }} onClick={() => void load()}>
-        Refresh
-      </button>
+      <div style={{ marginBottom: '1rem', display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+        <button type="button" className="btn btn-ghost" disabled={listBusy} onClick={() => void load()}>
+          {listBusy ? 'Loading…' : 'Retry'}
+        </button>
+      </div>
+
+      {loadErr ? (
+        <p className="form-error" style={{ marginBottom: '1rem' }} role="alert">
+          {loadErr}
+        </p>
+      ) : null}
 
       {msg ? (
         <p className="form-error" style={{ marginBottom: '1rem' }} role="alert">
@@ -190,14 +212,18 @@ export function CustomerCridoraPayPanel() {
         </p>
       ) : null}
 
-      {rows.length === 0 ? (
-        <p style={{ color: 'var(--text-muted)' }}>No CridoraPay bills yet.</p>
-      ) : (
+      {!loadErr && rows.length === 0 && !listBusy ? (
+        <p style={{ color: 'var(--text-muted)' }}>
+          No CridoraPay bills yet. Ask the jeweller to send a bill to your Cridora member ID, then tap Retry.
+        </p>
+      ) : null}
+
+      {rows.length > 0 ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {rows.map((r) => {
             const quote = quoteById[r.id] ?? r.quote
             const mode = payModeById[r.id] ?? 'vault'
-            const vaultAvail = Number.parseFloat(quote.vault_grams_available)
+            const vaultAvail = Number.parseFloat(quote?.vault_grams_available ?? '0')
             const canVault = vaultAvail > 0
             return (
               <article key={r.id} className="pf-card pf-card--lift pf-card--wide">
@@ -218,7 +244,7 @@ export function CustomerCridoraPayPanel() {
                     </p>
                   ) : null}
 
-                  {r.status === 'awaiting_customer' ? (
+                  {r.status === 'awaiting_customer' && quote ? (
                     <>
                       <p style={{ margin: '0 0 0.65rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
                         Vault at this jeweller:{' '}
@@ -330,10 +356,22 @@ export function CustomerCridoraPayPanel() {
                     </p>
                   ) : null}
 
+                  {r.status === 'expired' || r.status === 'cancelled' ? (
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>
+                      This bill is no longer active. Ask the jeweller to send a new one if needed.
+                    </p>
+                  ) : null}
+
                   {r.status === 'completed' ? (
                     <p style={{ color: 'var(--success)', fontWeight: 650 }}>
                       Recorded in Gold Records
                       {r.personal_holding_id ? ` (holding #${r.personal_holding_id})` : ''}.
+                    </p>
+                  ) : null}
+
+                  {r.status === 'awaiting_customer' && !quote ? (
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>
+                      Could not load vault quote — tap Retry above.
                     </p>
                   ) : null}
                 </div>
@@ -341,7 +379,7 @@ export function CustomerCridoraPayPanel() {
             )
           })}
         </div>
-      )}
+      ) : null}
     </div>
   )
 }

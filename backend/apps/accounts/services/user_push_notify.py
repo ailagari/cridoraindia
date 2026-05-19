@@ -280,6 +280,19 @@ def notify_corridorapay_bill_created(bill: CridoraPayBill) -> None:
     )
 
 
+def notify_corridorapay_customer_reminder(bill: CridoraPayBill) -> None:
+    notify_user_activity(
+        bill.customer,
+        title="CridoraPay bill pending",
+        body=(
+            f"Your bill {bill.reference} from {bill.jeweller.business_name or 'a jeweller'} "
+            "is waiting — open CridoraPay in Market."
+        ),
+        link_path=customer_dashboard("shop_cridorapay"),
+        tag=f"cp-remind-c-{bill.pk}",
+    )
+
+
 def notify_corridorapay_upi_selected(bill: CridoraPayBill) -> None:
     notify_user_push(
         bill.jeweller,

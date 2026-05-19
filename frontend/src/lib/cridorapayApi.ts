@@ -83,11 +83,27 @@ export async function jewellerCridoraPayCreate(body: {
 
 export async function jewellerCridoraPayList(
   status: 'open' | 'all' | string = 'open',
-): Promise<CridoraPayBillDTO[]> {
+): Promise<{ ok: true; results: CridoraPayBillDTO[] } | { ok: false; detail: string }> {
   const res = await authFetch(`/api/v1/jeweller/cridorapay/bills/list/?status=${encodeURIComponent(status)}`)
-  if (!res.ok) return []
-  const body = (await res.json()) as { results?: CridoraPayBillDTO[] }
-  return body.results ?? []
+  const data = (await res.json().catch(() => ({}))) as { results?: CridoraPayBillDTO[]; detail?: string }
+  if (!res.ok) {
+    return { ok: false, detail: data.detail != null ? String(data.detail) : 'Could not load bills' }
+  }
+  return { ok: true, results: data.results ?? [] }
+}
+
+export async function jewellerCridoraPayResendNotify(
+  billId: number,
+): Promise<{ ok: true; data: CridoraPayBillDTO } | { ok: false; detail: string }> {
+  const res = await authFetch(`/api/v1/jeweller/cridorapay/bills/${billId}/resend-notify/`, {
+    method: 'POST',
+    jsonBody: {},
+  })
+  const data = (await res.json().catch(() => ({}))) as CridoraPayBillDTO & { detail?: string }
+  if (!res.ok) {
+    return { ok: false, detail: data.detail != null ? String(data.detail) : 'Could not notify customer' }
+  }
+  return { ok: true, data: data as CridoraPayBillDTO }
 }
 
 export async function jewellerCridoraPayVerifyVaultOtp(
@@ -133,11 +149,15 @@ export async function jewellerCridoraPayMarkCashPaid(
   return { ok: true, data: data as CridoraPayBillDTO }
 }
 
-export async function customerCridoraPayList(): Promise<CridoraPayBillDTO[]> {
-  const res = await authFetch('/api/v1/cridorapay/bills/')
-  if (!res.ok) return []
-  const body = (await res.json()) as { results?: CridoraPayBillDTO[] }
-  return body.results ?? []
+export async function customerCridoraPayList(
+  scope: 'all' | 'active' = 'all',
+): Promise<{ ok: true; results: CridoraPayBillDTO[] } | { ok: false; detail: string }> {
+  const res = await authFetch(`/api/v1/cridorapay/bills/?scope=${encodeURIComponent(scope)}`)
+  const data = (await res.json().catch(() => ({}))) as { results?: CridoraPayBillDTO[]; detail?: string }
+  if (!res.ok) {
+    return { ok: false, detail: data.detail != null ? String(data.detail) : 'Could not load bills' }
+  }
+  return { ok: true, results: data.results ?? [] }
 }
 
 export async function customerCridoraPayQuote(

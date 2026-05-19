@@ -146,6 +146,7 @@ from .corridorapay_views import (
     JewellerCridoraPayCancelView,
     JewellerCridoraPayMarkCashPaidView,
     JewellerCridoraPayMarkUpiPaidView,
+    JewellerCridoraPayResendNotifyView,
     JewellerCridoraPayVerifyVaultOtpView,
 )
 from .cross_redemption_views import (
@@ -372,6 +373,10 @@ urlpatterns = [
     path(
         "jeweller/cridorapay/bills/<int:pk>/cancel/",
         JewellerCridoraPayCancelView.as_view(),
+    ),
+    path(
+        "jeweller/cridorapay/bills/<int:pk>/resend-notify/",
+        JewellerCridoraPayResendNotifyView.as_view(),
     ),
     path("corridorapay/bills/", CustomerCridoraPayBillsListView.as_view()),
     path("corridorapay/bills/<int:pk>/quote/", CustomerCridoraPayQuoteView.as_view()),

@@ -334,10 +334,49 @@ class CustomerCridoraPayBillsListView(APIView):
         if request.user.user_type != User.CUSTOMER:
             return Response({"detail": "Customers only."}, status=status.HTTP_403_FORBIDDEN)
         qs = CridoraPayBill.objects.filter(customer=request.user).select_related(
-            "jeweller", "settlement_otp"
-        )[:50]
-        rows = [_ser_bill(b, include_customer=False, include_otp_expiry=True) for b in qs]
+            "customer", "jeweller", "settlement_otp"
+        )
+        scope = (request.query_params.get("scope") or "all").strip().lower()
+        if scope == "active":
+            qs = qs.filter(status__in=OPEN_STATUSES)
+        qs = qs.order_by("-created_at")[:50]
+        rows = []
+        for b in qs:
+            try:
+                rows.append(_ser_bill(b, include_customer=False, include_otp_expiry=True))
+            except Exception:
+                continue
         return Response({"results": rows})
+
+
+class JewellerCridoraPayResendNotifyView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk: int):
+        if request.user.user_type != User.JEWELLER:
+            return Response({"detail": "Jewellers only."}, status=status.HTTP_403_FORBIDDEN)
+        try:
+            bill = CridoraPayBill.objects.select_related("customer", "jeweller").get(
+                pk=pk, jeweller=request.user
+            )
+        except CridoraPayBill.DoesNotExist:
+            return Response({"detail": "Bill not found."}, status=status.HTTP_404_NOT_FOUND)
+        bill = _expire_if_needed(bill)
+        if bill.status not in OPEN_STATUSES:
+            return Response(
+                {"detail": "This bill is no longer open — create a new bill if needed."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        from apps.accounts.services.user_push_notify import (
+            notify_corridorapay_bill_created,
+            notify_corridorapay_customer_reminder,
+        )
+
+        if bill.status == CridoraPayBill.STATUS_AWAITING_CUSTOMER:
+            notify_corridorapay_bill_created(bill)
+        else:
+            notify_corridorapay_customer_reminder(bill)
+        return Response(_ser_bill(bill, include_customer=True, include_otp_expiry=True))
 
 
 class CustomerCridoraPayQuoteView(APIView):
