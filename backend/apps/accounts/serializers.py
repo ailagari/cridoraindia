@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.contrib.auth.password_validation import validate_password
 from decimal import Decimal
 from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -53,6 +54,26 @@ class LoginSerializer(serializers.Serializer):
                 {"email": "Account is disabled."}
             )
         attrs["user"] = user
+        return attrs
+
+
+class PasswordChangeSerializer(serializers.Serializer):
+    current_password = serializers.CharField(write_only=True)
+    new_password = serializers.CharField(write_only=True, min_length=8)
+
+    def validate(self, attrs):
+        user = self.context["request"].user
+        current = attrs.get("current_password") or ""
+        new_pw = attrs.get("new_password") or ""
+        if not user.check_password(current):
+            raise serializers.ValidationError(
+                {"current_password": "Current password is incorrect."}
+            )
+        if current == new_pw:
+            raise serializers.ValidationError(
+                {"new_password": "New password must differ from your current password."}
+            )
+        validate_password(new_pw, user)
         return attrs
 
 

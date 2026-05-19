@@ -8,6 +8,7 @@ import { useLivePoll } from '@/lib/useLivePoll'
 import { AdminPortfolioPanel } from '@/features/portfolio/AdminPortfolioPanel'
 import { AdminPersonalHoldingsPanel } from '@/features/portfolio/AdminPersonalHoldingsPanel'
 import { AdminFractionalOtpPolicyPanel } from '@/features/admin/AdminFractionalOtpPolicyPanel'
+import { ChangePasswordPanel } from '@/features/auth/ChangePasswordPanel'
 import { AdminFestivalBroadcastPanel } from '@/features/admin/AdminFestivalBroadcastPanel'
 import { AdminGoldTickerPanel, AdminMarketplaceCatalogSetupPanel } from '@/features/marketplace/AdminMarketplaceSection'
 
@@ -686,12 +687,7 @@ export function AdminDashboardPage() {
         ) : null}
 
         {active === 'plat_security' ? (
-          <div className="dash-coming dash-coming--payments">
-            <h2 className="dash-coming__title">Password & security</h2>
-            <p className="dash-coming__text">
-              Admin password rotation, session management, and access controls will be managed here.
-            </p>
-          </div>
+          <ChangePasswordPanel description="Update your admin sign-in password. Use a strong unique password for platform access." />
         ) : null}
 
         {active === 'plat_account' ? (

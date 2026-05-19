@@ -15,6 +15,7 @@ from .serializers import (
     JewellerBusinessProfileSerializer,
     KYDocumentReadSerializer,
     LoginSerializer,
+    PasswordChangeSerializer,
     UserMeSerializer,
     user_auth_payload,
 )
@@ -69,6 +70,26 @@ class MeView(APIView):
     def get(self, request):
         data = UserMeSerializer(request.user, context={"request": request}).data
         return Response(data)
+
+
+class PasswordChangeView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        ser = PasswordChangeSerializer(data=request.data, context={"request": request})
+        if not ser.is_valid():
+            return Response(ser.errors, status=status.HTTP_400_BAD_REQUEST)
+        user = request.user
+        user.set_password(ser.validated_data["new_password"])
+        user.save(update_fields=["password"])
+        refresh_token = request.data.get("refresh")
+        if refresh_token:
+            try:
+                token = RefreshToken(refresh_token)
+                token.blacklist()
+            except Exception:
+                pass
+        return Response(user_auth_payload(user))
 
 
 class JewellerBusinessProfileView(APIView):

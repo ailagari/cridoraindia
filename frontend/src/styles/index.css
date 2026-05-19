@@ -2914,13 +2914,21 @@ select.input {
   background: rgba(0, 8, 20, 0.28);
 }
 
+.jeweller-vault-ledger-inline__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 0.75rem;
+  padding: 0.8rem 1rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+}
+
 .jeweller-vault-ledger-inline__title {
   margin: 0;
-  padding: 0.8rem 1rem;
   font-size: 0.95rem;
   font-weight: 600;
   letter-spacing: 0.02em;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.18);
   color: var(--text-primary, #e8eef8);
 }
 
@@ -2942,6 +2950,119 @@ select.input {
   letter-spacing: normal;
   text-transform: none;
   line-height: 1.35;
+}
+
+.jeweller-vault-ledger-scroll {
+  max-width: 100%;
+}
+
+@media (max-width: 767px) {
+  .jeweller-vault-ledger-inline {
+    overflow: visible;
+  }
+
+  .jeweller-vault-ledger-table {
+    min-width: 0;
+  }
+
+  .jeweller-vault-ledger-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .jeweller-vault-ledger-table tbody tr {
+    display: block;
+    padding: 0.85rem 0;
+    border-bottom: 1px solid var(--border-soft);
+  }
+
+  .jeweller-vault-ledger-table tbody td {
+    display: block;
+    padding: 0.35rem 0;
+    border: none;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    background: transparent;
+    white-space: normal;
+  }
+
+  .jeweller-vault-ledger-table tbody td::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 0.28rem;
+    font-size: 0.58rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+  }
+
+  .jeweller-vault-ledger-table tbody tr > td:last-child {
+    margin-bottom: 0;
+  }
+
+  .jeweller-vault-ledger-scroll {
+    overflow-x: visible;
+    border: none;
+    background: transparent;
+    padding: 0;
+  }
+
+  .pf-card--ledger-table-wrap .pf-ledger-table {
+    min-width: 0;
+  }
+
+  .pf-card--ledger-table-wrap .pf-ledger-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .pf-card--ledger-table-wrap .pf-ledger-table tbody tr {
+    display: block;
+    padding: 0.85rem 0;
+    border-bottom: 1px solid var(--border-soft);
+  }
+
+  .pf-card--ledger-table-wrap .pf-ledger-table tbody td {
+    display: block;
+    padding: 0.35rem 0;
+    border: none;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    background: transparent;
+    white-space: normal;
+  }
+
+  .pf-card--ledger-table-wrap .pf-ledger-table tbody td::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 0.28rem;
+    font-size: 0.58rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+  }
+
+  .pf-card--ledger-table-wrap .pf-ledger-scroll {
+    overflow-x: visible;
+  }
 }
 
 .jeweller-sellbacks-wrap {

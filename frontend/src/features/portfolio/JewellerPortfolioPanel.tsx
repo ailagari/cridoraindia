@@ -9,9 +9,11 @@ function parseG(s: string): number {
   return Number.isFinite(n) ? n : 0
 }
 
-function fmtWhen(iso: string): string {
-  const t = Date.parse(iso)
-  if (Number.isNaN(t)) return iso.slice(0, 10)
+function fmtWhen(iso: string | null | undefined): string {
+  const raw = (iso ?? '').trim()
+  if (!raw) return '—'
+  const t = Date.parse(raw)
+  if (Number.isNaN(t)) return raw.slice(0, 10)
   return new Date(t).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })
 }
 
@@ -110,18 +112,28 @@ export function JewellerPortfolioPanel({ embedded }: PanelProps = {}) {
               <tbody>
                 {pending.map((row) => (
                   <tr key={row.id} className="pf-ledger-row">
-                    <td className="pf-ledger-date">{fmtWhen(row.created_at)}</td>
-                    <td className="tabular">{row.reference}</td>
-                    <td>
-                      {row.customer.name || row.customer.email}
-                      <span className="tabular" style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                        {' '}
-                        · {row.customer.cridora_member_id}
-                      </span>
+                    <td className="pf-ledger-date" data-label="Created">
+                      {fmtWhen(row.created_at)}
                     </td>
-                    <td className="tabular pf-ledger-grams">{parseG(row.grams).toFixed(6)} g</td>
-                    <td className="tabular pf-ledger-inr pf-ledger-inr--out">₹{fmtInrPlain(row.total_inr)}</td>
-                    <td>
+                    <td className="tabular" data-label="Reference">
+                      {row.reference}
+                    </td>
+                    <td data-label="Customer">
+                      {row.customer?.name || row.customer?.email || '—'}
+                      {row.customer?.cridora_member_id ? (
+                        <span className="tabular" style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                          {' '}
+                          · {row.customer.cridora_member_id}
+                        </span>
+                      ) : null}
+                    </td>
+                    <td className="tabular pf-ledger-grams" data-label="Grams">
+                      {parseG(row.grams).toFixed(6)} g
+                    </td>
+                    <td className="tabular pf-ledger-inr pf-ledger-inr--out" data-label="Total">
+                      ₹{fmtInrPlain(row.total_inr)}
+                    </td>
+                    <td data-label="Status">
                       <span className="pf-ledger-pill pf-ledger-pill--buy">{row.status}</span>
                     </td>
                   </tr>
@@ -162,11 +174,19 @@ export function JewellerPortfolioPanel({ embedded }: PanelProps = {}) {
                     key={`${row.purchase_reference}-${row.created_at}-${row.customer_member_id}-${i}`}
                     className="pf-ledger-row"
                   >
-                    <td className="pf-ledger-date">{fmtWhen(row.created_at)}</td>
-                    <td>{row.customer_label}</td>
-                    <td className="tabular">{row.customer_member_id}</td>
-                    <td className="tabular pf-ledger-grams">+{parseG(row.grams).toFixed(6)} g</td>
-                    <td className="tabular">{row.purchase_reference}</td>
+                    <td className="pf-ledger-date" data-label="Credited">
+                      {fmtWhen(row.created_at)}
+                    </td>
+                    <td data-label="Customer">{row.customer_label ?? '—'}</td>
+                    <td className="tabular" data-label="Member ID">
+                      {row.customer_member_id ?? '—'}
+                    </td>
+                    <td className="tabular pf-ledger-grams" data-label="Grams">
+                      +{parseG(row.grams).toFixed(6)} g
+                    </td>
+                    <td className="tabular" data-label="Purchase">
+                      {row.purchase_reference ?? '—'}
+                    </td>
                   </tr>
                 ))}
               </tbody>

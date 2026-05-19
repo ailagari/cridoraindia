@@ -44,6 +44,7 @@ export const JEWELLER_NAV_GROUPS: DashboardNavGroup[] = [
     icon: 'profile',
     items: [
       { sectionKey: 'prof_more', label: 'Shop & business' },
+      { sectionKey: 'prof_security', label: 'Password & security' },
       { sectionKey: 'prof_kyb', label: 'KYB' },
     ],
   },
@@ -74,6 +75,7 @@ export const JEWELLER_LEGACY_SECTION: Record<string, string> = {
   txn_settlements: 'txn_ops',
   prof_payouts: 'prof_more',
   prof_shop: 'prof_more',
+  profile_security: 'prof_security',
 }
 
 export function normalizeJewellerSection(raw: string | null): string | null {

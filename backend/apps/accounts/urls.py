@@ -12,6 +12,7 @@ from .views import (
     LoginView,
     LogoutView,
     MeView,
+    PasswordChangeView,
 )
 from .views_gold import (
     DefaultJewellerView,
@@ -158,6 +159,7 @@ urlpatterns = [
     path("auth/register/", CustomerRegisterView.as_view()),
     path("auth/jeweller/apply/", JewellerApplyView.as_view()),
     path("auth/me/", MeView.as_view()),
+    path("auth/password/change/", PasswordChangeView.as_view()),
     path("jeweller/business-profile/", JewellerBusinessProfileView.as_view()),
     path("gold/wallet/", GoldWalletView.as_view()),
     path("gold/sellback/quote/", GoldSellbackQuoteView.as_view()),

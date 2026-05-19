@@ -53,7 +53,7 @@ export function isAccountShortcutSection(user: AuthUser | null, sectionParam: st
     case 'customer':
       return s === 'profile_personal' || s === 'profile_security' || s === 'profile_cridora_id'
     case 'jeweller':
-      return s === 'prof_more'
+      return s === 'prof_more' || s === 'prof_security'
     case 'admin':
       return s === 'plat_account' || s === 'plat_security' || s === 'plat_gold' || s === 'plat_control'
     default:

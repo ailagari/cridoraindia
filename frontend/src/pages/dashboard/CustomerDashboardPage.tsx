@@ -8,6 +8,7 @@ import { GoldTransferPanel } from '@/features/gold/GoldTransferPanel'
 import { CustomerDepositInfoPanel } from '@/features/invest/CustomerDepositInfoPanel'
 import { FractionalPurchasePanel } from '@/features/invest/FractionalPurchasePanel'
 import { CustomerKycWorkflow } from '@/features/customer/CustomerKycWorkflow'
+import { ChangePasswordPanel } from '@/features/auth/ChangePasswordPanel'
 import { CustomerPortfolioPanel } from '@/features/portfolio/CustomerPortfolioPanel'
 import { CustomerVaultsPanel } from '@/features/portfolio/CustomerVaultsPanel'
 import { CustomerCrossRedemptionPanel } from '@/features/crossRedemption/CustomerCrossRedemptionPanel'
@@ -131,10 +132,7 @@ export function CustomerDashboardPage() {
       {active === 'redeem_emergency' ? <CustomerCrossRedemptionPanel /> : null}
       {active === 'profile_cridora_id' || active === 'profile_qr' ? <CustomerVaultAddressesPanel /> : null}
       {active === 'profile_security' ? (
-        <ComingSoon
-          title="Password & security"
-          children="Change password, manage sessions, and configure two-factor authentication here."
-        />
+        <ChangePasswordPanel description="Update your sign-in password. Other devices will need to sign in again after their session expires." />
       ) : null}
       {active === 'profile_personal' ? (
         <ComingSoon

@@ -11,6 +11,7 @@ import {
   authFetch,
   clearTokens,
   getStoredAccess,
+  getStoredRefresh,
   storeTokens,
 } from '@/lib/api'
 import { claimPushSubscriptionForLoggedInUser } from '@/lib/webPushApi'
@@ -35,6 +36,7 @@ type AuthContextValue = {
   registerJeweller: (payload: Record<string, string>) => Promise<AuthUser>
   logout: () => Promise<void>
   refreshProfile: () => Promise<void>
+  changePassword: (currentPassword: string, newPassword: string) => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -192,6 +194,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(u)
   }, [])
 
+  const changePassword = useCallback(
+    async (currentPassword: string, newPassword: string) => {
+      const refresh = getStoredRefresh()
+      const res = await authFetch('/api/v1/auth/password/change/', {
+        method: 'POST',
+        jsonBody: {
+          current_password: currentPassword,
+          new_password: newPassword,
+          ...(refresh ? { refresh } : {}),
+        },
+      })
+      const data = (await res.json().catch(() => ({}))) as Record<string, unknown>
+      if (!res.ok) {
+        throw new Error(extractApiMessage(data, 'Could not change password.'))
+      }
+      persistSession(data)
+    },
+    [persistSession],
+  )
+
   const value = useMemo(
     () => ({
       user,
@@ -201,6 +223,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       registerJeweller,
       logout,
       refreshProfile,
+      changePassword,
     }),
     [
       user,
@@ -210,6 +233,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       registerJeweller,
       logout,
       refreshProfile,
+      changePassword,
     ],
   )
 

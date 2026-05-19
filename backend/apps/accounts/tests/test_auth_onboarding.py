@@ -133,3 +133,73 @@ class AuthOnboardingApiTests(APITestCase):
         self.assertEqual(patch.status_code, 200)
         self.assertEqual(patch.data.get("gstin"), "27AAAAA0000A1Z5")
         self.assertEqual(patch.data.get("business_name"), "Patch Jewellers Pvt Ltd")
+
+    def test_password_change_for_customer(self):
+        reg = self.client.post(
+            "/api/v1/auth/register/",
+            {
+                "email": "pw_change@example.com",
+                "password": "oldpass1234",
+                "first_name": "Pw",
+                "last_name": "Change",
+            },
+            format="json",
+        )
+        self.assertEqual(reg.status_code, 201)
+        old_refresh = reg.data["refresh"]
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {reg.data['access']}")
+        bad = self.client.post(
+            "/api/v1/auth/password/change/",
+            {"current_password": "wrong", "new_password": "newpass1234"},
+            format="json",
+        )
+        self.assertEqual(bad.status_code, 400)
+        ok = self.client.post(
+            "/api/v1/auth/password/change/",
+            {
+                "current_password": "oldpass1234",
+                "new_password": "newpass5678",
+                "refresh": old_refresh,
+            },
+            format="json",
+        )
+        self.assertEqual(ok.status_code, 200)
+        self.assertIn("access", ok.data)
+        login_old = self.client.post(
+            "/api/v1/auth/login/",
+            {"email": "pw_change@example.com", "password": "oldpass1234"},
+            format="json",
+        )
+        self.assertEqual(login_old.status_code, 400)
+        login_new = self.client.post(
+            "/api/v1/auth/login/",
+            {"email": "pw_change@example.com", "password": "newpass5678"},
+            format="json",
+        )
+        self.assertEqual(login_new.status_code, 200)
+
+    def test_password_change_for_jeweller(self):
+        reg = self.client.post(
+            "/api/v1/auth/jeweller/apply/",
+            {
+                "email": "jeweller_pw@example.com",
+                "password": "oldpass1234",
+                "first_name": "J",
+                "last_name": "W",
+                "business_name": "PW Jewellers",
+                "shop_address": "1 Road",
+                "city": "Mumbai",
+                "state": "MH",
+                "pincode": "400001",
+            },
+            format="json",
+        )
+        self.assertEqual(reg.status_code, 201)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {reg.data['access']}")
+        ok = self.client.post(
+            "/api/v1/auth/password/change/",
+            {"current_password": "oldpass1234", "new_password": "newpass5678"},
+            format="json",
+        )
+        self.assertEqual(ok.status_code, 200)
+        self.assertEqual(ok.data.get("user_type"), "jeweller")

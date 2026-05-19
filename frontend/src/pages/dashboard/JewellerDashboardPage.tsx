@@ -13,6 +13,7 @@ import { JewellerFractionalVerifyPanel } from '@/features/invest/JewellerFractio
 import { JewellerCrossRedemptionInboxPanel } from '@/features/crossRedemption/JewellerCrossRedemptionInboxPanel'
 import { JewellerSellbacksPanel } from '@/features/redeem/JewellerSellbacksPanel'
 import { JewellerOrnamentRedemptionsPanel } from '@/features/marketplace/JewellerOrnamentRedemptionsPanel'
+import { ChangePasswordPanel } from '@/features/auth/ChangePasswordPanel'
 import { useAuth } from '@/context/AuthContext'
 import { LIVE_PROFILE_POLL_MS } from '@/lib/liveDeskIntervals'
 import { useLivePoll } from '@/lib/useLivePoll'
@@ -96,6 +97,9 @@ export function JewellerDashboardPage() {
         <div className="dash-panel-max">
           <JewellerKybWorkflow />
         </div>
+      ) : null}
+      {active === 'prof_security' ? (
+        <ChangePasswordPanel description="Update your jeweller account password used to sign in to the Cridora desk." />
       ) : null}
       {active === 'prof_more' ? <JewellerBusinessProfilePanel /> : null}
     </DashboardLayout>
