@@ -10,6 +10,7 @@ from .models import BankAccount, KYDocument
 from .services.admin_access import sync_staff_superuser_to_platform_admin
 from .serializers import (
     BankAccountSerializer,
+    CustomerPersonalProfileSerializer,
     CustomerRegisterSerializer,
     JewellerApplySerializer,
     JewellerBusinessProfileSerializer,
@@ -90,6 +91,34 @@ class PasswordChangeView(APIView):
             except Exception:
                 pass
         return Response(user_auth_payload(user))
+
+
+class CustomerPersonalProfileView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request):
+        if request.user.user_type != User.CUSTOMER:
+            return Response(
+                {"detail": "Only customers can update personal profile."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        ser = CustomerPersonalProfileSerializer(data=request.data, partial=True)
+        if not ser.is_valid():
+            return Response(ser.errors, status=status.HTTP_400_BAD_REQUEST)
+        if not ser.validated_data:
+            return Response(
+                UserMeSerializer(request.user, context={"request": request}).data
+            )
+        u = request.user
+        fields_to_update: list[str] = []
+        for key in ("first_name", "last_name", "phone"):
+            if key not in ser.validated_data:
+                continue
+            setattr(u, key, (ser.validated_data[key] or "").strip())
+            fields_to_update.append(key)
+        if fields_to_update:
+            u.save(update_fields=fields_to_update)
+        return Response(UserMeSerializer(u, context={"request": request}).data)
 
 
 class JewellerBusinessProfileView(APIView):

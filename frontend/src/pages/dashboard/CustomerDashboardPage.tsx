@@ -7,6 +7,7 @@ import { CustomerVaultAddressesPanel } from '@/features/gold/CustomerVaultAddres
 import { GoldTransferPanel } from '@/features/gold/GoldTransferPanel'
 import { CustomerDepositInfoPanel } from '@/features/invest/CustomerDepositInfoPanel'
 import { FractionalPurchasePanel } from '@/features/invest/FractionalPurchasePanel'
+import { CustomerAccountDetailsPanel } from '@/features/customer/CustomerAccountDetailsPanel'
 import { CustomerKycWorkflow } from '@/features/customer/CustomerKycWorkflow'
 import { ChangePasswordPanel } from '@/features/auth/ChangePasswordPanel'
 import { CustomerPortfolioPanel } from '@/features/portfolio/CustomerPortfolioPanel'
@@ -134,12 +135,7 @@ export function CustomerDashboardPage() {
       {active === 'profile_security' ? (
         <ChangePasswordPanel description="Update your sign-in password. Other devices will need to sign in again after their session expires." />
       ) : null}
-      {active === 'profile_personal' ? (
-        <ComingSoon
-          title="Personal details"
-          children="Update your name, phone, and notification preferences from this panel."
-        />
-      ) : null}
+      {active === 'profile_personal' ? <CustomerAccountDetailsPanel /> : null}
       {active === 'profile_kyc' ? (
         <div className="dash-panel-max">
           <CustomerKycWorkflow />

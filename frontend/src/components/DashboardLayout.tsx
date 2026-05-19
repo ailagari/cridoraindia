@@ -4,6 +4,7 @@ import { CridoraLogo } from '@/components/CridoraLogo'
 import { DashboardMobileSubNav } from '@/components/DashboardMobileSubNav'
 import { NavHubIcon } from '@/components/NavHubIcon'
 import { GoldTickerStrip } from '@/components/GoldTickerStrip'
+import { DashboardMobileUserMenu } from '@/components/DashboardMobileUserMenu'
 import { NotificationBell } from '@/components/NotificationBell'
 import { useAuth, type AuthUser } from '@/context/AuthContext'
 import type { DashboardNavGroup } from '@/lib/mobileNav/types'
@@ -256,25 +257,35 @@ export function DashboardLayout({
 
       <div className="dash-main">
         <header className="dash-topbar">
-          <div className="dash-topbar-left">
-            <button
-              type="button"
-              className="btn btn-ghost dash-hamburger"
-              aria-label="Open menu"
-              onClick={() => setMobileOpen(true)}
-            >
-              Menu
-            </button>
-            <h1 className="dash-topbar-title">{title}</h1>
-          </div>
-          <div className="dash-topbar-right" style={{ alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-            {role === 'jeweller' ? <GoldTickerStrip variant="jeweller" /> : null}
-            {role === 'admin' ? <GoldTickerStrip variant="admin" /> : null}
-            <NotificationBell compact role={role} />
-            <Link to="/" className="dash-public-link">
-              Public site
+          <div className="dash-topbar-inner">
+            <Link to="/" className="dash-topbar-logo" onClick={() => setMobileOpen(false)}>
+              <CridoraLogo size="sm" />
             </Link>
+            <h1 className="dash-topbar-title">{title}</h1>
+            <span className="dash-mobile-username" title={user?.first_name?.trim() || undefined}>
+              {user?.first_name?.trim() || 'Account'}
+            </span>
+            <div className="dash-topbar-end">
+              <div className="dash-mobile-actions">
+                <NotificationBell compact role={role} />
+                <DashboardMobileUserMenu onLogout={handleLogout} />
+              </div>
+              <div className="dash-topbar-right">
+                {role === 'jeweller' ? <GoldTickerStrip variant="jeweller" /> : null}
+                {role === 'admin' ? <GoldTickerStrip variant="admin" /> : null}
+                <NotificationBell compact role={role} />
+                <Link to="/" className="dash-public-link">
+                  Public site
+                </Link>
+              </div>
+            </div>
           </div>
+          {role === 'jeweller' || role === 'admin' ? (
+            <div className="dash-topbar-mobile-ticker">
+              {role === 'jeweller' ? <GoldTickerStrip variant="jeweller" /> : null}
+              {role === 'admin' ? <GoldTickerStrip variant="admin" /> : null}
+            </div>
+          ) : null}
         </header>
 
         <DashboardMobileSubNav

@@ -3,6 +3,7 @@ from rest_framework_simplejwt.views import TokenRefreshView
 
 from .views import (
     BankAccountUpsertView,
+    CustomerPersonalProfileView,
     CustomerRegisterView,
     HealthView,
     JewellerApplyView,
@@ -181,6 +182,7 @@ urlpatterns = [
     path("gold/sellback/confirm/", GoldSellbackConfirmView.as_view()),
     path("gold/sellback/outstanding/", GoldSellbackOutstandingView.as_view()),
     path("gold/sellback/<int:pk>/otp/regenerate/", GoldSellbackOtpRegenerateView.as_view()),
+    path("customer/profile/", CustomerPersonalProfileView.as_view()),
     path("customer/profile/payout-upi/", CustomerPayoutUpiProfileView.as_view()),
     path("gold/sellback/<int:pk>/confirm-utr/", CustomerSellbackConfirmUtrView.as_view()),
     path("gold/sellback/<int:pk>/cancel-upi/", CustomerSellbackCancelUpiView.as_view()),

@@ -154,6 +154,14 @@ class JewellerApplySerializer(serializers.Serializer):
         )
 
 
+class CustomerPersonalProfileSerializer(serializers.Serializer):
+    """Customer-only PATCH for contact name and phone."""
+
+    first_name = serializers.CharField(max_length=150, required=False, allow_blank=True)
+    last_name = serializers.CharField(max_length=150, required=False, allow_blank=True)
+    phone = serializers.CharField(max_length=20, required=False, allow_blank=True)
+
+
 class JewellerBusinessProfileSerializer(serializers.Serializer):
     """Jeweller-only POST/PATCH for GSTIN and showroom identity after signup."""
 

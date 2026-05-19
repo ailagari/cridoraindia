@@ -134,6 +134,34 @@ class AuthOnboardingApiTests(APITestCase):
         self.assertEqual(patch.data.get("gstin"), "27AAAAA0000A1Z5")
         self.assertEqual(patch.data.get("business_name"), "Patch Jewellers Pvt Ltd")
 
+    def test_customer_personal_profile_patch(self):
+        reg = self.client.post(
+            "/api/v1/auth/register/",
+            {
+                "email": "profile_patch@example.com",
+                "password": "securepass12",
+                "first_name": "Old",
+                "last_name": "Name",
+                "phone": "9876543210",
+            },
+            format="json",
+        )
+        self.assertEqual(reg.status_code, 201)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {reg.data['access']}")
+        patch = self.client.patch(
+            "/api/v1/customer/profile/",
+            {
+                "first_name": "New",
+                "last_name": "Customer",
+                "phone": "+91 98765 43211",
+            },
+            format="json",
+        )
+        self.assertEqual(patch.status_code, 200)
+        self.assertEqual(patch.data.get("first_name"), "New")
+        self.assertEqual(patch.data.get("last_name"), "Customer")
+        self.assertEqual(patch.data.get("phone"), "+91 98765 43211")
+
     def test_password_change_for_customer(self):
         reg = self.client.post(
             "/api/v1/auth/register/",
