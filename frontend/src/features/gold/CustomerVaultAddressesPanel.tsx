@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import QRCode from 'qrcode'
 import { useAuth } from '@/context/AuthContext'
+import { usePublicLayoutMax767 } from '@/hooks/usePublicLayoutMax767'
 import {
   fetchGoldWallet,
   vaultRowTotalGrams,
@@ -110,6 +112,8 @@ function vaultRowSubtitle(v: VaultRowDTO): string {
 
 export function CustomerVaultAddressesPanel() {
   const { user } = useAuth()
+  const navigate = useNavigate()
+  const narrow = usePublicLayoutMax767()
   const [wallet, setWallet] = useState<GoldWalletDTO | null>(null)
   const [loadErr, setLoadErr] = useState('')
 
@@ -147,6 +151,17 @@ export function CustomerVaultAddressesPanel() {
       ) : null}
 
       {loadErr ? <p className="form-error">{loadErr}</p> : null}
+
+      {narrow ? (
+        <button
+          type="button"
+          className="btn btn-primary btn--block"
+          style={{ marginBottom: '1rem' }}
+          onClick={() => navigate('/userdashboard?section=redeem_transfer&transferMode=scan')}
+        >
+          Scan & pay gold
+        </button>
+      ) : null}
 
       {wallet ? (
         <div className="card" style={{ padding: '1.25rem', borderRadius: 20, marginBottom: '1rem' }}>
