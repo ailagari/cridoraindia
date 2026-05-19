@@ -1,23 +1,37 @@
 import { useId } from 'react'
 
-type Props = { size?: 'sm' | 'md' | 'lg'; showWordmark?: boolean; className?: string }
+type Props = {
+  size?: 'sm' | 'md' | 'lg'
+  showWordmark?: boolean
+  className?: string
+  /** Pulsating golden drop-shadow (e.g. native Android splash). */
+  pulseGlow?: boolean
+}
 
 const box = { sm: 36, md: 44, lg: 80 } as const
 
-export function CridoraLogo({ size = 'sm', showWordmark = true, className = '' }: Props) {
+export function CridoraLogo({
+  size = 'sm',
+  showWordmark = true,
+  className = '',
+  pulseGlow = false,
+}: Props) {
   const gid = `cg-${useId().replace(/[^a-zA-Z0-9_-]/g, '')}`
   const s = box[size]
 
   return (
     <span className={className} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.65rem' }}>
       <span
+        className={pulseGlow ? 'cridora-logo__mark cridora-logo__mark--pulse' : undefined}
         style={{
           flexShrink: 0,
           width: s,
           height: s,
           display: 'grid',
           placeItems: 'center',
-          filter: 'drop-shadow(0 2px 10px rgba(212, 168, 92, 0.35))',
+          ...(pulseGlow
+            ? {}
+            : { filter: 'drop-shadow(0 2px 10px rgba(212, 168, 92, 0.35))' }),
         }}
       >
         <svg width={s} height={s} viewBox="0 0 40 40" fill="none" aria-hidden>

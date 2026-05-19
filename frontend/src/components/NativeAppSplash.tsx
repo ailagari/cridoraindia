@@ -61,7 +61,7 @@ export function NativeAppSplash() {
         <div className="native-app-splash__glow native-app-splash__glow--outer" aria-hidden />
         <div className="native-app-splash__glow" aria-hidden />
         <div className="native-app-splash__logo">
-          <CridoraLogo size="lg" showWordmark={false} />
+          <CridoraLogo size="lg" showWordmark={false} pulseGlow />
         </div>
         <p className="native-app-splash__wordmark">
           Cridora <span>India</span>
