@@ -128,6 +128,27 @@ class FractionalUpiApiTests(APITestCase):
         self.assertEqual(res.status_code, 201, res.data)
         self.assertEqual(res.data["total_inr"], "100.00")
 
+    def test_customer_can_cancel_unpaid_upi_order(self):
+        order_id = self._create_upi_order()
+        self.client.force_authenticate(self.customer)
+        res = self.client.post(f"/api/v1/fractional/orders/{order_id}/cancel-upi/", {}, format="json")
+        self.assertEqual(res.status_code, 200, res.data)
+        self.assertEqual(res.data["status"], "cancelled")
+        purchase = FractionalGoldPurchase.objects.get(pk=order_id)
+        self.assertEqual(purchase.status, FractionalGoldPurchase.CANCELLED)
+
+    def test_cannot_cancel_after_utr_submitted(self):
+        order_id = self._create_upi_order()
+        self.client.force_authenticate(self.customer)
+        submit = self.client.post(
+            f"/api/v1/fractional/orders/{order_id}/submit-utr/",
+            {"utr": "123456789012"},
+            format="json",
+        )
+        self.assertEqual(submit.status_code, 200, submit.data)
+        res = self.client.post(f"/api/v1/fractional/orders/{order_id}/cancel-upi/", {}, format="json")
+        self.assertEqual(res.status_code, 400)
+
     def test_payment_payload_and_submit_utr(self):
         order_id = self._create_upi_order()
         pay = self.client.get(f"/api/v1/fractional/orders/{order_id}/payment/")

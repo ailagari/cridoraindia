@@ -46,6 +46,7 @@ from .fractional_views import (
     JewellerFractionalVerifyView,
 )
 from .fractional_upi_views import (
+    FractionalOrderCancelUpiView,
     FractionalOrderPaymentView,
     FractionalOrderSubmitUtrView,
     JewellerFractionalConfirmUtrView,
@@ -210,6 +211,10 @@ urlpatterns = [
     path(
         "fractional/orders/<int:pk>/submit-utr/",
         FractionalOrderSubmitUtrView.as_view(),
+    ),
+    path(
+        "fractional/orders/<int:pk>/cancel-upi/",
+        FractionalOrderCancelUpiView.as_view(),
     ),
     path("jeweller/fractional/pending/", JewellerFractionalPendingView.as_view()),
     path("jeweller/fractional/pending-upi/", JewellerFractionalPendingUpiView.as_view()),

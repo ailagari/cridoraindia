@@ -118,6 +118,16 @@ def payment_payload_for(purchase: FractionalGoldPurchase) -> dict:
     }
 
 
+def cancel_upi_order(purchase: FractionalGoldPurchase) -> tuple[bool, str]:
+    if purchase.payment_method != FractionalGoldPurchase.PAY_UPI:
+        return False, "This order is not an online UPI purchase."
+    if purchase.status != FractionalGoldPurchase.PENDING_PAYMENT:
+        return False, "Only unpaid orders can be cancelled."
+    purchase.status = FractionalGoldPurchase.CANCELLED
+    purchase.save(update_fields=["status", "updated_at"])
+    return True, "Order cancelled."
+
+
 def submit_utr(purchase: FractionalGoldPurchase, raw_utr: str) -> tuple[bool, str]:
     if purchase.payment_method != FractionalGoldPurchase.PAY_UPI:
         return False, "This order is not an online UPI purchase."

@@ -8305,6 +8305,15 @@ select.input {
   gap: 0.45rem;
 }
 
+.fractional-upi-pay__cancel {
+  margin-top: 0.15rem;
+  color: var(--text-muted);
+}
+
+.fractional-upi-pay__cancel:hover:not(:disabled) {
+  color: var(--text);
+}
+
 .fractional-upi-utr-display {
   font-size: 0.95rem;
   letter-spacing: 0.04em;

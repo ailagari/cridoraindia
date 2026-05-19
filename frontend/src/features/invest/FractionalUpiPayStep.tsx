@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import QRCode from 'qrcode'
 import {
+  fractionalCancelUpiOrder,
   fractionalFetchPayment,
   fractionalSubmitUtr,
   type FractionalPaymentPayload,
@@ -13,6 +14,7 @@ type Props = {
   setBusy: (v: boolean) => void
   onUpdated: () => void | Promise<void>
   onSuccess: (message: string) => void
+  onCancelled: () => void
 }
 
 function formatInr(s: string): string {
@@ -21,7 +23,7 @@ function formatInr(s: string): string {
   return n.toLocaleString('en-IN', { maximumFractionDigits: 2 })
 }
 
-export function FractionalUpiPayStep({ order, busy, setBusy, onUpdated, onSuccess }: Props) {
+export function FractionalUpiPayStep({ order, busy, setBusy, onUpdated, onSuccess, onCancelled }: Props) {
   const [payment, setPayment] = useState<FractionalPaymentPayload | null>(null)
   const [loadErr, setLoadErr] = useState('')
   const [actionErr, setActionErr] = useState('')
@@ -100,6 +102,22 @@ export function FractionalUpiPayStep({ order, busy, setBusy, onUpdated, onSucces
         return
       }
       onSuccess(`UTR submitted for ${out.data.reference}. Waiting for jeweller verification.`)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const cancelOrder = async () => {
+    setActionErr('')
+    setBusy(true)
+    try {
+      const out = await fractionalCancelUpiOrder(order.id)
+      if (!out.ok) {
+        setActionErr(out.detail)
+        return
+      }
+      await onUpdated()
+      onCancelled()
     } finally {
       setBusy(false)
     }
@@ -210,9 +228,29 @@ export function FractionalUpiPayStep({ order, busy, setBusy, onUpdated, onSucces
           >
             Submit UTR
           </button>
+          <button
+            type="button"
+            className="btn btn-ghost btn--block fractional-upi-pay__cancel"
+            disabled={busy}
+            onClick={() => void cancelOrder()}
+          >
+            Cancel order
+          </button>
           {actionErr ? <p className="form-error">{actionErr}</p> : null}
         </>
-      ) : null}
+      ) : (
+        <>
+          <button
+            type="button"
+            className="btn btn-ghost btn--block fractional-upi-pay__cancel"
+            disabled={busy}
+            onClick={() => void cancelOrder()}
+          >
+            Cancel order
+          </button>
+          {actionErr ? <p className="form-error">{actionErr}</p> : null}
+        </>
+      )}
     </div>
   )
 }

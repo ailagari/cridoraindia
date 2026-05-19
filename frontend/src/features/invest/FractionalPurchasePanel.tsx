@@ -117,7 +117,7 @@ export function FractionalPurchasePanel() {
     setLastOrder(row)
     if (row.payment_method === 'upi' && (row.status === 'pending_payment' || row.status === 'awaiting_utr_verify')) {
       setActiveUpiOrder(row)
-    } else if (row.status === 'completed') {
+    } else if (row.status === 'completed' || row.status === 'cancelled') {
       setActiveUpiOrder(null)
     }
   }, [orders, lastOrder])
@@ -425,6 +425,11 @@ export function FractionalPurchasePanel() {
                 if (w) setBalanceHint(w.balance_grams)
               }}
               onSuccess={(msg) => setSuccessToast(msg)}
+              onCancelled={() => {
+                setActiveUpiOrder(null)
+                setLastOrder(null)
+                setOrderMsg('Order cancelled. You can place a new order when ready.')
+              }}
             />
           ) : null}
 
