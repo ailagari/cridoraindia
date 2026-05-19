@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "367952015340",
+    "project_id": "cridoraindia",
+    "storage_bucket": "cridoraindia.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:367952015340:android:e104568b4701381bbd5ac9",
+        "android_client_info": {
+          "package_name": "in.cridora.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAu5jJX0uYFCdionWswEFVMPuSdW_MEqG8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

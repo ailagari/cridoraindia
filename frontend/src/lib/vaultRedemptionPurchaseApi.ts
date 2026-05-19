@@ -37,7 +37,14 @@ export type VaultRedemptionQuoteDTO = {
   vault_covers_full_order: boolean
   same_store: boolean
   cross_platform_fee_inr: string
+  gold_metal_value_inr?: string
+  stone_component_inr?: string
+  stone_included?: boolean
+  stone_type?: string
+  stone_weight_grams?: string
   vault_metal_credit_inr: string
+  gst_on_gold_full_inr?: string
+  gst_on_gold_charged_inr?: string
   gst_on_gold_saved_inr: string
   cash_only_final_invoice_inr: string
   cross_redemption?: CrossRedemptionQuoteAddon | null

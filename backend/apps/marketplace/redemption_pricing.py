@@ -98,13 +98,12 @@ def resolve_listing_metal_rate_inr(
 
 def _jeweller_line_parts(
     product: MarketplaceProduct, customer: User | None
-) -> tuple[Decimal, Decimal, Decimal, Decimal, Decimal, bool]:
-    """gold_line, making, gst_gold_full, gst_making, discount, same_store."""
+) -> tuple[Decimal, Decimal, Decimal, Decimal, Decimal, Decimal, bool]:
+    """gold_metal_inr, stone_inr, making, gst_gold_full, gst_making, discount, same_store."""
     profile = jeweller_profile_for(product.jeweller)
     metal_rate = resolve_listing_metal_rate_inr(product, profile)
-    metal_val = gold_metal_value_inr(product, metal_rate)
+    gold_metal = gold_metal_value_inr(product, metal_rate)
     stone = stone_component_inr(product)
-    gold_line = metal_val + stone
 
     same_store = bool(
         customer
@@ -112,12 +111,12 @@ def _jeweller_line_parts(
         and customer.default_jeweller_id == product.jeweller_id
     )
 
-    raw_making = _raw_making_inr(product, metal_val, same_store)
+    raw_making = _raw_making_inr(product, gold_metal, same_store)
     discount = (raw_making * _DISCOUNT_ON_MAKING).quantize(Decimal("0.01"))
     making = (raw_making - discount).quantize(Decimal("0.01"))
-    gst_gold_full = (gold_line * _GST_GOLD).quantize(Decimal("0.01"))
+    gst_gold_full = (gold_metal * _GST_GOLD).quantize(Decimal("0.01"))
     gst_making = (making * _GST_MAKING).quantize(Decimal("0.01"))
-    return gold_line, making, gst_gold_full, gst_making, discount, same_store
+    return gold_metal, stone, making, gst_gold_full, gst_making, discount, same_store
 
 
 def checkout_totals_with_vault(
@@ -127,16 +126,17 @@ def checkout_totals_with_vault(
 ) -> dict[str, Decimal | bool]:
     """
     Checkout totals when applying up to `vault_grams` from the customer's vault at the listing jeweller.
-    GST on gold is waived on the metal portion paid from vault (already taxed when vaulted).
+    Gold metal and stone are priced separately (stone cost/weight from the jeweller's SKU).
+    GST on gold applies only to gold metal; vault grams credit only gold metal, not stone.
     """
-    gold_line, making, gst_gold_full, gst_making, _discount, same_store = _jeweller_line_parts(
+    gold_metal, stone, making, gst_gold_full, gst_making, _discount, same_store = _jeweller_line_parts(
         product, customer
     )
     metal_rate = resolve_listing_metal_rate_inr(product)
 
-    full_jeweller_subtotal = (gold_line + making + gst_gold_full + gst_making).quantize(
-        Decimal("0.01")
-    )
+    full_jeweller_subtotal = (
+        gold_metal + stone + making + gst_gold_full + gst_making
+    ).quantize(Decimal("0.01"))
 
     cross = Decimal("0")
     if product.is_x_redeem and not customer_has_vault_holdings_at_jeweller(
@@ -150,9 +150,9 @@ def checkout_totals_with_vault(
 
     grams = max(Decimal("0"), vault_grams)
     raw_vault_inr = (grams * metal_rate).quantize(Decimal("0.01"))
-    vault_metal_credit = min(raw_vault_inr, gold_line)
-    gst_on_gold = ((gold_line - vault_metal_credit) * _GST_GOLD).quantize(Decimal("0.01"))
-    gst_on_gold_saved = max(Decimal("0"), gst_gold_full - gst_on_gold)
+    vault_metal_credit = min(raw_vault_inr, gold_metal)
+    gst_on_gold_charged = ((gold_metal - vault_metal_credit) * _GST_GOLD).quantize(Decimal("0.01"))
+    gst_on_gold_saved = max(Decimal("0"), gst_gold_full - gst_on_gold_charged)
     vault_value_offset = min(raw_vault_inr, final_invoice)
     cash_payable = max(
         Decimal("0"), final_invoice - vault_value_offset - gst_on_gold_saved
@@ -164,7 +164,12 @@ def checkout_totals_with_vault(
         "jeweller_subtotal_inr": full_jeweller_subtotal,
         "same_store": same_store,
         "cross_platform_fee_inr": cross,
+        "gold_metal_value_inr": gold_metal,
+        "stone_component_inr": stone,
+        "stone_included": bool(product.stone_included and stone > 0),
         "vault_metal_credit_inr": vault_metal_credit,
+        "gst_on_gold_full_inr": gst_gold_full,
+        "gst_on_gold_charged_inr": gst_on_gold_charged,
         "gst_on_gold_saved_inr": gst_on_gold_saved,
         "cash_payable_inr": cash_payable,
         "grams_applied": grams,

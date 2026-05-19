@@ -107,7 +107,6 @@ export function NotificationBell({
   const rootRef = useRef<HTMLDivElement>(null)
   /** Bottom sheet on narrow viewports (PWA / mobile dashboards). */
   const [useSheetLayout, setUseSheetLayout] = useState(false)
-  const autoMarkedOnOpenRef = useRef(false)
   const prevMockItemsRef = useRef<AppNotification[]>([])
 
   const mergeFeedWithPriorRead = useCallback(
@@ -427,17 +426,6 @@ export function NotificationBell({
     setItemsReadLocal()
     setShowHistory(false)
   }, [useAdminFeed, usePlatformFeed, loadAdminFeed, loadPlatformFeed, setItemsReadLocal])
-
-  useEffect(() => {
-    if (!open) {
-      autoMarkedOnOpenRef.current = false
-      return
-    }
-    if (autoMarkedOnOpenRef.current) return
-    if (!items.some((i) => !i.read)) return
-    autoMarkedOnOpenRef.current = true
-    void markAllRead()
-  }, [open, items, markAllRead])
 
   const onFeedItemActivate = useCallback(
     async (n: AppNotification) => {

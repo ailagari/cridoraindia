@@ -1,6 +1,11 @@
 import type { MarketplaceProductDTO } from '@/lib/marketplaceApi'
 
 export type PriceBreakdown = {
+  /** Gold metal only (rate × fine gold weight). */
+  goldMetalValue: number
+  /** Jeweller-listed stone charge when present (separate from vault gold). */
+  stoneComponent: number
+  /** Gold metal + stone (before making and taxes). */
   goldValue: number
   makingCharges: number
   gstOnGold: number
@@ -127,11 +132,13 @@ export function makingChargesBreakdownLabel(p: MarketplaceProductDTO, ctx?: Chec
 }
 
 function jewellerLineParts(p: MarketplaceProductDTO, ctx?: CheckoutPricingContext): JewellerParts {
-  const goldValue = Number.parseFloat(p.gold_plus_stone_inr)
+  const goldMetalValue = Number.parseFloat(p.gold_metal_value_inr)
+  const stoneComponent = Number.parseFloat(p.stone_component_inr || '0')
+  const goldValue = goldMetalValue + stoneComponent
   const rawMakingCharges = rawMakingChargesInr(p, ctx)
   const discountAmount = rawMakingCharges * DISCOUNT_RATE
   const makingCharges = rawMakingCharges - discountAmount
-  const gstOnGold = goldValue * 0.03
+  const gstOnGold = goldMetalValue * 0.03
   const gstOnMaking = makingCharges * 0.18
   const jewellerSubtotal = goldValue + makingCharges + gstOnGold + gstOnMaking
 
@@ -232,6 +239,8 @@ export function calculateCheckoutPrice(
 ): PriceBreakdown {
   const q = Math.max(1, Math.min(9999, Math.floor(Number.isFinite(quantity) ? quantity : 1)))
   const j0 = jewellerLineParts(p, ctx)
+  const goldMetalQ = Number.parseFloat(p.gold_metal_value_inr) * q
+  const stoneQ = Number.parseFloat(p.stone_component_inr || '0') * q
   const j = {
     goldValue: j0.goldValue * q,
     makingCharges: j0.makingCharges * q,
@@ -245,9 +254,9 @@ export function calculateCheckoutPrice(
   const metalRate = Number.parseFloat(p.metal_rate_inr_per_gram_used)
   const cappedGrams = Math.max(0, Math.min(vaultGramsToApply, vaultBalanceGrams))
   const rawVaultInr = cappedGrams * metalRate
-  const vaultMetalCredit = Math.min(rawVaultInr, j.goldValue)
-  const gstOnGoldFull = j.gstOnGold
-  const gstOnGold = Math.max(0, (j.goldValue - vaultMetalCredit) * 0.03)
+  const vaultMetalCredit = Math.min(rawVaultInr, goldMetalQ)
+  const gstOnGoldFull = goldMetalQ * 0.03
+  const gstOnGold = Math.max(0, (goldMetalQ - vaultMetalCredit) * 0.03)
   const gstOnGoldSaved = Math.max(0, gstOnGoldFull - gstOnGold)
   const vaultValueOffset = Math.min(rawVaultInr, finalAmount)
   const payableAmount = Math.max(0, finalAmount - vaultValueOffset - gstOnGoldSaved)
@@ -257,6 +266,8 @@ export function calculateCheckoutPrice(
   const jewellerSubtotal = j.jewellerSubtotal
 
   return {
+    goldMetalValue: goldMetalQ,
+    stoneComponent: stoneQ,
     goldValue: j.goldValue,
     makingCharges: j.makingCharges,
     gstOnGold,

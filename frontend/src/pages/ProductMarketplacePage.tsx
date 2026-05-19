@@ -8,6 +8,7 @@ import {
 } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { ProductPhoto } from '@/components/ProductPhoto'
+import { VaultGoldTaxSavingsNotice } from '@/features/gold/VaultGoldTaxSavingsNotice'
 import {
   fetchMarketplaceProducts,
   fetchMarketplaceProduct,
@@ -285,7 +286,15 @@ function CheckoutView({
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', fontSize: '0.88rem' }}>
             <Row label="Gold + stone (metal layer)" value={`₹${formatInr(p.goldValue)}`} />
-            <Row label="GST on gold (3%)" value={`₹${formatInr(p.gstOnGold, 2)}`} />
+            <Row
+              label={
+                vaultActive && vaultGrams > 0 && p.gstOnGoldSaved > 0
+                  ? 'GST on gold (vault-exempt metal)'
+                  : 'GST on gold (3%)'
+              }
+              value={`₹${formatInr(p.gstOnGold, 2)}`}
+            />
+            {vaultActive && vaultGrams > 0 ? <VaultGoldTaxSavingsNotice gstSavedInr={p.gstOnGoldSaved} compact /> : null}
             <Row
               label="Making charges"
               value={
@@ -545,13 +554,7 @@ function CheckoutView({
                   value={<strong style={{ color: 'var(--success)' }}>₹{formatInr(p.vaultMetalCredit)}</strong>}
                   muted
                 />
-                {p.gstOnGoldSaved > 0 ? (
-                  <Row
-                    label="GST on gold (already taxed in vault)"
-                    value={<strong style={{ color: 'var(--success)' }}>-₹{formatInr(p.gstOnGoldSaved)}</strong>}
-                    muted
-                  />
-                ) : null}
+                <VaultGoldTaxSavingsNotice gstSavedInr={p.gstOnGoldSaved} />
                 {vaultGrams * metalRate > p.finalAmount + 1e-6 ? (
                   <p style={{ margin: 0, fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: 1.45 }}>
                     Invoice fully covered — credit stops at ₹{formatInr(p.finalAmount)}; extra gram selection is not needed

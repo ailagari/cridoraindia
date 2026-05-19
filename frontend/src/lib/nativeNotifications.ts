@@ -9,8 +9,11 @@ const CHANNEL_ID = 'cridora-alerts'
 const CHANNEL_NAME = 'Cridora alerts'
 const TRAY_NOTIFIED_KEY = 'cridora_tray_notified_ids_v1'
 
-/** FCM requires google-services.json in android/app/ — off by default to avoid native crashes. */
-const FCM_ENABLED = import.meta.env.VITE_FCM_ENABLED === 'true'
+/** Use FCM when the native plugin exists unless explicitly disabled at build time. */
+function isFcmEnabled(): boolean {
+  if (!isNativeAndroid() || !Capacitor.isPluginAvailable('PushNotifications')) return false
+  return import.meta.env.VITE_FCM_ENABLED !== 'false'
+}
 
 let bridgeReady = false
 let pushListenersAttached = false
@@ -78,18 +81,8 @@ async function requestLocalPermission(): Promise<boolean> {
   }
 }
 
-async function pushPermissionGranted(): Promise<boolean> {
-  if (!FCM_ENABLED || !isNativeAndroid()) return false
-  try {
-    const status = await PushNotifications.checkPermissions()
-    return status.receive === 'granted'
-  } catch {
-    return false
-  }
-}
-
 async function requestPushPermission(): Promise<boolean> {
-  if (!FCM_ENABLED || !isNativeAndroid()) return false
+  if (!isFcmEnabled()) return false
   try {
     const status = await PushNotifications.requestPermissions()
     return status.receive === 'granted'
@@ -110,12 +103,23 @@ async function postNativeSubscribe(token: string): Promise<void> {
 }
 
 async function registerFcmToken(): Promise<void> {
-  if (!FCM_ENABLED || !isNativeAndroid()) return
+  if (!isFcmEnabled()) return
   await PushNotifications.register()
 }
 
+async function ensureFcmRegistered(): Promise<void> {
+  if (!isFcmEnabled()) return
+  if (!(await localPermissionGranted())) return
+  await requestPushPermission()
+  try {
+    await registerFcmToken()
+  } catch {
+    /* google-services.json missing or FCM misconfigured */
+  }
+}
+
 function attachPushListeners(): void {
-  if (!FCM_ENABLED || pushListenersAttached) return
+  if (!isFcmEnabled() || pushListenersAttached) return
   pushListenersAttached = true
 
   PushNotifications.addListener('registration', (token) => {
@@ -170,8 +174,9 @@ export async function initNativeNotificationBridge(): Promise<void> {
   try {
     await ensureAndroidChannel()
     attachLocalTapListener()
-    if (FCM_ENABLED) {
+    if (isFcmEnabled()) {
       attachPushListeners()
+      void ensureFcmRegistered()
     }
   } catch {
     bridgeReady = false
@@ -187,9 +192,7 @@ export async function registerNativePushSubscription(): Promise<void> {
   if (!localOk) {
     throw new Error('Notification permission was not granted.')
   }
-  if (FCM_ENABLED && (await requestPushPermission())) {
-    await registerFcmToken()
-  }
+  await ensureFcmRegistered()
 }
 
 export async function getNativePushActive(): Promise<boolean> {
@@ -201,13 +204,7 @@ export async function claimNativePushForLoggedInUser(): Promise<void> {
   if (!isNativeAndroid() || !getStoredAccess()) return
   if (!(await localPermissionGranted())) return
   await initNativeNotificationBridge()
-  if (FCM_ENABLED && (await pushPermissionGranted())) {
-    try {
-      await registerFcmToken()
-    } catch {
-      /* FCM optional */
-    }
-  }
+  await ensureFcmRegistered()
 }
 
 export async function showTrayNotification(item: {
@@ -259,7 +256,10 @@ export function notifyBellFeedUpdates(prev: AppNotification[], next: AppNotifica
 
 export function nativePushSetupHint(): string | null {
   if (!isNativeAndroid()) return null
-  return 'Tap Enable in the bell to allow tray alerts. Server push needs Firebase (optional).'
+  if (isFcmEnabled()) {
+    return 'Tap Enable in the bell to allow tray alerts and register for server pushes (FCM).'
+  }
+  return 'Tap Enable in the bell to allow tray alerts. Add google-services.json and rebuild for server pushes.'
 }
 
 export function nativePushNotificationsSupported(): boolean {

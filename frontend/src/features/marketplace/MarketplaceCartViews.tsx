@@ -604,7 +604,7 @@ export function MarketplaceCartCheckout({
               <div style={{ fontSize: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 <Row label="Vault metal credit" value={<strong style={{ color: 'var(--success)' }}>₹{formatInr(cartBreakdown?.vaultMetalCredit ?? vaultValueOffset)}</strong>} muted />
                 {gstOnGoldSaved > 0 ? (
-                  <Row label="GST on gold (vault relief)" value={<strong style={{ color: 'var(--success)' }}>-₹{formatInr(gstOnGoldSaved)}</strong>} muted />
+                  <Row label="Vault saved you (GST on gold)" value={<strong style={{ color: 'var(--success)' }}>₹{formatInr(gstOnGoldSaved)}</strong>} muted />
                 ) : null}
                 <Row label="Grams debited from vault" value={<strong className="tabular">{goldFromVault.toFixed(3)}g</strong>} muted />
                 {cartBreakdown ? (

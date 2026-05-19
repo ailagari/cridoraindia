@@ -122,7 +122,18 @@ def _redemption_quote_payload(
         "vault_covers_full_order": totals["cash_payable_inr"] <= 0 and grams > 0,
         "same_store": totals["same_store"],
         "cross_platform_fee_inr": str(totals["cross_platform_fee_inr"]),
+        "gold_metal_value_inr": str(totals["gold_metal_value_inr"]),
+        "stone_component_inr": str(totals["stone_component_inr"]),
+        "stone_included": totals["stone_included"],
+        "stone_type": product.stone_type or "",
+        "stone_weight_grams": (
+            str(product.stone_weight_grams)
+            if product.stone_weight_grams is not None
+            else ""
+        ),
         "vault_metal_credit_inr": str(totals["vault_metal_credit_inr"]),
+        "gst_on_gold_full_inr": str(totals["gst_on_gold_full_inr"]),
+        "gst_on_gold_charged_inr": str(totals["gst_on_gold_charged_inr"]),
         "gst_on_gold_saved_inr": str(totals["gst_on_gold_saved_inr"]),
         "cash_only_final_invoice_inr": str(cash_only["final_invoice_inr"]),
         "cross_redemption": cross_addon,

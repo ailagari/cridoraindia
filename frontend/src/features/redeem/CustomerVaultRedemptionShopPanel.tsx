@@ -16,7 +16,8 @@ import {
   fetchVaultRedemptionQuote,
   type VaultRedemptionQuoteDTO,
 } from '@/lib/vaultRedemptionPurchaseApi'
-import { MarketplaceProductListSummary } from '@/features/marketplace/productPricing'
+import { VaultGoldTaxSavingsNotice } from '@/features/gold/VaultGoldTaxSavingsNotice'
+import { formatInr, MarketplaceProductListSummary } from '@/features/marketplace/productPricing'
 
 function parseG(s: string): number {
   const n = Number.parseFloat(s)
@@ -164,7 +165,9 @@ export function CustomerVaultRedemptionShopPanel() {
         setQuoteErr(out.detail)
         return
       }
-      setOkMsg(`${out.redemption.reference}: debited ${out.redemption.grams_charged} g. ${out.detail}`)
+      const saved = parseG(out.redemption.gst_on_gold_saved_inr)
+      const savedNote = saved > 0 ? ` Vault saved you ₹${formatInr(saved)} on gold GST.` : ''
+      setOkMsg(`${out.redemption.reference}: debited ${out.redemption.grams_charged} g.${savedNote} ${out.detail}`)
       setSelected(null)
       void refreshProducts()
       void refreshProfile()
@@ -187,10 +190,9 @@ export function CustomerVaultRedemptionShopPanel() {
   return (
     <div className="dash-panel-max">
       <p className="dash-panel-lead">
-        <strong>Redeem with vault gold</strong> — browse verified jewellers and admin-approved catalogue SKUs, then pay the
-        all-in invoice by debiting grams vaulted with the <em>listing</em> jeweller. Grams are converted at that
-        jeweller&apos;s quoted metal ₹/g (same basis as the public price breakdown). Collect the physical piece at the
-        showroom; this flow only moves ledger grams.
+        <strong>Redeem with vault gold</strong> — pay from your holding (deposits, fractional, transfers, schemes). GST on
+        gold is <strong>not charged again</strong> on metal paid from vault; we show how much the vault saved you. Collect
+        the physical piece at the showroom.
       </p>
 
       {!kycOk ? (
@@ -362,12 +364,23 @@ export function CustomerVaultRedemptionShopPanel() {
                 )}
               </p>
               <p style={{ margin: '0 0 0.35rem' }}>
-                Final invoice (incl. taxes &amp; platform fee if any):{' '}
-                <strong className="tabular">₹{parseG(quote.final_invoice_inr).toLocaleString('en-IN')}</strong>
+                Catalogue total (reference, incl. taxes):{' '}
+                <strong className="tabular">₹{formatInr(parseG(quote.final_invoice_inr))}</strong>
               </p>
-              <p style={{ margin: '0 0 0.35rem' }}>
+              <VaultGoldTaxSavingsNotice gstSavedInr={parseG(quote.gst_on_gold_saved_inr)} />
+              {parseG(quote.cash_payable_inr) > 0.01 ? (
+                <p style={{ margin: '0.5rem 0 0.35rem' }}>
+                  Cash / UPI balance after vault:{' '}
+                  <strong className="tabular">₹{formatInr(parseG(quote.cash_payable_inr))}</strong>
+                </p>
+              ) : parseG(quote.grams_required) > 0 ? (
+                <p style={{ margin: '0.5rem 0 0.35rem', color: 'var(--success)', fontWeight: 600 }}>
+                  Fully covered from vault — no extra cash due for this order.
+                </p>
+              ) : null}
+              <p style={{ margin: '0.65rem 0 0.35rem' }}>
                 Metal rate used for gram conversion:{' '}
-                <strong className="tabular">₹{parseG(quote.metal_rate_inr_per_gram).toLocaleString('en-IN')}</strong>/g
+                <strong className="tabular">₹{formatInr(parseG(quote.metal_rate_inr_per_gram), 2)}</strong>/g
               </p>
               <p style={{ margin: '0 0 0.35rem' }}>
                 Grams to debit: <strong className="tabular">{quote.grams_required} g</strong>

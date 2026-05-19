@@ -90,11 +90,15 @@ export function MarketplaceCheckoutReceiptCard({
           />
         ) : null}
         {gstSaved > 0 ? (
-          <BillRow label="GST on gold (vault relief)" value={`-₹${formatInr(gstSaved)}`} muted />
+          <BillRow label="Vault saved you (GST on gold)" value={`₹${formatInr(gstSaved)}`} muted />
         ) : null}
         <BillRow label="Gold metal (line)" value={`₹${formatInr(p.goldValue)}`} muted />
         <BillRow label="Making (after 5% off)" value={`₹${formatInr(p.makingCharges)}`} muted />
-        <BillRow label="GST on gold" value={`₹${formatInr(p.gstOnGold)}`} muted />
+        <BillRow
+          label={gstSaved > 0 ? 'GST on gold (after vault relief)' : 'GST on gold'}
+          value={`₹${formatInr(p.gstOnGold)}`}
+          muted
+        />
         <BillRow label="GST on making" value={`₹${formatInr(p.gstOnMaking)}`} muted />
         {p.crossPlatformFee > 0 ? (
           <BillRow label="Cridora platform fee" value={`₹${formatInr(p.crossPlatformFee)}`} muted />

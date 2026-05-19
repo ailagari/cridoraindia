@@ -142,7 +142,10 @@ export function MarketplaceProductPricingBreakdown({
       {showMetalSplit && stoneComp > 0 ? (
         <CardPriceRow label="— Stone / other value" value={`₹${formatInr(stoneComp)}`} />
       ) : null}
-      <CardPriceRow label="GST on metal (3%)" value={`₹${formatInr(base.gstOnGold, 2)}`} />
+      <CardPriceRow
+        label={showMetalSplit ? 'GST on gold metal (3%)' : 'GST on gold (3%)'}
+        value={`₹${formatInr(base.gstOnGold, 2)}`}
+      />
       <CardPriceRow label={makingChargesBreakdownLabel(p, pricingContext)} value={`₹${formatInr(base.makingCharges)}`} />
       <CardPriceRow label="GST on making (18%)" value={`₹${formatInr(base.gstOnMaking, 2)}`} />
       <div
