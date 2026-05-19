@@ -3,6 +3,7 @@ import { authFetch } from '@/lib/api'
 export type GoldLoanOfferDTO = {
   jeweller_id: string
   jeweller_label: string
+  is_primary_custodian?: string
   grams: string
   eligible_vault_balance_grams: string
   eligible_for_request: string
@@ -20,6 +21,9 @@ export type GoldLoanOfferDTO = {
 export type GoldLoanCompareDTO = {
   grams: string
   offer_count: string
+  eligible_offer_count: string
+  skip_compare: string
+  auto_selected_jeweller_id: string
   offers: GoldLoanOfferDTO[]
   gold_loan_ltv_min_percent: string
   gold_loan_ltv_max_percent: string

@@ -9,7 +9,10 @@ from django.db import transaction
 
 from apps.accounts.gold_identity import MIN_TRANSFER_GRAMS
 from apps.accounts.models import GoldLoanRequest
-from apps.accounts.vault_service import customer_loan_eligible_grams
+from apps.accounts.vault_service import (
+    customer_loan_custodian_ids,
+    customer_loan_eligible_grams,
+)
 from apps.marketplace.loan_policy import compute_loan_amounts, jeweller_effective_ltv_percent
 from apps.marketplace.models import JewellerPricingProfile, jeweller_profile_for
 from apps.marketplace.pricing import reference_metal_rate_inr_per_gram_for_jeweller
@@ -64,9 +67,13 @@ def _quote_for_jeweller(
     min_str = str(min_g) if min_g is not None else ""
 
     eligible = available >= grams
+    is_primary = bool(
+        customer.default_jeweller_id and jeweller.id == customer.default_jeweller_id
+    )
     out: dict[str, str] = {
         "jeweller_id": str(jeweller.id),
         "jeweller_label": jeweller.business_name or jeweller.email or "",
+        "is_primary_custodian": "true" if is_primary else "false",
         "grams": str(grams),
         "eligible_vault_balance_grams": str(available),
         "eligible_for_request": "true" if eligible else "false",
@@ -99,6 +106,8 @@ def quote_customer_loan(
         return None, "Complete verified KYC before requesting a gold loan."
     if jeweller.user_type != User.JEWELLER or jeweller.kyc_status != User.KYC_VERIFIED:
         return None, "Verified jeweller not found."
+    if jeweller.id not in customer_loan_custodian_ids(customer):
+        return None, "Loans are only available against gold in your vault at this jeweller."
     if grams <= 0:
         return None, "Enter a positive gold quantity."
     if grams < MIN_TRANSFER_GRAMS:
@@ -122,9 +131,14 @@ def compare_loan_offers(
     if grams <= 0:
         return None, "Enter a positive gold quantity."
 
+    custodian_ids = customer_loan_custodian_ids(customer)
+    if not custodian_ids:
+        return None, "No fractional or deposit vault gold to borrow against."
+
     ticker = get_or_create_ticker()
     profiles = (
         JewellerPricingProfile.objects.filter(
+            jeweller_id__in=custodian_ids,
             feat_loan_available=True,
             jeweller__user_type=User.JEWELLER,
             jeweller__kyc_status=User.KYC_VERIFIED,
@@ -154,9 +168,16 @@ def compare_loan_offers(
         reverse=True,
     )
 
+    eligible_offers = [o for o in offers if o["eligible_for_request"] == "true"]
+    skip_compare = len(eligible_offers) == 1
+    auto_jeweller_id = eligible_offers[0]["jeweller_id"] if skip_compare else ""
+
     return {
         "grams": str(grams),
         "offer_count": str(len(offers)),
+        "eligible_offer_count": str(len(eligible_offers)),
+        "skip_compare": "true" if skip_compare else "false",
+        "auto_selected_jeweller_id": auto_jeweller_id,
         "offers": offers,
         **_loan_policy_payload(ticker),
     }, None

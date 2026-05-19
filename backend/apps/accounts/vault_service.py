@@ -155,6 +155,20 @@ def customer_loan_eligible_grams(customer: User, custodian: User) -> Decimal:
     return total
 
 
+def customer_loan_custodian_ids(customer: User) -> set[int]:
+    """Jeweller custodian IDs where the customer holds fractional or deposit vault gold."""
+    rows = (
+        VaultHolding.objects.filter(
+            vault__owner=customer,
+            holding_type__in=(VaultHolding.FRACTIONAL, VaultHolding.DEPOSIT),
+            balance_grams__gt=0,
+        )
+        .values_list("vault__custodian_id", flat=True)
+        .distinct()
+    )
+    return {int(jid) for jid in rows if jid}
+
+
 def debit_customer_fractional(customer: User, custodian: User, grams: Decimal) -> str | None:
     vault = ensure_vault(customer, custodian)
     hid = _fractional_holding(vault).pk

@@ -73,6 +73,28 @@ class GoldLoanQuoteTests(TestCase):
         self.assertIsNone(err)
         assert payload is not None
         self.assertEqual(int(payload["offer_count"]), 1)
+        self.assertEqual(int(payload["eligible_offer_count"]), 1)
+        self.assertEqual(payload["skip_compare"], "true")
+
+    def test_compare_excludes_jewellers_without_customer_vault(self):
+        other = User.objects.create_user(
+            username="loan-j2",
+            email="loan-j2@test.com",
+            password="x",
+            user_type=User.JEWELLER,
+            kyc_status=User.KYC_VERIFIED,
+            business_name="Other Jeweller",
+        )
+        profile = jeweller_profile_for(other)
+        profile.feat_loan_available = True
+        profile.gold_loan_ltv_percent = Decimal("99")
+        profile.save()
+        payload, err = compare_loan_offers(self.customer, grams=Decimal("10"))
+        self.assertIsNone(err)
+        assert payload is not None
+        jeweller_ids = {o["jeweller_id"] for o in payload["offers"]}
+        self.assertIn(str(self.jeweller.id), jeweller_ids)
+        self.assertNotIn(str(other.id), jeweller_ids)
 
     def test_ltv_out_of_range_rejected_on_profile(self):
         profile = JewellerPricingProfile.objects.get(jeweller=self.jeweller)

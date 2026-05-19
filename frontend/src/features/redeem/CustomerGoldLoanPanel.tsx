@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   fetchGoldLoanOutstanding,
@@ -25,6 +25,10 @@ function fmtInr(s: string): string {
   return n.toLocaleString('en-IN', { maximumFractionDigits: 2 })
 }
 
+function eligibleOffers(data: GoldLoanCompareDTO): GoldLoanOfferDTO[] {
+  return data.offers.filter((o) => o.eligible_for_request === 'true')
+}
+
 export function CustomerGoldLoanPanel() {
   const [wallet, setWallet] = useState<GoldWalletDTO | null>(null)
   const [gramsInput, setGramsInput] = useState('')
@@ -35,6 +39,7 @@ export function CustomerGoldLoanPanel() {
   const [actionErr, setActionErr] = useState('')
   const [successMsg, setSuccessMsg] = useState('')
   const [busy, setBusy] = useState(false)
+  const compareSeq = useRef(0)
 
   const refreshWallet = useCallback(async () => {
     setWallet(await fetchGoldWallet())
@@ -59,31 +64,7 @@ export function CustomerGoldLoanPanel() {
     [wallet],
   )
 
-  const runCompare = async () => {
-    const g = gramsInput.trim()
-    if (!g || parseG(g) <= 0) {
-      setActionErr('Enter grams to compare loan offers.')
-      return
-    }
-    setBusy(true)
-    setActionErr('')
-    setSuccessMsg('')
-    setQuote(null)
-    const data = await postGoldLoanCompare(g)
-    setBusy(false)
-    if (!data) {
-      setActionErr('Could not load jeweller loan comparison.')
-      setCompare(null)
-      return
-    }
-    setCompare(data)
-    const firstEligible = data.offers.find((o) => o.eligible_for_request === 'true')
-    if (firstEligible) {
-      setSelectedJewellerId(Number.parseInt(firstEligible.jeweller_id, 10))
-    }
-  }
-
-  const runQuote = async (jewellerId: number, grams: string) => {
+  const runQuote = useCallback(async (jewellerId: number, grams: string) => {
     setBusy(true)
     setActionErr('')
     const { data, detail } = await postGoldLoanQuote(jewellerId, grams)
@@ -94,11 +75,68 @@ export function CustomerGoldLoanPanel() {
       return
     }
     setQuote(data)
-  }
+    setSelectedJewellerId(jewellerId)
+  }, [])
+
+  const applyCompareResult = useCallback(
+    async (data: GoldLoanCompareDTO) => {
+      setCompare(data)
+      const eligible = eligibleOffers(data)
+      if (eligible.length === 0) {
+        setQuote(null)
+        setSelectedJewellerId(null)
+        return
+      }
+      if (data.skip_compare === 'true' && data.auto_selected_jeweller_id) {
+        const jid = Number.parseInt(data.auto_selected_jeweller_id, 10)
+        await runQuote(jid, data.grams)
+        return
+      }
+      const first = eligible[0]
+      const jid = Number.parseInt(first.jeweller_id, 10)
+      setSelectedJewellerId(jid)
+      setQuote(null)
+    },
+    [runQuote],
+  )
+
+  const runCompare = useCallback(
+    async (grams: string) => {
+      const seq = ++compareSeq.current
+      setBusy(true)
+      setActionErr('')
+      setSuccessMsg('')
+      setQuote(null)
+      setCompare(null)
+      setSelectedJewellerId(null)
+      const res = await authFetchCompare(grams)
+      if (seq !== compareSeq.current) return
+      setBusy(false)
+      if (!res.ok) {
+        setActionErr(res.detail)
+        return
+      }
+      await applyCompareResult(res.data)
+    },
+    [applyCompareResult],
+  )
+
+  useEffect(() => {
+    const g = gramsInput.trim()
+    if (!g || parseG(g) <= 0) {
+      setCompare(null)
+      setQuote(null)
+      setSelectedJewellerId(null)
+      return
+    }
+    const t = window.setTimeout(() => {
+      void runCompare(g)
+    }, 450)
+    return () => window.clearTimeout(t)
+  }, [gramsInput, runCompare])
 
   const onSelectOffer = (offer: GoldLoanOfferDTO) => {
     const jid = Number.parseInt(offer.jeweller_id, 10)
-    setSelectedJewellerId(jid)
     void runQuote(jid, offer.grams)
   }
 
@@ -115,16 +153,24 @@ export function CustomerGoldLoanPanel() {
     setSuccessMsg(`Loan request ${data.reference} submitted — awaiting jeweller approval.`)
     setQuote(null)
     setCompare(null)
+    setGramsInput('')
     void refreshOutstanding()
     void refreshWallet()
   }
 
+  const showCompareList =
+    compare != null &&
+    compare.skip_compare !== 'true' &&
+    eligibleOffers(compare).length > 1
+
+  const singleJewellerQuote =
+    compare != null && compare.skip_compare === 'true' && quote != null
+
   return (
     <div className="dash-panel-max">
       <p style={{ color: 'var(--text-muted)', fontSize: '0.92rem', lineHeight: 1.55, marginTop: 0 }}>
-        Borrow against <strong>vault gold</strong> custodied with a jeweller (fractional + deposit grams).
-        Each jeweller sets a loan % within Cridora&apos;s platform range; a standard processing fee applies to
-        the loan principal.
+        Borrow only against <strong>your vault gold</strong> at jewellers where you hold fractional or deposit
+        grams (primary or secondary custodians). Offers load automatically when you enter grams.
       </p>
 
       {actionErr ? <p className="form-error">{actionErr}</p> : null}
@@ -144,7 +190,8 @@ export function CustomerGoldLoanPanel() {
           <ul style={{ margin: 0, paddingLeft: '1.1rem', fontSize: '0.88rem' }}>
             {vaultRows.map((v) => (
               <li key={v.custodian_id}>
-                <strong>{v.custodian_label}</strong> —{' '}
+                <strong>{v.custodian_label}</strong>
+                {v.is_primary_custodian ? ' (primary)' : ' (secondary)'} —{' '}
                 <span className="tabular">
                   {(parseG(v.fractional_grams) + parseG(v.deposit_grams ?? '0')).toFixed(3)} g
                 </span>{' '}
@@ -165,22 +212,29 @@ export function CustomerGoldLoanPanel() {
         />
       </label>
 
-      <button type="button" className="btn btn-primary" disabled={busy} onClick={() => void runCompare()}>
-        Compare jeweller loans
-      </button>
+      {busy && gramsInput.trim() ? (
+        <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>
+          Finding loan offers at your jewellers…
+        </p>
+      ) : null}
 
       {compare ? (
         <div style={{ marginTop: '1.25rem' }}>
           <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
             Platform processing fee:{' '}
-            <strong>{compare.gold_loan_processing_fee_percent}%</strong> of principal · jewellers may offer{' '}
-            {compare.gold_loan_ltv_min_percent}–{compare.gold_loan_ltv_max_percent}% of collateral value.
+            <strong>{compare.gold_loan_processing_fee_percent}%</strong> of principal.
           </p>
-          {compare.offers.length === 0 ? (
-            <p style={{ color: 'var(--text-muted)' }}>No jewellers are offering loans for this amount yet.</p>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-              {compare.offers.map((o) => (
+          {eligibleOffers(compare).length === 0 ? (
+            <p style={{ color: 'var(--text-muted)' }}>
+              None of your vault jewellers can offer a loan for this amount. Try fewer grams or ask your jeweller
+              to enable loans and set a loan %.
+            </p>
+          ) : null}
+
+          {showCompareList ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', marginTop: '0.75rem' }}>
+              <p style={{ margin: 0, fontSize: '0.85rem', fontWeight: 700 }}>Compare offers</p>
+              {eligibleOffers(compare).map((o) => (
                 <button
                   key={o.jeweller_id}
                   type="button"
@@ -202,7 +256,10 @@ export function CustomerGoldLoanPanel() {
                   onClick={() => onSelectOffer(o)}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.5rem', flexWrap: 'wrap' }}>
-                    <strong>{o.jeweller_label}</strong>
+                    <strong>
+                      {o.jeweller_label}
+                      {o.is_primary_custodian === 'true' ? ' · primary' : ''}
+                    </strong>
                     <span className="tabular" style={{ fontWeight: 800, color: 'var(--gold-light)' }}>
                       ₹{fmtInr(o.net_disbursement_inr)} net
                     </span>
@@ -210,16 +267,17 @@ export function CustomerGoldLoanPanel() {
                   <p style={{ margin: '0.35rem 0 0', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
                     {o.ltv_percent}% LTV · principal ₹{fmtInr(o.gross_principal_inr)} · fee ₹
                     {fmtInr(o.processing_fee_inr)} ({o.processing_fee_percent}%)
-                    {o.eligible_for_request !== 'true' ? ` · ${o.ineligible_reason}` : null}
                   </p>
                 </button>
               ))}
             </div>
-          )}
+          ) : null}
 
-          {quote ? (
+          {(quote && (showCompareList || singleJewellerQuote)) ? (
             <div className="card" style={{ marginTop: '1rem', padding: '1rem', borderRadius: 16 }}>
-              <h4 style={{ margin: '0 0 0.5rem' }}>Quote — {quote.jeweller_label}</h4>
+              <h4 style={{ margin: '0 0 0.5rem' }}>
+                {singleJewellerQuote ? 'Your loan offer' : 'Quote'} — {quote.jeweller_label}
+              </h4>
               <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--text-muted)' }}>
                 Collateral ₹{fmtInr(quote.collateral_value_inr)} ({quote.grams} g @ ₹
                 {fmtInr(quote.reference_metal_inr_per_gram)}/g) × {quote.ltv_percent}% = principal ₹
@@ -255,4 +313,14 @@ export function CustomerGoldLoanPanel() {
       ) : null}
     </div>
   )
+}
+
+async function authFetchCompare(
+  grams: string,
+): Promise<{ ok: true; data: GoldLoanCompareDTO } | { ok: false; detail: string }> {
+  const data = await postGoldLoanCompare(grams)
+  if (!data) {
+    return { ok: false, detail: 'Could not load loan offers from your vault jewellers.' }
+  }
+  return { ok: true, data }
 }
