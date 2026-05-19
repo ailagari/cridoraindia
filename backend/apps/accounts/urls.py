@@ -63,6 +63,7 @@ from .gold_deposit_views import (
 )
 from .loan_views import (
     GoldLoanCompareView,
+    GoldLoanVaultRatesView,
     GoldLoanConfirmView,
     GoldLoanOutstandingView,
     GoldLoanQuoteView,
@@ -188,6 +189,7 @@ urlpatterns = [
     path("auth/password/change/", PasswordChangeView.as_view()),
     path("jeweller/business-profile/", JewellerBusinessProfileView.as_view()),
     path("gold/wallet/", GoldWalletView.as_view()),
+    path("gold/loans/vault-rates/", GoldLoanVaultRatesView.as_view()),
     path("gold/loans/compare/", GoldLoanCompareView.as_view()),
     path("gold/loans/quote/", GoldLoanQuoteView.as_view()),
     path("gold/loans/confirm/", GoldLoanConfirmView.as_view()),

@@ -88,6 +88,16 @@ def _quote_for_jeweller(
         "processing_fee_jeweller_share_inr": str(amounts["processing_fee_jeweller_share_inr"]),
         "processing_fee_cridora_share_inr": str(amounts["processing_fee_cridora_share_inr"]),
         "net_disbursement_inr": str(amounts["net_disbursement_inr"]),
+        "gross_loan_inr_per_gram": str(
+            (amounts["gross_principal_inr"] / grams).quantize(Decimal("0.01"))
+            if grams > 0
+            else "0"
+        ),
+        "net_loan_inr_per_gram": str(
+            (amounts["net_disbursement_inr"] / grams).quantize(Decimal("0.01"))
+            if grams > 0
+            else "0"
+        ),
         "feat_loan_available": "true",
     }
     out.update(_loan_policy_payload(ticker))
@@ -121,6 +131,75 @@ def quote_customer_loan(
     return _quote_for_jeweller(customer, jeweller, grams, require_balance=True)
 
 
+def customer_vault_loan_rates(customer: User) -> list[dict[str, str]]:
+    """Indicative net loan ₹/g of collateral for each vault custodian (before gram amount)."""
+    if customer.user_type != User.CUSTOMER:
+        return []
+
+    ticker = get_or_create_ticker()
+    fee_pct = ticker.gold_loan_processing_fee_percent
+    custodian_ids = customer_loan_custodian_ids(customer)
+    if not custodian_ids:
+        return []
+
+    cridora_base, _ = resolve_cridora_base_22k_inr()
+    jewellers = User.objects.filter(pk__in=custodian_ids, user_type=User.JEWELLER).order_by(
+        "business_name", "id"
+    )
+    rows: list[dict[str, str]] = []
+    for jeweller in jewellers:
+        profile = jeweller_profile_for(jeweller)
+        available = customer_loan_eligible_grams(customer, jeweller)
+        ref_metal = reference_metal_rate_inr_per_gram_for_jeweller(profile, cridora_base)
+        ltv = jeweller_effective_ltv_percent(profile, ticker)
+        is_primary = bool(
+            customer.default_jeweller_id and jeweller.id == customer.default_jeweller_id
+        )
+        if ltv is None or not profile.feat_loan_available:
+            rows.append(
+                {
+                    "jeweller_id": str(jeweller.id),
+                    "jeweller_label": jeweller.business_name or jeweller.email or "",
+                    "is_primary_custodian": "true" if is_primary else "false",
+                    "eligible_vault_balance_grams": str(available),
+                    "reference_metal_inr_per_gram": str(ref_metal),
+                    "ltv_percent": "",
+                    "gross_loan_inr_per_gram": "",
+                    "net_loan_inr_per_gram": "",
+                    "processing_fee_percent": str(fee_pct),
+                    "loan_available": "false",
+                    "loan_unavailable_reason": (
+                        "Jeweller has not enabled gold loans or has not set a loan %."
+                    ),
+                }
+            )
+            continue
+
+        amounts = compute_loan_amounts(
+            grams=Decimal("1"),
+            metal_inr_per_gram=ref_metal,
+            ltv_percent=ltv,
+            processing_fee_percent=fee_pct,
+            processing_fee_jeweller_share_percent=ticker.gold_loan_processing_fee_jeweller_share_percent,
+        )
+        rows.append(
+            {
+                "jeweller_id": str(jeweller.id),
+                "jeweller_label": jeweller.business_name or jeweller.email or "",
+                "is_primary_custodian": "true" if is_primary else "false",
+                "eligible_vault_balance_grams": str(available),
+                "reference_metal_inr_per_gram": str(ref_metal),
+                "ltv_percent": str(ltv),
+                "gross_loan_inr_per_gram": str(amounts["gross_principal_inr"]),
+                "net_loan_inr_per_gram": str(amounts["net_disbursement_inr"]),
+                "processing_fee_percent": str(fee_pct),
+                "loan_available": "true",
+                "loan_unavailable_reason": "",
+            }
+        )
+    return rows
+
+
 def compare_loan_offers(
     customer: User,
     *,
@@ -132,8 +211,6 @@ def compare_loan_offers(
         return None, "Enter a positive gold quantity."
 
     custodian_ids = customer_loan_custodian_ids(customer)
-    if not custodian_ids:
-        return None, "No fractional or deposit vault gold to borrow against."
 
     ticker = get_or_create_ticker()
     profiles = (
@@ -172,6 +249,18 @@ def compare_loan_offers(
     skip_compare = len(eligible_offers) == 1
     auto_jeweller_id = eligible_offers[0]["jeweller_id"] if skip_compare else ""
 
+    if not custodian_ids:
+        return {
+            "grams": str(grams),
+            "offer_count": "0",
+            "eligible_offer_count": "0",
+            "skip_compare": "false",
+            "auto_selected_jeweller_id": "",
+            "offers": [],
+            "vault_rates": [],
+            **_loan_policy_payload(ticker),
+        }, None
+
     return {
         "grams": str(grams),
         "offer_count": str(len(offers)),
@@ -179,6 +268,7 @@ def compare_loan_offers(
         "skip_compare": "true" if skip_compare else "false",
         "auto_selected_jeweller_id": auto_jeweller_id,
         "offers": offers,
+        "vault_rates": customer_vault_loan_rates(customer),
         **_loan_policy_payload(ticker),
     }, None
 

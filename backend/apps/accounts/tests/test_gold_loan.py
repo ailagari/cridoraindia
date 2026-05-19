@@ -2,8 +2,9 @@ from decimal import Decimal
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
+from rest_framework.test import APIClient
 
-from apps.accounts.loan_service import compare_loan_offers, quote_customer_loan
+from apps.accounts.loan_service import compare_loan_offers, customer_vault_loan_rates, quote_customer_loan
 from apps.accounts.vault_service import credit_customer_deposit, credit_customer_fractional, ensure_vault
 from apps.marketplace.loan_policy import compute_loan_amounts
 from apps.marketplace.models import JewellerPricingProfile, get_or_create_ticker, jeweller_profile_for
@@ -104,3 +105,16 @@ class GoldLoanQuoteTests(TestCase):
             self.customer, self.jeweller, grams=Decimal("1")
         )
         self.assertIn("not offering", err or "")
+
+    def test_compare_api_accepts_grams_string(self):
+        client = APIClient()
+        client.force_authenticate(user=self.customer)
+        res = client.post("/api/v1/gold/loans/compare/", {"grams": "10"}, format="json")
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(int(res.json()["eligible_offer_count"]), 1)
+
+    def test_vault_rates_include_net_per_gram(self):
+        rows = customer_vault_loan_rates(self.customer)
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["loan_available"], "true")
+        self.assertGreater(Decimal(rows[0]["net_loan_inr_per_gram"]), Decimal("0"))

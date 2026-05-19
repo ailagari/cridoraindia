@@ -15,7 +15,23 @@ export type GoldLoanOfferDTO = {
   processing_fee_percent: string
   processing_fee_inr: string
   net_disbursement_inr: string
+  gross_loan_inr_per_gram?: string
+  net_loan_inr_per_gram?: string
   gold_loan_interest_apr_percent: string
+}
+
+export type GoldLoanVaultRateDTO = {
+  jeweller_id: string
+  jeweller_label: string
+  is_primary_custodian: string
+  eligible_vault_balance_grams: string
+  reference_metal_inr_per_gram: string
+  ltv_percent: string
+  gross_loan_inr_per_gram: string
+  net_loan_inr_per_gram: string
+  processing_fee_percent: string
+  loan_available: string
+  loan_unavailable_reason: string
 }
 
 export type GoldLoanCompareDTO = {
@@ -25,6 +41,7 @@ export type GoldLoanCompareDTO = {
   skip_compare: string
   auto_selected_jeweller_id: string
   offers: GoldLoanOfferDTO[]
+  vault_rates?: GoldLoanVaultRateDTO[]
   gold_loan_ltv_min_percent: string
   gold_loan_ltv_max_percent: string
   gold_loan_processing_fee_percent: string
@@ -56,13 +73,25 @@ export type GoldLoanOutstandingDTO = {
   updated_at: string
 }
 
-export async function postGoldLoanCompare(grams: string): Promise<GoldLoanCompareDTO | null> {
+export async function fetchGoldLoanVaultRates(): Promise<GoldLoanVaultRateDTO[] | null> {
+  const res = await authFetch('/api/v1/gold/loans/vault-rates/')
+  if (!res.ok) return null
+  const j = (await res.json()) as { vault_rates?: GoldLoanVaultRateDTO[] }
+  return j.vault_rates ?? []
+}
+
+export async function postGoldLoanCompare(
+  grams: string,
+): Promise<{ data: GoldLoanCompareDTO | null; detail: string }> {
   const res = await authFetch('/api/v1/gold/loans/compare/', {
     method: 'POST',
     jsonBody: { grams },
   })
-  if (!res.ok) return null
-  return (await res.json()) as GoldLoanCompareDTO
+  const j = (await res.json().catch(() => ({}))) as GoldLoanCompareDTO & { detail?: string }
+  if (!res.ok) {
+    return { data: null, detail: j.detail ?? 'Could not load loan offers from your vault jewellers.' }
+  }
+  return { data: j, detail: '' }
 }
 
 export async function postGoldLoanQuote(

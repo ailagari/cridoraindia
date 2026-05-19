@@ -5,7 +5,12 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .gold_identity import parse_grams
-from .loan_service import compare_loan_offers, create_pending_loan_request, quote_customer_loan
+from .loan_service import (
+    compare_loan_offers,
+    create_pending_loan_request,
+    customer_vault_loan_rates,
+    quote_customer_loan,
+)
 from .models import GoldLoanRequest
 
 User = get_user_model()
@@ -57,6 +62,16 @@ def _serialize_loan_jeweller(row: GoldLoanRequest) -> dict:
     }
 
 
+class GoldLoanVaultRatesView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        if user.user_type != User.CUSTOMER:
+            return Response({"detail": "Customers only."}, status=status.HTTP_403_FORBIDDEN)
+        return Response({"vault_rates": customer_vault_loan_rates(user)})
+
+
 class GoldLoanCompareView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -64,9 +79,9 @@ class GoldLoanCompareView(APIView):
         user = request.user
         if user.user_type != User.CUSTOMER:
             return Response({"detail": "Customers only."}, status=status.HTTP_403_FORBIDDEN)
-        grams = parse_grams(request.data.get("grams"))
-        if grams is None:
-            return Response({"detail": "Invalid grams."}, status=status.HTTP_400_BAD_REQUEST)
+        grams, g_err = parse_grams(request.data.get("grams"))
+        if g_err or grams is None:
+            return Response({"detail": g_err or "Invalid grams."}, status=status.HTTP_400_BAD_REQUEST)
         payload, err = compare_loan_offers(user, grams=grams)
         if err:
             return Response({"detail": err}, status=status.HTTP_400_BAD_REQUEST)
@@ -84,9 +99,9 @@ class GoldLoanQuoteView(APIView):
             jid = int(request.data.get("jeweller_id"))
         except (TypeError, ValueError):
             return Response({"detail": "jeweller_id required."}, status=status.HTTP_400_BAD_REQUEST)
-        grams = parse_grams(request.data.get("grams"))
-        if grams is None:
-            return Response({"detail": "Invalid grams."}, status=status.HTTP_400_BAD_REQUEST)
+        grams, g_err = parse_grams(request.data.get("grams"))
+        if g_err or grams is None:
+            return Response({"detail": g_err or "Invalid grams."}, status=status.HTTP_400_BAD_REQUEST)
         try:
             jeweller = User.objects.get(pk=jid, user_type=User.JEWELLER)
         except User.DoesNotExist:
@@ -108,9 +123,9 @@ class GoldLoanConfirmView(APIView):
             jid = int(request.data.get("jeweller_id"))
         except (TypeError, ValueError):
             return Response({"detail": "jeweller_id required."}, status=status.HTTP_400_BAD_REQUEST)
-        grams = parse_grams(request.data.get("grams"))
-        if grams is None:
-            return Response({"detail": "Invalid grams."}, status=status.HTTP_400_BAD_REQUEST)
+        grams, g_err = parse_grams(request.data.get("grams"))
+        if g_err or grams is None:
+            return Response({"detail": g_err or "Invalid grams."}, status=status.HTTP_400_BAD_REQUEST)
         try:
             jeweller = User.objects.get(pk=jid, user_type=User.JEWELLER)
         except User.DoesNotExist:
