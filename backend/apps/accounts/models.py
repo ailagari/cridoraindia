@@ -32,6 +32,11 @@ class User(AbstractUser):
         max_length=20, choices=USER_TYPE_CHOICES, default=CUSTOMER
     )
     phone = models.CharField(max_length=20, blank=True)
+    profile_photo_url = models.URLField(
+        max_length=512,
+        blank=True,
+        help_text="Optional profile photo shown in dashboards and menus.",
+    )
 
     # Jeweller / KYB profile (India)
     business_name = models.CharField(max_length=255, blank=True)

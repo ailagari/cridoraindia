@@ -1,13 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { UserAvatar } from '@/components/UserAvatar'
 import { useAuth } from '@/context/AuthContext'
-
-function initials(user: { first_name: string; last_name: string; email: string }): string {
-  const a = user.first_name.trim().charAt(0)
-  const b = user.last_name.trim().charAt(0)
-  if (a || b) return `${a}${b}`.toUpperCase() || '?'
-  return user.email.trim().charAt(0).toUpperCase() || '?'
-}
+import { userAvatarFallback, userAvatarImageFit, userAvatarImageUrl } from '@/lib/userAvatar'
 
 type Props = {
   onLogout: () => void | Promise<void>
@@ -47,9 +42,12 @@ export function DashboardMobileUserMenu({ onLogout }: Props) {
         aria-label={open ? 'Close account menu' : 'Open account menu'}
         onClick={() => setOpen((v) => !v)}
       >
-        <span className="dash-mobile-user-menu__avatar" aria-hidden>
-          {user ? initials(user) : '?'}
-        </span>
+        <UserAvatar
+          className="dash-mobile-user-menu__avatar"
+          imageUrl={user ? userAvatarImageUrl(user) : ''}
+          fallback={user ? userAvatarFallback(user) : '?'}
+          imageFit={user ? userAvatarImageFit(user) : 'cover'}
+        />
       </button>
       {open ? (
         <div className="dash-mobile-user-menu__panel" role="menu">

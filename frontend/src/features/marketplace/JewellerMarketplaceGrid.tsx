@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react'
 import { Link } from 'react-router-dom'
+import { UserAvatar } from '@/components/UserAvatar'
 import { mergeJewellerListWithDemos } from '@/lib/jewellerMarketplaceDemos'
 import { jewellerStorefrontFeatureChips } from '@/features/marketplace/jewellerMarketplaceShared'
 import { LIVE_STOREFRONT_GRID_POLL_MS } from '@/lib/liveDeskIntervals'
@@ -44,34 +45,23 @@ const SORT_OPTIONS: { value: JewellerSortKey; label: string }[] = [
 ]
 
 function JewellerCardLogo({ businessName, logoUrl }: { businessName: string; logoUrl: string }) {
-  const [broken, setBroken] = useState(false)
-  const showImg = logoUrl.trim() !== '' && !broken
-  if (showImg) {
-    return (
-      <div className="media-frame media-frame--logo-tile">
-        <img src={logoUrl} alt="" className="media-fill" onError={() => setBroken(true)} />
-      </div>
-    )
-  }
-  const ch = businessName.trim().charAt(0).toUpperCase() || '—'
+  const fallback = businessName.trim().charAt(0).toUpperCase() || '—'
   return (
-    <div
+    <UserAvatar
+      imageUrl={logoUrl}
+      fallback={fallback}
+      imageFit="contain"
       style={{
         width: 48,
         height: 48,
         borderRadius: 14,
-        display: 'grid',
-        placeItems: 'center',
         fontWeight: 800,
         fontSize: '1.1rem',
         background: 'var(--gold-soft)',
         color: 'var(--gold-light)',
         border: '1px solid rgba(180, 130, 48, 0.35)',
       }}
-      aria-hidden
-    >
-      {ch}
-    </div>
+    />
   )
 }
 

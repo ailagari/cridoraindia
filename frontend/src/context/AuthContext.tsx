@@ -26,6 +26,8 @@ export type AuthUser = {
   user_type: UserType
   kyc_status: string
   business_name: string
+  profile_photo_url: string
+  logo_url: string
 }
 
 type AuthContextValue = {
@@ -60,6 +62,8 @@ function readStoredUser(): AuthUser | null {
     return {
       ...u,
       business_name: typeof u.business_name === 'string' ? u.business_name : '',
+      profile_photo_url: typeof u.profile_photo_url === 'string' ? u.profile_photo_url : '',
+      logo_url: typeof u.logo_url === 'string' ? u.logo_url : '',
     }
   } catch {
     return null
@@ -101,6 +105,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       user_type: data.user_type as UserType,
       kyc_status: String(data.kyc_status ?? 'pending'),
       business_name: typeof data.business_name === 'string' ? data.business_name : '',
+      profile_photo_url: typeof data.profile_photo_url === 'string' ? data.profile_photo_url : '',
+      logo_url: typeof data.logo_url === 'string' ? data.logo_url : '',
     }
     saveUser(u)
     setUser(u)
@@ -189,6 +195,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       user_type: data.user_type as UserType,
       kyc_status: String(data.kyc_status ?? 'pending'),
       business_name: typeof data.business_name === 'string' ? data.business_name : '',
+      profile_photo_url: typeof data.profile_photo_url === 'string' ? data.profile_photo_url : '',
+      logo_url: typeof data.logo_url === 'string' ? data.logo_url : '',
     }
     saveUser(u)
     setUser(u)

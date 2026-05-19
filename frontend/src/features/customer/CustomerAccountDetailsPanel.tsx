@@ -1,6 +1,7 @@
-import { type FormEvent, useCallback, useEffect, useMemo, useState } from 'react'
+import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { FormSubmitFoot } from '@/components/ui/FormSubmitFoot'
+import { UserAvatar } from '@/components/UserAvatar'
 import { useAuth } from '@/context/AuthContext'
 import {
   fetchCustomerMeDetails,
@@ -11,6 +12,8 @@ import {
   fetchCustomerPayoutUpiProfile,
   updateCustomerPayoutUpiProfile,
 } from '@/lib/goldTransferApi'
+import { removeProfilePhoto, uploadProfilePhoto } from '@/lib/profilePhotoApi'
+import { userAvatarFallback, userAvatarImageFit, userAvatarImageUrl } from '@/lib/userAvatar'
 
 function kycTone(status: string): 'ok' | 'bad' | 'wait' {
   if (status === 'verified') return 'ok'
@@ -32,6 +35,7 @@ function displayName(me: CustomerMeDetailsDTO | null): string {
 
 export function CustomerAccountDetailsPanel() {
   const { user, refreshProfile } = useAuth()
+  const photoInputRef = useRef<HTMLInputElement>(null)
   const [me, setMe] = useState<CustomerMeDetailsDTO | null>(null)
   const [loaded, setLoaded] = useState(false)
   const [firstName, setFirstName] = useState('')
@@ -40,6 +44,8 @@ export function CustomerAccountDetailsPanel() {
   const [profileMessage, setProfileMessage] = useState('')
   const [profileError, setProfileError] = useState('')
   const [profileBusy, setProfileBusy] = useState(false)
+  const [photoBusy, setPhotoBusy] = useState(false)
+  const [photoError, setPhotoError] = useState('')
   const [payoutUpi, setPayoutUpi] = useState('')
   const [payoutLoaded, setPayoutLoaded] = useState(false)
   const [payoutMessage, setPayoutMessage] = useState('')
@@ -111,6 +117,36 @@ export function CustomerAccountDetailsPanel() {
     }
   }
 
+  const onUploadPhoto = async (file: File) => {
+    setPhotoError('')
+    setPhotoBusy(true)
+    try {
+      const out = await uploadProfilePhoto(file)
+      if (!out.ok) {
+        setPhotoError(out.detail)
+        return
+      }
+      await refreshProfile()
+    } finally {
+      setPhotoBusy(false)
+    }
+  }
+
+  const onRemovePhoto = async () => {
+    setPhotoError('')
+    setPhotoBusy(true)
+    try {
+      const out = await removeProfilePhoto()
+      if (!out.ok) {
+        setPhotoError(out.detail)
+        return
+      }
+      await refreshProfile()
+    } finally {
+      setPhotoBusy(false)
+    }
+  }
+
   const onSavePayoutUpi = async (e: FormEvent) => {
     e.preventDefault()
     setPayoutMessage('')
@@ -176,6 +212,58 @@ export function CustomerAccountDetailsPanel() {
           </p>
           <p className="kyc-stat__sub">Contact support to change email</p>
         </div>
+      </div>
+
+      <div className="card account-details__card" style={{ display: 'grid', gap: '0.85rem' }}>
+        <h3 className="account-details__heading">Profile photo</h3>
+        <p className="dash-panel-lead" style={{ margin: 0 }}>
+          Shown in your dashboard sidebar and mobile menu. Remove it anytime to show initials instead.
+        </p>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.85rem', alignItems: 'center' }}>
+          {user ? (
+            <UserAvatar
+              className="dash-avatar"
+              imageUrl={userAvatarImageUrl(user)}
+              fallback={userAvatarFallback(user)}
+              imageFit={userAvatarImageFit(user)}
+              style={{ width: '4rem', height: '4rem', fontSize: '1rem' }}
+            />
+          ) : null}
+          <input
+            ref={photoInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            disabled={photoBusy}
+            style={{ display: 'none' }}
+            onChange={(e) => {
+              const f = e.target.files?.[0]
+              e.target.value = ''
+              if (f) void onUploadPhoto(f)
+            }}
+          />
+          <button
+            type="button"
+            className="btn btn-ghost"
+            disabled={photoBusy}
+            onClick={() => photoInputRef.current?.click()}
+          >
+            {photoBusy ? 'Working…' : 'Upload photo'}
+          </button>
+          {user?.profile_photo_url.trim() ? (
+            <button
+              type="button"
+              className="btn btn-ghost"
+              disabled={photoBusy}
+              onClick={() => void onRemovePhoto()}
+            >
+              Remove photo
+            </button>
+          ) : null}
+        </div>
+        {photoError ? <p className="form-error">{photoError}</p> : null}
+        <p style={{ margin: 0, fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+          JPEG, PNG, or WebP · max 2 MB
+        </p>
       </div>
 
       <div className="card account-details__card">

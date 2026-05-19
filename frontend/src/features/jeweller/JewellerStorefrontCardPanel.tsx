@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, type SetStateAction } from 'r
 import { Link } from 'react-router-dom'
 import { FormSubmitFoot } from '@/components/ui/FormSubmitFoot'
 import { authFetch, authUpload } from '@/lib/api'
+import { useAuth } from '@/context/AuthContext'
 import { LIVE_MARKETPLACE_EDITOR_POLL_MS } from '@/lib/liveDeskIntervals'
 import { numOrZero, parseN } from '@/features/marketplace/jewellerMarketplaceShared'
 import { useLivePoll } from '@/lib/useLivePoll'
@@ -9,6 +10,7 @@ import { useLivePoll } from '@/lib/useLivePoll'
 type ProfileApi = Record<string, unknown>
 
 export function JewellerStorefrontCardPanel() {
+  const { refreshProfile: refreshAuthProfile } = useAuth()
   const logoInputRef = useRef<HTMLInputElement>(null)
   /** Avoid clobbering in-progress edits when marketplace profile is polled every few seconds. */
   const storefrontDraftDirtyRef = useRef(false)
@@ -128,7 +130,30 @@ export function JewellerStorefrontCardPanel() {
       setCardDraft((p) => ({ ...p, logo_url: body.logo_url ?? p.logo_url }))
     }
     await refreshProfile()
+    await refreshAuthProfile()
     flashSuccess('Logo uploaded.')
+  }
+
+  const removeLogo = async () => {
+    commitCardDraft((p) => ({ ...p, logo_url: '' }))
+    setBusy(true)
+    setFormError('')
+    const res = await authFetch('/api/v1/jeweller/marketplace/profile/', {
+      method: 'PATCH',
+      jsonBody: { logo_url: '' },
+    })
+    setBusy(false)
+    if (!res.ok) {
+      setSuccessMsg('')
+      const j = await res.json().catch(() => ({}))
+      setFormError(JSON.stringify(j))
+      await refreshProfile()
+      return
+    }
+    storefrontDraftDirtyRef.current = false
+    await refreshProfile()
+    await refreshAuthProfile()
+    flashSuccess('Logo removed.')
   }
 
   const saveShopCard = async () => {
@@ -162,6 +187,7 @@ export function JewellerStorefrontCardPanel() {
     }
     storefrontDraftDirtyRef.current = false
     await refreshProfile()
+    await refreshAuthProfile()
     flashSuccess('Shop card saved.')
   }
 
@@ -222,6 +248,16 @@ export function JewellerStorefrontCardPanel() {
                     >
                       {logoBusy ? 'Uploading…' : 'Upload image'}
                     </button>
+                    {cardDraft.logo_url.trim() !== '' ? (
+                      <button
+                        type="button"
+                        className="btn btn-ghost"
+                        disabled={disableActions}
+                        onClick={() => void removeLogo()}
+                      >
+                        Remove logo
+                      </button>
+                    ) : null}
                   </div>
                   <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block', marginTop: '0.35rem' }}>
                     JPEG, PNG, or WebP · max 2 MB. Or paste a hosted URL below.

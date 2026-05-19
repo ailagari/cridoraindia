@@ -1,4 +1,8 @@
 from django.db import transaction
+from django.core.files.base import ContentFile
+from django.core.files.storage import default_storage
+import uuid
+
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -269,6 +273,54 @@ class KYDocumentUploadView(APIView):
             KYDocumentReadSerializer(obj, context={"request": request}).data,
             status=status.HTTP_201_CREATED,
         )
+
+
+_PROFILE_PHOTO_CT_ALLOWED = frozenset({"image/jpeg", "image/png", "image/webp"})
+_PROFILE_PHOTO_CT_EXT = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp"}
+_MAX_PROFILE_PHOTO_BYTES = 2 * 1024 * 1024
+
+
+class ProfilePhotoView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        upload = request.FILES.get("file")
+        if not upload:
+            return Response(
+                {"detail": "file is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        ct = (getattr(upload, "content_type", None) or "").split(";")[0].strip().lower()
+        if ct not in _PROFILE_PHOTO_CT_ALLOWED:
+            return Response(
+                {"detail": "Photo must be JPEG, PNG, or WebP."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        size = int(getattr(upload, "size", 0) or 0)
+        if size > _MAX_PROFILE_PHOTO_BYTES:
+            return Response(
+                {"detail": "Photo must be 2 MB or smaller."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        ext = _PROFILE_PHOTO_CT_EXT[ct]
+        rel = f"profile_photos/{request.user.pk}/{uuid.uuid4().hex}{ext}"
+        saved_name = default_storage.save(rel, ContentFile(upload.read()))
+        media_url = default_storage.url(saved_name)
+        absolute = (
+            media_url
+            if isinstance(media_url, str) and media_url.startswith("http")
+            else request.build_absolute_uri(media_url)
+        )
+        user = request.user
+        user.profile_photo_url = absolute[:512]
+        user.save(update_fields=["profile_photo_url"])
+        return Response({"profile_photo_url": user.profile_photo_url})
+
+    def delete(self, request):
+        user = request.user
+        user.profile_photo_url = ""
+        user.save(update_fields=["profile_photo_url"])
+        return Response({"profile_photo_url": ""})
 
 
 # Fix typo: User.kYC_VERIFIED -> User.KYC_VERIFIED in views

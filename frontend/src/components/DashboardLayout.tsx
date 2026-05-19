@@ -6,7 +6,9 @@ import { NavHubIcon } from '@/components/NavHubIcon'
 import { GoldTickerStrip } from '@/components/GoldTickerStrip'
 import { DashboardMobileUserMenu } from '@/components/DashboardMobileUserMenu'
 import { NotificationBell } from '@/components/NotificationBell'
+import { UserAvatar } from '@/components/UserAvatar'
 import { useAuth, type AuthUser } from '@/context/AuthContext'
+import { userAvatarFallback, userAvatarImageFit, userAvatarImageUrl } from '@/lib/userAvatar'
 import type { DashboardNavGroup } from '@/lib/mobileNav/types'
 
 export type { DashboardNavItem, DashboardNavGroup } from '@/lib/mobileNav/types'
@@ -26,17 +28,6 @@ function jewellerSidebarDisplayName(user: AuthUser): string {
   const personal = `${user.first_name} ${user.last_name}`.trim()
   if (personal) return personal
   return user.email
-}
-
-function sidebarAvatarLetter(user: AuthUser, role: 'customer' | 'jeweller' | 'admin'): string {
-  if (role === 'jeweller') {
-    const biz = user.business_name.trim()
-    const src = biz || `${user.first_name} ${user.last_name}`.trim() || user.email
-    const ch = src.trim()[0]
-    return ch ? ch.toUpperCase() : 'U'
-  }
-  const ch = user.first_name?.trim()[0] ?? user.email?.trim()[0]
-  return ch ? ch.toUpperCase() : 'U'
 }
 
 type Props = {
@@ -201,7 +192,7 @@ export function DashboardLayout({
     [accordionOpen, activeSection, meta.accentVar, pickSection, role, toggleAccordion],
   )
 
-  const initial = user != null ? sidebarAvatarLetter(user, role) : 'U'
+  const avatarUser = user
 
   return (
     <div className={`dash-shell dash-shell--${role}`}>
@@ -227,9 +218,13 @@ export function DashboardLayout({
         </div>
 
         <div className="dash-user-card">
-          <div className="dash-avatar" style={{ borderColor: meta.accentVar, color: meta.accentVar }}>
-            {initial}
-          </div>
+          <UserAvatar
+            className="dash-avatar"
+            imageUrl={avatarUser ? userAvatarImageUrl(avatarUser) : ''}
+            fallback={avatarUser ? userAvatarFallback(avatarUser) : 'U'}
+            imageFit={avatarUser ? userAvatarImageFit(avatarUser) : 'cover'}
+            style={{ borderColor: meta.accentVar, color: meta.accentVar }}
+          />
           <div className="dash-user-text">
             <div className="dash-user-name">
               {!user ? null : role === 'jeweller' ? jewellerSidebarDisplayName(user) : (

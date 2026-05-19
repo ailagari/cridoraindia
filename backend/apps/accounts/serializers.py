@@ -18,6 +18,8 @@ from .models import (
     FestivalBroadcastNotification,
     KYDocument,
 )
+from apps.marketplace.models import jeweller_profile_for
+
 from .vault_service import sync_customer_aggregate_balance, wallet_vault_payload
 from .services.personal_holdings import customer_portfolio_totals_payload
 
@@ -264,6 +266,7 @@ class UserMeSerializer(serializers.ModelSerializer):
     bank_account = serializers.SerializerMethodField()
     documents = serializers.SerializerMethodField()
     gold_wallet = serializers.SerializerMethodField()
+    logo_url = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -274,6 +277,8 @@ class UserMeSerializer(serializers.ModelSerializer):
             "last_name",
             "user_type",
             "phone",
+            "profile_photo_url",
+            "logo_url",
             "kyc_status",
             "business_name",
             "gstin",
@@ -312,10 +317,20 @@ class UserMeSerializer(serializers.ModelSerializer):
             "jeweller_pref_nearby",
             "jeweller_pref_ornament",
             "jeweller_pref_redemption",
+            "logo_url",
             "bank_account",
             "documents",
             "gold_wallet",
         )
+
+    def get_logo_url(self, obj):
+        if obj.user_type != User.JEWELLER:
+            return ""
+        try:
+            profile = jeweller_profile_for(obj)
+        except Exception:
+            return ""
+        return (profile.logo_url or "").strip()
 
     def get_bank_account(self, obj):
         try:
@@ -522,6 +537,12 @@ class FestivalBroadcastNotificationCreateSerializer(serializers.Serializer):
 
 def user_auth_payload(user):
     tokens = issue_tokens(user)
+    logo_url = ""
+    if user.user_type == User.JEWELLER:
+        try:
+            logo_url = (jeweller_profile_for(user).logo_url or "").strip()
+        except Exception:
+            logo_url = ""
     tokens.update(
         {
             "user_id": user.id,
@@ -531,6 +552,8 @@ def user_auth_payload(user):
             "user_type": user.user_type,
             "kyc_status": user.kyc_status,
             "business_name": user.business_name,
+            "profile_photo_url": (user.profile_photo_url or "").strip(),
+            "logo_url": logo_url,
         }
     )
     return tokens
