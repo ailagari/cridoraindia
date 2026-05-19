@@ -6,6 +6,7 @@ import {
   postJewellerSellbackReject,
   type JewellerSellbackRowDTO,
 } from '@/lib/goldTransferApi'
+import { SellbackUpiPayoutStep } from '@/features/redeem/SellbackUpiPayoutStep'
 import { LIVE_BALANCE_POLL_MS } from '@/lib/liveDeskIntervals'
 import { useLivePoll } from '@/lib/useLivePoll'
 
@@ -21,19 +22,25 @@ function fmtWhen(iso: string): string {
   return new Date(ms).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })
 }
 
-function statusLabel(st: string): string {
+function statusLabel(st: string, paymentMethod?: string): string {
   if (st === 'pending_jeweller') return 'Pending your action'
-  if (st === 'accepted_awaiting_otp') return 'Accepted · enter OTP'
+  if (st === 'accepted_awaiting_otp') {
+    return paymentMethod === 'upi' ? 'Accepted · pay via UPI' : 'Accepted · enter OTP'
+  }
+  if (st === 'awaiting_utr_verify') return 'UTR submitted · customer confirm'
   if (st === 'completed') return 'Completed'
   if (st === 'rejected') return 'Rejected'
+  if (st === 'cancelled') return 'Cancelled'
   return st
 }
 
 export function JewellerSellbacksPanel() {
   const [rows, setRows] = useState<JewellerSellbackRowDTO[]>([])
   const [loadErr, setLoadErr] = useState('')
+  const [successMsg, setSuccessMsg] = useState('')
   const [otpDraft, setOtpDraft] = useState<Record<number, string>>({})
   const [busyId, setBusyId] = useState<number | null>(null)
+  const [busyUpi, setBusyUpi] = useState(false)
 
   const refresh = useCallback(async () => {
     setLoadErr('')
@@ -56,11 +63,24 @@ export function JewellerSellbacksPanel() {
     const q: JewellerSellbackRowDTO[] = []
     const h: JewellerSellbackRowDTO[] = []
     for (const r of rows) {
-      if (r.status === 'pending_jeweller' || r.status === 'accepted_awaiting_otp') q.push(r)
-      else h.push(r)
+      if (
+        r.status === 'pending_jeweller' ||
+        r.status === 'accepted_awaiting_otp' ||
+        r.status === 'awaiting_utr_verify'
+      ) {
+        q.push(r)
+      } else {
+        h.push(r)
+      }
     }
     return { queue: q, history: h }
   }, [rows])
+
+  const upiPayoutRows = queue.filter(
+    (r) =>
+      r.payment_method === 'upi' &&
+      (r.status === 'accepted_awaiting_otp' || r.status === 'awaiting_utr_verify'),
+  )
 
   const onAccept = async (id: number) => {
     setBusyId(id)
@@ -124,7 +144,7 @@ export function JewellerSellbacksPanel() {
           <span style={{ color: 'var(--text-faint)' }}>— add phone on profile</span>
         )}
       </td>
-      <td data-label="Status">{statusLabel(r.status)}</td>
+      <td data-label="Status">{statusLabel(r.status, r.payment_method)}</td>
       <td data-label="Grams">
         <span className="tabular">{r.grams} g</span>
       </td>
@@ -157,7 +177,7 @@ export function JewellerSellbacksPanel() {
                 Reject
               </button>
             </div>
-          ) : r.status === 'accepted_awaiting_otp' ? (
+          ) : r.status === 'accepted_awaiting_otp' && r.payment_method === 'cash' ? (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', alignItems: 'center' }}>
               <input
                 type="text"
@@ -193,6 +213,10 @@ export function JewellerSellbacksPanel() {
                 Settle (verify OTP)
               </button>
             </div>
+          ) : r.status === 'accepted_awaiting_otp' && r.payment_method === 'upi' ? (
+            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Use UPI payout panel below</span>
+          ) : r.status === 'awaiting_utr_verify' ? (
+            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Awaiting customer confirm</span>
           ) : (
             '—'
           )}
@@ -205,12 +229,31 @@ export function JewellerSellbacksPanel() {
     <div className="dash-panel-max pf-scope">
       <h2 className="dash-panel-title">Cash sellbacks</h2>
       <p className="dash-panel-lead">
-        Real-time sellback queue from customers. Call them on the phone number shown to confirm identity and collect their{' '}
-        <strong>OTP</strong> after you pay cash <strong>outside Cridora</strong>. Accept first, complete payout offline,
-        then enter OTP to debit vault gold.
+        Real-time sellback queue from customers. For <strong>cash</strong> sellbacks: pay at counter, collect OTP, settle
+        here. For <strong>UPI</strong> sellbacks: accept, pay the customer&apos;s UPI ID, submit the UTR — they confirm
+        receipt before vault gold is debited.
       </p>
 
       {loadErr ? <p className="form-error">{loadErr}</p> : null}
+      {successMsg ? (
+        <p style={{ margin: '0 0 1rem', color: 'var(--success)', fontWeight: 600 }} role="status">
+          {successMsg}
+        </p>
+      ) : null}
+
+      {upiPayoutRows.map((row) => (
+        <SellbackUpiPayoutStep
+          key={row.id}
+          row={row}
+          busy={busyUpi}
+          setBusy={setBusyUpi}
+          onUpdated={refresh}
+          onSuccess={(msg) => {
+            setSuccessMsg(msg)
+            setLoadErr('')
+          }}
+        />
+      ))}
 
       {rows.length === 0 && !loadErr ? (
         <p style={{ color: 'var(--text-muted)' }}>No sellback records yet.</p>

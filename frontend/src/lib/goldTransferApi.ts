@@ -240,18 +240,42 @@ export type JewellerSellbackRowDTO = {
   reference_metal_inr_per_gram_snapshot: string
   buyback_inr_per_gram_snapshot: string
   cash_estimate_inr: string
+  payment_method: string
+  payout_upi_vpa: string
   status: string
+  upi_utr?: string
+  utr_submitted_at?: string | null
+}
+
+export type SellbackPayoutPayload = {
+  reference: string
+  payee_vpa: string
+  payee_name: string
+  amount_inr: string
+  payment_note: string
+  upi_uri: string
+  payout_expires_at: string | null
+  expired: boolean
+}
+
+export type CustomerPayoutUpiProfileDTO = {
+  payout_upi_vpa: string
+  configured: boolean
 }
 
 export type SellbackOutstandingDTO = {
   id: number
   reference: string
   status: string
+  payment_method: string
+  payout_upi_vpa: string
   jeweller_label: string
   grams: string
   cash_estimate_inr: string
   buyback_inr_per_gram: string
   otp_expires_at: string | null
+  upi_utr?: string
+  utr_submitted_at?: string | null
   created_at: string
   updated_at: string
 }
@@ -274,6 +298,7 @@ export async function postGoldSellbackQuote(
 export async function postGoldSellbackConfirm(
   jewellerId: number,
   grams: string,
+  options?: { payment_method?: 'cash' | 'upi'; payout_upi_vpa?: string },
 ): Promise<
   | {
       ok: true
@@ -281,20 +306,41 @@ export async function postGoldSellbackConfirm(
       detail: string
       otp_code?: string
       otp_expires_at?: string
-      sellback?: { id: number; reference: string; grams: string; cash_estimate_inr: string; status: string }
+      sellback?: {
+        id: number
+        reference: string
+        grams: string
+        cash_estimate_inr: string
+        status: string
+        payment_method: string
+        payout_upi_vpa: string
+      }
     }
   | { ok: false; detail: string }
 > {
   const res = await authFetch('/api/v1/gold/sellback/confirm/', {
     method: 'POST',
-    jsonBody: { jeweller_id: jewellerId, grams },
+    jsonBody: {
+      jeweller_id: jewellerId,
+      grams,
+      payment_method: options?.payment_method ?? 'cash',
+      payout_upi_vpa: options?.payout_upi_vpa ?? '',
+    },
   })
   const data = (await res.json()) as {
     detail?: string
     wallet?: GoldWalletDTO
     otp_code?: string
     otp_expires_at?: string
-    sellback?: { id: number; reference: string; grams: string; cash_estimate_inr: string; status: string }
+    sellback?: {
+      id: number
+      reference: string
+      grams: string
+      cash_estimate_inr: string
+      status: string
+      payment_method: string
+      payout_upi_vpa: string
+    }
   }
   if (!res.ok) {
     return { ok: false, detail: data.detail ?? 'Sellback failed.' }
@@ -384,6 +430,88 @@ export async function postJewellerSellbackComplete(
     return { ok: false, detail: data.detail ?? 'Could not complete.' }
   }
   return { ok: true, detail: data.detail ?? 'Completed.' }
+}
+
+export async function fetchCustomerPayoutUpiProfile(): Promise<
+  { ok: true; data: CustomerPayoutUpiProfileDTO } | { ok: false; detail: string }
+> {
+  const res = await authFetch('/api/v1/customer/profile/payout-upi/')
+  const data = (await res.json()) as CustomerPayoutUpiProfileDTO & { detail?: string }
+  if (!res.ok) {
+    return { ok: false, detail: data.detail != null ? String(data.detail) : 'Could not load payout UPI.' }
+  }
+  return { ok: true, data: data as CustomerPayoutUpiProfileDTO }
+}
+
+export async function updateCustomerPayoutUpiProfile(body: {
+  payout_upi_vpa: string
+}): Promise<{ ok: true; data: CustomerPayoutUpiProfileDTO } | { ok: false; detail: string }> {
+  const res = await authFetch('/api/v1/customer/profile/payout-upi/', {
+    method: 'PATCH',
+    jsonBody: body,
+  })
+  const data = (await res.json()) as CustomerPayoutUpiProfileDTO & { detail?: string }
+  if (!res.ok) {
+    return { ok: false, detail: data.detail != null ? String(data.detail) : 'Could not save payout UPI.' }
+  }
+  return { ok: true, data: data as CustomerPayoutUpiProfileDTO }
+}
+
+export async function jewellerFetchSellbackPayout(
+  sellbackId: number,
+): Promise<
+  | { ok: true; data: JewellerSellbackRowDTO & { payout: SellbackPayoutPayload } }
+  | { ok: false; detail: string }
+> {
+  const res = await authFetch(`/api/v1/jeweller/sellbacks/${sellbackId}/payout/`)
+  const data = (await res.json()) as JewellerSellbackRowDTO & { payout?: SellbackPayoutPayload; detail?: string }
+  if (!res.ok || !data.payout) {
+    return { ok: false, detail: data.detail != null ? String(data.detail) : 'Could not load payout details.' }
+  }
+  return { ok: true, data: data as JewellerSellbackRowDTO & { payout: SellbackPayoutPayload } }
+}
+
+export async function jewellerSubmitSellbackUtr(
+  sellbackId: number,
+  utr: string,
+): Promise<{ ok: true; data: JewellerSellbackRowDTO } | { ok: false; detail: string }> {
+  const res = await authFetch(`/api/v1/jeweller/sellbacks/${sellbackId}/submit-utr/`, {
+    method: 'POST',
+    jsonBody: { utr: utr.trim() },
+  })
+  const data = (await res.json()) as JewellerSellbackRowDTO & { detail?: string }
+  if (!res.ok) {
+    return { ok: false, detail: data.detail != null ? String(data.detail) : 'Could not submit UTR.' }
+  }
+  return { ok: true, data: data as JewellerSellbackRowDTO }
+}
+
+export async function customerConfirmSellbackUtr(
+  sellbackId: number,
+): Promise<{ ok: true; detail: string; sellback: SellbackOutstandingDTO } | { ok: false; detail: string }> {
+  const res = await authFetch(`/api/v1/gold/sellback/${sellbackId}/confirm-utr/`, {
+    method: 'POST',
+    jsonBody: {},
+  })
+  const data = (await res.json()) as { detail?: string; sellback?: SellbackOutstandingDTO }
+  if (!res.ok || !data.sellback) {
+    return { ok: false, detail: data.detail != null ? String(data.detail) : 'Could not confirm payout.' }
+  }
+  return { ok: true, detail: data.detail ?? 'Sellback settled.', sellback: data.sellback }
+}
+
+export async function customerCancelSellbackUpi(
+  sellbackId: number,
+): Promise<{ ok: true; data: SellbackOutstandingDTO } | { ok: false; detail: string }> {
+  const res = await authFetch(`/api/v1/gold/sellback/${sellbackId}/cancel-upi/`, {
+    method: 'POST',
+    jsonBody: {},
+  })
+  const data = (await res.json()) as SellbackOutstandingDTO & { detail?: string }
+  if (!res.ok) {
+    return { ok: false, detail: data.detail != null ? String(data.detail) : 'Could not cancel sellback.' }
+  }
+  return { ok: true, data: data as SellbackOutstandingDTO }
 }
 
 export async function resolveGoldUPI(gold_upi: string): Promise<GoldResolveResponse> {

@@ -2,22 +2,20 @@ import { useCallback, useEffect, useState } from 'react'
 import QRCode from 'qrcode'
 import { UpiPayMethodNotice } from '@/components/UpiPayMethodNotice'
 import {
-  fractionalCancelUpiOrder,
-  fractionalFetchPayment,
-  fractionalSubmitUtr,
-  type FractionalPaymentPayload,
-  type FractionalPurchaseDTO,
-} from '@/lib/fractionalPurchaseApi'
+  jewellerFetchSellbackPayout,
+  jewellerSubmitSellbackUtr,
+  type JewellerSellbackRowDTO,
+  type SellbackPayoutPayload,
+} from '@/lib/goldTransferApi'
 import { usePublicLayoutMax767 } from '@/hooks/usePublicLayoutMax767'
 import { openUpiPayUri } from '@/lib/openUpiPayUri'
 
 type Props = {
-  order: FractionalPurchaseDTO
+  row: JewellerSellbackRowDTO
   busy: boolean
   setBusy: (v: boolean) => void
   onUpdated: () => void | Promise<void>
   onSuccess: (message: string) => void
-  onCancelled: () => void
 }
 
 function formatInr(s: string): string {
@@ -26,32 +24,34 @@ function formatInr(s: string): string {
   return n.toLocaleString('en-IN', { maximumFractionDigits: 2 })
 }
 
-export function FractionalUpiPayStep({ order, busy, setBusy, onUpdated, onSuccess, onCancelled }: Props) {
+export function SellbackUpiPayoutStep({ row, busy, setBusy, onUpdated, onSuccess }: Props) {
   const narrow = usePublicLayoutMax767()
-  const [payment, setPayment] = useState<FractionalPaymentPayload | null>(null)
+  const [payout, setPayout] = useState<SellbackPayoutPayload | null>(null)
   const [loadErr, setLoadErr] = useState('')
   const [actionErr, setActionErr] = useState('')
   const [utrInput, setUtrInput] = useState('')
   const [qrSrc, setQrSrc] = useState('')
   const [copyMsg, setCopyMsg] = useState('')
 
-  const refreshPayment = useCallback(async () => {
+  const refreshPayout = useCallback(async () => {
     setLoadErr('')
-    const out = await fractionalFetchPayment(order.id)
+    const out = await jewellerFetchSellbackPayout(row.id)
     if (!out.ok) {
       setLoadErr(out.detail)
-      setPayment(null)
+      setPayout(null)
       return
     }
-    setPayment(out.data.payment)
-  }, [order.id])
+    setPayout(out.data.payout)
+  }, [row.id])
 
   useEffect(() => {
-    void refreshPayment()
-  }, [refreshPayment])
+    if (row.status === 'accepted_awaiting_otp') {
+      void refreshPayout()
+    }
+  }, [row.status, refreshPayout])
 
   useEffect(() => {
-    const uri = payment?.upi_uri ?? ''
+    const uri = payout?.upi_uri ?? ''
     if (!uri || narrow) {
       setQrSrc('')
       return
@@ -63,7 +63,7 @@ export function FractionalUpiPayStep({ order, busy, setBusy, onUpdated, onSucces
     return () => {
       cancelled = true
     }
-  }, [payment?.upi_uri, narrow])
+  }, [payout?.upi_uri, narrow])
 
   const copyText = async (text: string, label: string) => {
     try {
@@ -77,19 +77,19 @@ export function FractionalUpiPayStep({ order, busy, setBusy, onUpdated, onSucces
   }
 
   const copyPaymentDetails = async () => {
-    if (!payment) return
+    if (!payout) return
     const lines = [
-      `UPI ID: ${payment.payee_vpa}`,
-      `Amount: ₹${formatInr(payment.amount_inr)}`,
-      `Note: ${payment.payment_note}`,
-      `Ref: ${payment.reference}`,
+      `UPI ID: ${payout.payee_vpa}`,
+      `Amount: ₹${formatInr(payout.amount_inr)}`,
+      `Note: ${payout.payment_note}`,
+      `Ref: ${payout.reference}`,
     ]
     await copyText(lines.join('\n'), 'Payment details')
   }
 
   const openUpiApp = () => {
-    if (!payment?.upi_uri) return
-    openUpiPayUri(payment.upi_uri)
+    if (!payout?.upi_uri) return
+    openUpiPayUri(payout.upi_uri)
   }
 
   const pasteUtr = async () => {
@@ -106,87 +106,55 @@ export function FractionalUpiPayStep({ order, busy, setBusy, onUpdated, onSucces
     setActionErr('')
     setBusy(true)
     try {
-      const out = await fractionalSubmitUtr(order.id, utrInput)
+      const out = await jewellerSubmitSellbackUtr(row.id, utrInput)
       if (!out.ok) {
         setActionErr(out.detail)
         return
       }
       await onUpdated()
-      if (out.data.status === 'completed') {
-        onSuccess(`Order ${out.data.reference} completed. ${out.data.grams} g credited.`)
-        return
-      }
-      onSuccess(`UTR submitted for ${out.data.reference}. Waiting for jeweller verification.`)
+      onSuccess(`UTR submitted for ${row.reference}. Waiting for customer confirmation.`)
     } finally {
       setBusy(false)
     }
   }
 
-  const cancelOrder = async () => {
-    setActionErr('')
-    setBusy(true)
-    try {
-      const out = await fractionalCancelUpiOrder(order.id)
-      if (!out.ok) {
-        setActionErr(out.detail)
-        return
-      }
-      await onUpdated()
-      onCancelled()
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  if (order.status === 'awaiting_utr_verify') {
+  if (row.status === 'awaiting_utr_verify') {
     return (
       <div className="fractional-upi-pay card" role="status">
-        <p className="fractional-upi-pay__title">Payment proof received</p>
+        <p className="fractional-upi-pay__title">Payout proof submitted</p>
         <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
-          Your UTR <strong className="tabular">{order.upi_utr || utrInput}</strong> was submitted for{' '}
-          <strong>{order.reference}</strong>. The jeweller will confirm against their UPI app and your gold will be
-          credited shortly.
+          UTR <strong className="tabular">{row.upi_utr || utrInput}</strong> submitted for{' '}
+          <strong>{row.reference}</strong>. The customer will confirm receipt in their app before vault gold is debited.
         </p>
       </div>
     )
   }
 
-  if (order.status === 'completed') {
-    return (
-      <div className="fractional-upi-pay card" role="status">
-        <p className="fractional-upi-pay__title" style={{ color: 'var(--gold-light)' }}>
-          Order completed
-        </p>
-        <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--text-muted)' }}>
-          {order.reference} — <strong className="tabular">{order.grams} g</strong> credited to your vault.
-        </p>
-      </div>
-    )
-  }
+  if (row.status !== 'accepted_awaiting_otp') return null
 
   return (
     <div className="fractional-upi-pay card">
-      <p className="fractional-upi-pay__title">Pay with UPI</p>
+      <p className="fractional-upi-pay__title">Pay customer via UPI</p>
       <p className="fractional-upi-pay__lead">
-        Pay <strong className="tabular">₹{formatInr(order.total_inr)}</strong> to{' '}
-        <strong>{order.jeweller.business_name}</strong>. Then paste the <strong>UPI reference number</strong> from your
-        receipt below.
+        Send <strong className="tabular">₹{formatInr(row.cash_estimate_inr)}</strong> to{' '}
+        <strong>{row.customer_label}</strong>. Then paste the <strong>UPI reference number</strong> from your receipt
+        below.
       </p>
 
       {loadErr ? <p className="form-error">{loadErr}</p> : null}
-      {payment?.expired ? (
-        <p className="form-error">This payment window expired. Place a new order.</p>
+      {payout?.expired ? (
+        <p className="form-error">This payout window expired. Ask the customer to submit a new sellback.</p>
       ) : null}
 
-      {payment && !payment.expired ? (
+      {payout && !payout.expired ? (
         <>
           <UpiPayMethodNotice compact={narrow} />
 
           <div className="fractional-upi-pay__payee">
             <span className="fractional-upi-pay__label">Pay to UPI ID</span>
-            <p className="fractional-upi-pay__vpa tabular">{payment.payee_vpa}</p>
+            <p className="fractional-upi-pay__vpa tabular">{payout.payee_vpa}</p>
             <p className="fractional-upi-pay__meta">
-              {payment.payee_name} · Ref {payment.reference}
+              {payout.payee_name} · Ref {payout.reference}
             </p>
           </div>
 
@@ -206,7 +174,7 @@ export function FractionalUpiPayStep({ order, busy, setBusy, onUpdated, onSucces
               type="button"
               className="btn btn-ghost btn--block"
               disabled={busy}
-              onClick={() => void copyText(payment.payee_vpa, 'UPI ID')}
+              onClick={() => void copyText(payout.payee_vpa, 'UPI ID')}
             >
               Copy UPI ID
             </button>
@@ -214,9 +182,9 @@ export function FractionalUpiPayStep({ order, busy, setBusy, onUpdated, onSucces
               type="button"
               className="btn btn-ghost btn--block"
               disabled={busy}
-              onClick={() => void copyText(payment.amount_inr, 'Amount')}
+              onClick={() => void copyText(payout.amount_inr, 'Amount')}
             >
-              Copy amount (₹{formatInr(payment.amount_inr)})
+              Copy amount (₹{formatInr(payout.amount_inr)})
             </button>
           </div>
           {copyMsg ? <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-muted)' }}>{copyMsg}</p> : null}
@@ -231,9 +199,9 @@ export function FractionalUpiPayStep({ order, busy, setBusy, onUpdated, onSucces
           ) : null}
 
           <div className="field" style={{ marginTop: '0.75rem' }}>
-            <label htmlFor={`frac-utr-${order.id}`}>UPI reference (UTR)</label>
+            <label htmlFor={`sb-utr-${row.id}`}>UPI reference (UTR)</label>
             <input
-              id={`frac-utr-${order.id}`}
+              id={`sb-utr-${row.id}`}
               value={utrInput}
               onChange={(e) => setUtrInput(e.target.value)}
               placeholder="12-digit ref from GPay / PhonePe receipt"
@@ -252,29 +220,9 @@ export function FractionalUpiPayStep({ order, busy, setBusy, onUpdated, onSucces
           >
             Submit UTR
           </button>
-          <button
-            type="button"
-            className="btn btn-ghost btn--block fractional-upi-pay__cancel"
-            disabled={busy}
-            onClick={() => void cancelOrder()}
-          >
-            Cancel order
-          </button>
           {actionErr ? <p className="form-error">{actionErr}</p> : null}
         </>
-      ) : (
-        <>
-          <button
-            type="button"
-            className="btn btn-ghost btn--block fractional-upi-pay__cancel"
-            disabled={busy}
-            onClick={() => void cancelOrder()}
-          >
-            Cancel order
-          </button>
-          {actionErr ? <p className="form-error">{actionErr}</p> : null}
-        </>
-      )}
+      ) : null}
     </div>
   )
 }

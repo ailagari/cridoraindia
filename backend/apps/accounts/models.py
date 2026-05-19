@@ -74,6 +74,11 @@ class User(AbstractUser):
         blank=True,
         help_text="Normalized GoldUPI username@jewellercode (lowercase).",
     )
+    payout_upi_vpa = models.CharField(
+        max_length=128,
+        blank=True,
+        help_text="Customer UPI ID for sellback cash payouts.",
+    )
     jeweller_code = models.CharField(
         max_length=40,
         blank=True,
@@ -463,18 +468,29 @@ class FractionalGoldPurchase(models.Model):
 
 
 class GoldSellbackRequest(models.Model):
-    """Customer sells fractional vault gold back to the custodian jeweller (cash estimate; payout offline in MVP)."""
+    """Customer sells fractional vault gold back to the custodian jeweller (cash or UPI payout)."""
 
     STATUS_PENDING_JEWELLER = "pending_jeweller"
     STATUS_REJECTED = "rejected"
     STATUS_ACCEPTED_AWAITING_OTP = "accepted_awaiting_otp"
+    STATUS_AWAITING_UTR_VERIFY = "awaiting_utr_verify"
     STATUS_COMPLETED = "completed"
+    STATUS_CANCELLED = "cancelled"
 
     STATUS_CHOICES = [
         (STATUS_PENDING_JEWELLER, "Pending jeweller"),
         (STATUS_REJECTED, "Rejected"),
         (STATUS_ACCEPTED_AWAITING_OTP, "Accepted awaiting OTP"),
+        (STATUS_AWAITING_UTR_VERIFY, "Awaiting UTR verification"),
         (STATUS_COMPLETED, "Completed"),
+        (STATUS_CANCELLED, "Cancelled"),
+    ]
+
+    PAY_CASH = "cash"
+    PAY_UPI = "upi"
+    PAYMENT_CHOICES = [
+        (PAY_CASH, "Cash at counter"),
+        (PAY_UPI, "UPI"),
     ]
 
     customer = models.ForeignKey(
@@ -505,6 +521,34 @@ class GoldSellbackRequest(models.Model):
         decimal_places=2,
         help_text="grams × buyback ₹/g at execution.",
     )
+    payment_method = models.CharField(
+        max_length=16,
+        choices=PAYMENT_CHOICES,
+        default=PAY_CASH,
+    )
+    payout_upi_vpa = models.CharField(
+        max_length=128,
+        blank=True,
+        help_text="Snapshot of customer UPI VPA for online payout.",
+    )
+    payment_note = models.CharField(
+        max_length=128,
+        blank=True,
+        help_text="UPI transaction note, e.g. Cridora SB-42.",
+    )
+    payout_expires_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When an unfunded UPI payout should expire.",
+    )
+    upi_utr = models.CharField(
+        max_length=32,
+        null=True,
+        blank=True,
+        unique=True,
+        help_text="Jeweller-submitted UPI reference after paying customer.",
+    )
+    utr_submitted_at = models.DateTimeField(null=True, blank=True)
     status = models.CharField(
         max_length=32,
         choices=STATUS_CHOICES,

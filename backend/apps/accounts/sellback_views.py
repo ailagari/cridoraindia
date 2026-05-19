@@ -38,7 +38,11 @@ def _serialize_sellback_jeweller(row: GoldSellbackRequest) -> dict:
         "reference_metal_inr_per_gram_snapshot": str(row.reference_metal_inr_per_gram_snapshot),
         "buyback_inr_per_gram_snapshot": str(row.buyback_inr_per_gram_snapshot),
         "cash_estimate_inr": str(row.cash_estimate_inr),
+        "payment_method": row.payment_method,
+        "payout_upi_vpa": row.payout_upi_vpa or "",
         "status": row.status,
+        "upi_utr": row.upi_utr or "",
+        "utr_submitted_at": row.utr_submitted_at.isoformat() if row.utr_submitted_at else None,
     }
 
 
@@ -50,11 +54,15 @@ def _serialize_customer_outstanding(row: GoldSellbackRequest) -> dict:
         "id": row.id,
         "reference": f"SB-{row.id}",
         "status": row.status,
+        "payment_method": row.payment_method,
+        "payout_upi_vpa": row.payout_upi_vpa or "",
         "jeweller_label": jl.business_name or jl.email or "",
         "grams": str(row.grams),
         "cash_estimate_inr": str(row.cash_estimate_inr),
         "buyback_inr_per_gram": str(row.buyback_inr_per_gram_snapshot),
         "otp_expires_at": exp,
+        "upi_utr": row.upi_utr or "",
+        "utr_submitted_at": row.utr_submitted_at.isoformat() if row.utr_submitted_at else None,
         "created_at": row.created_at.isoformat(),
         "updated_at": row.updated_at.isoformat(),
     }
@@ -119,40 +127,57 @@ class GoldSellbackConfirmView(APIView):
         if err:
             return Response({"detail": err}, status=status.HTTP_400_BAD_REQUEST)
 
+        payment_method = str(request.data.get("payment_method") or GoldSellbackRequest.PAY_CASH).strip().lower()
+        payout_upi_vpa = str(request.data.get("payout_upi_vpa") or "").strip()
+
         jeweller = User.objects.filter(pk=jid, user_type=User.JEWELLER).first()
         if not jeweller:
             return Response({"detail": "Jeweller not found."}, status=status.HTTP_400_BAD_REQUEST)
 
-        row, ex_err, otp_plain = create_pending_sellback_with_otp(user, jeweller, grams)
-        if ex_err or row is None or otp_plain is None:
+        row, ex_err, otp_plain = create_pending_sellback_with_otp(
+            user,
+            jeweller,
+            grams,
+            payment_method=payment_method,
+            payout_upi_vpa=payout_upi_vpa,
+        )
+        if ex_err or row is None:
             return Response(
                 {"detail": ex_err or "Sellback request failed."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        otp_row = row.settlement_otp
+        otp_row = getattr(row, "settlement_otp", None)
         expires_iso = otp_row.expires_at.isoformat() if otp_row else ""
 
         if hasattr(user, "gold_balance"):
             user.gold_balance.refresh_from_db()
 
-        return Response(
-            {
-                "detail": "Sellback submitted. Share the OTP with your jeweller only after you receive cash.",
-                "sellback": {
-                    "id": row.id,
-                    "reference": f"SB-{row.id}",
-                    "grams": str(row.grams),
-                    "cash_estimate_inr": str(row.cash_estimate_inr),
-                    "buyback_inr_per_gram": str(row.buyback_inr_per_gram_snapshot),
-                    "status": row.status,
-                },
-                "otp_code": otp_plain,
-                "otp_expires_at": expires_iso,
-                "wallet": _wallet_payload(user),
-            },
-            status=status.HTTP_201_CREATED,
+        detail = (
+            "Sellback submitted. Your jeweller will pay you via UPI after accepting."
+            if row.payment_method == GoldSellbackRequest.PAY_UPI
+            else "Sellback submitted. Share the OTP with your jeweller only after you receive cash."
         )
+
+        body: dict = {
+            "detail": detail,
+            "sellback": {
+                "id": row.id,
+                "reference": f"SB-{row.id}",
+                "grams": str(row.grams),
+                "cash_estimate_inr": str(row.cash_estimate_inr),
+                "buyback_inr_per_gram": str(row.buyback_inr_per_gram_snapshot),
+                "status": row.status,
+                "payment_method": row.payment_method,
+                "payout_upi_vpa": row.payout_upi_vpa or "",
+            },
+            "wallet": _wallet_payload(user),
+        }
+        if otp_plain:
+            body["otp_code"] = otp_plain
+            body["otp_expires_at"] = expires_iso
+
+        return Response(body, status=status.HTTP_201_CREATED)
 
 
 class GoldSellbackOutstandingView(APIView):
@@ -168,6 +193,7 @@ class GoldSellbackOutstandingView(APIView):
                 status__in=(
                     GoldSellbackRequest.STATUS_PENDING_JEWELLER,
                     GoldSellbackRequest.STATUS_ACCEPTED_AWAITING_OTP,
+                    GoldSellbackRequest.STATUS_AWAITING_UTR_VERIFY,
                 ),
             )
             .select_related("jeweller", "settlement_otp")
@@ -216,7 +242,12 @@ class JewellerSellbackAcceptView(APIView):
         ok, err = jeweller_accept_sellback(user, pk)
         if not ok:
             return Response({"detail": err}, status=status.HTTP_400_BAD_REQUEST)
-        return Response({"detail": "Accepted. Pay the customer offline, then enter their OTP to debit vault gold."})
+        row = GoldSellbackRequest.objects.filter(pk=pk, jeweller=user).first()
+        if row and row.payment_method == GoldSellbackRequest.PAY_UPI:
+            msg = "Accepted. Pay the customer via UPI, then submit the UTR from your receipt."
+        else:
+            msg = "Accepted. Pay the customer offline, then enter their OTP to debit vault gold."
+        return Response({"detail": msg})
 
 
 class JewellerSellbackRejectView(APIView):

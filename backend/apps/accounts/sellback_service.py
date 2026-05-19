@@ -12,6 +12,8 @@ from apps.accounts.gold_identity import MIN_TRANSFER_GRAMS, parse_cash_inr
 from apps.accounts.jeweller_liability_service import release_custodial_liability_for_sellback
 from apps.accounts.models import GoldSellbackRequest
 from apps.accounts.sellback_otp import issue_sellback_otp, verify_sellback_otp
+from apps.accounts.services.fractional_upi import default_payment_expires_at
+from apps.accounts.services.sellback_upi import normalize_upi_vpa, payout_note_for
 from apps.accounts.vault_service import customer_fractional_available, debit_customer_fractional
 from apps.marketplace.models import JewellerPricingProfile, jeweller_profile_for
 from apps.marketplace.pricing import (
@@ -87,13 +89,50 @@ def quote_customer_sellback(
     return out, None
 
 
+def settle_sellback(row: GoldSellbackRequest) -> str | None:
+    """Debit vault and release liability after cash OTP or UPI confirmation."""
+    customer = row.customer
+    jeweller = row.jeweller
+    grams = row.grams
+    err_debit = debit_customer_fractional(customer, jeweller, grams)
+    if err_debit:
+        return err_debit
+
+    row.status = GoldSellbackRequest.STATUS_COMPLETED
+    row.save(update_fields=["status", "updated_at"])
+
+    release_custodial_liability_for_sellback(jeweller, customer, grams, row)
+
+    JewellerPricingProfile.objects.filter(jeweller=jeweller).update(
+        metric_total_redeemed_gold_grams=F("metric_total_redeemed_gold_grams") + grams
+    )
+    return None
+
+
 def create_pending_sellback_with_otp(
-    customer: User, jeweller: User, grams: Decimal
+    customer: User,
+    jeweller: User,
+    grams: Decimal,
+    *,
+    payment_method: str = GoldSellbackRequest.PAY_CASH,
+    payout_upi_vpa: str = "",
 ) -> tuple[GoldSellbackRequest | None, str | None, str | None]:
-    """Creates pending request + OTP; vault balance unchanged until jeweller verifies OTP."""
+    """Creates pending request; cash path also issues OTP."""
     payload, err = quote_customer_sellback(customer, jeweller, grams=grams)
     if err or not payload:
         return None, err or "Quote failed.", None
+
+    method = payment_method if payment_method in (
+        GoldSellbackRequest.PAY_CASH,
+        GoldSellbackRequest.PAY_UPI,
+    ) else GoldSellbackRequest.PAY_CASH
+
+    payout_vpa = ""
+    if method == GoldSellbackRequest.PAY_UPI:
+        normalized = normalize_upi_vpa(payout_upi_vpa)
+        if not normalized:
+            return None, "Enter a valid UPI ID for payout (name@bank).", None
+        payout_vpa = normalized
 
     with transaction.atomic():
         row = GoldSellbackRequest.objects.create(
@@ -103,8 +142,18 @@ def create_pending_sellback_with_otp(
             reference_metal_inr_per_gram_snapshot=Decimal(payload["reference_metal_inr_per_gram"]),
             buyback_inr_per_gram_snapshot=Decimal(payload["buyback_inr_per_gram"]),
             cash_estimate_inr=Decimal(payload["cash_estimate_inr"]),
+            payment_method=method,
+            payout_upi_vpa=payout_vpa,
             status=GoldSellbackRequest.STATUS_PENDING_JEWELLER,
         )
+        row.payment_note = payout_note_for(row.id)
+        row.save(update_fields=["payment_note", "updated_at"])
+
+        if method == GoldSellbackRequest.PAY_UPI:
+            customer.payout_upi_vpa = payout_vpa
+            customer.save(update_fields=["payout_upi_vpa"])
+            return row, None, None
+
         code, _expires_at = issue_sellback_otp(row)
     return row, None, code
 
@@ -136,7 +185,11 @@ def jeweller_accept_sellback(jeweller: User, sellback_id: int) -> tuple[bool, st
         if row.status != GoldSellbackRequest.STATUS_PENDING_JEWELLER:
             return False, "Only pending requests can be accepted."
         row.status = GoldSellbackRequest.STATUS_ACCEPTED_AWAITING_OTP
-        row.save(update_fields=["status", "updated_at"])
+        updates = ["status", "updated_at"]
+        if row.payment_method == GoldSellbackRequest.PAY_UPI:
+            row.payout_expires_at = default_payment_expires_at()
+            updates.append("payout_expires_at")
+        row.save(update_fields=updates)
     return True, ""
 
 
@@ -169,24 +222,39 @@ def jeweller_complete_sellback_with_otp(
         if not row:
             return None, "Sellback not found."
         if row.status != GoldSellbackRequest.STATUS_ACCEPTED_AWAITING_OTP:
-            return None, "Accept the sellback first, pay the customer offline, then enter their OTP."
+            return None, "Accept the sellback first, pay the customer, then settle."
+        if row.payment_method == GoldSellbackRequest.PAY_UPI:
+            return None, "This is a UPI payout sellback. Pay the customer in your UPI app and submit the UTR."
         ok, detail = verify_sellback_otp(row, otp)
         if not ok:
             return None, detail
 
-        customer = row.customer
-        grams = row.grams
-        err_debit = debit_customer_fractional(customer, jeweller, grams)
-        if err_debit:
-            return None, err_debit
+        err_settle = settle_sellback(row)
+        if err_settle:
+            return None, err_settle
 
-        row.status = GoldSellbackRequest.STATUS_COMPLETED
-        row.save(update_fields=["status", "updated_at"])
+    return row, None
 
-        release_custodial_liability_for_sellback(jeweller, customer, grams, row)
 
-        JewellerPricingProfile.objects.filter(jeweller=jeweller).update(
-            metric_total_redeemed_gold_grams=F("metric_total_redeemed_gold_grams") + grams
+def customer_confirm_sellback_utr(
+    customer: User, sellback_id: int
+) -> tuple[GoldSellbackRequest | None, str | None]:
+    from apps.accounts.services.sellback_upi import confirm_utr_for_customer
+
+    with transaction.atomic():
+        row = (
+            GoldSellbackRequest.objects.select_for_update()
+            .filter(pk=sellback_id, customer=customer)
+            .first()
         )
+        if not row:
+            return None, "Sellback not found."
+        ok, detail = confirm_utr_for_customer(row, customer)
+        if not ok:
+            return None, detail
+
+        err_settle = settle_sellback(row)
+        if err_settle:
+            return None, err_settle
 
     return row, None

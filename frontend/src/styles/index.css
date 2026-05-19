@@ -8267,6 +8267,34 @@ select.input {
   line-height: 1.5;
 }
 
+.fractional-upi-pay__notice {
+  margin: 0 0 0.85rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--gold) 35%, var(--border-soft));
+  background: color-mix(in srgb, var(--gold) 10%, transparent);
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.fractional-upi-pay__notice strong {
+  color: var(--text);
+}
+
+.fractional-upi-pay__notice--compact {
+  margin-bottom: 0.65rem;
+  font-size: 0.72rem;
+}
+
+.fractional-upi-pay__qr-caption {
+  margin: 0 0 0.85rem;
+  font-size: 0.72rem;
+  color: var(--text-faint);
+  text-align: center;
+  line-height: 1.4;
+}
+
 .fractional-upi-pay__payee {
   margin-bottom: 0.85rem;
 }

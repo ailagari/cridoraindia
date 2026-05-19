@@ -70,6 +70,13 @@ from .sellback_views import (
     JewellerSellbackListView,
     JewellerSellbackRejectView,
 )
+from .sellback_upi_views import (
+    CustomerPayoutUpiProfileView,
+    CustomerSellbackCancelUpiView,
+    CustomerSellbackConfirmUtrView,
+    JewellerSellbackPayoutView,
+    JewellerSellbackSubmitUtrView,
+)
 from .views_festival_broadcast import (
     AdminFestivalBroadcastCancelView,
     AdminFestivalBroadcastListCreateView,
@@ -174,6 +181,9 @@ urlpatterns = [
     path("gold/sellback/confirm/", GoldSellbackConfirmView.as_view()),
     path("gold/sellback/outstanding/", GoldSellbackOutstandingView.as_view()),
     path("gold/sellback/<int:pk>/otp/regenerate/", GoldSellbackOtpRegenerateView.as_view()),
+    path("customer/profile/payout-upi/", CustomerPayoutUpiProfileView.as_view()),
+    path("gold/sellback/<int:pk>/confirm-utr/", CustomerSellbackConfirmUtrView.as_view()),
+    path("gold/sellback/<int:pk>/cancel-upi/", CustomerSellbackCancelUpiView.as_view()),
     path("gold/resolve/", GoldUPIResolveView.as_view()),
     path("gold/transfers/", GoldTransferCreateView.as_view()),
     path("gold/identity/", GoldIdentityUpsertView.as_view()),
@@ -222,6 +232,8 @@ urlpatterns = [
     path("jeweller/sellbacks/<int:pk>/accept/", JewellerSellbackAcceptView.as_view()),
     path("jeweller/sellbacks/<int:pk>/reject/", JewellerSellbackRejectView.as_view()),
     path("jeweller/sellbacks/<int:pk>/complete/", JewellerSellbackCompleteView.as_view()),
+    path("jeweller/sellbacks/<int:pk>/payout/", JewellerSellbackPayoutView.as_view()),
+    path("jeweller/sellbacks/<int:pk>/submit-utr/", JewellerSellbackSubmitUtrView.as_view()),
     path("jeweller/sellbacks/", JewellerSellbackListView.as_view()),
     path(
         "jeweller/custody-vaults/<int:customer_id>/ledger/",

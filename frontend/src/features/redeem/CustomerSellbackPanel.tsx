@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
+  fetchCustomerPayoutUpiProfile,
   fetchGoldWallet,
   fetchSellbackOutstanding,
   postGoldSellbackConfirm,
@@ -9,6 +10,8 @@ import {
   type SellbackOutstandingDTO,
   type SellbackQuoteDTO,
 } from '@/lib/goldTransferApi'
+import { DashSegmentPair } from '@/components/DashSegmentPair'
+import { SellbackUpiConfirmStep } from '@/features/redeem/SellbackUpiConfirmStep'
 import { LIVE_BALANCE_POLL_MS } from '@/lib/liveDeskIntervals'
 import { useLivePoll } from '@/lib/useLivePoll'
 
@@ -29,12 +32,25 @@ function normalizeCashInr(raw: string): string | null {
   return n.toFixed(2)
 }
 
-function statusHint(st: string): string {
-  if (st === 'pending_jeweller') return 'Waiting for jeweller to accept or reject.'
-  if (st === 'accepted_awaiting_otp')
-    return 'Jeweller accepted — receive cash at the showroom, then share your OTP when they call you.'
+function statusHint(st: string, paymentMethod?: string): string {
+  if (st === 'pending_jeweller') {
+    return paymentMethod === 'upi'
+      ? 'Waiting for jeweller to accept your UPI payout request.'
+      : 'Waiting for jeweller to accept or reject.'
+  }
+  if (st === 'accepted_awaiting_otp') {
+    return paymentMethod === 'upi'
+      ? 'Jeweller accepted — awaiting UPI payout to your account.'
+      : 'Jeweller accepted — receive cash at the showroom, then share your OTP when they call you.'
+  }
+  if (st === 'awaiting_utr_verify') return 'Confirm the UPI payout below once funds arrive.'
   return st
 }
+
+const PAYOUT_METHODS = [
+  { id: 'cash', label: 'Cash at counter' },
+  { id: 'upi', label: 'UPI payout' },
+] as const
 
 export function CustomerSellbackPanel() {
   const [wallet, setWallet] = useState<GoldWalletDTO | null>(null)
@@ -52,6 +68,9 @@ export function CustomerSellbackPanel() {
   const [outstanding, setOutstanding] = useState<SellbackOutstandingDTO[]>([])
   const [otpBanner, setOtpBanner] = useState<{ code: string; expiresAt: string; sellbackId: number } | null>(null)
   const [busyRegen, setBusyRegen] = useState(false)
+  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'upi'>('cash')
+  const [payoutUpiVpa, setPayoutUpiVpa] = useState('')
+  const [busyUpi, setBusyUpi] = useState(false)
 
   const refreshWallet = useCallback(async () => {
     setLoadErr('')
@@ -67,6 +86,12 @@ export function CustomerSellbackPanel() {
   const refreshOutstanding = useCallback(async () => {
     const rows = await fetchSellbackOutstanding()
     setOutstanding(rows ?? [])
+  }, [])
+
+  useEffect(() => {
+    void fetchCustomerPayoutUpiProfile().then((out) => {
+      if (out.ok && out.data.payout_upi_vpa) setPayoutUpiVpa(out.data.payout_upi_vpa)
+    })
   }, [])
 
   useEffect(() => {
@@ -153,10 +178,17 @@ export function CustomerSellbackPanel() {
 
   const runConfirm = async () => {
     if (jewellerId == null || !quote || !quoteFresh) return
+    if (paymentMethod === 'upi' && !payoutUpiVpa.trim()) {
+      setConfirmErr('Enter your UPI ID to receive the payout.')
+      return
+    }
     setBusyConfirm(true)
     setConfirmErr('')
     setSuccessMsg('')
-    const out = await postGoldSellbackConfirm(jewellerId, quote.grams)
+    const out = await postGoldSellbackConfirm(jewellerId, quote.grams, {
+      payment_method: paymentMethod,
+      payout_upi_vpa: payoutUpiVpa.trim(),
+    })
     setBusyConfirm(false)
     if (!out.ok) {
       setConfirmErr(out.detail)
@@ -180,11 +212,31 @@ export function CustomerSellbackPanel() {
           id: out.sellback!.id,
           reference: out.sellback!.reference,
           status: out.sellback!.status,
+          payment_method: out.sellback!.payment_method,
+          payout_upi_vpa: out.sellback!.payout_upi_vpa,
           jeweller_label: jl,
           grams: out.sellback!.grams,
           cash_estimate_inr: out.sellback!.cash_estimate_inr,
           buyback_inr_per_gram: buyRate,
           otp_expires_at: out.otp_expires_at ?? null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }
+        return [row, ...prev.filter((p) => p.id !== out.sellback!.id)]
+      })
+    } else if (out.sellback?.id != null) {
+      setOutstanding((prev) => {
+        const row: SellbackOutstandingDTO = {
+          id: out.sellback!.id,
+          reference: out.sellback!.reference,
+          status: out.sellback!.status,
+          payment_method: out.sellback!.payment_method,
+          payout_upi_vpa: out.sellback!.payout_upi_vpa,
+          jeweller_label: jl,
+          grams: out.sellback!.grams,
+          cash_estimate_inr: out.sellback!.cash_estimate_inr,
+          buyback_inr_per_gram: buyRate,
+          otp_expires_at: null,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         }
@@ -217,22 +269,24 @@ export function CustomerSellbackPanel() {
     outstanding.some(
       (o) =>
         o.id === otpBanner.sellbackId &&
+        o.payment_method === 'cash' &&
         (o.status === 'pending_jeweller' || o.status === 'accepted_awaiting_otp'),
     )
+
+  const upiOutstanding = outstanding.filter((o) => o.payment_method === 'upi' && o.status !== 'completed' && o.status !== 'cancelled')
 
   return (
     <div className="dash-panel-max pf-scope">
       <h2 className="dash-panel-title">Cash sellback</h2>
       <p className="dash-panel-lead">
-        Sell vault gold back to your <strong>custodian jeweller</strong> at their buyback ₹/g. Request either{' '}
-        <strong>grams</strong> or <strong>cash amount</strong> — we derive the other from their rate. After you confirm,
-        your jeweller sees the request live: they accept or reject, pay you <strong>outside Cridora</strong>, then enter
-        your <strong>OTP</strong> to debit vault gold.
+        Sell vault gold back to your <strong>custodian jeweller</strong> at their buyback ₹/g. Choose{' '}
+        <strong>cash at counter</strong> (OTP settlement) or <strong>UPI payout</strong> (jeweller pays your UPI ID,
+        you confirm receipt).
       </p>
 
       {loadErr ? <p className="form-error">{loadErr}</p> : null}
 
-      {(outstanding.length > 0 || showOtpBlock) && (
+      {(outstanding.length > 0 || showOtpBlock || upiOutstanding.length > 0) && (
         <div
           className="card"
           style={{
@@ -278,13 +332,26 @@ export function CustomerSellbackPanel() {
               </p>
             </div>
           ) : null}
+          {upiOutstanding.map((o) => (
+            <SellbackUpiConfirmStep
+              key={o.id}
+              row={o}
+              busy={busyUpi}
+              setBusy={setBusyUpi}
+              onUpdated={async () => {
+                await refreshOutstanding()
+                await refreshWallet()
+              }}
+              onSuccess={(msg) => setSuccessMsg(msg)}
+            />
+          ))}
           {outstanding.length > 0 ? (
             <ul style={{ margin: 0, paddingLeft: '1.1rem', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
               {outstanding.map((o) => (
                 <li key={o.id} style={{ marginBottom: '0.35rem' }}>
                   <strong className="tabular">{o.reference}</strong> · {o.jeweller_label} ·{' '}
                   <span className="tabular">{o.grams} g</span> · est. ₹{fmtInr(o.cash_estimate_inr)} ·{' '}
-                  <span style={{ color: 'var(--text)' }}>{statusHint(o.status)}</span>
+                  <span style={{ color: 'var(--text)' }}>{statusHint(o.status, o.payment_method)}</span>
                   {o.status === 'pending_jeweller' && !showOtpBlock ? (
                     <span style={{ display: 'block', marginTop: '0.25rem', fontSize: '0.72rem' }}>
                       Open this page after confirming to see your OTP, or regenerate while still pending.
@@ -354,6 +421,30 @@ export function CustomerSellbackPanel() {
               By cash (₹)
             </button>
           </div>
+
+          <fieldset style={{ border: 'none', padding: 0, margin: '1rem 0 0' }}>
+            <legend className="fractional-buy-legend">Payout method</legend>
+            <DashSegmentPair
+              items={[...PAYOUT_METHODS]}
+              value={paymentMethod}
+              onChange={(id) => setPaymentMethod(id as 'cash' | 'upi')}
+              ariaLabel="Payout method"
+              className="fractional-buy-payment-segments"
+            />
+          </fieldset>
+
+          {paymentMethod === 'upi' ? (
+            <div className="field" style={{ marginTop: '0.75rem' }}>
+              <label htmlFor="sellback-payout-upi">Your UPI ID (receive payout)</label>
+              <input
+                id="sellback-payout-upi"
+                value={payoutUpiVpa}
+                onChange={(e) => setPayoutUpiVpa(e.target.value)}
+                placeholder="yourname@okhdfcbank"
+                autoComplete="off"
+              />
+            </div>
+          ) : null}
 
           {inputMode === 'grams' ? (
             <>
