@@ -9,9 +9,11 @@ from django.db import transaction
 
 from apps.accounts.gold_identity import MIN_TRANSFER_GRAMS
 from apps.accounts.models import GoldLoanRequest
+from apps.accounts.loan_otp import issue_loan_otp, verify_loan_otp
 from apps.accounts.vault_service import (
     customer_loan_custodian_ids,
     customer_loan_eligible_grams,
+    debit_customer_loan_collateral,
 )
 from apps.marketplace.loan_policy import compute_loan_amounts, jeweller_effective_ltv_percent
 from apps.marketplace.models import JewellerPricingProfile, jeweller_profile_for
@@ -278,10 +280,10 @@ def create_pending_loan_request(
     customer: User,
     jeweller: User,
     grams: Decimal,
-) -> tuple[GoldLoanRequest | None, str | None]:
+) -> tuple[GoldLoanRequest | None, str | None, str | None]:
     payload, err = quote_customer_loan(customer, jeweller, grams=grams)
     if err or payload is None:
-        return None, err or "Could not quote loan."
+        return None, err or "Could not quote loan.", None
 
     row = GoldLoanRequest.objects.create(
         customer=customer,
@@ -297,6 +299,88 @@ def create_pending_loan_request(
             payload["processing_fee_jeweller_share_inr"]
         ),
         net_disbursement_inr_snapshot=Decimal(payload["net_disbursement_inr"]),
+        payment_method=GoldLoanRequest.PAY_CASH,
         status=GoldLoanRequest.STATUS_PENDING_JEWELLER,
     )
+    code, _expires_at = issue_loan_otp(row)
+    from apps.accounts.services.user_push_notify import notify_loan_pending_jeweller
+
+    notify_loan_pending_jeweller(row)
+    return row, None, code
+
+
+def regenerate_customer_loan_otp(customer: User, loan_id: int) -> tuple[str | None, str | None]:
+    row = GoldLoanRequest.objects.filter(
+        pk=loan_id,
+        customer=customer,
+        status__in=(
+            GoldLoanRequest.STATUS_PENDING_JEWELLER,
+            GoldLoanRequest.STATUS_ACCEPTED_AWAITING_OTP,
+        ),
+    ).first()
+    if not row:
+        return None, "No open loan found for this reference."
+    try:
+        code, _ = issue_loan_otp(row)
+    except ValueError as e:
+        return None, str(e)
+    return code, None
+
+
+def jeweller_accept_loan(jeweller: User, loan_id: int) -> tuple[bool, str]:
+    with transaction.atomic():
+        row = (
+            GoldLoanRequest.objects.select_for_update()
+            .filter(pk=loan_id, jeweller=jeweller)
+            .first()
+        )
+        if not row:
+            return False, "Loan not found."
+        if row.status != GoldLoanRequest.STATUS_PENDING_JEWELLER:
+            return False, "Only pending requests can be accepted."
+        row.status = GoldLoanRequest.STATUS_ACCEPTED_AWAITING_OTP
+        row.save(update_fields=["status", "updated_at"])
+        from apps.accounts.services.user_push_notify import notify_loan_awaiting_otp_customer
+
+        notify_loan_awaiting_otp_customer(row)
+    return True, ""
+
+
+def jeweller_reject_loan(jeweller: User, loan_id: int) -> tuple[bool, str]:
+    with transaction.atomic():
+        row = (
+            GoldLoanRequest.objects.select_for_update()
+            .filter(pk=loan_id, jeweller=jeweller)
+            .first()
+        )
+        if not row:
+            return False, "Loan not found."
+        if row.status != GoldLoanRequest.STATUS_PENDING_JEWELLER:
+            return False, "Only pending requests can be rejected."
+        row.status = GoldLoanRequest.STATUS_REJECTED
+        row.save(update_fields=["status", "updated_at"])
+    return True, ""
+
+
+def jeweller_complete_loan_with_otp(
+    jeweller: User, loan_id: int, otp: str
+) -> tuple[GoldLoanRequest | None, str | None]:
+    with transaction.atomic():
+        row = (
+            GoldLoanRequest.objects.select_for_update()
+            .filter(pk=loan_id, jeweller=jeweller)
+            .first()
+        )
+        if not row:
+            return None, "Loan not found."
+        if row.status != GoldLoanRequest.STATUS_ACCEPTED_AWAITING_OTP:
+            return None, "Accept the loan first, pay the customer cash, then enter their OTP."
+        ok, detail = verify_loan_otp(row, otp)
+        if not ok:
+            return None, detail
+        err_debit = debit_customer_loan_collateral(row.customer, row.jeweller, row.grams)
+        if err_debit:
+            return None, err_debit
+        row.status = GoldLoanRequest.STATUS_DISBURSED
+        row.save(update_fields=["status", "updated_at"])
     return row, None

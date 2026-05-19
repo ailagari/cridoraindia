@@ -108,6 +108,9 @@ class JewellerGoldDepositIntakeCreateView(APIView):
             jeweller_note=note,
             status=GoldDepositIntake.AWAITING_CUSTOMER_OTP,
         )
+        from apps.accounts.services.user_push_notify import notify_gold_deposit_intake_created
+
+        notify_gold_deposit_intake_created(intake)
         return Response(_ser_intake(intake, include_customer=True), status=status.HTTP_201_CREATED)
 
 
@@ -207,6 +210,9 @@ class CustomerGoldDepositCounterOtpIssueView(APIView):
             return Response({"detail": "Deposit intake not found."}, status=status.HTTP_404_NOT_FOUND)
         except ValueError as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        from apps.accounts.services.user_push_notify import notify_gold_deposit_counter_otp_issued
+
+        notify_gold_deposit_counter_otp_issued(intake)
         payload = _ser_intake(intake, include_customer=False)
         payload["otp"] = code
         payload["otp_expires_at"] = expires_at.isoformat()

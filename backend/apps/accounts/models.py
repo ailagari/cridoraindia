@@ -574,16 +574,23 @@ class GoldLoanRequest(models.Model):
 
     STATUS_PENDING_JEWELLER = "pending_jeweller"
     STATUS_REJECTED = "rejected"
-    STATUS_APPROVED = "approved"
+    STATUS_ACCEPTED_AWAITING_OTP = "accepted_awaiting_otp"
     STATUS_DISBURSED = "disbursed"
     STATUS_CANCELLED = "cancelled"
+    # Legacy alias kept for old rows until migrated
+    STATUS_APPROVED = STATUS_ACCEPTED_AWAITING_OTP
 
     STATUS_CHOICES = [
         (STATUS_PENDING_JEWELLER, "Pending jeweller"),
         (STATUS_REJECTED, "Rejected"),
-        (STATUS_APPROVED, "Approved"),
+        (STATUS_ACCEPTED_AWAITING_OTP, "Accepted awaiting OTP"),
         (STATUS_DISBURSED, "Disbursed"),
         (STATUS_CANCELLED, "Cancelled"),
+    ]
+
+    PAY_CASH = "cash"
+    PAYMENT_CHOICES = [
+        (PAY_CASH, "Cash at counter"),
     ]
 
     customer = models.ForeignKey(
@@ -623,6 +630,11 @@ class GoldLoanRequest(models.Model):
         decimal_places=2,
         help_text="Cash to customer after processing fee deduction.",
     )
+    payment_method = models.CharField(
+        max_length=16,
+        choices=PAYMENT_CHOICES,
+        default=PAY_CASH,
+    )
     status = models.CharField(
         max_length=32,
         choices=STATUS_CHOICES,
@@ -636,6 +648,26 @@ class GoldLoanRequest(models.Model):
 
     def __str__(self):
         return f"GoldLoanRequest({self.customer_id}, {self.jeweller_id}, {self.grams}g)"
+
+
+class GoldLoanOtp(models.Model):
+    """OTP customer shares with jeweller after receiving cash loan disbursement."""
+
+    loan = models.OneToOneField(
+        GoldLoanRequest,
+        on_delete=models.CASCADE,
+        related_name="settlement_otp",
+    )
+    code_hash = models.CharField(max_length=64)
+    expires_at = models.DateTimeField(db_index=True)
+    failed_attempts = models.PositiveSmallIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Gold loan settlement OTP"
+
+    def __str__(self):
+        return f"GoldLoanOtp(loan={self.loan_id})"
 
 
 class GoldSellbackOtp(models.Model):

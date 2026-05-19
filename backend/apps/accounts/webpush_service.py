@@ -67,13 +67,16 @@ def send_push_to_user(user, payload: dict[str, Any]) -> int:
     return n
 
 
-def send_push_broadcast(payload: dict[str, Any]) -> int:
-    """Send to every stored Push subscription row (no filter by user role).
+def send_push_to_users(users, payload: dict[str, Any]) -> int:
+    """Send to each user's devices only (Web Push + FCM)."""
+    total = 0
+    for user in users.iterator(chunk_size=100):
+        total += send_push_to_user(user, payload)
+    return total
 
-    Covers customer, jeweller, and admin accounts equally — anyone who tapped Enable
-    and has a row in ``WebPushSubscription``. Each browser/profile yields at most one
-    subscription (extra tabs do not create separate endpoints).
-    """
+
+def send_push_broadcast(payload: dict[str, Any]) -> int:
+    """Broadcast to all subscribers — use only for admin festival / platform announcements."""
     n = 0
     if webpush_configured():
         for sub in WebPushSubscription.objects.all().iterator(chunk_size=200):
@@ -108,7 +111,7 @@ def send_push_to_platform_admins(payload: dict[str, Any]) -> int:
     from django.contrib.auth import get_user_model
 
     AdminUser = get_user_model()
-    if not webpush_configured():
+    if not push_delivery_configured():
         return 0
     admins = AdminUser.objects.filter(
         Q(user_type=AdminUser.ADMIN) | Q(is_superuser=True, is_staff=True)

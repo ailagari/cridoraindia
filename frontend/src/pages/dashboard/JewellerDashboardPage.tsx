@@ -12,6 +12,7 @@ import { JewellerGoldDepositPanel } from '@/features/invest/JewellerGoldDepositP
 import { JewellerFractionalVerifyPanel } from '@/features/invest/JewellerFractionalVerifyPanel'
 import { JewellerCrossRedemptionInboxPanel } from '@/features/crossRedemption/JewellerCrossRedemptionInboxPanel'
 import { JewellerSellbacksPanel } from '@/features/redeem/JewellerSellbacksPanel'
+import { JewellerLoansPanel } from '@/features/redeem/JewellerLoansPanel'
 import { JewellerOrnamentRedemptionsPanel } from '@/features/marketplace/JewellerOrnamentRedemptionsPanel'
 import { ChangePasswordPanel } from '@/features/auth/ChangePasswordPanel'
 import { useAuth } from '@/context/AuthContext'
@@ -88,6 +89,7 @@ export function JewellerDashboardPage() {
       {active === 'txn_ops' ? (
         <>
           <JewellerSellbacksPanel />
+          <JewellerLoansPanel />
           <JewellerCrossRedemptionInboxPanel />
           <JewellerOrnamentRedemptionsPanel />
         </>

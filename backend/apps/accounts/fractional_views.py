@@ -279,6 +279,9 @@ class FractionalCounterOtpIssueView(APIView):
                 {"detail": str(e)},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        from apps.accounts.services.user_push_notify import notify_fractional_counter_otp_issued
+
+        notify_fractional_counter_otp_issued(purchase)
         payload = _ser_purchase(purchase)
         payload["otp"] = code
         payload["otp_expires_at"] = expires_at.isoformat()

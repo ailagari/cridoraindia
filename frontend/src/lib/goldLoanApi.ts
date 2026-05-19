@@ -69,8 +69,28 @@ export type GoldLoanOutstandingDTO = {
   processing_fee_inr: string
   net_disbursement_inr: string
   reference_metal_inr_per_gram: string
+  payment_method?: string
+  otp_expires_at?: string | null
   created_at: string
   updated_at: string
+}
+
+export type JewellerLoanRowDTO = {
+  id: number
+  reference: string
+  created_at: string
+  updated_at: string
+  customer_id: number
+  customer_label: string
+  customer_phone: string
+  grams: string
+  collateral_value_inr: string
+  ltv_percent: string
+  gross_principal_inr: string
+  processing_fee_inr: string
+  net_disbursement_inr: string
+  status: string
+  payment_method: string
 }
 
 export async function fetchGoldLoanVaultRates(): Promise<GoldLoanVaultRateDTO[] | null> {
@@ -112,20 +132,105 @@ export async function postGoldLoanQuote(
 export async function postGoldLoanConfirm(
   jewellerId: number,
   grams: string,
-): Promise<{ data: GoldLoanOutstandingDTO | null; detail: string }> {
+): Promise<
+  | { ok: true; detail: string; loan: GoldLoanOutstandingDTO; otp_code?: string; otp_expires_at?: string }
+  | { ok: false; detail: string }
+> {
   const res = await authFetch('/api/v1/gold/loans/confirm/', {
     method: 'POST',
     jsonBody: { jeweller_id: jewellerId, grams },
   })
-  const j = (await res.json().catch(() => ({}))) as GoldLoanOutstandingDTO & { detail?: string }
-  if (!res.ok) {
-    return { data: null, detail: j.detail ?? 'Could not submit loan request.' }
+  const j = (await res.json().catch(() => ({}))) as {
+    detail?: string
+    loan?: GoldLoanOutstandingDTO
+    otp_code?: string
+    otp_expires_at?: string
   }
-  return { data: j, detail: '' }
+  if (!res.ok) {
+    return { ok: false, detail: j.detail ?? 'Could not submit loan request.' }
+  }
+  if (!j.loan) {
+    return { ok: false, detail: j.detail ?? 'Could not submit loan request.' }
+  }
+  return {
+    ok: true,
+    detail: j.detail ?? 'Loan submitted.',
+    loan: j.loan,
+    otp_code: j.otp_code,
+    otp_expires_at: j.otp_expires_at,
+  }
 }
 
 export async function fetchGoldLoanOutstanding(): Promise<GoldLoanOutstandingDTO[] | null> {
   const res = await authFetch('/api/v1/gold/loans/outstanding/')
   if (!res.ok) return null
-  return (await res.json()) as GoldLoanOutstandingDTO[]
+  const j = (await res.json()) as { results?: GoldLoanOutstandingDTO[] }
+  return j.results ?? []
+}
+
+export async function postGoldLoanOtpRegenerate(
+  loanId: number,
+): Promise<{ ok: true; otp_code: string; otp_expires_at: string } | { ok: false; detail: string }> {
+  const res = await authFetch(`/api/v1/gold/loans/${loanId}/otp/regenerate/`, {
+    method: 'POST',
+    jsonBody: {},
+  })
+  const j = (await res.json().catch(() => ({}))) as {
+    detail?: string
+    otp_code?: string
+    otp_expires_at?: string
+  }
+  if (!res.ok || !j.otp_code) {
+    return { ok: false, detail: j.detail ?? 'Could not regenerate OTP.' }
+  }
+  return { ok: true, otp_code: j.otp_code, otp_expires_at: j.otp_expires_at ?? '' }
+}
+
+export async function fetchJewellerLoans(): Promise<{ results: JewellerLoanRowDTO[] } | null> {
+  const res = await authFetch('/api/v1/jeweller/loans/')
+  if (!res.ok) return null
+  return (await res.json()) as { results: JewellerLoanRowDTO[] }
+}
+
+export async function postJewellerLoanAccept(
+  loanId: number,
+): Promise<{ ok: true; detail: string } | { ok: false; detail: string }> {
+  const res = await authFetch(`/api/v1/jeweller/loans/${loanId}/accept/`, {
+    method: 'POST',
+    jsonBody: {},
+  })
+  const data = (await res.json()) as { detail?: string }
+  if (!res.ok) {
+    return { ok: false, detail: data.detail ?? 'Could not accept.' }
+  }
+  return { ok: true, detail: data.detail ?? 'Accepted.' }
+}
+
+export async function postJewellerLoanReject(
+  loanId: number,
+): Promise<{ ok: true; detail: string } | { ok: false; detail: string }> {
+  const res = await authFetch(`/api/v1/jeweller/loans/${loanId}/reject/`, {
+    method: 'POST',
+    jsonBody: {},
+  })
+  const data = (await res.json()) as { detail?: string }
+  if (!res.ok) {
+    return { ok: false, detail: data.detail ?? 'Could not reject.' }
+  }
+  return { ok: true, detail: data.detail ?? 'Rejected.' }
+}
+
+export async function postJewellerLoanComplete(
+  loanId: number,
+  otp: string,
+): Promise<{ ok: true; detail: string } | { ok: false; detail: string }> {
+  const res = await authFetch(`/api/v1/jeweller/loans/${loanId}/complete/`, {
+    method: 'POST',
+    jsonBody: { otp: otp.trim() },
+  })
+  const data = (await res.json()) as { detail?: string }
+  if (!res.ok) {
+    return { ok: false, detail: data.detail ?? 'Could not complete loan.' }
+  }
+  return { ok: true, detail: data.detail ?? 'Loan disbursed.' }
 }

@@ -107,6 +107,10 @@ class CustomerCrossRedemptionAuthorizeView(APIView):
             req = CrossRedemptionRequest.objects.select_related("source_jeweller", "destination_jeweller").filter(pk=out["request_id"]).first()
             out["ux_status"] = public_ux_status(req) if req else "Processing"
             if req:
+                if req.workflow_state == CrossRedemptionRequest.WorkflowState.AWAITING_SOURCE:
+                    from apps.accounts.services.user_push_notify import notify_cross_redemption_pending_source
+
+                    notify_cross_redemption_pending_source(req)
                 out["request"] = _serialize(req, viewer=user)
         else:
             out["ux_status"] = "Failed"

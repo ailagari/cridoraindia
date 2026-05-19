@@ -21,3 +21,6 @@ def apply_gold_deposit_credit_and_liabilities(intake: GoldDepositIntake) -> None
     intake.status = GoldDepositIntake.COMPLETED
     intake.completed_at = timezone.now()
     intake.save(update_fields=["status", "completed_at", "updated_at"])
+    from apps.accounts.services.user_push_notify import notify_gold_deposit_completed
+
+    notify_gold_deposit_completed(intake)

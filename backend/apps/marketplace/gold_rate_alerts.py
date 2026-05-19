@@ -1,4 +1,4 @@
-"""Detect large moves in public Cridora 22K reference and broadcast push."""
+"""Detect large moves in public Cridora 22K reference; push customers with gold holdings only."""
 
 from __future__ import annotations
 
@@ -8,7 +8,9 @@ from django.core.cache import cache
 from django.db import transaction
 
 from apps.accounts.push_payload import build_push_payload
-from apps.accounts.webpush_service import push_delivery_configured, send_push_broadcast
+from apps.accounts.services.push_deep_links import customer_dashboard
+from apps.accounts.services.user_push_notify import send_push_to_customers_with_gold_interest
+from apps.accounts.webpush_service import push_delivery_configured
 
 from .models import GoldTickerConfig, get_or_create_ticker
 from .spot_prices import resolve_cridora_base_22k_inr
@@ -27,7 +29,7 @@ def _fmt_rupees(d: Decimal) -> str:
 
 def maybe_notify_gold_rate_move(*, force: bool = False) -> dict:
     """
-    If public Cridora 22K reference moved by ≥ threshold vs previous baseline, advance baseline and broadcast push.
+    If public Cridora 22K reference moved by ≥ threshold vs previous baseline, advance baseline and notify holders.
     Uses a short cache lock unless force=True (e.g. cron or after admin ticker save).
     """
     result: dict = {"sent": False, "skipped": "unknown"}
@@ -43,7 +45,7 @@ def maybe_notify_gold_rate_move(*, force: bool = False) -> dict:
     ticker_pk = get_or_create_ticker().pk
 
     title = "Gold rate alert"
-    link = "/marketplace"
+    link = customer_dashboard("portfolio_holdings")
     image_url = ""
     body: str | None = None
     with transaction.atomic():
@@ -58,7 +60,9 @@ def maybe_notify_gold_rate_move(*, force: bool = False) -> dict:
             return result
 
         title = (t.rate_move_alert_title or "Gold rate alert").strip() or "Gold rate alert"
-        link = (t.rate_move_alert_link or "/marketplace").strip() or "/marketplace"
+        link = (t.rate_move_alert_link or customer_dashboard("portfolio_holdings")).strip() or customer_dashboard(
+            "portfolio_holdings"
+        )
         image_url = (t.gold_push_image_url or "").strip()
 
         baseline = t.rate_alert_baseline_inr_per_gram_22k
@@ -89,7 +93,7 @@ def maybe_notify_gold_rate_move(*, force: bool = False) -> dict:
         )
 
     if body:
-        n = send_push_broadcast(
+        n = send_push_to_customers_with_gold_interest(
             build_push_payload(
                 title=title,
                 body=body,

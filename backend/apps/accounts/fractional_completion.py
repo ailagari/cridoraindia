@@ -23,3 +23,6 @@ def apply_fractional_purchase_credit_and_liabilities(purchase: FractionalGoldPur
     purchase.status = FractionalGoldPurchase.COMPLETED
     purchase.jeweller_verified_at = timezone.now()
     purchase.save(update_fields=["status", "jeweller_verified_at", "updated_at"])
+    from apps.accounts.services.user_push_notify import notify_fractional_purchase_completed
+
+    notify_fractional_purchase_completed(purchase)

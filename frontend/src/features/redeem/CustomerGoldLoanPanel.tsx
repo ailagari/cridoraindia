@@ -5,6 +5,7 @@ import {
   fetchGoldLoanVaultRates,
   postGoldLoanCompare,
   postGoldLoanConfirm,
+  postGoldLoanOtpRegenerate,
   postGoldLoanQuote,
   type GoldLoanCompareDTO,
   type GoldLoanOfferDTO,
@@ -40,7 +41,17 @@ export function CustomerGoldLoanPanel() {
   const [actionErr, setActionErr] = useState('')
   const [successMsg, setSuccessMsg] = useState('')
   const [busy, setBusy] = useState(false)
+  const [busyRegen, setBusyRegen] = useState(false)
+  const [otpBanner, setOtpBanner] = useState<{ code: string; expiresAt: string; loanId: number } | null>(
+    null,
+  )
   const compareSeq = useRef(0)
+
+  function loanStatusHint(st: string): string {
+    if (st === 'pending_jeweller') return 'awaiting jeweller'
+    if (st === 'accepted_awaiting_otp') return 'jeweller accepted — share OTP after cash'
+    return st.replace(/_/g, ' ')
+  }
 
   const refreshVaultRates = useCallback(async () => {
     setVaultRates((await fetchGoldLoanVaultRates()) ?? [])
@@ -138,19 +149,47 @@ export function CustomerGoldLoanPanel() {
     if (!selectedJewellerId || !compare) return
     setBusy(true)
     setActionErr('')
-    const { data, detail } = await postGoldLoanConfirm(selectedJewellerId, compare.grams)
+    const out = await postGoldLoanConfirm(selectedJewellerId, compare.grams)
     setBusy(false)
-    if (!data) {
-      setActionErr(detail)
+    if (!out.ok) {
+      setActionErr(out.detail)
       return
     }
-    setSuccessMsg(`Loan request ${data.reference} submitted — awaiting jeweller approval.`)
+    setSuccessMsg(out.detail)
+    if (out.otp_code && out.loan.id) {
+      setOtpBanner({
+        code: out.otp_code,
+        expiresAt: out.otp_expires_at ?? '',
+        loanId: out.loan.id,
+      })
+    }
     setQuote(null)
     setCompare(null)
     setGramsInput('')
     void refreshOutstanding()
     void refreshVaultRates()
   }
+
+  const runRegenerate = async (loanId: number) => {
+    setBusyRegen(true)
+    setActionErr('')
+    const out = await postGoldLoanOtpRegenerate(loanId)
+    setBusyRegen(false)
+    if (!out.ok) {
+      setActionErr(out.detail)
+      return
+    }
+    setOtpBanner({ code: out.otp_code, expiresAt: out.otp_expires_at, loanId })
+    setSuccessMsg('New OTP issued. Previous code is invalid.')
+  }
+
+  const showOtpBlock =
+    otpBanner != null &&
+    outstanding.some(
+      (o) =>
+        o.id === otpBanner.loanId &&
+        (o.status === 'pending_jeweller' || o.status === 'accepted_awaiting_otp'),
+    )
 
   const displayRates = useMemo(() => {
     if (compare?.vault_rates?.length) return compare.vault_rates
@@ -316,17 +355,74 @@ export function CustomerGoldLoanPanel() {
         </div>
       ) : null}
 
-      {outstanding.length > 0 ? (
-        <div style={{ marginTop: '1.5rem' }}>
-          <h3 style={{ fontSize: '1rem' }}>Open requests</h3>
-          <ul style={{ paddingLeft: '1.1rem', fontSize: '0.88rem' }}>
-            {outstanding.map((r) => (
-              <li key={r.id}>
-                {r.reference} · {r.jeweller_label} · {r.grams} g · ₹{fmtInr(r.net_disbursement_inr)} ·{' '}
-                {r.status.replace(/_/g, ' ')}
-              </li>
-            ))}
-          </ul>
+      {(outstanding.length > 0 || showOtpBlock) ? (
+        <div
+          className="card"
+          style={{
+            marginTop: '1.5rem',
+            padding: '1rem 1.15rem',
+            borderRadius: 16,
+            border: '1px solid rgba(245, 158, 11, 0.35)',
+            background: 'rgba(245, 158, 11, 0.08)',
+          }}
+        >
+          <h3 style={{ margin: '0 0 0.65rem', fontSize: '0.95rem' }}>Open loan requests</h3>
+          {otpBanner && showOtpBlock ? (
+            <div style={{ marginBottom: '0.85rem' }}>
+              <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                Settlement OTP (share only after you receive cash){' '}
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  style={{ fontSize: '0.68rem', padding: '0.2rem 0.45rem', marginLeft: '0.35rem' }}
+                  disabled={busyRegen}
+                  onClick={() => void runRegenerate(otpBanner.loanId)}
+                >
+                  {busyRegen ? '…' : 'Regenerate OTP'}
+                </button>
+              </p>
+              <p
+                className="tabular"
+                style={{
+                  margin: '0.35rem 0 0',
+                  fontSize: '1.65rem',
+                  fontWeight: 800,
+                  letterSpacing: '0.12em',
+                  color: 'var(--gold-light)',
+                }}
+              >
+                {otpBanner.code}
+              </p>
+              <p style={{ margin: '0.25rem 0 0', fontSize: '0.72rem', color: 'var(--text-faint)' }}>
+                Expires{' '}
+                {otpBanner.expiresAt
+                  ? new Date(otpBanner.expiresAt).toLocaleString('en-IN')
+                  : '—'}
+              </p>
+            </div>
+          ) : null}
+          {outstanding.length > 0 ? (
+            <ul style={{ margin: 0, paddingLeft: '1.1rem', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+              {outstanding.map((r) => (
+                <li key={r.id} style={{ marginBottom: '0.35rem' }}>
+                  <strong className="tabular">{r.reference}</strong> · {r.jeweller_label} ·{' '}
+                  <span className="tabular">{r.grams} g</span> · ₹{fmtInr(r.net_disbursement_inr)} ·{' '}
+                  <span style={{ color: 'var(--text)' }}>{loanStatusHint(r.status)}</span>
+                  {r.status === 'pending_jeweller' && !showOtpBlock ? (
+                    <button
+                      type="button"
+                      className="btn btn-ghost"
+                      style={{ fontSize: '0.68rem', padding: '0.15rem 0.4rem', marginLeft: '0.35rem' }}
+                      disabled={busyRegen}
+                      onClick={() => void runRegenerate(r.id)}
+                    >
+                      Get OTP
+                    </button>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          ) : null}
         </div>
       ) : null}
     </div>

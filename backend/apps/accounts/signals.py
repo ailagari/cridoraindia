@@ -7,10 +7,11 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 
 from .models import AdminNotification, FractionalGoldPurchase, KYDocument
+from .services.push_deep_links import jeweller_dashboard
 from .webpush_service import (
+    push_delivery_configured,
     send_push_to_platform_admins,
     send_push_to_user,
-    webpush_configured,
 )
 
 User = get_user_model()
@@ -53,7 +54,7 @@ def admin_notify_on_pending_kyc_document(sender, instance, **kwargs):
         actor=actor,
     )
 
-    if webpush_configured():
+    if push_delivery_configured():
         send_push_to_platform_admins(
             {
                 "title": title,
@@ -83,7 +84,7 @@ def jeweller_push_on_counter_fractional_order(sender, instance, created, **kwarg
         return
     if instance.status != FractionalGoldPurchase.AWAITING_COUNTER:
         return
-    if not webpush_configured():
+    if not push_delivery_configured():
         return
     try:
         customer = instance.customer
@@ -98,7 +99,7 @@ def jeweller_push_on_counter_fractional_order(sender, instance, created, **kwarg
             {
                 "title": title,
                 "body": body,
-                "url": "/dashboard/jeweller?section=txn_purchases",
+                "url": jeweller_dashboard("txn_purchases"),
                 "tag": f"cridora-counter-frac-{instance.pk}",
             },
         )

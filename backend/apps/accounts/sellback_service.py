@@ -152,10 +152,12 @@ def create_pending_sellback_with_otp(
         if method == GoldSellbackRequest.PAY_UPI:
             customer.payout_upi_vpa = payout_vpa
             customer.save(update_fields=["payout_upi_vpa"])
-            return row, None, None
+        else:
+            code, _expires_at = issue_sellback_otp(row)
+        from apps.accounts.services.user_push_notify import notify_sellback_pending_jeweller
 
-        code, _expires_at = issue_sellback_otp(row)
-    return row, None, code
+        notify_sellback_pending_jeweller(row)
+    return row, None, code if method != GoldSellbackRequest.PAY_UPI else None
 
 
 def regenerate_customer_sellback_otp(customer: User, sellback_id: int) -> tuple[str | None, str | None]:
@@ -185,6 +187,9 @@ def jeweller_accept_sellback(jeweller: User, sellback_id: int) -> tuple[bool, st
         if row.status != GoldSellbackRequest.STATUS_PENDING_JEWELLER:
             return False, "Only pending requests can be accepted."
         row.status = GoldSellbackRequest.STATUS_ACCEPTED_AWAITING_OTP
+        from apps.accounts.services.user_push_notify import notify_sellback_awaiting_otp_customer
+
+        notify_sellback_awaiting_otp_customer(row)
         updates = ["status", "updated_at"]
         if row.payment_method == GoldSellbackRequest.PAY_UPI:
             row.payout_expires_at = default_payment_expires_at()

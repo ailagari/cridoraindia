@@ -169,6 +169,46 @@ def customer_loan_custodian_ids(customer: User) -> set[int]:
     return {int(jid) for jid in rows if jid}
 
 
+_LOAN_COLLATERAL_DEBIT_ORDER = (
+    VaultHolding.FRACTIONAL,
+    VaultHolding.DEPOSIT,
+)
+
+
+def debit_customer_loan_collateral(customer: User, custodian: User, grams: Decimal) -> str | None:
+    """Lock pledged grams: fractional then deposit at custodian."""
+    vault = ensure_vault(customer, custodian)
+    holdings = {ht: _vault_holding(vault, ht) for ht in _LOAN_COLLATERAL_DEBIT_ORDER}
+    with transaction.atomic():
+        locked_bal: dict[str, Decimal] = {}
+        total_avail = Decimal("0")
+        for ht in _LOAN_COLLATERAL_DEBIT_ORDER:
+            pk = holdings[ht].pk
+            b = (
+                VaultHolding.objects.select_for_update()
+                .filter(pk=pk)
+                .values_list("balance_grams", flat=True)
+                .first()
+            )
+            bal = b if b is not None else Decimal("0")
+            locked_bal[ht] = bal
+            total_avail += bal
+        if total_avail < grams:
+            return "Insufficient vault balance to pledge as collateral."
+        remaining = grams
+        for ht in _LOAN_COLLATERAL_DEBIT_ORDER:
+            if remaining <= 0:
+                break
+            take = min(locked_bal[ht], remaining)
+            if take > 0:
+                VaultHolding.objects.filter(pk=holdings[ht].pk).update(
+                    balance_grams=F("balance_grams") - take
+                )
+                remaining -= take
+    sync_customer_aggregate_balance(customer)
+    return None
+
+
 def debit_customer_fractional(customer: User, custodian: User, grams: Decimal) -> str | None:
     vault = ensure_vault(customer, custodian)
     hid = _fractional_holding(vault).pk
