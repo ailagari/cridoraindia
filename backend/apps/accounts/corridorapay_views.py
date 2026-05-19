@@ -5,9 +5,11 @@ from __future__ import annotations
 from datetime import timedelta
 from decimal import Decimal, InvalidOperation
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.db.utils import OperationalError, ProgrammingError
+from django.http import FileResponse
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
@@ -24,6 +26,7 @@ from apps.accounts.services.corridorapay.completion import (
 )
 from apps.accounts.services.corridorapay.quote import corridorapay_quote_payload, corridorapay_split
 from apps.accounts.services.fractional_upi import jeweller_upi_vpa
+from apps.accounts.services.personal_holdings import validate_document_upload
 from apps.accounts.services.platform_operational import fractional_counter_otp_ttl_seconds_int
 
 User = get_user_model()
@@ -63,6 +66,18 @@ def _ser_jeweller_brief(j: User) -> dict:
     }
 
 
+def _max_invoice_bytes() -> int:
+    return int(getattr(settings, "PERSONAL_HOLDING_MAX_UPLOAD_BYTES", 8 * 1024 * 1024))
+
+
+def _invoice_filename(bill: CridoraPayBill) -> str:
+    if bill.purchase_invoice_filename:
+        return bill.purchase_invoice_filename
+    if bill.purchase_invoice:
+        return bill.purchase_invoice.name.rsplit("/", 1)[-1]
+    return ""
+
+
 def _ser_bill(bill: CridoraPayBill, *, include_customer: bool, include_otp_expiry: bool) -> dict:
     bill = _expire_if_needed(bill)
     row = {
@@ -82,6 +97,8 @@ def _ser_bill(bill: CridoraPayBill, *, include_customer: bool, include_otp_expir
         "cash_payable_inr": str(bill.cash_payable_inr),
         "payee_upi_vpa": bill.payee_upi_vpa or "",
         "payment_note": bill.payment_note or "",
+        "has_purchase_invoice": bool(bill.purchase_invoice),
+        "purchase_invoice_filename": _invoice_filename(bill),
         "personal_holding_id": bill.personal_holding_id,
         "expires_at": bill.expires_at.isoformat() if bill.expires_at else None,
         "completed_at": bill.completed_at.isoformat() if bill.completed_at else None,
@@ -166,6 +183,19 @@ class JewellerCridoraPayBillCreateView(APIView):
             return Response({"detail": "Invalid category."}, status=status.HTTP_400_BAD_REQUEST)
         purity = (request.data.get("purity") or "BIS 916").strip()[:64] or "BIS 916"
         note = (request.data.get("jeweller_note") or "").strip()[:500]
+        invoice = request.FILES.get("invoice_file")
+        if not invoice:
+            return Response(
+                {"detail": "Purchase invoice file is required (JPG, PNG, WEBP, or PDF)."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        inv_err = validate_document_upload(
+            filename=getattr(invoice, "name", "") or "",
+            size_bytes=int(getattr(invoice, "size", 0) or 0),
+            max_bytes=_max_invoice_bytes(),
+        )
+        if inv_err:
+            return Response({"detail": inv_err}, status=status.HTTP_400_BAD_REQUEST)
         rate = jeweller_metal_rate_inr_per_gram(request.user)
         if rate <= 0:
             return Response(
@@ -184,6 +214,8 @@ class JewellerCridoraPayBillCreateView(APIView):
             metal_rate_inr_per_gram=rate,
             jeweller_note=note,
             expires_at=timezone.now() + timedelta(hours=BILL_EXPIRY_HOURS),
+            purchase_invoice=invoice,
+            purchase_invoice_filename=(getattr(invoice, "name", "") or "")[:255],
         )
         from apps.accounts.services.user_push_notify import notify_corridorapay_bill_created
 
@@ -584,3 +616,24 @@ class CustomerCridoraPayCancelView(APIView):
         except CridoraPayBill.DoesNotExist:
             return Response({"detail": "Bill not found."}, status=status.HTTP_404_NOT_FOUND)
         return Response(_ser_bill(bill, include_customer=False, include_otp_expiry=False))
+
+
+class CridoraPayBillInvoiceView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk: int):
+        bill = CridoraPayBill.objects.filter(pk=pk).select_related("customer", "jeweller").first()
+        if not bill:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        if request.user.id not in (bill.customer_id, bill.jeweller_id):
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        if not bill.purchase_invoice:
+            return Response({"detail": "No purchase invoice."}, status=status.HTTP_404_NOT_FOUND)
+        fname = _invoice_filename(bill) or "invoice"
+        fh = bill.purchase_invoice.open("rb")
+        lower = fname.lower()
+        inline = lower.endswith((".jpg", ".jpeg", ".png", ".webp"))
+        resp = FileResponse(fh, as_attachment=not inline, filename=fname)
+        if inline:
+            resp["Content-Disposition"] = f'inline; filename="{fname}"'
+        return resp

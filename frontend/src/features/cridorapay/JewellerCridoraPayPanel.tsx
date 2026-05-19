@@ -78,6 +78,7 @@ export function JewellerCridoraPayPanel() {
   const [totalInr, setTotalInr] = useState('')
   const [title, setTitle] = useState('Shop purchase')
   const [note, setNote] = useState('')
+  const [invoiceFile, setInvoiceFile] = useState<File | null>(null)
   const [formBusy, setFormBusy] = useState(false)
   const [listBusy, setListBusy] = useState(false)
   const [resendMsg, setResendMsg] = useState('')
@@ -150,15 +151,20 @@ export function JewellerCridoraPayPanel() {
       setFormMsg('Enter gold weight (g) and total bill amount (₹).')
       return
     }
+    if (!invoiceFile) {
+      setFormMsg('Attach the shop purchase invoice (JPG, PNG, WEBP, or PDF).')
+      return
+    }
     setFormBusy(true)
     try {
-      const out = await jewellerCridoraPayCreate({
-        customer_id: customerId,
-        weight_grams: weightGrams.trim(),
-        total_inr: totalInr.trim(),
-        title: title.trim() || undefined,
-        jeweller_note: note.trim() || undefined,
-      })
+      const fd = new FormData()
+      fd.set('customer_id', String(customerId))
+      fd.set('weight_grams', weightGrams.trim())
+      fd.set('total_inr', totalInr.trim())
+      if (title.trim()) fd.set('title', title.trim())
+      if (note.trim()) fd.set('jeweller_note', note.trim())
+      fd.set('invoice_file', invoiceFile)
+      const out = await jewellerCridoraPayCreate(fd)
       if (!out.ok) {
         setFormMsg(out.detail)
         return
@@ -169,6 +175,7 @@ export function JewellerCridoraPayPanel() {
       setWeightGrams('')
       setTotalInr('')
       setNote('')
+      setInvoiceFile(null)
       await load()
     } finally {
       setFormBusy(false)
@@ -301,6 +308,18 @@ export function JewellerCridoraPayPanel() {
               <span>Note (optional)</span>
               <input className="input" value={note} onChange={(e) => setNote(e.target.value)} />
             </label>
+            <label className="pf-vault-field">
+              <span>Purchase invoice (required)</span>
+              <input
+                className="input"
+                type="file"
+                accept=".jpg,.jpeg,.png,.webp,.pdf,image/jpeg,image/png,image/webp,application/pdf"
+                onChange={(e) => setInvoiceFile(e.target.files?.[0] ?? null)}
+              />
+              <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                JPG, PNG, WEBP, or PDF — customer reviews this before paying.
+              </span>
+            </label>
           </div>
           <button
             type="button"
@@ -360,6 +379,9 @@ export function JewellerCridoraPayPanel() {
                     <td data-label="Bill">
                       <strong className="tabular">{r.reference}</strong>
                       <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{statusLabel(r.status)}</div>
+                      {r.has_purchase_invoice ? (
+                        <div style={{ fontSize: '0.72rem', color: 'var(--success)' }}>Invoice attached</div>
+                      ) : null}
                     </td>
                     <td data-label="Customer">{label}</td>
                     <td data-label="Amount" className="tabular">

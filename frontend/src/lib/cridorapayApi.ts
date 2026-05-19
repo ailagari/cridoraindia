@@ -1,4 +1,4 @@
-import { authFetch } from '@/lib/api'
+import { authFetch, apiUrl, getStoredAccess } from '@/lib/api'
 
 async function readResponseJson<T extends object>(res: Response): Promise<T | null> {
   const text = await res.text()
@@ -79,6 +79,8 @@ export type CridoraPayBillDTO = {
   cash_payable_inr: string
   payee_upi_vpa: string
   payment_note: string
+  has_purchase_invoice: boolean
+  purchase_invoice_filename: string
   personal_holding_id: number | null
   expires_at: string | null
   completed_at: string | null
@@ -91,24 +93,18 @@ export type CridoraPayBillDTO = {
   otp_policy_seconds?: number
 }
 
-export async function jewellerCridoraPayCreate(body: {
-  customer_id: number
-  weight_grams: string
-  total_inr: string
-  title?: string
-  category?: string
-  purity?: string
-  jeweller_note?: string
-}): Promise<{ ok: true; data: CridoraPayBillDTO } | { ok: false; detail: string }> {
-  const res = await authFetch('/api/v1/jeweller/cridorapay/bills/', {
-    method: 'POST',
-    jsonBody: body as Record<string, string | number>,
-  })
-  const data = (await res.json().catch(() => ({}))) as CridoraPayBillDTO & { detail?: string }
+export async function jewellerCridoraPayCreate(
+  form: FormData,
+): Promise<{ ok: true; data: CridoraPayBillDTO } | { ok: false; detail: string }> {
+  const res = await authFetch('/api/v1/jeweller/cridorapay/bills/', { method: 'POST', body: form })
+  const data = await readResponseJson<CridoraPayBillDTO & { detail?: string }>(res)
   if (!res.ok) {
-    return { ok: false, detail: data.detail != null ? String(data.detail) : 'Could not create bill' }
+    return {
+      ok: false,
+      detail: data ? parseApiDetail(data, res, 'Could not create bill') : 'Could not create bill',
+    }
   }
-  return { ok: true, data: data as CridoraPayBillDTO }
+  return { ok: true, data: (data ?? {}) as CridoraPayBillDTO }
 }
 
 export async function jewellerCridoraPayList(
@@ -256,4 +252,26 @@ export async function customerCridoraPayCancel(
     return { ok: false, detail: data.detail != null ? String(data.detail) : 'Could not cancel' }
   }
   return { ok: true, data: data as CridoraPayBillDTO }
+}
+
+export function cridoraPayInvoiceUrl(billId: number): string {
+  return apiUrl(`/api/v1/cridorapay/bills/${billId}/invoice/`)
+}
+
+export async function fetchCridoraPayInvoiceBlob(
+  billId: number,
+): Promise<{ ok: true; blob: Blob; filename: string } | { ok: false; detail: string }> {
+  const token = getStoredAccess()
+  if (!token) return { ok: false, detail: 'Not signed in' }
+  const res = await fetch(cridoraPayInvoiceUrl(billId), {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  const errJson = await readResponseJson<{ detail?: string }>(res)
+  if (!res.ok) {
+    return { ok: false, detail: parseApiDetail(errJson, res, 'Could not load invoice') }
+  }
+  const cd = res.headers.get('Content-Disposition') ?? ''
+  const match = /filename=\"?([^\";]+)/i.exec(cd)
+  const filename = match?.[1]?.trim() || 'purchase-invoice'
+  return { ok: true, blob: await res.blob(), filename }
 }

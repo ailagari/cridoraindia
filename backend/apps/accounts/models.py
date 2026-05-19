@@ -1024,6 +1024,8 @@ class CridoraPayBill(models.Model):
     vault_debited = models.BooleanField(default=False)
     payee_upi_vpa = models.CharField(max_length=128, blank=True, default="")
     payment_note = models.CharField(max_length=128, blank=True, default="")
+    purchase_invoice = models.FileField(upload_to="cridorapay_invoices/%Y/%m/", blank=True)
+    purchase_invoice_filename = models.CharField(max_length=255, blank=True, default="")
     personal_holding = models.ForeignKey(
         "PersonalGoldHolding",
         on_delete=models.SET_NULL,

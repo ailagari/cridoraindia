@@ -141,6 +141,7 @@ from .corridorapay_views import (
     CustomerCridoraPayCancelView,
     CustomerCridoraPayQuoteView,
     CustomerCridoraPayVaultOtpIssueView,
+    CridoraPayBillInvoiceView,
     JewellerCridoraPayBillCreateView,
     JewellerCridoraPayBillsListView,
     JewellerCridoraPayCancelView,
@@ -379,6 +380,7 @@ urlpatterns = [
         JewellerCridoraPayResendNotifyView.as_view(),
     ),
     path("cridorapay/bills/", CustomerCridoraPayBillsListView.as_view()),
+    path("cridorapay/bills/<int:pk>/invoice/", CridoraPayBillInvoiceView.as_view()),
     path("cridorapay/bills/<int:pk>/quote/", CustomerCridoraPayQuoteView.as_view()),
     path("cridorapay/bills/<int:pk>/accept/", CustomerCridoraPayAcceptView.as_view()),
     path(

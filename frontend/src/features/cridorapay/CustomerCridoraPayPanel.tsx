@@ -8,6 +8,7 @@ import {
   type CridoraPayBillDTO,
   type CridoraPayQuote,
 } from '@/lib/cridorapayApi'
+import { CridoraPayInvoicePreview } from '@/features/cridorapay/CridoraPayInvoicePreview'
 import { fetchFractionalCounterOtpPolicy } from '@/lib/fractionalPurchaseApi'
 import { useAuth } from '@/context/AuthContext'
 import { useCounterOtpCountdown } from '@/features/invest/useCounterOtpCountdown'
@@ -79,6 +80,7 @@ export function CustomerCridoraPayPanel() {
   const [quoteById, setQuoteById] = useState<Record<number, CridoraPayQuote>>({})
   const [otpReveal, setOtpReveal] = useState<{ billId: number; otp: string; expiresAt: string } | null>(null)
   const [otpPolicySeconds, setOtpPolicySeconds] = useState<number | null>(null)
+  const [invoiceReviewedById, setInvoiceReviewedById] = useState<Record<number, boolean>>({})
 
   const load = useCallback(async () => {
     setLoadErr('')
@@ -233,6 +235,7 @@ export function CustomerCridoraPayPanel() {
             const mode = payModeById[r.id] ?? 'vault'
             const vaultAvail = Number.parseFloat(quote?.vault_grams_available ?? '0')
             const canVault = vaultAvail > 0
+            const invoiceReviewed = !(r.has_purchase_invoice ?? false) || invoiceReviewedById[r.id]
             return (
               <article key={r.id} className="pf-card pf-card--lift pf-card--wide">
                 <header className="pf-card__head">
@@ -250,6 +253,16 @@ export function CustomerCridoraPayPanel() {
                     <p style={{ margin: '0 0 0.75rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
                       {r.jeweller_note}
                     </p>
+                  ) : null}
+
+                  {r.status === 'awaiting_customer' ? (
+                    <CridoraPayInvoicePreview
+                      bill={r}
+                      requireReview={r.has_purchase_invoice ?? false}
+                      onReviewed={() => setInvoiceReviewedById((m) => ({ ...m, [r.id]: true }))}
+                    />
+                  ) : r.has_purchase_invoice ? (
+                    <CridoraPayInvoicePreview bill={r} />
                   ) : null}
 
                   {r.status === 'awaiting_customer' && quote ? (
@@ -306,7 +319,9 @@ export function CustomerCridoraPayPanel() {
                       <button
                         type="button"
                         className="btn btn-primary"
-                        disabled={!kycVerified || busyId === r.id || (mode === 'vault' && !canVault)}
+                        disabled={
+                          !kycVerified || busyId === r.id || !invoiceReviewed || (mode === 'vault' && !canVault)
+                        }
                         onClick={() => void accept(r)}
                       >
                         Confirm payment choice
