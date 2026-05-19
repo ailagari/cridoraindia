@@ -8,7 +8,8 @@ from django.core.cache import cache
 from django.db import transaction
 from django.utils import timezone
 
-from apps.accounts.webpush_service import send_push_broadcast, webpush_configured
+from apps.accounts.push_payload import build_push_payload
+from apps.accounts.webpush_service import push_delivery_configured, send_push_broadcast
 
 from .models import GoldTickerConfig, get_or_create_ticker
 from .spot_prices import resolve_cridora_base_22k_inr
@@ -27,7 +28,7 @@ def _fmt_inr(d: Decimal) -> str:
 
 def run_hourly_gold_price_push_digest(*, force: bool = False) -> dict:
     """
-    Compare current 22K reference to the last hourly snapshot; broadcast when price moved.
+    Compare current public 22K reference to the last hourly snapshot; broadcast when price moved.
     The first successful run only stores a baseline (no notification).
 
     Schedule: run management command `run_hourly_gold_push` every hour (e.g. Railway Cron).
@@ -42,11 +43,18 @@ def run_hourly_gold_price_push_digest(*, force: bool = False) -> dict:
     ticker_pk = get_or_create_ticker().pk
 
     body: str | None = None
+    title = "Gold price update"
+    link = "/marketplace"
+    image_url = ""
     with transaction.atomic():
         t = GoldTickerConfig.objects.select_for_update().get(pk=ticker_pk)
         if not t.hourly_gold_push_enabled:
             result["skipped"] = "disabled"
             return result
+
+        title = (t.hourly_gold_push_title or "Gold price update").strip() or "Gold price update"
+        link = (t.hourly_gold_push_link or "/marketplace").strip() or "/marketplace"
+        image_url = (t.gold_push_image_url or "").strip()
 
         baseline = t.hourly_gold_push_baseline_inr_per_gram_22k
         if baseline is None:
@@ -69,16 +77,11 @@ def run_hourly_gold_price_push_digest(*, force: bool = False) -> dict:
             return result
 
         swing = abs(delta)
-        if delta > 0:
-            body = (
-                f"Gold price increased to ₹{_fmt_inr(current)}/g for 22K reference "
-                f"(up ₹{_fmt_inr(swing)}/g in the past hour from ₹{_fmt_inr(baseline)}/g)."
-            )
-        else:
-            body = (
-                f"Gold price decreased to ₹{_fmt_inr(current)}/g for 22K reference "
-                f"(down ₹{_fmt_inr(swing)}/g in the past hour from ₹{_fmt_inr(baseline)}/g)."
-            )
+        direction = "up" if delta > 0 else "down"
+        body = (
+            f"Public 22K reference is ₹{_fmt_inr(current)}/g ({direction} ₹{_fmt_inr(swing)}/g in the past hour "
+            f"from ₹{_fmt_inr(baseline)}/g). Open your dashboard or marketplace for live rates."
+        )
 
         GoldTickerConfig.objects.filter(pk=t.pk).update(
             hourly_gold_push_baseline_inr_per_gram_22k=current,
@@ -86,18 +89,19 @@ def run_hourly_gold_price_push_digest(*, force: bool = False) -> dict:
         )
 
     if body:
-        if not webpush_configured():
-            result["skipped"] = "webpush_not_configured"
+        if not push_delivery_configured():
+            result["skipped"] = "push_not_configured"
             result["current_inr"] = str(current)
             result["delta_inr"] = str(delta)
             return result
         n = send_push_broadcast(
-            {
-                "title": "Gold price update",
-                "body": body,
-                "url": "/marketplace",
-                "tag": "cridora-gold-hourly",
-            }
+            build_push_payload(
+                title=title,
+                body=body,
+                url=link,
+                tag="cridora-gold-hourly",
+                image_url=image_url or None,
+            )
         )
         result["sent"] = True
         result["subscriptions_notified"] = n

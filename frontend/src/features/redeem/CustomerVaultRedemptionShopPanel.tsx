@@ -378,12 +378,32 @@ export function CustomerVaultRedemptionShopPanel() {
                   Fully covered from vault — no extra cash due for this order.
                 </p>
               ) : null}
+              {parseG(quote.gold_metal_value_inr ?? '0') > 0 ? (
+                <p style={{ margin: '0 0 0.35rem' }}>
+                  Gold metal: <strong className="tabular">₹{formatInr(parseG(quote.gold_metal_value_inr ?? '0'))}</strong>
+                </p>
+              ) : null}
+              {quote.stone_included && parseG(quote.stone_component_inr ?? '0') > 0 ? (
+                <p style={{ margin: '0 0 0.35rem' }}>
+                  Stone
+                  {quote.stone_type ? ` (${quote.stone_type}` : ''}
+                  {quote.stone_weight_grams
+                    ? `${quote.stone_type ? ' · ' : ' ('}${quote.stone_weight_grams}g`
+                    : quote.stone_type
+                      ? ''
+                      : ''}
+                  {quote.stone_type || quote.stone_weight_grams ? ')' : ''}:{' '}
+                  <strong className="tabular">₹{formatInr(parseG(quote.stone_component_inr ?? '0'))}</strong>
+                  <span style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>
+                    {' '}
+                    — jeweller-listed; pay with cash/UPI, not vault grams.
+                  </span>
+                </p>
+              ) : null}
               <p style={{ margin: '0.65rem 0 0.35rem' }}>
-                Metal rate used for gram conversion:{' '}
-                <strong className="tabular">₹{formatInr(parseG(quote.metal_rate_inr_per_gram), 2)}</strong>/g
-              </p>
-              <p style={{ margin: '0 0 0.35rem' }}>
-                Grams to debit: <strong className="tabular">{quote.grams_required} g</strong>
+                Vault debits gold metal only at{' '}
+                <strong className="tabular">₹{formatInr(parseG(quote.metal_rate_inr_per_gram), 2)}</strong>/g —{' '}
+                <strong className="tabular">{quote.grams_required} g</strong>
               </p>
               <p style={{ margin: '0 0 0.35rem' }}>
                 Your vault at this jeweller:{' '}

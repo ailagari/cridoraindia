@@ -8,6 +8,7 @@ from django.db.models import Count
 from django.utils import timezone
 
 from apps.accounts.models import AdminNotification, FestivalBroadcastNotification, WebPushSubscription
+from apps.accounts.push_payload import build_push_payload
 from apps.accounts.webpush_service import send_push_broadcast
 
 logger = logging.getLogger(__name__)
@@ -120,12 +121,13 @@ def process_due_festival_broadcasts(*, limit: int = 50) -> int:
                         row.pk,
                     )
                 n = send_push_broadcast(
-                    {
-                        "title": row.title.strip() or "Cridora",
-                        "body": row.body.strip(),
-                        "url": "/",
-                        "tag": f"cridora-festival-{row.pk}",
-                    }
+                    build_push_payload(
+                        title=row.title.strip() or "Cridora",
+                        body=row.body.strip(),
+                        url="/",
+                        tag=f"cridora-festival-{row.pk}",
+                        image_url=(row.image_url or "").strip() or None,
+                    )
                 )
                 row.status = FestivalBroadcastNotification.STATUS_SENT
                 row.sent_at = now

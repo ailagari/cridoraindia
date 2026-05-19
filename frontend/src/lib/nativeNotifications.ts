@@ -137,11 +137,14 @@ function attachPushListeners(): void {
     const body = notification.body ?? 'Open Cridora for details.'
     const url =
       typeof notification.data?.url === 'string' ? notification.data.url : '/'
+    const image =
+      typeof notification.data?.image === 'string' ? notification.data.image : undefined
     void showTrayNotification({
       id: `push-${Date.now()}`,
       title,
       body,
       link_path: url,
+      image_url: image,
     })
   })
 
@@ -212,6 +215,7 @@ export async function showTrayNotification(item: {
   title: string
   body: string
   link_path?: string
+  image_url?: string
 }): Promise<void> {
   if (!isNativeAndroid()) return
   if (!(await localPermissionGranted())) return
@@ -220,6 +224,8 @@ export async function showTrayNotification(item: {
   persistNotifiedIds()
   try {
     await ensureAndroidChannel()
+    const imageUrl = item.image_url?.trim()
+    const hasImage = Boolean(imageUrl && (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')))
     await LocalNotifications.schedule({
       notifications: [
         {
@@ -230,7 +236,13 @@ export async function showTrayNotification(item: {
           smallIcon: 'ic_stat_cridora',
           iconColor: '#D4AF37',
           schedule: { at: new Date(Date.now() + 300) },
-          extra: { url: item.link_path ?? '/' },
+          extra: { url: item.link_path ?? '/', ...(hasImage ? { image: imageUrl } : {}) },
+          ...(hasImage
+            ? {
+                largeIcon: imageUrl,
+                attachments: [{ id: 'push-image', url: imageUrl! }],
+              }
+            : {}),
         },
       ],
     })

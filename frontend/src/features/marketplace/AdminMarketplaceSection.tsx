@@ -346,8 +346,6 @@ function AdminPublishedRatesSummary(props: {
 export function AdminGoldTickerPanel() {
   const [data, setData] = useState<AdminTickerPayload | null>(null)
   const [adjDraft, setAdjDraft] = useState<AdjustmentsState>(() => emptyAdjustments())
-  const [alertDraft, setAlertDraft] = useState('')
-  const [hourlyPushDraft, setHourlyPushDraft] = useState(true)
   const [manualOn, setManualOn] = useState(false)
   const [manual22Draft, setManual22Draft] = useState('')
   const [manual24Draft, setManual24Draft] = useState('')
@@ -370,8 +368,6 @@ export function AdminGoldTickerPanel() {
     const j = (await res.json()) as AdminTickerPayload
     setData(j)
     setAdjDraft(parseAdjustments(j.live_metal_adjustments_json))
-    setAlertDraft(j.rate_move_alert_threshold_inr ?? '10')
-    setHourlyPushDraft(j.hourly_gold_push_enabled !== false)
     setManualOn(Boolean(j.manual_ticker_enabled))
     setManual22Draft(j.ticker_manual_22k_inr_per_gram ?? '')
     setManual24Draft(j.ticker_manual_24k_inr_per_gram ?? '')
@@ -424,8 +420,6 @@ export function AdminGoldTickerPanel() {
       method: 'PATCH',
       jsonBody: {
         live_metal_adjustments_json: buildAdjustmentsPayload(adjDraft),
-        rate_move_alert_threshold_inr: alertDraft.trim(),
-        hourly_gold_push_enabled: hourlyPushDraft,
         manual_ticker_enabled: manualOn,
         ticker_manual_22k_inr_per_gram: manual22Draft.trim() || null,
         ticker_manual_24k_inr_per_gram: manual24Draft.trim() ? manual24Draft.trim() : null,
@@ -454,8 +448,8 @@ export function AdminGoldTickerPanel() {
         <p className="dash-coming__text" style={{ marginBottom: 0, fontSize: '0.82rem', maxWidth: '52rem' }}>
           Configure live metal rates, alerts, and <strong>all platform fees and storefront disclosures</strong> here.{' '}
           <strong>Live:</strong> markup on international raw spot, then deduction — jewellers and customers see the published
-          live market column. <strong>Manual:</strong> fixed 22K/24K gold only (no row rules).{' '}
-          <strong>Alerts:</strong> 22K vs baseline; <strong>0</strong> disables.
+          live market column. <strong>Manual:</strong> fixed 22K/24K gold only (no row rules). Push alerts are configured under{' '}
+          <strong>Pushes &amp; alerts</strong>.
         </p>
         {data ? (
           <ul className="admin-ticker-panel__meta" aria-label="Current ticker snapshot">
@@ -727,51 +721,6 @@ export function AdminGoldTickerPanel() {
           rules.
         </p>
       )}
-
-      <p className="admin-ticker-panel__section-title">Rate move alerts</p>
-      <div className="admin-ticker-panel__card">
-      <label className="field" style={{ maxWidth: 420, marginBottom: 0 }}>
-        <span>22K alert (₹ move vs baseline, 0 = off)</span>
-        <input
-          type="text"
-          inputMode="decimal"
-          value={alertDraft}
-          onChange={(e) => setAlertDraft(e.target.value)}
-          placeholder="10"
-        />
-        {data ? (
-          <span className="dash-footnote" style={{ display: 'block', marginTop: '0.3rem', fontSize: '0.72rem' }}>
-            Baseline <strong className="tabular">{data.rate_alert_baseline_inr_per_gram_22k ?? '—'}</strong> · now{' '}
-            <strong className="tabular">{data.platform_base_inr_per_gram_22k}</strong>
-          </span>
-        ) : null}
-      </label>
-      </div>
-
-      <div className="admin-ticker-panel__card">
-        <label style={{ display: 'flex', gap: '0.65rem', alignItems: 'flex-start', cursor: 'pointer' }}>
-          <input
-            type="checkbox"
-            checked={hourlyPushDraft}
-            onChange={(e) => setHourlyPushDraft(e.target.checked)}
-            style={{ marginTop: '0.2rem' }}
-          />
-          <span style={{ fontSize: '0.85rem', lineHeight: 1.45 }}>
-            <strong>Hourly gold digest (Web Push)</strong> — each scheduled run compares live{' '}
-            <strong className="tabular">22K</strong> reference to the prior hourly snapshot and notifies subscribed devices when
-            the price moves (requires VAPID keys + cron; first run only stores a baseline).
-            {data?.hourly_gold_push_baseline_inr_per_gram_22k != null ? (
-              <span className="dash-footnote" style={{ display: 'block', marginTop: '0.35rem', fontSize: '0.72rem' }}>
-                Last snapshot{' '}
-                <strong className="tabular">{data.hourly_gold_push_baseline_inr_per_gram_22k}</strong>
-                {data.hourly_gold_push_baseline_recorded_at
-                  ? ` · ${new Date(data.hourly_gold_push_baseline_recorded_at).toLocaleString()}`
-                  : ''}
-              </span>
-            ) : null}
-          </span>
-        </label>
-      </div>
 
       <p className="admin-ticker-panel__section-title">Platform fees &amp; storefront disclosures</p>
       <div className="admin-ticker-panel__card" style={{ marginBottom: 0 }}>

@@ -25,6 +25,7 @@ type PushPayload = {
   body?: string
   url?: string
   tag?: string
+  image?: string
 }
 
 self.addEventListener('push', (event: PushEvent) => {
@@ -51,13 +52,21 @@ self.addEventListener('push', (event: PushEvent) => {
   const body = bodyRaw.length > 0 ? bodyRaw : 'Open Cridora for details.'
   const targetUrl = new URL(data.url || '/', self.location.origin).href
   const iconHref = new URL('/icon-192.png', self.location.origin).href
+  const imageRaw = typeof data.image === 'string' ? data.image.trim() : ''
+  const imageHref =
+    imageRaw.startsWith('http://') || imageRaw.startsWith('https://')
+      ? imageRaw
+      : imageRaw.startsWith('/')
+        ? new URL(imageRaw, self.location.origin).href
+        : null
   const notifyOpts = {
     body,
-    icon: iconHref,
+    icon: imageHref || iconHref,
     badge: iconHref,
     vibrate: [180, 80, 120],
     data: { url: targetUrl },
     tag: data.tag || fallback.tag,
+    ...(imageHref ? { image: imageHref } : {}),
   } as NotificationOptions
   event.waitUntil(
     (async () => {

@@ -47,7 +47,11 @@ class GoldTickerConfig(models.Model):
         max_digits=12,
         decimal_places=2,
         default=Decimal("10.00"),
-        help_text="Notify subscribers when Cridora reference 22K ₹/g moves by ≥ this vs previous reference. 0 disables.",
+        help_text="Notify when public Cridora 22K reference moves by ≥ this ₹/g vs baseline (requires alerts enabled).",
+    )
+    rate_move_alerts_enabled = models.BooleanField(
+        default=True,
+        help_text="When on, subscribers are notified when public 22K reference moves by ≥ threshold.",
     )
     rate_alert_baseline_inr_per_gram_22k = models.DecimalField(
         max_digits=12,
@@ -71,6 +75,34 @@ class GoldTickerConfig(models.Model):
         null=True,
         blank=True,
         help_text="When hourly snapshot baseline was recorded (internal).",
+    )
+    hourly_gold_push_title = models.CharField(
+        max_length=120,
+        blank=True,
+        default="Gold price update",
+        help_text="Title for hourly 22K movement digest pushes.",
+    )
+    hourly_gold_push_link = models.CharField(
+        max_length=512,
+        default="/marketplace",
+        help_text="In-app path opened when the hourly digest is tapped.",
+    )
+    rate_move_alert_title = models.CharField(
+        max_length=120,
+        blank=True,
+        default="Gold rate alert",
+        help_text="Title for threshold-based 22K reference move alerts.",
+    )
+    rate_move_alert_link = models.CharField(
+        max_length=512,
+        default="/marketplace",
+        help_text="In-app path opened when a threshold alert is tapped.",
+    )
+    gold_push_image_url = models.URLField(
+        max_length=512,
+        blank=True,
+        default="",
+        help_text="Optional image URL shown on automated gold price alerts (HTTPS recommended).",
     )
     gold_deposit_yield_apr_percent = models.DecimalField(
         max_digits=8,

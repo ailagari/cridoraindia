@@ -1311,6 +1311,12 @@ class FestivalBroadcastNotification(models.Model):
         help_text="Notification title shown on the device.",
     )
     body = models.TextField(help_text="Main message body.")
+    image_url = models.URLField(
+        max_length=512,
+        blank=True,
+        default="",
+        help_text="Optional HTTPS image shown in the push notification.",
+    )
     scheduled_at = models.DateTimeField(
         db_index=True,
         help_text="When to send (UTC in DB; use aware datetimes from the API).",

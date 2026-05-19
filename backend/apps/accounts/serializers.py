@@ -456,6 +456,7 @@ class FestivalBroadcastNotificationSerializer(serializers.ModelSerializer):
             "id",
             "title",
             "body",
+            "image_url",
             "scheduled_at",
             "status",
             "sent_at",
@@ -472,16 +473,19 @@ class FestivalBroadcastNotificationCreateSerializer(serializers.Serializer):
         max_length=120, required=False, allow_blank=True, default=""
     )
     body = serializers.CharField(max_length=2000, min_length=1)
+    image_url = serializers.URLField(required=False, allow_blank=True, max_length=512)
     scheduled_at = serializers.DateTimeField()
 
     def create(self, validated_data):
         request = self.context["request"]
         title = (validated_data.get("title") or "").strip() or "Cridora"
         body = validated_data["body"].strip()
+        image_url = (validated_data.get("image_url") or "").strip()
         scheduled_at = validated_data["scheduled_at"]
         return FestivalBroadcastNotification.objects.create(
             title=title,
             body=body,
+            image_url=image_url,
             scheduled_at=scheduled_at,
             created_by=request.user,
         )

@@ -21,6 +21,11 @@ def webpush_configured() -> bool:
     return bool(pub and priv)
 
 
+def push_delivery_configured() -> bool:
+    """True when at least one push channel (Web Push or FCM) can send."""
+    return webpush_configured() or fcm_service.fcm_configured()
+
+
 def send_push_payload(subscription: WebPushSubscription, payload: dict[str, Any]) -> None:
     if not webpush_configured():
         return

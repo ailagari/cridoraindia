@@ -285,12 +285,22 @@ function CheckoutView({
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', fontSize: '0.88rem' }}>
-            <Row label="Gold + stone (metal layer)" value={`₹${formatInr(p.goldValue)}`} />
+            <Row label="Gold metal" value={`₹${formatInr(p.goldMetalValue)}`} />
+            {p.stoneComponent > 0 ? (
+              <Row
+                label={
+                  product.stone_type?.trim()
+                    ? `Stone (${product.stone_type.trim()}${product.stone_weight_grams ? ` · ${product.stone_weight_grams}g` : ''})`
+                    : 'Stone (jeweller-listed)'
+                }
+                value={`₹${formatInr(p.stoneComponent)}`}
+              />
+            ) : null}
             <Row
               label={
                 vaultActive && vaultGrams > 0 && p.gstOnGoldSaved > 0
-                  ? 'GST on gold (vault-exempt metal)'
-                  : 'GST on gold (3%)'
+                  ? 'GST on gold metal (vault-exempt portion)'
+                  : 'GST on gold metal (3%)'
               }
               value={`₹${formatInr(p.gstOnGold, 2)}`}
             />

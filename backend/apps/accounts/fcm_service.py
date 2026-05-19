@@ -45,16 +45,20 @@ def send_fcm_payload(token: str, payload: dict[str, Any]) -> None:
     body = str(payload.get("body") or "Open Cridora for details.")
     url = str(payload.get("url") or "/")
     tag = str(payload.get("tag") or "cridora-default")
+    image = str(payload.get("image") or "").strip() or None
+    android_notification = messaging.AndroidNotification(
+        channel_id="cridora-alerts",
+        tag=tag,
+    )
+    if image:
+        android_notification.image = image
     message = messaging.Message(
         token=token,
-        notification=messaging.Notification(title=title, body=body),
-        data={"url": url, "tag": tag},
+        notification=messaging.Notification(title=title, body=body, image=image),
+        data={"url": url, "tag": tag, **({"image": image} if image else {})},
         android=messaging.AndroidConfig(
             priority="high",
-            notification=messaging.AndroidNotification(
-                channel_id="cridora-alerts",
-                tag=tag,
-            ),
+            notification=android_notification,
         ),
     )
     messaging.send(message, app=app)

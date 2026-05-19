@@ -92,7 +92,14 @@ export function MarketplaceCheckoutReceiptCard({
         {gstSaved > 0 ? (
           <BillRow label="Vault saved you (GST on gold)" value={`₹${formatInr(gstSaved)}`} muted />
         ) : null}
-        <BillRow label="Gold metal (line)" value={`₹${formatInr(p.goldValue)}`} muted />
+        {p.stoneComponent > 0 ? (
+          <>
+            <BillRow label="Gold metal" value={`₹${formatInr(p.goldMetalValue)}`} muted />
+            <BillRow label="Stone (jeweller-listed)" value={`₹${formatInr(p.stoneComponent)}`} muted />
+          </>
+        ) : (
+          <BillRow label="Gold metal" value={`₹${formatInr(p.goldMetalValue)}`} muted />
+        )}
         <BillRow label="Making (after 5% off)" value={`₹${formatInr(p.makingCharges)}`} muted />
         <BillRow
           label={gstSaved > 0 ? 'GST on gold (after vault relief)' : 'GST on gold'}
