@@ -11,19 +11,12 @@ from django.utils import timezone
 from apps.accounts.push_payload import build_push_payload
 from apps.accounts.webpush_service import push_delivery_configured, send_push_broadcast
 
+from .gold_push_copy import format_gold_price_move_body
 from .models import GoldTickerConfig, get_or_create_ticker
 from .spot_prices import resolve_cridora_base_22k_inr
 
 _LOCK_KEY = "marketplace_hourly_gold_push_lock"
 _LOCK_TTL = 120
-
-
-def _fmt_inr(d: Decimal) -> str:
-    q = d.quantize(Decimal("0.01"))
-    s = format(q, "f")
-    if "." in s:
-        s = s.rstrip("0").rstrip(".")
-    return s
 
 
 def run_hourly_gold_price_push_digest(*, force: bool = False) -> dict:
@@ -76,12 +69,7 @@ def run_hourly_gold_price_push_digest(*, force: bool = False) -> dict:
             result["current_inr"] = str(current)
             return result
 
-        swing = abs(delta)
-        direction = "up" if delta > 0 else "down"
-        body = (
-            f"Public 22K reference is ₹{_fmt_inr(current)}/g ({direction} ₹{_fmt_inr(swing)}/g in the past hour "
-            f"from ₹{_fmt_inr(baseline)}/g). Open your dashboard or marketplace for live rates."
-        )
+        body = format_gold_price_move_body(baseline=baseline, current=current)
 
         GoldTickerConfig.objects.filter(pk=t.pk).update(
             hourly_gold_push_baseline_inr_per_gram_22k=current,

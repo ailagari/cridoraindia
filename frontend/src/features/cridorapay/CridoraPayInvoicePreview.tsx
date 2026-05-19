@@ -1,9 +1,17 @@
 import { useCallback, useEffect, useState } from 'react'
 import { fetchCridoraPayInvoiceBlob, type CridoraPayBillDTO } from '@/lib/cridorapayApi'
 
-function isImageFilename(name: string): boolean {
+function isImageFilename(name: string, blobType?: string): boolean {
   const lower = name.toLowerCase()
-  return lower.endsWith('.jpg') || lower.endsWith('.jpeg') || lower.endsWith('.png') || lower.endsWith('.webp')
+  if (lower.endsWith('.jpg') || lower.endsWith('.jpeg') || lower.endsWith('.png') || lower.endsWith('.webp')) {
+    return true
+  }
+  return (blobType ?? '').startsWith('image/')
+}
+
+function isPdfFilename(name: string, blobType?: string): boolean {
+  const lower = name.toLowerCase()
+  return lower.endsWith('.pdf') || (blobType ?? '').includes('pdf')
 }
 
 type Props = {
@@ -17,6 +25,7 @@ export function CridoraPayInvoicePreview({ bill, requireReview = false, onReview
   const [err, setErr] = useState('')
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [filename, setFilename] = useState(bill.purchase_invoice_filename || '')
+  const [mimeType, setMimeType] = useState('')
   const [reviewed, setReviewed] = useState(false)
 
   useEffect(() => {
@@ -35,13 +44,10 @@ export function CridoraPayInvoicePreview({ bill, requireReview = false, onReview
         return
       }
       setFilename(out.filename)
+      setMimeType(out.blob.type)
       setPreviewUrl((prev) => {
         if (prev) URL.revokeObjectURL(prev)
-        const url = URL.createObjectURL(out.blob)
-        if (!isImageFilename(out.filename)) {
-          window.open(url, '_blank', 'noopener')
-        }
-        return url
+        return URL.createObjectURL(out.blob)
       })
       setReviewed(true)
       onReviewed?.()
@@ -87,7 +93,7 @@ export function CridoraPayInvoicePreview({ bill, requireReview = false, onReview
           {err}
         </p>
       ) : null}
-      {previewUrl && isImageFilename(filename) ? (
+      {previewUrl && isImageFilename(filename, mimeType) ? (
         <img
           src={previewUrl}
           alt="Purchase invoice"
@@ -101,9 +107,26 @@ export function CridoraPayInvoicePreview({ bill, requireReview = false, onReview
           }}
         />
       ) : null}
-      {previewUrl && !isImageFilename(filename) ? (
-        <p style={{ margin: '0.5rem 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-          PDF opened in a new tab. If it did not open, tap View purchase invoice again.
+      {previewUrl && isPdfFilename(filename, mimeType) ? (
+        <iframe
+          src={previewUrl}
+          title="Purchase invoice PDF"
+          style={{
+            display: 'block',
+            marginTop: '0.75rem',
+            width: '100%',
+            minHeight: 360,
+            borderRadius: 8,
+            border: '1px solid var(--border-soft)',
+            background: '#fff',
+          }}
+        />
+      ) : null}
+      {previewUrl && !isImageFilename(filename, mimeType) && !isPdfFilename(filename, mimeType) ? (
+        <p style={{ margin: '0.5rem 0 0', fontSize: '0.8rem' }}>
+          <a href={previewUrl} download={filename || 'purchase-invoice'} className="btn btn-ghost btn-sm">
+            Download invoice
+          </a>
         </p>
       ) : null}
     </div>

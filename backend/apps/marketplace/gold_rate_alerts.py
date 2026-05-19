@@ -10,19 +10,12 @@ from django.db import transaction
 from apps.accounts.push_payload import build_push_payload
 from apps.accounts.webpush_service import push_delivery_configured, send_push_broadcast
 
+from .gold_push_copy import format_gold_price_move_body
 from .models import GoldTickerConfig, get_or_create_ticker
 from .spot_prices import resolve_cridora_base_22k_inr
 
 _ALERT_LOCK_KEY = "marketplace_gold_rate_alert_lock"
 _ALERT_LOCK_TTL = 50
-
-
-def _fmt_rupees(d: Decimal) -> str:
-    q = d.quantize(Decimal("0.01"))
-    s = format(q, "f")
-    if "." in s:
-        s = s.rstrip("0").rstrip(".")
-    return s
 
 
 def maybe_notify_gold_rate_move(*, force: bool = False) -> dict:
@@ -79,11 +72,7 @@ def maybe_notify_gold_rate_move(*, force: bool = False) -> dict:
             result["delta_inr"] = str(delta)
             return result
 
-        direction_label = "up" if delta > 0 else "down"
-        body = (
-            f"Public 22K reference moved {direction_label} by ₹{_fmt_rupees(swing)}/g "
-            f"(now ₹{_fmt_rupees(current)}/g vs previous baseline ₹{_fmt_rupees(baseline)}/g)."
-        )
+        body = format_gold_price_move_body(baseline=baseline, current=current)
         GoldTickerConfig.objects.filter(pk=t.pk).update(
             rate_alert_baseline_inr_per_gram_22k=current
         )

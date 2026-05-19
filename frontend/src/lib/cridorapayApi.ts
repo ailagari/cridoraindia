@@ -1,4 +1,4 @@
-import { authFetch, apiUrl, getStoredAccess } from '@/lib/api'
+import { authFetch, apiUrl } from '@/lib/api'
 
 async function readResponseJson<T extends object>(res: Response): Promise<T | null> {
   const text = await res.text()
@@ -261,17 +261,21 @@ export function cridoraPayInvoiceUrl(billId: number): string {
 export async function fetchCridoraPayInvoiceBlob(
   billId: number,
 ): Promise<{ ok: true; blob: Blob; filename: string } | { ok: false; detail: string }> {
-  const token = getStoredAccess()
-  if (!token) return { ok: false, detail: 'Not signed in' }
-  const res = await fetch(cridoraPayInvoiceUrl(billId), {
-    headers: { Authorization: `Bearer ${token}` },
-  })
-  const errJson = await readResponseJson<{ detail?: string }>(res)
-  if (!res.ok) {
-    return { ok: false, detail: parseApiDetail(errJson, res, 'Could not load invoice') }
+  try {
+    const res = await authFetch(`/api/v1/cridorapay/bills/${billId}/invoice/`)
+    if (!res.ok) {
+      const errJson = await readResponseJson<{ detail?: string }>(res)
+      return { ok: false, detail: parseApiDetail(errJson, res, 'Could not load invoice') }
+    }
+    const cd = res.headers.get('Content-Disposition') ?? ''
+    const match = /filename=\"?([^\";]+)/i.exec(cd)
+    const filename = match?.[1]?.trim() || 'purchase-invoice'
+    const blob = await res.blob()
+    if (blob.size <= 0) {
+      return { ok: false, detail: 'Invoice file is empty.' }
+    }
+    return { ok: true, blob, filename }
+  } catch (e) {
+    return { ok: false, detail: e instanceof Error ? e.message : 'Could not load invoice' }
   }
-  const cd = res.headers.get('Content-Disposition') ?? ''
-  const match = /filename=\"?([^\";]+)/i.exec(cd)
-  const filename = match?.[1]?.trim() || 'purchase-invoice'
-  return { ok: true, blob: await res.blob(), filename }
 }

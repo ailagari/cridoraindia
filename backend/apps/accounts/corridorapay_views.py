@@ -11,6 +11,7 @@ from django.db import transaction
 from django.db.utils import OperationalError, ProgrammingError
 from django.http import FileResponse
 from django.utils import timezone
+import mimetypes
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -633,7 +634,8 @@ class CridoraPayBillInvoiceView(APIView):
         fh = bill.purchase_invoice.open("rb")
         lower = fname.lower()
         inline = lower.endswith((".jpg", ".jpeg", ".png", ".webp"))
-        resp = FileResponse(fh, as_attachment=not inline, filename=fname)
+        content_type = mimetypes.guess_type(fname)[0] or "application/octet-stream"
+        resp = FileResponse(fh, as_attachment=not inline, filename=fname, content_type=content_type)
         if inline:
             resp["Content-Disposition"] = f'inline; filename="{fname}"'
         return resp
