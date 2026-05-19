@@ -12,7 +12,6 @@ import { CustomerPortfolioPanel } from '@/features/portfolio/CustomerPortfolioPa
 import { CustomerVaultsPanel } from '@/features/portfolio/CustomerVaultsPanel'
 import { CustomerCrossRedemptionPanel } from '@/features/crossRedemption/CustomerCrossRedemptionPanel'
 import { CustomerSellbackPanel } from '@/features/redeem/CustomerSellbackPanel'
-import { CustomerVaultRedemptionShopPanel } from '@/features/redeem/CustomerVaultRedemptionShopPanel'
 import { useAuth } from '@/context/AuthContext'
 import { LIVE_PROFILE_POLL_MS } from '@/lib/liveDeskIntervals'
 import { useLivePoll } from '@/lib/useLivePoll'
@@ -115,25 +114,38 @@ export function CustomerDashboardPage() {
       {active === 'shop_products' ? <CustomerProductsBrowsePanel /> : null}
       {active === 'invest_fractional' ? <FractionalPurchasePanel /> : null}
       {active === 'invest_deposit' ? <CustomerDepositInfoPanel /> : null}
-      {active === 'redeem_vault_shop' ? <CustomerVaultRedemptionShopPanel /> : null}
-      {active === 'redeem_hub' ? (
-        <>
-          <CustomerSellbackPanel />
-          <CustomerCrossRedemptionPanel />
-          <ComingSoon
-            title="More liquidity options"
-            children="Loans and emergency funds will plug in here next. Use Shop with vault for ornament redemption from the catalogue."
-          />
-        </>
+      {active === 'invest_scheme' ? (
+        <ComingSoon
+          title="Golden scheme"
+          children="Enroll in partner jeweller monthly schemes from here. Browse jewellers under Market to see live scheme terms."
+        />
       ) : null}
+      {active === 'redeem_cash' ? <CustomerSellbackPanel /> : null}
       {active === 'redeem_transfer' ? <GoldTransferPanel roleLabel="customer" /> : null}
+      {active === 'redeem_loan' ? (
+        <ComingSoon
+          title="Gold loan"
+          children="Vault-backed loans against your holdings will appear here when lending partners go live."
+        />
+      ) : null}
+      {active === 'redeem_emergency' ? <CustomerCrossRedemptionPanel /> : null}
+      {active === 'profile_cridora_id' || active === 'profile_qr' ? <CustomerVaultAddressesPanel /> : null}
+      {active === 'profile_security' ? (
+        <ComingSoon
+          title="Password & security"
+          children="Change password, manage sessions, and configure two-factor authentication here."
+        />
+      ) : null}
+      {active === 'profile_personal' ? (
+        <ComingSoon
+          title="Personal details"
+          children="Update your name, phone, and notification preferences from this panel."
+        />
+      ) : null}
       {active === 'profile_kyc' ? (
         <div className="dash-panel-max">
           <CustomerKycWorkflow />
         </div>
-      ) : null}
-      {active === 'profile_more' ? (
-        <ComingSoon title="Account" children="Security, notifications, and payout preferences — consolidated here as services go live." />
       ) : null}
     </DashboardLayout>
   )

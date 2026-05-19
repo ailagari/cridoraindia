@@ -362,3 +362,124 @@ def customer_portfolio_ledger_payload(user: User, ledger_filter: str = "all") ->
         else:
             rows = [x for x in rows if x["transaction_type"] == lf]
     return {"entries": rows}
+
+
+def admin_personal_vault_user_summaries(
+    *,
+    q: str | None = None,
+    user_id: int | None = None,
+    limit: int = 250,
+) -> list[dict[str, Any]]:
+    """Read-only admin rollup: customer default jeweller + personal grams by linked jeweller."""
+    qs = PersonalGoldHolding.objects.filter(is_removed=False)
+    if user_id:
+        qs = qs.filter(user_id=user_id)
+    needle = (q or "").strip()
+    if needle:
+        qs = qs.filter(
+            Q(user__email__icontains=needle)
+            | Q(user__first_name__icontains=needle)
+            | Q(user__last_name__icontains=needle)
+            | Q(user__cridora_member_id__icontains=needle)
+            | Q(user__default_jeweller__business_name__icontains=needle)
+            | Q(user__default_jeweller__email__icontains=needle)
+            | Q(jeweller__business_name__icontains=needle)
+            | Q(jeweller__email__icontains=needle)
+        )
+
+    user_rows = list(
+        qs.values(
+            "user_id",
+            "user__email",
+            "user__first_name",
+            "user__last_name",
+            "user__cridora_member_id",
+            "user__default_jeweller_id",
+            "user__default_jeweller__business_name",
+            "user__default_jeweller__email",
+        )
+        .annotate(
+            holding_count=Count("id"),
+            total_weight_grams=Coalesce(Sum("weight_grams"), Decimal("0"), output_field=DecimalField()),
+        )
+        .order_by("-total_weight_grams", "user__email")[:limit]
+    )
+    if not user_rows:
+        return []
+
+    user_ids = [int(r["user_id"]) for r in user_rows]
+    jeweller_rows = (
+        qs.filter(user_id__in=user_ids)
+        .values(
+            "user_id",
+            "jeweller_id",
+            "jeweller__business_name",
+            "jeweller__email",
+        )
+        .annotate(
+            holding_count=Count("id"),
+            total_weight_grams=Coalesce(Sum("weight_grams"), Decimal("0"), output_field=DecimalField()),
+        )
+        .order_by("-total_weight_grams")
+    )
+
+    by_user_jeweller: dict[int, list[dict[str, Any]]] = {}
+    for row in jeweller_rows:
+        uid = int(row["user_id"])
+        jid = row["jeweller_id"]
+        if jid:
+            jname = (row["jeweller__business_name"] or row["jeweller__email"] or "").strip()
+        else:
+            jname = "Self-declared"
+        by_user_jeweller.setdefault(uid, []).append(
+            {
+                "jeweller_id": jid,
+                "jeweller_name": jname,
+                "holding_count": int(row["holding_count"]),
+                "total_weight_grams": str(row["total_weight_grams"]),
+            }
+        )
+
+    rate, _ = reference_gold_rate_inr_per_gram()
+    out: list[dict[str, Any]] = []
+    for row in user_rows:
+        uid = int(row["user_id"])
+        default_jid = row["user__default_jeweller_id"]
+        default_name = (
+            (row["user__default_jeweller__business_name"] or row["user__default_jeweller__email"] or "").strip()
+            if default_jid
+            else ""
+        )
+        total_g = row["total_weight_grams"] or Decimal("0")
+        name = f"{row['user__first_name'] or ''} {row['user__last_name'] or ''}".strip()
+        breakdown = []
+        for item in by_user_jeweller.get(uid, []):
+            breakdown.append(
+                {
+                    **item,
+                    "is_default_jeweller": bool(
+                        default_jid and item["jeweller_id"] and int(item["jeweller_id"]) == int(default_jid)
+                    ),
+                }
+            )
+        breakdown.sort(
+            key=lambda x: (
+                0 if x.get("is_default_jeweller") else 1,
+                -Decimal(x["total_weight_grams"]),
+            )
+        )
+        out.append(
+            {
+                "user_id": uid,
+                "email": row["user__email"] or "",
+                "full_name": name,
+                "cridora_member_id": row["user__cridora_member_id"] or "",
+                "default_jeweller_id": default_jid,
+                "default_jeweller_name": default_name,
+                "holding_count": int(row["holding_count"]),
+                "total_weight_grams": str(total_g),
+                "total_estimated_value_inr": str(calculate_holding_value_inr(total_g, rate)),
+                "holdings_by_jeweller": breakdown,
+            }
+        )
+    return out

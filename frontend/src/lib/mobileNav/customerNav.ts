@@ -4,12 +4,12 @@ import type { DashboardNavGroup } from './types'
 export const CUSTOMER_NAV_GROUPS: DashboardNavGroup[] = [
   {
     id: 'shop',
-    label: 'Marketplace',
+    label: 'Market',
     shortLabel: 'Market',
     icon: 'shop',
     items: [
-      { sectionKey: 'shop_jewellers', label: 'Jewellers' },
-      { sectionKey: 'shop_products', label: 'Catalogue' },
+      { sectionKey: 'shop_jewellers', label: 'Search jeweller' },
+      { sectionKey: 'shop_products', label: 'Products' },
     ],
   },
   {
@@ -18,8 +18,9 @@ export const CUSTOMER_NAV_GROUPS: DashboardNavGroup[] = [
     shortLabel: 'Invest',
     icon: 'coins',
     items: [
-      { sectionKey: 'invest_fractional', label: 'Buy gold' },
-      { sectionKey: 'invest_deposit', label: 'Gold deposit' },
+      { sectionKey: 'invest_fractional', label: 'Fractional' },
+      { sectionKey: 'invest_deposit', label: 'Deposit' },
+      { sectionKey: 'invest_scheme', label: 'Scheme' },
     ],
   },
   {
@@ -29,19 +30,20 @@ export const CUSTOMER_NAV_GROUPS: DashboardNavGroup[] = [
     icon: 'portfolio',
     items: [
       { sectionKey: 'portfolio_overview', label: 'Overview' },
-      { sectionKey: 'portfolio_holdings', label: 'Vaults' },
-      { sectionKey: 'portfolio_vault_ids', label: 'Vault IDs' },
+      { sectionKey: 'portfolio_holdings', label: 'Vault' },
+      { sectionKey: 'portfolio_vault_ids', label: 'Vault ID' },
     ],
   },
   {
     id: 'redeem',
-    label: 'Use gold',
-    shortLabel: 'Use',
-    icon: 'grid',
+    label: 'Redeem',
+    shortLabel: 'Redeem',
+    icon: 'redeem',
     items: [
-      { sectionKey: 'redeem_vault_shop', label: 'Shop with vault' },
+      { sectionKey: 'redeem_cash', label: 'Cash sell' },
       { sectionKey: 'redeem_transfer', label: 'Transfer' },
-      { sectionKey: 'redeem_hub', label: 'Redeem & liquidity' },
+      { sectionKey: 'redeem_loan', label: 'Loan' },
+      { sectionKey: 'redeem_emergency', label: 'Emergency' },
     ],
   },
   {
@@ -50,8 +52,11 @@ export const CUSTOMER_NAV_GROUPS: DashboardNavGroup[] = [
     shortLabel: 'Profile',
     icon: 'profile',
     items: [
+      { sectionKey: 'profile_cridora_id', label: 'Cridora ID' },
+      { sectionKey: 'profile_qr', label: 'QR code' },
+      { sectionKey: 'profile_security', label: 'Password & security' },
+      { sectionKey: 'profile_personal', label: 'Personal details' },
       { sectionKey: 'profile_kyc', label: 'KYC' },
-      { sectionKey: 'profile_more', label: 'Account' },
     ],
   },
 ]
@@ -62,9 +67,9 @@ export const CUSTOMER_LEGACY_SECTION: Record<string, string> = {
   overview: 'portfolio_overview',
   kyc: 'profile_kyc',
   portfolio: 'portfolio_overview',
-  payments: 'profile_more',
+  payments: 'profile_personal',
   shop_offers: 'shop_products',
-  shop_schemes: 'shop_products',
+  shop_schemes: 'invest_scheme',
   invest_deposit: 'invest_deposit',
   invest_goldnest: 'invest_fractional',
   invest_history: 'invest_fractional',
@@ -72,15 +77,14 @@ export const CUSTOMER_LEGACY_SECTION: Record<string, string> = {
   portfolio_locked: 'portfolio_holdings',
   portfolio_activity: 'portfolio_holdings',
   portfolio_vaults: 'portfolio_vault_ids',
-  redeem_ornament: 'redeem_vault_shop',
-  redeem_cash: 'redeem_hub',
-  redeem_loan: 'redeem_hub',
-  redeem_emergency: 'redeem_hub',
-  profile_account: 'profile_more',
-  profile_security: 'profile_more',
-  profile_notifications: 'profile_more',
-  profile_payments: 'profile_more',
-  profile_settings: 'profile_more',
+  redeem_vault_shop: 'redeem_cash',
+  redeem_hub: 'redeem_cash',
+  redeem_cash_sell: 'redeem_cash',
+  profile_account: 'profile_personal',
+  profile_notifications: 'profile_personal',
+  profile_payments: 'profile_personal',
+  profile_settings: 'profile_security',
+  profile_more: 'profile_personal',
 }
 
 export function normalizeCustomerSection(raw: string | null): string | null {

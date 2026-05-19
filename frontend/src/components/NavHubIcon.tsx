@@ -74,6 +74,12 @@ export function NavHubIcon({ icon, active }: { icon: HubIcon; active: boolean })
           <path d="M5 12h14M12 5c2.5 2.2 3.5 5.2 3.5 7s-1 4.8-3.5 7M12 5c-2.5 2.2-3.5 5.2-3.5 7s1 4.8 3.5 7" stroke={c} />
         </svg>
       )
+    case 'redeem':
+      return (
+        <svg {...common} width={24} height={24} style={{ opacity }}>
+          <path d="M12 5v14M8 9l4-4 4 4M8 15l4 4 4-4" stroke={c} />
+        </svg>
+      )
     case 'shield':
       return (
         <svg {...common} width={24} height={24} style={{ opacity }}>

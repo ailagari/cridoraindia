@@ -2,16 +2,9 @@ import type { DashboardNavGroup } from './types'
 
 export const JEWELLER_NAV_GROUPS: DashboardNavGroup[] = [
   {
-    id: 'portfolio',
-    label: 'Portfolio',
-    shortLabel: 'Portfolio',
-    icon: 'portfolio',
-    items: [{ sectionKey: 'portfolio', label: 'Portfolio' }],
-  },
-  {
     id: 'customers',
-    label: 'Customers',
-    shortLabel: 'Clients',
+    label: 'Customer',
+    shortLabel: 'Customer',
     icon: 'users',
     items: [{ sectionKey: 'cust_hub', label: 'Customer vaults' }],
   },
@@ -26,15 +19,22 @@ export const JEWELLER_NAV_GROUPS: DashboardNavGroup[] = [
     ],
   },
   {
+    id: 'portfolio',
+    label: 'Portfolio',
+    shortLabel: 'Portfolio',
+    icon: 'portfolio',
+    items: [{ sectionKey: 'portfolio', label: 'Portfolio' }],
+  },
+  {
     id: 'transactions',
     label: 'Operations',
     shortLabel: 'Ops',
     icon: 'coins',
     items: [
-      { sectionKey: 'txn_purchases', label: 'Purchases' },
-      { sectionKey: 'txn_deposits', label: 'Gold deposits' },
-      { sectionKey: 'txn_ops', label: 'Redemptions' },
-      { sectionKey: 'txn_transfers', label: 'Transfers' },
+      { sectionKey: 'txn_purchases', label: 'Purchase' },
+      { sectionKey: 'txn_deposits', label: 'Deposit' },
+      { sectionKey: 'txn_ops', label: 'Redemption' },
+      { sectionKey: 'txn_transfers', label: 'Transfer' },
     ],
   },
   {
@@ -43,8 +43,8 @@ export const JEWELLER_NAV_GROUPS: DashboardNavGroup[] = [
     shortLabel: 'Profile',
     icon: 'profile',
     items: [
-      { sectionKey: 'prof_kyb', label: 'KYB' },
       { sectionKey: 'prof_more', label: 'Shop & business' },
+      { sectionKey: 'prof_kyb', label: 'KYB' },
     ],
   },
 ]

@@ -25,6 +25,7 @@ from apps.accounts.models import (
     PortfolioUserNotification,
 )
 from apps.accounts.services.personal_holdings import (
+    admin_personal_vault_user_summaries,
     calculate_holding_value_inr,
     customer_personal_holdings_qs,
     customer_portfolio_ledger_payload,
@@ -697,22 +698,16 @@ class AdminPersonalHoldingsListView(APIView):
     def get(self, request):
         if not _admin_ok(request):
             return Response({"detail": "Admin only."}, status=status.HTTP_403_FORBIDDEN)
-        qs = PersonalGoldHolding.objects.filter(is_removed=False).select_related("user", "jeweller")
-        uid = request.query_params.get("user_id")
-        if uid:
+        uid_raw = request.query_params.get("user_id")
+        user_id = None
+        if uid_raw:
             try:
-                qs = qs.filter(user_id=int(uid))
+                user_id = int(uid_raw)
             except ValueError:
                 pass
-        q = (request.query_params.get("q") or "").strip().lower()
-        if q:
-            qs = qs.filter(title__icontains=q)
-        rows = list(qs.order_by("-updated_at")[:250])
-        return Response(
-            {
-                "results": [_holding_detail_dict(h, include_documents=False) for h in rows],
-            }
-        )
+        q = (request.query_params.get("q") or "").strip()
+        results = admin_personal_vault_user_summaries(q=q or None, user_id=user_id)
+        return Response({"results": results})
 
 
 class AdminPersonalHoldingRemoveView(APIView):

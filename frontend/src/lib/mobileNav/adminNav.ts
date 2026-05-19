@@ -2,24 +2,14 @@ import type { DashboardNavGroup } from './types'
 
 export const ADMIN_NAV_GROUPS: DashboardNavGroup[] = [
   {
-    id: 'overview',
-    label: 'Overview',
-    shortLabel: 'Home',
-    icon: 'home',
+    id: 'users',
+    label: 'Users',
+    shortLabel: 'Users',
+    icon: 'users',
     items: [
-      { sectionKey: 'ops_overview', label: 'Pulse' },
-      { sectionKey: 'ops_portfolio', label: 'Holdings' },
-      { sectionKey: 'ops_personal_vault', label: 'Gold vault' },
-    ],
-  },
-  {
-    id: 'kyc',
-    label: 'Approvals',
-    shortLabel: 'KYC',
-    icon: 'shield',
-    items: [
-      { sectionKey: 'ap_kyc', label: 'Customers' },
-      { sectionKey: 'ap_kyb', label: 'Jewellers' },
+      { sectionKey: 'users_jewellers', label: 'Jewellers' },
+      { sectionKey: 'users_customers', label: 'Customers' },
+      { sectionKey: 'users_kyc_kyb', label: 'KYC / KYB' },
     ],
   },
   {
@@ -29,26 +19,38 @@ export const ADMIN_NAV_GROUPS: DashboardNavGroup[] = [
     icon: 'globe',
     items: [
       { sectionKey: 'mkt_products', label: 'Catalogue' },
-      { sectionKey: 'mkt_programs', label: 'Programs & risk' },
+      { sectionKey: 'mkt_programs', label: 'Programs & risks' },
     ],
   },
   {
-    id: 'settlements',
+    id: 'portfolio',
+    label: 'Portfolio',
+    shortLabel: 'Portfolio',
+    icon: 'portfolio',
+    items: [
+      { sectionKey: 'ops_overview', label: 'Pulse' },
+      { sectionKey: 'ops_portfolio', label: 'Holding' },
+      { sectionKey: 'ops_personal_vault', label: 'Gold vault' },
+    ],
+  },
+  {
+    id: 'treasury',
     label: 'Treasury',
-    shortLabel: 'Money',
+    shortLabel: 'Treasury',
     icon: 'coins',
     items: [{ sectionKey: 'fin_hub', label: 'Settlements' }],
   },
   {
-    id: 'settings',
+    id: 'control',
     label: 'Control',
-    shortLabel: 'Admin',
+    shortLabel: 'Control',
     icon: 'building',
     items: [
-      { sectionKey: 'people_users', label: 'Users' },
       { sectionKey: 'plat_festival', label: 'Pushes & alerts' },
       { sectionKey: 'plat_gold', label: 'Ticker & fees' },
       { sectionKey: 'plat_control', label: 'Controls' },
+      { sectionKey: 'plat_security', label: 'Password & security' },
+      { sectionKey: 'plat_account', label: 'Account settings' },
     ],
   },
 ]
@@ -58,16 +60,20 @@ export const ADMIN_DEFAULT_SECTION = 'ops_overview'
 export const ADMIN_LEGACY_SECTION: Record<string, string> = {
   overview: 'ops_overview',
   portfolio: 'ops_portfolio',
-  kyc: 'ap_kyc',
-  kyb: 'ap_kyb',
-  users: 'people_users',
+  kyc: 'users_kyc_kyb',
+  kyb: 'users_kyc_kyb',
+  ap_kyc: 'users_kyc_kyb',
+  ap_kyb: 'users_kyc_kyb',
+  users: 'users_customers',
+  people_users: 'users_customers',
   payments: 'fin_hub',
   ledger: 'fin_hub',
   mkt_schemes: 'mkt_programs',
   mkt_offers: 'mkt_programs',
   mkt_reports: 'mkt_programs',
   plat_emergency: 'plat_control',
-  plat_settings: 'plat_control',
+  plat_settings: 'plat_account',
+  settings: 'plat_account',
 }
 
 export function normalizeAdminSection(raw: string | null): string | null {

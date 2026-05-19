@@ -35,12 +35,12 @@ export function dashboardAccountShortcutPath(user: AuthUser): string {
   const base = userDashboardPath(user)
   const section =
     user.user_type === 'customer'
-      ? 'profile_more'
+      ? 'profile_personal'
       : user.user_type === 'jeweller'
         ? 'prof_more'
         : user.user_type === 'admin'
-          ? 'people_users'
-          : 'profile_more'
+          ? 'plat_account'
+          : 'profile_personal'
   const sep = base.includes('?') ? '&' : '?'
   return `${base}${sep}section=${section}`
 }
@@ -51,11 +51,11 @@ export function isAccountShortcutSection(user: AuthUser | null, sectionParam: st
   const s = sectionParam ?? ''
   switch (user.user_type) {
     case 'customer':
-      return s === 'profile_more'
+      return s === 'profile_personal' || s === 'profile_security' || s === 'profile_cridora_id'
     case 'jeweller':
       return s === 'prof_more'
     case 'admin':
-      return s === 'people_users' || s === 'plat_gold' || s === 'plat_control'
+      return s === 'plat_account' || s === 'plat_security' || s === 'plat_gold' || s === 'plat_control'
     default:
       return false
   }

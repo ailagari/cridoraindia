@@ -433,14 +433,12 @@ export function AdminDashboardPage() {
     if (!data?.stats) return ADMIN_NAV_GROUPS
     const kyc = data.stats.kyc_review_queue_count ?? 0
     const kyb = data.stats.kyb_review_queue_count ?? 0
+    const queueTotal = kyc + kyb
     return ADMIN_NAV_GROUPS.map((group) => ({
       ...group,
       items: group.items.map((item) => {
-        if (item.sectionKey === 'ap_kyc' && kyc > 0) {
-          return { ...item, badge: kyc }
-        }
-        if (item.sectionKey === 'ap_kyb' && kyb > 0) {
-          return { ...item, badge: kyb }
+        if (item.sectionKey === 'users_kyc_kyb' && queueTotal > 0) {
+          return { ...item, badge: queueTotal }
         }
         return { ...item }
       }),
@@ -594,31 +592,57 @@ export function AdminDashboardPage() {
           </p>
         ) : null}
 
-        {active === 'ap_kyc' && data ? (
-          <QueueTable
-            title="Customers awaiting review"
-            rows={data.kyc_queue}
-            kind="kyc"
-            busyId={busyId}
-            onInspect={(id) => void openUserModal(id)}
-            onApproveInline={(id) => void runKycAction(id, 'approve')}
-          />
+        {active === 'users_kyc_kyb' && data ? (
+          <>
+            <div className="admin-dash-widgets" style={{ marginBottom: '1rem' }}>
+              <div className="admin-dash-stat admin-dash-stat--amber">
+                <span className="admin-dash-stat__eyebrow">KYC pending</span>
+                <p className="admin-dash-stat__value">{data.stats.kyc_review_queue_count}</p>
+                <p className="admin-dash-stat__sub">
+                  {data.stats.total_customers} customers · {data.stats.pending_kyc_identity} awaiting identity
+                </p>
+              </div>
+              <div className="admin-dash-stat admin-dash-stat--iris">
+                <span className="admin-dash-stat__eyebrow">KYB pending</span>
+                <p className="admin-dash-stat__value">{data.stats.kyb_review_queue_count}</p>
+                <p className="admin-dash-stat__sub">
+                  {data.stats.total_jewellers} jewellers · {data.stats.pending_kyb_identity} awaiting identity
+                </p>
+              </div>
+            </div>
+            <QueueTable
+              title="Customers awaiting KYC review"
+              rows={data.kyc_queue}
+              kind="kyc"
+              busyId={busyId}
+              onInspect={(id) => void openUserModal(id)}
+              onApproveInline={(id) => void runKycAction(id, 'approve')}
+            />
+            <QueueTable
+              title="Jewellers awaiting KYB review"
+              rows={data.kyb_queue}
+              kind="kyb"
+              busyId={busyId}
+              onInspect={(id) => void openUserModal(id)}
+              onApproveInline={(id) => void runKybAction(id, 'approve')}
+            />
+          </>
         ) : null}
 
-        {active === 'ap_kyb' && data ? (
-          <QueueTable
-            title="Jewellers awaiting KYB"
-            rows={data.kyb_queue}
-            kind="kyb"
-            busyId={busyId}
-            onInspect={(id) => void openUserModal(id)}
-            onApproveInline={(id) => void runKybAction(id, 'approve')}
-          />
-        ) : null}
-
-        {active === 'people_users' && data ? (
+        {active === 'users_customers' && data ? (
           <UserDirectoryTable
-            users={data.recent_users}
+            title="Customers"
+            users={data.recent_users.filter((u) => u.user_type === 'customer')}
+            busyId={busyId}
+            onFreeze={runFreeze}
+            onInspect={(id) => void openUserModal(id)}
+          />
+        ) : null}
+
+        {active === 'users_jewellers' && data ? (
+          <UserDirectoryTable
+            title="Jewellers"
+            users={data.recent_users.filter((u) => u.user_type === 'jeweller')}
             busyId={busyId}
             onFreeze={runFreeze}
             onInspect={(id) => void openUserModal(id)}
@@ -659,6 +683,24 @@ export function AdminDashboardPage() {
               </p>
             </div>
           </>
+        ) : null}
+
+        {active === 'plat_security' ? (
+          <div className="dash-coming dash-coming--payments">
+            <h2 className="dash-coming__title">Password & security</h2>
+            <p className="dash-coming__text">
+              Admin password rotation, session management, and access controls will be managed here.
+            </p>
+          </div>
+        ) : null}
+
+        {active === 'plat_account' ? (
+          <div className="dash-coming dash-coming--payments">
+            <h2 className="dash-coming__title">Account settings</h2>
+            <p className="dash-coming__text">
+              Admin profile, notification preferences, and team access settings will appear here.
+            </p>
+          </div>
         ) : null}
       </div>
 
@@ -1019,11 +1061,13 @@ function QueueTable({
 }
 
 function UserDirectoryTable({
+  title,
   users,
   busyId,
   onFreeze,
   onInspect,
 }: {
+  title: string
   users: QueueUser[]
   busyId: number | null
   onFreeze: (id: number, freeze: boolean) => void
@@ -1031,7 +1075,7 @@ function UserDirectoryTable({
 }) {
   return (
     <>
-      <h2 className="dash-table-title">Recent registrations</h2>
+      <h2 className="dash-table-title">{title}</h2>
       <div className="dash-table-scroll card">
         <table className="admin-user-table">
           <thead>

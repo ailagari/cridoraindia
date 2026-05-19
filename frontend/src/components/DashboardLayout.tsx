@@ -1,6 +1,7 @@
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { CridoraLogo } from '@/components/CridoraLogo'
+import { DashboardMobileSubNav } from '@/components/DashboardMobileSubNav'
 import { NavHubIcon } from '@/components/NavHubIcon'
 import { GoldTickerStrip } from '@/components/GoldTickerStrip'
 import { NotificationBell } from '@/components/NotificationBell'
@@ -276,27 +277,12 @@ export function DashboardLayout({
           </div>
         </header>
 
-        {activeGroup.items.length > 1 ? (
-          <div className="dash-hub-tabs" aria-label="Subsections">
-            {activeGroup.items.map((item) => {
-              const active = item.sectionKey === activeSection
-              return (
-                <button
-                  key={item.sectionKey}
-                  type="button"
-                  className={'dash-hub-pill' + (active ? ' dash-hub-pill--active' : '')}
-                  style={active ? { borderColor: meta.accentVar, color: meta.accentVar } : undefined}
-                  onClick={() => pickSection(item.sectionKey)}
-                >
-                  <span className="dash-hub-pill-label">{item.label}</span>
-                  {typeof item.badge === 'number' && item.badge > 0 ? (
-                    <span className="dash-hub-badge">{item.badge > 99 ? '99+' : item.badge}</span>
-                  ) : null}
-                </button>
-              )
-            })}
-          </div>
-        ) : null}
+        <DashboardMobileSubNav
+          items={activeGroup.items}
+          activeSection={activeSection}
+          accentVar={meta.accentVar}
+          onPick={pickSection}
+        />
 
         <main className="dash-content dash-content--with-bottom">{children}</main>
       </div>
