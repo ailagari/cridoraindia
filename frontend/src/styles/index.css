@@ -8142,11 +8142,34 @@ select.input {
   font-size: 1rem;
 }
 
-.gold-transfer-mobile__success {
-  margin: 0;
+.gold-transfer-mobile-toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px));
+  z-index: 2000;
+  transform: translateX(-50%);
+  max-width: min(90vw, 380px);
+  padding: 0.7rem 1.15rem;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--gold) 55%, var(--border-soft));
+  background: var(--veil-90);
   color: var(--gold-light);
   font-size: 0.85rem;
-  font-weight: 600;
+  font-weight: 700;
+  text-align: center;
+  box-shadow: 0 10px 36px color-mix(in srgb, var(--gold) 18%, transparent);
+  animation: gold-transfer-toast-in 0.28s ease;
+}
+
+@keyframes gold-transfer-toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
 }
 
 .gold-transfer-scan-overlay {

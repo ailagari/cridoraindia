@@ -112,7 +112,7 @@ export function useGoldTransfer({ roleLabel }: Options) {
     [goldUpiInput],
   )
 
-  const onSend = useCallback(async () => {
+  const onSend = useCallback(async (): Promise<string | false> => {
     setSendErr('')
     setSendOk('')
     if (!recipient) {
@@ -129,12 +129,21 @@ export function useGoldTransfer({ roleLabel }: Options) {
         return false
       }
       setWallet(result.wallet)
-      setSendOk(`${result.detail} Sent ${grams.trim()} g to ${upi}.`)
-      return true
+      const message = `${result.detail} Sent ${grams.trim()} g to ${upi}.`
+      setSendOk(message)
+      return message
     } finally {
       setBusy(false)
     }
   }, [recipient, goldUpiInput, grams, isCustomer, fromCustodianId])
+
+  const prepareForNextTransfer = useCallback(() => {
+    setRecipient(null)
+    setRoutingKind('')
+    setResolveErr('')
+    setSendErr('')
+    setGoldUpiInput('')
+  }, [])
 
   const selectedVaultGrams = useMemo(() => {
     if (!isCustomer || fromCustodianId == null) return null
@@ -169,6 +178,7 @@ export function useGoldTransfer({ roleLabel }: Options) {
     refreshWallet,
     clearRecipient,
     resetSendState,
+    prepareForNextTransfer,
     onResolve,
     onSend,
   }

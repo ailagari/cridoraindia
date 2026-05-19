@@ -30,10 +30,17 @@ export function GoldTransferMobileFlow({ roleLabel, initialMode = 'scan', receiv
   const [step, setStep] = useState<MobileStep>('pick')
   const [scanOpen, setScanOpen] = useState(false)
   const [scanErr, setScanErr] = useState('')
+  const [successToast, setSuccessToast] = useState('')
 
   useEffect(() => {
     setMode(initialMode)
   }, [initialMode])
+
+  useEffect(() => {
+    if (!successToast) return
+    const timer = window.setTimeout(() => setSuccessToast(''), 2800)
+    return () => window.clearTimeout(timer)
+  }, [successToast])
 
   const balanceLabel = useMemo(() => {
     if (!transfer.wallet) return '—'
@@ -62,8 +69,12 @@ export function GoldTransferMobileFlow({ roleLabel, initialMode = 'scan', receiv
   }, [transfer])
 
   const onSend = useCallback(async () => {
-    const ok = await transfer.onSend()
-    if (ok) setStep('pick')
+    const message = await transfer.onSend()
+    if (message) {
+      setSuccessToast(message)
+      transfer.prepareForNextTransfer()
+      setStep('pick')
+    }
   }, [transfer])
 
   const onBackToPick = useCallback(() => {
@@ -189,7 +200,6 @@ export function GoldTransferMobileFlow({ roleLabel, initialMode = 'scan', receiv
           </button>
 
           {transfer.sendErr ? <p className="form-error">{transfer.sendErr}</p> : null}
-          {transfer.sendOk ? <p className="gold-transfer-mobile__success">{transfer.sendOk}</p> : null}
         </div>
       </div>
     )
@@ -283,6 +293,12 @@ export function GoldTransferMobileFlow({ roleLabel, initialMode = 'scan', receiv
         onScan={(address) => void onScannedRaw(address)}
         onError={(detail) => setScanErr(detail)}
       />
+
+      {successToast ? (
+        <div className="gold-transfer-mobile-toast" role="status" aria-live="polite">
+          {successToast}
+        </div>
+      ) : null}
     </div>
   )
 }
