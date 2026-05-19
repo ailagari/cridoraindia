@@ -111,6 +111,22 @@ class FractionalUpiApiTests(APITestCase):
             format="json",
         )
         self.assertEqual(res.status_code, 400)
+        self.assertIn("UPI", str(res.data))
+
+    def test_upi_order_accepts_amount_below_former_minimum(self):
+        self.client.force_authenticate(self.customer)
+        res = self.client.post(
+            "/api/v1/fractional/orders/",
+            {
+                "jeweller_id": self.jeweller.id,
+                "payment_method": "upi",
+                "mode": "by_total_inr",
+                "total_inr": "100",
+            },
+            format="json",
+        )
+        self.assertEqual(res.status_code, 201, res.data)
+        self.assertEqual(res.data["total_inr"], "100.00")
 
     def test_payment_payload_and_submit_utr(self):
         order_id = self._create_upi_order()

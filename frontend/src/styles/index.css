@@ -5380,6 +5380,32 @@ select.input {
   display: none;
 }
 
+/* Shared two-option segment control (forms, verify tabs, gold transfer). */
+.dash-segment-pair {
+  display: flex;
+  gap: 0.35rem;
+  padding: 0.32rem;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--dash-pill-bg) 88%, transparent);
+  border: 1px solid var(--border-soft);
+}
+
+.dash-segment-pair .dash-mobile-segment-btn {
+  flex: 1;
+  min-height: 2.85rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.02em;
+}
+
+.fractional-buy-payment-segments {
+  max-width: 480px;
+}
+
+.fractional-jeweller-verify-tabs {
+  margin-bottom: 1rem;
+  max-width: 420px;
+}
+
 .dash-mobile-segment-btn {
   flex: 1 0 auto;
   min-width: 0;
@@ -7974,19 +8000,6 @@ select.input {
   color: var(--text-muted);
 }
 
-.gold-transfer-mobile__segments {
-  display: flex;
-  gap: 0.35rem;
-  padding: 0.28rem;
-  border-radius: 14px;
-  background: color-mix(in srgb, var(--dash-pill-bg) 88%, transparent);
-  border: 1px solid var(--border-soft);
-}
-
-.gold-transfer-mobile__segments .dash-mobile-segment-btn {
-  flex: 1;
-}
-
 .gold-transfer-mobile__scan-card {
   display: flex;
   flex-direction: column;
@@ -8230,20 +8243,6 @@ select.input {
   border: 2px solid color-mix(in srgb, var(--gold) 85%, #fff);
   border-radius: 18px;
   box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.45);
-}
-
-.fractional-jeweller-verify-tabs {
-  display: flex;
-  gap: 0.35rem;
-  padding: 0.28rem;
-  border-radius: 14px;
-  background: color-mix(in srgb, var(--dash-pill-bg) 88%, transparent);
-  border: 1px solid var(--border-soft);
-  max-width: 420px;
-}
-
-.fractional-jeweller-verify-tabs .dash-mobile-segment-btn {
-  flex: 1;
 }
 
 .fractional-upi-pay {

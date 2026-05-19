@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { GoldTransferQrScannerOverlay } from '@/features/gold/GoldTransferQrScannerOverlay'
+import { DashSegmentPair } from '@/components/DashSegmentPair'
 import { useGoldTransfer } from '@/features/gold/useGoldTransfer'
 import { parseScannedQrText } from '@/lib/cridoraBarcodeScan'
 import { formatVaultCardDisplay } from '@/lib/vaultRoutingDisplay'
@@ -16,6 +17,11 @@ type Props = {
 }
 
 const QUICK_GRAMS = ['0.1', '0.5', '1', '2']
+
+const SEND_MODES = [
+  { id: 'scan', label: 'Scan QR' },
+  { id: 'enter', label: 'Enter ID' },
+] as const
 
 function formatGramChip(value: string): string {
   const n = Number.parseFloat(value)
@@ -217,26 +223,12 @@ export function GoldTransferMobileFlow({ roleLabel, initialMode = 'scan', receiv
         ) : null}
       </div>
 
-      <div className="gold-transfer-mobile__segments" role="tablist" aria-label="Send method">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={mode === 'scan'}
-          className={`dash-mobile-segment-btn${mode === 'scan' ? ' dash-mobile-segment-btn--active' : ''}`}
-          onClick={() => setMode('scan')}
-        >
-          <span className="dash-mobile-segment-btn__label">Scan QR</span>
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={mode === 'enter'}
-          className={`dash-mobile-segment-btn${mode === 'enter' ? ' dash-mobile-segment-btn--active' : ''}`}
-          onClick={() => setMode('enter')}
-        >
-          <span className="dash-mobile-segment-btn__label">Enter ID</span>
-        </button>
-      </div>
+      <DashSegmentPair
+        items={[...SEND_MODES]}
+        value={mode}
+        onChange={(id) => setMode(id as MobileMode)}
+        ariaLabel="Send method"
+      />
 
       {transfer.loadErr ? <p className="form-error">{transfer.loadErr}</p> : null}
       {scanErr ? <p className="form-error">{scanErr}</p> : null}

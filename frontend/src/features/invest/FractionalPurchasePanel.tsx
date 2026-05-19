@@ -10,8 +10,8 @@ import {
   type FractionalPurchaseDTO,
   type FractionalQuoteDTO,
 } from '@/lib/fractionalPurchaseApi'
+import { DashSegmentPair } from '@/components/DashSegmentPair'
 import { FractionalUpiPayStep } from '@/features/invest/FractionalUpiPayStep'
-import { usePublicLayoutMax767 } from '@/hooks/usePublicLayoutMax767'
 import { useCounterOtpCountdown } from '@/features/invest/useCounterOtpCountdown'
 import { fetchGoldWallet } from '@/lib/goldTransferApi'
 import { LIVE_BALANCE_POLL_MS } from '@/lib/liveDeskIntervals'
@@ -30,8 +30,12 @@ function formatExpiry(iso: string): string {
   return new Date(t).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })
 }
 
+const PAYMENT_METHODS = [
+  { id: 'upi', label: 'Pay online (UPI)' },
+  { id: 'counter', label: 'Pay at counter' },
+] as const
+
 export function FractionalPurchasePanel() {
-  const narrow = usePublicLayoutMax767()
   const [params] = useSearchParams()
   const jewellerFromUrl = params.get('jeweller_id')
 
@@ -364,49 +368,13 @@ export function FractionalPurchasePanel() {
 
           <fieldset style={{ border: 'none', padding: 0, margin: 0 }}>
             <legend className="fractional-buy-legend">Payment method</legend>
-            <div
-              className={narrow ? 'gold-transfer-mobile__segments' : ''}
-              style={narrow ? undefined : { display: 'flex', flexWrap: 'wrap', gap: '1rem' }}
-              role="tablist"
-              aria-label="Payment method"
-            >
-              <button
-                type="button"
-                role="tab"
-                aria-selected={paymentMethod === 'upi'}
-                className={narrow ? `dash-mobile-segment-btn${paymentMethod === 'upi' ? ' dash-mobile-segment-btn--active' : ''}` : undefined}
-                style={narrow ? undefined : { font: 'inherit', cursor: 'pointer' }}
-                onClick={() => setPaymentMethod('upi')}
-              >
-                {narrow ? (
-                  <span className="dash-mobile-segment-btn__label">Pay online (UPI)</span>
-                ) : (
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                    <input type="radio" name="frac-pay" checked={paymentMethod === 'upi'} readOnly />
-                    Pay online (UPI)
-                  </label>
-                )}
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={paymentMethod === 'counter'}
-                className={
-                  narrow ? `dash-mobile-segment-btn${paymentMethod === 'counter' ? ' dash-mobile-segment-btn--active' : ''}` : undefined
-                }
-                style={narrow ? undefined : { font: 'inherit', cursor: 'pointer' }}
-                onClick={() => setPaymentMethod('counter')}
-              >
-                {narrow ? (
-                  <span className="dash-mobile-segment-btn__label">Pay at counter</span>
-                ) : (
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                    <input type="radio" name="frac-pay" checked={paymentMethod === 'counter'} readOnly />
-                    Pay at counter
-                  </label>
-                )}
-              </button>
-            </div>
+            <DashSegmentPair
+              items={[...PAYMENT_METHODS]}
+              value={paymentMethod}
+              onChange={(id) => setPaymentMethod(id as 'upi' | 'counter')}
+              ariaLabel="Payment method"
+              className="fractional-buy-payment-segments"
+            />
           </fieldset>
 
           <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-muted)', lineHeight: 1.45 }}>

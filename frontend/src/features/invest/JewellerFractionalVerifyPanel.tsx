@@ -7,10 +7,15 @@ import {
   type JewellerFractionalPendingRow,
   type JewellerFractionalPendingUpiRow,
 } from '@/lib/fractionalPurchaseApi'
+import { DashSegmentPair } from '@/components/DashSegmentPair'
 import { useCounterOtpCountdown } from '@/features/invest/useCounterOtpCountdown'
 import { LIVE_BALANCE_POLL_MS } from '@/lib/liveDeskIntervals'
 import { useLivePoll } from '@/lib/useLivePoll'
-import { usePublicLayoutMax767 } from '@/hooks/usePublicLayoutMax767'
+
+const VERIFY_MODES = [
+  { id: 'counter', label: 'Counter OTP' },
+  { id: 'upi', label: 'Online UPI' },
+] as const
 
 function formatInr(s: string): string {
   const n = Number.parseFloat(s)
@@ -62,7 +67,6 @@ function CustomerOtpExpiryHint({ expiresAt }: { expiresAt?: string | null }) {
 type VerifyMode = 'counter' | 'upi'
 
 export function JewellerFractionalVerifyPanel() {
-  const narrow = usePublicLayoutMax767()
   const [mode, setMode] = useState<VerifyMode>('counter')
   const [counterRows, setCounterRows] = useState<JewellerFractionalPendingRow[]>([])
   const [upiRows, setUpiRows] = useState<JewellerFractionalPendingUpiRow[]>([])
@@ -159,31 +163,13 @@ export function JewellerFractionalVerifyPanel() {
         before confirming.
       </p>
 
-      <div
-        className={narrow ? 'gold-transfer-mobile__segments' : 'fractional-jeweller-verify-tabs'}
-        role="tablist"
-        aria-label="Purchase verification type"
-        style={{ marginBottom: '1rem' }}
-      >
-        <button
-          type="button"
-          role="tab"
-          aria-selected={mode === 'counter'}
-          className={`dash-mobile-segment-btn${mode === 'counter' ? ' dash-mobile-segment-btn--active' : ''}`}
-          onClick={() => setMode('counter')}
-        >
-          <span className="dash-mobile-segment-btn__label">Counter OTP</span>
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={mode === 'upi'}
-          className={`dash-mobile-segment-btn${mode === 'upi' ? ' dash-mobile-segment-btn--active' : ''}`}
-          onClick={() => setMode('upi')}
-        >
-          <span className="dash-mobile-segment-btn__label">Online UPI</span>
-        </button>
-      </div>
+      <DashSegmentPair
+        items={[...VERIFY_MODES]}
+        value={mode}
+        onChange={(id) => setMode(id as VerifyMode)}
+        ariaLabel="Purchase verification type"
+        className="fractional-jeweller-verify-tabs"
+      />
 
       <div style={{ marginBottom: '1rem', display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center' }}>
         <button type="button" className="btn btn-ghost" onClick={() => void load()}>

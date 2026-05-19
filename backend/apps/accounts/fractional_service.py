@@ -13,8 +13,7 @@ from apps.marketplace.spot_prices import resolve_cridora_base_22k_inr
 User = get_user_model()
 
 GST_PERCENT = Decimal("3")  # GST on gold value; aligned with marketplace metal GST handling
-MIN_TOTAL_INR = Decimal("500")
-MIN_GRAMS = Decimal("0.001")
+MIN_GRAMS = Decimal("0.001")  # gold deposit intake floor (not fractional purchase minimum)
 
 
 def jeweller_metal_rate_inr_per_gram(jeweller: User) -> Decimal:
@@ -53,8 +52,8 @@ def breakdown_from_total_inr(total_inr: Decimal, rate: Decimal) -> dict[str, Dec
 
 
 def validate_minimums(b: dict[str, Decimal]) -> str | None:
-    if b["total_inr"] < MIN_TOTAL_INR:
-        return f"Minimum order is ₹{MIN_TOTAL_INR} inclusive of GST."
-    if b["grams"] < MIN_GRAMS:
-        return f"Minimum gold quantity is {MIN_GRAMS} g."
+    if b["total_inr"] <= 0:
+        return "Enter a positive amount in ₹."
+    if b["grams"] <= 0:
+        return "Enter a positive gold quantity."
     return None
