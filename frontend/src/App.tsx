@@ -26,7 +26,6 @@ import { JewellerDashboardPage } from '@/pages/dashboard/JewellerDashboardPage'
 import { DashboardIndexRedirect } from '@/pages/dashboard/DashboardIndexRedirect'
 import { RedirectPreserveSearch } from '@/pages/dashboard/RedirectPreserveSearch'
 import { NativeNotificationBridge } from '@/components/NativeNotificationBridge'
-import { NativeAppDiagnostics } from '@/components/NativeAppDiagnostics'
 import { NativeAppSplash } from '@/components/NativeAppSplash'
 import { NativeAppEntryRoute } from '@/components/NativeAppEntryRoute'
 import { isNativePlatform } from '@/lib/capacitorPlatform'
@@ -43,7 +42,6 @@ export default function App() {
     <AppRouter>
       <ScrollToTop />
       <NativeNotificationBridge />
-      <NativeAppDiagnostics />
       <ThemeProvider>
         <AuthProvider>
           <NativeAppSplash />

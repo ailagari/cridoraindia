@@ -40,6 +40,9 @@ type AdminTickerPayload = {
   gold_deposit_yield_apr_percent?: string
   gold_loan_interest_apr_percent?: string
   gold_loan_processing_fee_percent?: string
+  gold_loan_processing_fee_jeweller_share_percent?: string
+  gold_loan_ltv_min_percent?: string
+  gold_loan_ltv_max_percent?: string
   cross_platform_fee_inr?: string
   platform_base_inr_per_gram_22k: string
   cridora_base_source?: string
@@ -352,6 +355,9 @@ export function AdminGoldTickerPanel() {
   const [depositYieldDraft, setDepositYieldDraft] = useState('0')
   const [loanAprDraft, setLoanAprDraft] = useState('0')
   const [loanFeeDraft, setLoanFeeDraft] = useState('0')
+  const [loanFeeJewellerShareDraft, setLoanFeeJewellerShareDraft] = useState('0')
+  const [loanLtvMinDraft, setLoanLtvMinDraft] = useState('95')
+  const [loanLtvMaxDraft, setLoanLtvMaxDraft] = useState('99')
   const [crossPlatformFeeDraft, setCrossPlatformFeeDraft] = useState('49')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
@@ -374,6 +380,9 @@ export function AdminGoldTickerPanel() {
     setDepositYieldDraft(j.gold_deposit_yield_apr_percent ?? '0')
     setLoanAprDraft(j.gold_loan_interest_apr_percent ?? '0')
     setLoanFeeDraft(j.gold_loan_processing_fee_percent ?? '0')
+    setLoanFeeJewellerShareDraft(j.gold_loan_processing_fee_jeweller_share_percent ?? '0')
+    setLoanLtvMinDraft(j.gold_loan_ltv_min_percent ?? '95')
+    setLoanLtvMaxDraft(j.gold_loan_ltv_max_percent ?? '99')
     setCrossPlatformFeeDraft(j.cross_platform_fee_inr ?? '49')
   }, [])
 
@@ -426,6 +435,9 @@ export function AdminGoldTickerPanel() {
         gold_deposit_yield_apr_percent: depositYieldDraft.trim(),
         gold_loan_interest_apr_percent: loanAprDraft.trim(),
         gold_loan_processing_fee_percent: loanFeeDraft.trim(),
+        gold_loan_processing_fee_jeweller_share_percent: loanFeeJewellerShareDraft.trim(),
+        gold_loan_ltv_min_percent: loanLtvMinDraft.trim(),
+        gold_loan_ltv_max_percent: loanLtvMaxDraft.trim(),
         cross_platform_fee_inr: crossPlatformFeeDraft.trim(),
       },
     })
@@ -760,6 +772,25 @@ export function AdminGoldTickerPanel() {
             <input value={loanFeeDraft} onChange={(e) => setLoanFeeDraft(e.target.value)} inputMode="decimal" />
             <span className="dash-footnote" style={{ display: 'block', marginTop: '0.25rem', fontSize: '0.68rem' }}>
               Headline: <strong className="tabular">{formatMaybeStrInr(loanFeeDraft, 3)}%</strong> of loan principal
+            </span>
+          </label>
+          <label className="field">
+            <span>Processing fee share to jewellers (%)</span>
+            <input
+              value={loanFeeJewellerShareDraft}
+              onChange={(e) => setLoanFeeJewellerShareDraft(e.target.value)}
+              inputMode="decimal"
+            />
+          </label>
+          <label className="field">
+            <span>Loan LTV range — minimum (%)</span>
+            <input value={loanLtvMinDraft} onChange={(e) => setLoanLtvMinDraft(e.target.value)} inputMode="decimal" />
+          </label>
+          <label className="field">
+            <span>Loan LTV range — maximum (%)</span>
+            <input value={loanLtvMaxDraft} onChange={(e) => setLoanLtvMaxDraft(e.target.value)} inputMode="decimal" />
+            <span className="dash-footnote" style={{ display: 'block', marginTop: '0.25rem', fontSize: '0.68rem' }}>
+              Jewellers offering loans choose any % between min and max.
             </span>
           </label>
         </div>

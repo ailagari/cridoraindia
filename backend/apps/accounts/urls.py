@@ -61,6 +61,16 @@ from .gold_deposit_views import (
     JewellerGoldDepositPendingView,
     JewellerGoldDepositVerifyView,
 )
+from .loan_views import (
+    GoldLoanCompareView,
+    GoldLoanConfirmView,
+    GoldLoanOutstandingView,
+    GoldLoanQuoteView,
+    JewellerLoanAcceptView,
+    JewellerLoanDisburseView,
+    JewellerLoanListView,
+    JewellerLoanRejectView,
+)
 from .sellback_views import (
     GoldSellbackConfirmView,
     GoldSellbackOutstandingView,
@@ -178,6 +188,10 @@ urlpatterns = [
     path("auth/password/change/", PasswordChangeView.as_view()),
     path("jeweller/business-profile/", JewellerBusinessProfileView.as_view()),
     path("gold/wallet/", GoldWalletView.as_view()),
+    path("gold/loans/compare/", GoldLoanCompareView.as_view()),
+    path("gold/loans/quote/", GoldLoanQuoteView.as_view()),
+    path("gold/loans/confirm/", GoldLoanConfirmView.as_view()),
+    path("gold/loans/outstanding/", GoldLoanOutstandingView.as_view()),
     path("gold/sellback/quote/", GoldSellbackQuoteView.as_view()),
     path("gold/sellback/confirm/", GoldSellbackConfirmView.as_view()),
     path("gold/sellback/outstanding/", GoldSellbackOutstandingView.as_view()),
@@ -236,6 +250,10 @@ urlpatterns = [
     path("jeweller/sellbacks/<int:pk>/complete/", JewellerSellbackCompleteView.as_view()),
     path("jeweller/sellbacks/<int:pk>/payout/", JewellerSellbackPayoutView.as_view()),
     path("jeweller/sellbacks/<int:pk>/submit-utr/", JewellerSellbackSubmitUtrView.as_view()),
+    path("jeweller/loans/", JewellerLoanListView.as_view()),
+    path("jeweller/loans/<int:pk>/accept/", JewellerLoanAcceptView.as_view()),
+    path("jeweller/loans/<int:pk>/reject/", JewellerLoanRejectView.as_view()),
+    path("jeweller/loans/<int:pk>/disburse/", JewellerLoanDisburseView.as_view()),
     path("jeweller/sellbacks/", JewellerSellbackListView.as_view()),
     path(
         "jeweller/custody-vaults/<int:customer_id>/ledger/",

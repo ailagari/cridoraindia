@@ -119,8 +119,26 @@ class GoldTickerConfig(models.Model):
     gold_loan_processing_fee_percent = models.DecimalField(
         max_digits=8,
         decimal_places=3,
-        default=Decimal("0"),
+        default=Decimal("2"),
         help_text="Platform-disclosed gold loan processing fee (% of loan principal).",
+    )
+    gold_loan_processing_fee_jeweller_share_percent = models.DecimalField(
+        max_digits=8,
+        decimal_places=3,
+        default=Decimal("0"),
+        help_text="Share of processing fee (%) paid to jeweller on disbursement; remainder is Cridora revenue.",
+    )
+    gold_loan_ltv_min_percent = models.DecimalField(
+        max_digits=8,
+        decimal_places=3,
+        default=Decimal("95"),
+        help_text="Minimum loan-to-value (%) jewellers may offer against custodied vault gold.",
+    )
+    gold_loan_ltv_max_percent = models.DecimalField(
+        max_digits=8,
+        decimal_places=3,
+        default=Decimal("99"),
+        help_text="Maximum loan-to-value (%) jewellers may offer against custodied vault gold.",
     )
     cross_platform_fee_inr = models.DecimalField(
         max_digits=12,
@@ -395,7 +413,14 @@ class JewellerPricingProfile(models.Model):
         max_digits=12,
         decimal_places=2,
         default=Decimal("0"),
-        help_text="Jeweller-disclosed extra ₹/g adjustment vs live loan reference (storefront disclosure).",
+        help_text="Legacy disclosure — prefer gold_loan_ltv_percent for max loan % of collateral.",
+    )
+    gold_loan_ltv_percent = models.DecimalField(
+        max_digits=8,
+        decimal_places=3,
+        null=True,
+        blank=True,
+        help_text="Loan-to-value (%) of vault collateral this jeweller offers; must be within platform min–max.",
     )
     golden_scheme_enabled = models.BooleanField(
         default=False,

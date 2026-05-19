@@ -74,6 +74,9 @@ class GoldTickerReadSerializer(serializers.ModelSerializer):
             "gold_deposit_yield_apr_percent",
             "gold_loan_interest_apr_percent",
             "gold_loan_processing_fee_percent",
+            "gold_loan_processing_fee_jeweller_share_percent",
+            "gold_loan_ltv_min_percent",
+            "gold_loan_ltv_max_percent",
             "cross_platform_fee_inr",
             "platform_base_inr_per_gram_22k",
             "cridora_base_source",
@@ -182,8 +185,26 @@ class GoldTickerAdminSerializer(serializers.ModelSerializer):
             "gold_deposit_yield_apr_percent",
             "gold_loan_interest_apr_percent",
             "gold_loan_processing_fee_percent",
+            "gold_loan_processing_fee_jeweller_share_percent",
+            "gold_loan_ltv_min_percent",
+            "gold_loan_ltv_max_percent",
             "cross_platform_fee_inr",
         )
+
+    def validate_gold_loan_ltv_min_percent(self, value):
+        if value < Decimal("0") or value > Decimal("100"):
+            raise serializers.ValidationError("Must be between 0 and 100.")
+        return value
+
+    def validate_gold_loan_ltv_max_percent(self, value):
+        if value < Decimal("0") or value > Decimal("100"):
+            raise serializers.ValidationError("Must be between 0 and 100.")
+        return value
+
+    def validate_gold_loan_processing_fee_jeweller_share_percent(self, value):
+        if value < Decimal("0") or value > Decimal("100"):
+            raise serializers.ValidationError("Must be between 0 and 100.")
+        return value
 
     def validate_live_metal_adjustments_json(self, value):
         from .metal_ticker_adjustments import normalize_live_metal_adjustments_json
@@ -225,6 +246,17 @@ class GoldTickerAdminSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 {key_24: "Leave blank or enter a positive 24K ₹/g."}
             )
+
+        min_ltv = attrs.get("gold_loan_ltv_min_percent")
+        max_ltv = attrs.get("gold_loan_ltv_max_percent")
+        if min_ltv is None and self.instance is not None:
+            min_ltv = self.instance.gold_loan_ltv_min_percent
+        if max_ltv is None and self.instance is not None:
+            max_ltv = self.instance.gold_loan_ltv_max_percent
+        if min_ltv is not None and max_ltv is not None and min_ltv > max_ltv:
+            raise serializers.ValidationError(
+                {"gold_loan_ltv_max_percent": "Must be greater than or equal to minimum LTV."}
+            )
         return attrs
 
     def validate_gold_loan_processing_fee_percent(self, value):
@@ -245,6 +277,9 @@ class JewellerPricingProfileSerializer(serializers.ModelSerializer):
     gold_deposit_yield_apr_percent = serializers.SerializerMethodField()
     gold_loan_interest_apr_percent = serializers.SerializerMethodField()
     gold_loan_processing_fee_percent = serializers.SerializerMethodField()
+    gold_loan_ltv_min_percent = serializers.SerializerMethodField()
+    gold_loan_ltv_max_percent = serializers.SerializerMethodField()
+    gold_loan_processing_fee_jeweller_share_percent = serializers.SerializerMethodField()
     metal_rate_preview = serializers.SerializerMethodField()
     admin_buyback_reference_preview = serializers.SerializerMethodField()
     metal_purities_offered = serializers.SerializerMethodField()
@@ -260,6 +295,7 @@ class JewellerPricingProfileSerializer(serializers.ModelSerializer):
             "metal_pricing_json",
             "metal_buyback_json",
             "gold_loan_jeweller_deduction_inr_per_gram",
+            "gold_loan_ltv_percent",
             "gold_rate_source",
             "gold_rate_external_api_url",
             "manual_gold_rate_inr_per_gram",
@@ -274,6 +310,9 @@ class JewellerPricingProfileSerializer(serializers.ModelSerializer):
             "gold_deposit_yield_apr_percent",
             "gold_loan_interest_apr_percent",
             "gold_loan_processing_fee_percent",
+            "gold_loan_ltv_min_percent",
+            "gold_loan_ltv_max_percent",
+            "gold_loan_processing_fee_jeweller_share_percent",
             "logo_url",
             "credibility_score",
             "lock_in_summary",
@@ -315,6 +354,9 @@ class JewellerPricingProfileSerializer(serializers.ModelSerializer):
             "gold_deposit_yield_apr_percent",
             "gold_loan_interest_apr_percent",
             "gold_loan_processing_fee_percent",
+            "gold_loan_ltv_min_percent",
+            "gold_loan_ltv_max_percent",
+            "gold_loan_processing_fee_jeweller_share_percent",
             "credibility_score",
             "metal_rate_preview",
             "admin_buyback_reference_preview",
@@ -338,6 +380,48 @@ class JewellerPricingProfileSerializer(serializers.ModelSerializer):
     def get_gold_loan_processing_fee_percent(self, obj: JewellerPricingProfile) -> str:
         t = get_or_create_ticker()
         return str(t.gold_loan_processing_fee_percent)
+
+    def get_gold_loan_ltv_min_percent(self, obj: JewellerPricingProfile) -> str:
+        t = get_or_create_ticker()
+        return str(t.gold_loan_ltv_min_percent)
+
+    def get_gold_loan_ltv_max_percent(self, obj: JewellerPricingProfile) -> str:
+        t = get_or_create_ticker()
+        return str(t.gold_loan_ltv_max_percent)
+
+    def get_gold_loan_processing_fee_jeweller_share_percent(self, obj: JewellerPricingProfile) -> str:
+        t = get_or_create_ticker()
+        return str(t.gold_loan_processing_fee_jeweller_share_percent)
+
+    def validate_gold_loan_ltv_percent(self, value):
+        if value is None:
+            return value
+        if value < Decimal("0") or value > Decimal("100"):
+            raise serializers.ValidationError("Must be between 0 and 100.")
+        ticker = get_or_create_ticker()
+        from .loan_policy import validate_ltv_bounds
+
+        err = validate_ltv_bounds(value, ticker)
+        if err:
+            raise serializers.ValidationError(err)
+        return value
+
+    def validate(self, attrs):
+        feat = attrs.get("feat_loan_available")
+        if feat is None and self.instance is not None:
+            feat = self.instance.feat_loan_available
+        ltv = attrs.get("gold_loan_ltv_percent")
+        if ltv is None and self.instance is not None:
+            ltv = self.instance.gold_loan_ltv_percent
+        if feat and ltv is None:
+            raise serializers.ValidationError(
+                {
+                    "gold_loan_ltv_percent": (
+                        "Set your max loan % of collateral when gold loans are enabled."
+                    )
+                }
+            )
+        return attrs
 
     def get_metal_rate_preview(self, obj: JewellerPricingProfile) -> dict[str, dict[str, str]]:
         spot = public_spot_prices_payload()
@@ -566,6 +650,13 @@ def public_jeweller_storefront(user) -> dict:
         "gold_deposit_yield_apr_percent": str(ticker.gold_deposit_yield_apr_percent),
         "gold_loan_interest_apr_percent": str(ticker.gold_loan_interest_apr_percent),
         "gold_loan_processing_fee_percent": str(ticker.gold_loan_processing_fee_percent),
+        "gold_loan_ltv_min_percent": str(ticker.gold_loan_ltv_min_percent),
+        "gold_loan_ltv_max_percent": str(ticker.gold_loan_ltv_max_percent),
+        "gold_loan_ltv_percent": (
+            str(profile.gold_loan_ltv_percent)
+            if profile.gold_loan_ltv_percent is not None
+            else ""
+        ),
         "gold_loan_jeweller_deduction_inr_per_gram": str(
             profile.gold_loan_jeweller_deduction_inr_per_gram
         ),

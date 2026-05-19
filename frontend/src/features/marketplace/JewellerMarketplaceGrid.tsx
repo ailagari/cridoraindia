@@ -39,7 +39,7 @@ const SORT_OPTIONS: { value: JewellerSortKey; label: string }[] = [
   { value: 'making', label: 'Making charge (low → high)' },
   { value: 'buyback', label: 'Sellback rate (high → low)' },
   { value: 'deposit', label: 'Gold deposit yield (high → low)' },
-  { value: 'loan', label: 'Gold loan indicator (low → high)' },
+  { value: 'loan', label: 'Max loan % (high → low)' },
   { value: 'listings', label: 'Most listings' },
 ]
 
@@ -153,7 +153,7 @@ export function JewellerMarketplaceGrid({ intro, variant = 'public' }: Props) {
       )
     } else if (sortBy === 'loan') {
       out.sort(
-        (a, b) => parseNum(a.gold_loan_interest_apr_percent) - parseNum(b.gold_loan_interest_apr_percent),
+        (a, b) => parseNum(b.gold_loan_ltv_percent ?? '0') - parseNum(a.gold_loan_ltv_percent ?? '0'),
       )
     } else if (sortBy === 'listings') {
       out.sort((a, b) => b.approved_listing_count - a.approved_listing_count)

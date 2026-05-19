@@ -14,6 +14,7 @@ import { ComingSoonPanel } from '@/components/ui'
 import { CustomerPortfolioPanel } from '@/features/portfolio/CustomerPortfolioPanel'
 import { CustomerVaultsPanel } from '@/features/portfolio/CustomerVaultsPanel'
 import { CustomerCrossRedemptionPanel } from '@/features/crossRedemption/CustomerCrossRedemptionPanel'
+import { CustomerGoldLoanPanel } from '@/features/redeem/CustomerGoldLoanPanel'
 import { CustomerSellbackPanel } from '@/features/redeem/CustomerSellbackPanel'
 import { useAuth } from '@/context/AuthContext'
 import { LIVE_PROFILE_POLL_MS } from '@/lib/liveDeskIntervals'
@@ -109,7 +110,7 @@ export function CustomerDashboardPage() {
       {active === 'invest_scheme' ? <ComingSoonPanel title="Golden scheme" /> : null}
       {active === 'redeem_cash' ? <CustomerSellbackPanel /> : null}
       {active === 'redeem_transfer' ? <GoldTransferPanel roleLabel="customer" /> : null}
-      {active === 'redeem_loan' ? <ComingSoonPanel title="Gold loan" /> : null}
+      {active === 'redeem_loan' ? <CustomerGoldLoanPanel /> : null}
       {active === 'redeem_emergency' ? <CustomerCrossRedemptionPanel /> : null}
       {active === 'profile_cridora_id' || active === 'profile_qr' ? <CustomerVaultAddressesPanel /> : null}
       {active === 'profile_security' ? <ChangePasswordPanel /> : null}

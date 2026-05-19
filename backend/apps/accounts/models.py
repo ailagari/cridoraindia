@@ -564,6 +564,75 @@ class GoldSellbackRequest(models.Model):
         return f"GoldSellbackRequest({self.customer_id}, {self.jeweller_id}, {self.grams}g)"
 
 
+class GoldLoanRequest(models.Model):
+    """Customer pledges custodied vault gold for a cash loan from the custodian jeweller."""
+
+    STATUS_PENDING_JEWELLER = "pending_jeweller"
+    STATUS_REJECTED = "rejected"
+    STATUS_APPROVED = "approved"
+    STATUS_DISBURSED = "disbursed"
+    STATUS_CANCELLED = "cancelled"
+
+    STATUS_CHOICES = [
+        (STATUS_PENDING_JEWELLER, "Pending jeweller"),
+        (STATUS_REJECTED, "Rejected"),
+        (STATUS_APPROVED, "Approved"),
+        (STATUS_DISBURSED, "Disbursed"),
+        (STATUS_CANCELLED, "Cancelled"),
+    ]
+
+    customer = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="gold_loans",
+        limit_choices_to={"user_type": User.CUSTOMER},
+    )
+    jeweller = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="gold_loans_as_jeweller",
+        limit_choices_to={"user_type": User.JEWELLER},
+    )
+    grams = models.DecimalField(max_digits=16, decimal_places=6)
+    reference_metal_inr_per_gram_snapshot = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        help_text="Jeweller reference 22K metal ₹/g at quote time.",
+    )
+    collateral_value_inr_snapshot = models.DecimalField(max_digits=16, decimal_places=2)
+    ltv_percent_snapshot = models.DecimalField(max_digits=8, decimal_places=3)
+    gross_principal_inr_snapshot = models.DecimalField(
+        max_digits=16,
+        decimal_places=2,
+        help_text="Loan principal before processing fee (collateral × LTV%).",
+    )
+    processing_fee_percent_snapshot = models.DecimalField(max_digits=8, decimal_places=3)
+    processing_fee_inr_snapshot = models.DecimalField(max_digits=16, decimal_places=2)
+    processing_fee_jeweller_share_inr_snapshot = models.DecimalField(
+        max_digits=16,
+        decimal_places=2,
+        default=Decimal("0"),
+    )
+    net_disbursement_inr_snapshot = models.DecimalField(
+        max_digits=16,
+        decimal_places=2,
+        help_text="Cash to customer after processing fee deduction.",
+    )
+    status = models.CharField(
+        max_length=32,
+        choices=STATUS_CHOICES,
+        default=STATUS_PENDING_JEWELLER,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-updated_at", "-created_at"]
+
+    def __str__(self):
+        return f"GoldLoanRequest({self.customer_id}, {self.jeweller_id}, {self.grams}g)"
+
+
 class GoldSellbackOtp(models.Model):
     """OTP customer shares with jeweller after offline cash payout to settle vault debit."""
 

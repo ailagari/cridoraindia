@@ -119,7 +119,7 @@ export function JewellerRatesSchemesPanel() {
     lock_in_summary: '',
     representative_making_charge_inr_per_gram: '',
     buyback_headline_inr_per_gram: '',
-    gold_loan_jeweller_deduction_inr_per_gram: '',
+    gold_loan_ltv_percent: '',
     golden_scheme_enabled: false,
     golden_scheme_duration_months: '',
     golden_scheme_min_monthly_inr: '',
@@ -132,6 +132,8 @@ export function JewellerRatesSchemesPanel() {
     gold_deposit_yield_apr_percent: '0',
     gold_loan_interest_apr_percent: '0',
     gold_loan_processing_fee_percent: '0',
+    gold_loan_ltv_min_percent: '95',
+    gold_loan_ltv_max_percent: '99',
   })
 
   const toggleSection = useCallback((key: SectionKey) => {
@@ -181,9 +183,10 @@ export function JewellerRatesSchemesPanel() {
         pJson.buyback_headline_inr_per_gram != null && String(pJson.buyback_headline_inr_per_gram) !== ''
           ? String(pJson.buyback_headline_inr_per_gram)
           : '',
-      gold_loan_jeweller_deduction_inr_per_gram: String(
-        pJson.gold_loan_jeweller_deduction_inr_per_gram ?? '0',
-      ),
+      gold_loan_ltv_percent:
+        pJson.gold_loan_ltv_percent != null && String(pJson.gold_loan_ltv_percent) !== ''
+          ? String(pJson.gold_loan_ltv_percent)
+          : '',
       golden_scheme_enabled: Boolean(pJson.golden_scheme_enabled),
       golden_scheme_duration_months:
         pJson.golden_scheme_duration_months != null && String(pJson.golden_scheme_duration_months) !== ''
@@ -201,6 +204,8 @@ export function JewellerRatesSchemesPanel() {
       gold_deposit_yield_apr_percent: String(pJson.gold_deposit_yield_apr_percent ?? '0'),
       gold_loan_interest_apr_percent: String(pJson.gold_loan_interest_apr_percent ?? '0'),
       gold_loan_processing_fee_percent: String(pJson.gold_loan_processing_fee_percent ?? '0'),
+      gold_loan_ltv_min_percent: String(pJson.gold_loan_ltv_min_percent ?? '95'),
+      gold_loan_ltv_max_percent: String(pJson.gold_loan_ltv_max_percent ?? '99'),
     })
   }, [])
 
@@ -284,9 +289,10 @@ export function JewellerRatesSchemesPanel() {
       jsonBody: {
         metal_pricing_json,
         metal_buyback_json,
-        gold_loan_jeweller_deduction_inr_per_gram: numOrZero(
-          ratesDraft.gold_loan_jeweller_deduction_inr_per_gram,
-        ),
+        gold_loan_ltv_percent:
+          ratesDraft.gold_loan_ltv_percent.trim() === ''
+            ? null
+            : numOrZero(ratesDraft.gold_loan_ltv_percent),
         default_gold_markup_percent: numOrZero(ratesDraft.default_gold_markup_percent),
         gold_deposit_note: ratesDraft.gold_deposit_note.trim(),
         lock_in_summary: ratesDraft.lock_in_summary.trim(),
@@ -897,17 +903,23 @@ export function JewellerRatesSchemesPanel() {
                         </p>
                       </div>
                     </div>
+                    <p style={{ margin: '0 0 0.75rem', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                      Set your max loan as % of collateral value (platform allows{' '}
+                      {platformDisclosures.gold_loan_ltv_min_percent}–
+                      {platformDisclosures.gold_loan_ltv_max_percent}%).
+                    </p>
                     <label className="field">
-                      <span>Your loan disclosure: extra ₹/g (optional)</span>
+                      <span>Your max loan % of vault collateral (LTV)</span>
                       <input
                         inputMode="decimal"
-                        value={ratesDraft.gold_loan_jeweller_deduction_inr_per_gram}
+                        value={ratesDraft.gold_loan_ltv_percent}
                         onChange={(e) =>
                           setRatesDraft((p) => ({
                             ...p,
-                            gold_loan_jeweller_deduction_inr_per_gram: e.target.value,
+                            gold_loan_ltv_percent: e.target.value,
                           }))
                         }
+                        placeholder="e.g. 98"
                       />
                     </label>
                     <label className="field" style={{ marginTop: '0.85rem' }}>

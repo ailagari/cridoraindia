@@ -141,6 +141,20 @@ def customer_fractional_available(customer: User, custodian: User) -> Decimal:
     return h.balance_grams if h else Decimal("0")
 
 
+def customer_loan_eligible_grams(customer: User, custodian: User) -> Decimal:
+    """Fractional + deposit vault grams at custodian (loan collateral pool)."""
+    try:
+        vault = GoldVault.objects.get(owner=customer, custodian=custodian)
+    except GoldVault.DoesNotExist:
+        return Decimal("0")
+    total = Decimal("0")
+    for ht in (VaultHolding.FRACTIONAL, VaultHolding.DEPOSIT):
+        h = VaultHolding.objects.filter(vault=vault, holding_type=ht).first()
+        if h:
+            total += h.balance_grams
+    return total
+
+
 def debit_customer_fractional(customer: User, custodian: User, grams: Decimal) -> str | None:
     vault = ensure_vault(customer, custodian)
     hid = _fractional_holding(vault).pk

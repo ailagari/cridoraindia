@@ -125,6 +125,9 @@ export type JewellerStorefrontDTO = {
   golden_scheme_benefits?: string
   golden_scheme_rate_application_note?: string
   gold_loan_processing_fee_percent?: string
+  gold_loan_ltv_min_percent?: string
+  gold_loan_ltv_max_percent?: string
+  gold_loan_ltv_percent?: string
   gold_loan_jeweller_deduction_inr_per_gram?: string
 }
 
