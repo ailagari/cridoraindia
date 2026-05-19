@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { DashboardLayout } from '@/components/DashboardLayout'
 import { JewellerBusinessProfilePanel } from '@/features/jeweller/JewellerBusinessProfilePanel'
 import { JewellerKybWorkflow } from '@/features/jeweller/JewellerKybWorkflow'
-import { JewellerPortfolioPanel } from '@/features/portfolio/JewellerPortfolioPanel'
+import { JewellerPortfolioOverviewPanel } from '@/features/portfolio/JewellerPortfolioOverviewPanel'
 import { JewellerCustomerVaultsPanel } from '@/features/portfolio/JewellerCustomerVaultsPanel'
 import { GoldTransferPanel } from '@/features/gold/GoldTransferPanel'
 import { JewellerMarketplacePanel } from '@/features/marketplace/JewellerMarketplacePanel'
@@ -14,7 +14,6 @@ import { JewellerCrossRedemptionInboxPanel } from '@/features/crossRedemption/Je
 import { JewellerSellbacksPanel } from '@/features/redeem/JewellerSellbacksPanel'
 import { JewellerOrnamentRedemptionsPanel } from '@/features/marketplace/JewellerOrnamentRedemptionsPanel'
 import { useAuth } from '@/context/AuthContext'
-import { authFetch } from '@/lib/api'
 import { LIVE_PROFILE_POLL_MS } from '@/lib/liveDeskIntervals'
 import { useLivePoll } from '@/lib/useLivePoll'
 import {
@@ -24,17 +23,11 @@ import {
 } from '@/lib/mobileNav/jewellerNav'
 
 function jewellerTitle(section: string): string {
-  const item = JEWELLER_NAV_GROUPS.flatMap((g) => g.items).find((i) => i.sectionKey === section)
   const hub = JEWELLER_NAV_GROUPS.find((g) => g.items.some((i) => i.sectionKey === section))
+  if (section === JEWELLER_DEFAULT_SECTION) return hub?.label ?? 'Portfolio'
+  const item = JEWELLER_NAV_GROUPS.flatMap((g) => g.items).find((i) => i.sectionKey === section)
   if (item && hub) return `${hub.label} · ${item.label}`
   return item?.label ?? 'Jeweller'
-}
-
-type MeJson = {
-  business_name?: string
-  gstin?: string
-  city?: string
-  shop_address?: string
 }
 
 export function JewellerDashboardPage() {
@@ -73,12 +66,7 @@ export function JewellerDashboardPage() {
       onSectionChange={setSection}
       title={head}
     >
-      {active === 'desk_overview' ? (
-        <>
-          <JewellerOverview />
-          <JewellerPortfolioPanel />
-        </>
-      ) : null}
+      {active === 'portfolio' ? <JewellerPortfolioOverviewPanel onNavigate={setSection} /> : null}
       {active === 'cust_hub' ? <JewellerCustomerVaultsPanel /> : null}
       {active === 'mkt_products' ? <JewellerMarketplacePanel /> : null}
       {active === 'mkt_policy' ? (
@@ -111,53 +99,5 @@ export function JewellerDashboardPage() {
       ) : null}
       {active === 'prof_more' ? <JewellerBusinessProfilePanel /> : null}
     </DashboardLayout>
-  )
-}
-
-function JewellerOverview() {
-  const { user } = useAuth()
-  const [me, setMe] = useState<MeJson | null>(null)
-
-  const refreshMe = useCallback(async () => {
-    const r = await authFetch('/api/v1/auth/me/')
-    const data = r.ok ? ((await r.json()) as MeJson) : null
-    if (data && typeof data === 'object') {
-      setMe(data)
-    }
-  }, [])
-
-  useEffect(() => {
-    void refreshMe()
-  }, [refreshMe, user?.id])
-
-  useLivePoll(refreshMe, LIVE_PROFILE_POLL_MS, true)
-
-  const tone =
-    user?.kyc_status === 'verified' ? 'ok' : user?.kyc_status === 'rejected' ? 'bad' : 'wait'
-
-  return (
-    <div className="dash-panel-max">
-      <div className="dash-hero-cards">
-        <div className={`dash-spot dash-spot--${tone}`}>
-          <span className="dash-spot__eyebrow">KYB status</span>
-          <p className="dash-spot__value">{user?.kyc_status}</p>
-          <p className="dash-spot__sub">
-            After KYB approval, your shop appears on public jeweller directory pages; SKU listings still follow admin review.
-          </p>
-        </div>
-        <div className="dash-spot dash-spot--gold">
-          <span className="dash-spot__eyebrow">Business profile</span>
-          <p className="dash-spot__value">{me?.business_name ?? 'Your showroom'}</p>
-          <p className="dash-spot__sub">
-            GSTIN {me?.gstin ?? '—'} · {me?.city ?? '—'}
-          </p>
-        </div>
-        <div className="dash-spot dash-spot--violet">
-          <span className="dash-spot__eyebrow">Next steps</span>
-          <p className="dash-spot__value">KYB documents</p>
-          <p className="dash-spot__sub">{me?.shop_address ?? 'Complete uploads under KYB.'}</p>
-        </div>
-      </div>
-    </div>
   )
 }

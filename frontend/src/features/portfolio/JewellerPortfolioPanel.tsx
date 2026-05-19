@@ -21,7 +21,9 @@ function fmtInrPlain(s: string): string {
   return n.toLocaleString('en-IN', { maximumFractionDigits: 2 })
 }
 
-export function JewellerPortfolioPanel() {
+type PanelProps = { embedded?: boolean }
+
+export function JewellerPortfolioPanel({ embedded }: PanelProps = {}) {
   const [wallet, setWallet] = useState<Awaited<ReturnType<typeof fetchGoldWallet>>>(null)
   const [pending, setPending] = useState<JewellerFractionalPendingRow[]>([])
   const [loadErr, setLoadErr] = useState('')
@@ -50,11 +52,13 @@ export function JewellerPortfolioPanel() {
   const vaultG = parseG(wallet?.balance_grams ?? '0')
 
   return (
-    <div className="dash-panel-max pf-scope">
-      <p className="dash-panel-lead pf-lead-intro">
-        Live custodial liability from verified fractional purchases, your pending counter queue, and recent credits that
-        hit your jeweller ledger.
-      </p>
+    <div className={embedded ? 'pf-scope' : 'dash-panel-max pf-scope'}>
+      {embedded ? null : (
+        <p className="dash-panel-lead pf-lead-intro">
+          Live custodial liability from verified fractional purchases, your pending counter queue, and recent credits
+          that hit your jeweller ledger.
+        </p>
+      )}
 
       {loadErr ? <p className="form-error">{loadErr}</p> : null}
 

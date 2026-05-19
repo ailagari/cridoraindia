@@ -27,6 +27,7 @@ import { DashboardIndexRedirect } from '@/pages/dashboard/DashboardIndexRedirect
 import { RedirectPreserveSearch } from '@/pages/dashboard/RedirectPreserveSearch'
 import { NativeNotificationBridge } from '@/components/NativeNotificationBridge'
 import { NativeAppDiagnostics } from '@/components/NativeAppDiagnostics'
+import { NativeAppSplash } from '@/components/NativeAppSplash'
 import { isNativePlatform } from '@/lib/capacitorPlatform'
 import '@/styles/index.css'
 
@@ -42,6 +43,7 @@ export default function App() {
       <NativeAppDiagnostics />
       <ThemeProvider>
         <AuthProvider>
+          <NativeAppSplash />
           <Routes>
             <Route element={<PublicLayout />}>
               <Route index element={<HomePage />} />

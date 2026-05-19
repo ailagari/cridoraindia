@@ -18,7 +18,8 @@ export default defineConfig(({ mode }) => {
   const isCapacitorBuild = env.VITE_CAPACITOR_BUILD === 'true'
 
   return {
-    base: './',
+    /** Relative base breaks BrowserRouter on hard refresh (e.g. /dashboard/admin → ./assets → 404). */
+    base: isCapacitorBuild ? './' : '/',
     build: {
       /** Capacitor WebView fails to load module scripts tagged crossorigin. */
       modulePreload: false,

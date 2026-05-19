@@ -1,8 +1,8 @@
 import { useId } from 'react'
 
-type Props = { size?: 'sm' | 'md'; showWordmark?: boolean; className?: string }
+type Props = { size?: 'sm' | 'md' | 'lg'; showWordmark?: boolean; className?: string }
 
-const box = { sm: 36, md: 44 } as const
+const box = { sm: 36, md: 44, lg: 80 } as const
 
 export function CridoraLogo({ size = 'sm', showWordmark = true, className = '' }: Props) {
   const gid = `cg-${useId().replace(/[^a-zA-Z0-9_-]/g, '')}`

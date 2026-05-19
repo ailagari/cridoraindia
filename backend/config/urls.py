@@ -22,7 +22,8 @@ else:
             {"document_root": settings.MEDIA_ROOT},
         ),
         re_path(
-            r"^(?!api/|admin/|assets/|static/|media/).*$",
+            r"^(?!api/|admin/|assets/|static/|media/|sw\.js$|manifest\.webmanifest$|"
+            r"favicon\.svg$|icon-|apple-touch-icon\.png$).*$",
             spa_index,
         ),
     ]

@@ -126,6 +126,26 @@ export function DashboardLayout({
 
   const renderSidebarAccordion = useCallback(
     (g: DashboardNavGroup) => {
+      const sole = g.items.length === 1 ? g.items[0] : null
+      if (sole) {
+        const navActive = sole.sectionKey === activeSection
+        return (
+          <button
+            key={g.id}
+            type="button"
+            className={'dash-side-acc-trigger dash-side-acc-trigger--solo' + (navActive ? ' dash-side-acc-trigger--solo-active' : '')}
+            style={navActive ? { borderColor: meta.accentVar, color: meta.accentVar } : undefined}
+            onClick={() => pickSection(sole.sectionKey)}
+          >
+            <span className="dash-side-acc-trigger-label">
+              <span className="dash-side-acc-ico" aria-hidden="true">
+                <NavHubIcon icon={g.icon} active={navActive} />
+              </span>
+              {g.label}
+            </span>
+          </button>
+        )
+      }
       const open = accordionOpen[g.id] ?? false
       const panelId = `dash-acc-${role}-${g.id}`
       const hubActive = g.items.some((i) => i.sectionKey === activeSection)
@@ -256,25 +276,27 @@ export function DashboardLayout({
           </div>
         </header>
 
-        <div className="dash-hub-tabs" aria-label="Subsections">
-          {activeGroup.items.map((item) => {
-            const active = item.sectionKey === activeSection
-            return (
-              <button
-                key={item.sectionKey}
-                type="button"
-                className={'dash-hub-pill' + (active ? ' dash-hub-pill--active' : '')}
-                style={active ? { borderColor: meta.accentVar, color: meta.accentVar } : undefined}
-                onClick={() => pickSection(item.sectionKey)}
-              >
-                <span className="dash-hub-pill-label">{item.label}</span>
-                {typeof item.badge === 'number' && item.badge > 0 ? (
-                  <span className="dash-hub-badge">{item.badge > 99 ? '99+' : item.badge}</span>
-                ) : null}
-              </button>
-            )
-          })}
-        </div>
+        {activeGroup.items.length > 1 ? (
+          <div className="dash-hub-tabs" aria-label="Subsections">
+            {activeGroup.items.map((item) => {
+              const active = item.sectionKey === activeSection
+              return (
+                <button
+                  key={item.sectionKey}
+                  type="button"
+                  className={'dash-hub-pill' + (active ? ' dash-hub-pill--active' : '')}
+                  style={active ? { borderColor: meta.accentVar, color: meta.accentVar } : undefined}
+                  onClick={() => pickSection(item.sectionKey)}
+                >
+                  <span className="dash-hub-pill-label">{item.label}</span>
+                  {typeof item.badge === 'number' && item.badge > 0 ? (
+                    <span className="dash-hub-badge">{item.badge > 99 ? '99+' : item.badge}</span>
+                  ) : null}
+                </button>
+              )
+            })}
+          </div>
+        ) : null}
 
         <main className="dash-content dash-content--with-bottom">{children}</main>
       </div>

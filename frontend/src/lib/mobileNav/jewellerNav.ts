@@ -2,11 +2,11 @@ import type { DashboardNavGroup } from './types'
 
 export const JEWELLER_NAV_GROUPS: DashboardNavGroup[] = [
   {
-    id: 'dashboard',
-    label: 'Desk',
-    shortLabel: 'Desk',
-    icon: 'home',
-    items: [{ sectionKey: 'desk_overview', label: 'Overview' }],
+    id: 'portfolio',
+    label: 'Portfolio',
+    shortLabel: 'Portfolio',
+    icon: 'portfolio',
+    items: [{ sectionKey: 'portfolio', label: 'Portfolio' }],
   },
   {
     id: 'customers',
@@ -49,12 +49,13 @@ export const JEWELLER_NAV_GROUPS: DashboardNavGroup[] = [
   },
 ]
 
-export const JEWELLER_DEFAULT_SECTION = 'desk_overview'
+export const JEWELLER_DEFAULT_SECTION = 'portfolio'
 
 export const JEWELLER_LEGACY_SECTION: Record<string, string> = {
-  overview: 'desk_overview',
-  portfolio: 'desk_overview',
-  desk_portfolio: 'desk_overview',
+  overview: 'portfolio',
+  desk_overview: 'portfolio',
+  portfolio_home: 'portfolio',
+  desk_portfolio: 'portfolio',
   kyb: 'prof_kyb',
   catalog: 'mkt_products',
   payments: 'prof_more',

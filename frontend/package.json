@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "build:android": "node scripts/check-android-env.mjs && npm run build && npm run android:icons && npx cap sync android",
+    "build:capacitor": "tsc -b && vite build --mode capacitor",
+    "build:android": "node scripts/check-android-env.mjs && npm run build:capacitor && npm run android:icons && npx cap sync android",
     "android:rebuild": "npm run build:android && cd android && .\\gradlew.bat assembleDebug",
     "cap:sync": "npx cap sync",
     "cap:android": "npx cap open android",

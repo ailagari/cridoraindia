@@ -7,6 +7,8 @@ RUN npm ci
 COPY frontend/ ./
 ARG VITE_API_BASE_URL=
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+# Web deploy must use absolute asset URLs (hard refresh on /dashboard/* breaks with ./).
+ENV VITE_CAPACITOR_BUILD=
 RUN npm run build
 
 FROM python:3.12-slim
