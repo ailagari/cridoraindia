@@ -2,6 +2,20 @@ import path from 'node:path'
 import { defineConfig, loadEnv, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
+import { CAPACITOR_BOOT_SPLASH_HTML } from './src/lib/capacitorBootSplashHtml'
+
+/** Shows glowing logo in index.html before the JS bundle parses (Android WebView). */
+function injectCapacitorBootSplash(): Plugin {
+  return {
+    name: 'inject-capacitor-boot-splash',
+    transformIndexHtml(html) {
+      return html.replace(
+        '<div id="root"></div>',
+        `${CAPACITOR_BOOT_SPLASH_HTML}\n    <div id="root"></div>`,
+      )
+    },
+  }
+}
 
 /** Capacitor Android WebView rejects module scripts with crossorigin on local assets. */
 function stripCrossoriginForCapacitor(): Plugin {
@@ -28,6 +42,7 @@ export default defineConfig(({ mode }) => {
     },
     plugins: [
       react(),
+      ...(isCapacitorBuild ? [injectCapacitorBootSplash()] : []),
       stripCrossoriginForCapacitor(),
       VitePWA({
         strategies: 'injectManifest',

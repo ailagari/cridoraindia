@@ -1,14 +1,14 @@
 import { useId } from 'react'
 
 type Props = {
-  size?: 'sm' | 'md' | 'lg'
+  size?: 'sm' | 'md' | 'lg' | 'splash'
   showWordmark?: boolean
   className?: string
   /** Pulsating golden drop-shadow (e.g. native Android splash). */
   pulseGlow?: boolean
 }
 
-const box = { sm: 36, md: 44, lg: 80 } as const
+const box = { sm: 36, md: 44, lg: 80, splash: 160 } as const
 
 export function CridoraLogo({
   size = 'sm',

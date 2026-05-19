@@ -14,6 +14,10 @@ function waitForWindowLoad(): Promise<void> {
   })
 }
 
+function removeBootSplash(): void {
+  document.getElementById('cridora-boot-splash')?.remove()
+}
+
 /** Full-screen branded loader for Android while the WebView and session bootstrap. */
 export function NativeAppSplash() {
   const { loading: authLoading } = useAuth()
@@ -24,7 +28,11 @@ export function NativeAppSplash() {
   )
 
   useEffect(() => {
-    if (!isNativeAndroid()) return
+    if (!isNativeAndroid()) {
+      removeBootSplash()
+      return
+    }
+    removeBootSplash()
 
     let cancelled = false
     const started = Date.now()
@@ -58,10 +66,11 @@ export function NativeAppSplash() {
       aria-label="Loading Cridora India"
     >
       <div className="native-app-splash__inner">
-        <div className="native-app-splash__glow native-app-splash__glow--outer" aria-hidden />
-        <div className="native-app-splash__glow" aria-hidden />
-        <div className="native-app-splash__logo">
-          <CridoraLogo size="lg" showWordmark={false} pulseGlow />
+        <div className="native-app-splash__logo-stage">
+          <div className="native-app-splash__backside-glow" aria-hidden />
+          <div className="native-app-splash__logo-glow">
+            <CridoraLogo size="splash" showWordmark={false} />
+          </div>
         </div>
         <p className="native-app-splash__wordmark">
           Cridora <span>India</span>
