@@ -106,8 +106,8 @@ export function CustomerDashboardPage() {
       {active === 'portfolio_vault_ids' ? <CustomerVaultAddressesPanel /> : null}
       {active === 'shop_jewellers' ? <CustomerJewellersBrowsePanel /> : null}
       {active === 'shop_products' ? <CustomerProductsBrowsePanel /> : null}
-      {active === 'shop_cridorapay' ? <CustomerCridoraPayPanel /> : null}
       {active === 'invest_fractional' ? <FractionalPurchasePanel /> : null}
+      {active === 'invest_cridorapay' ? <CustomerCridoraPayPanel /> : null}
       {active === 'invest_deposit' ? <CustomerDepositInfoPanel /> : null}
       {active === 'invest_scheme' ? <ComingSoonPanel title="Golden scheme" /> : null}
       {active === 'redeem_cash' ? <CustomerSellbackPanel /> : null}

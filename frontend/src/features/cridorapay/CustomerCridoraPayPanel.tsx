@@ -91,6 +91,9 @@ export function CustomerCridoraPayPanel() {
         return
       }
       setRows(out.results)
+    } catch (e) {
+      setLoadErr(e instanceof Error ? e.message : 'Could not load bills')
+      setRows([])
     } finally {
       setListBusy(false)
     }
@@ -109,8 +112,9 @@ export function CustomerCridoraPayPanel() {
   }, [])
 
   const refreshQuote = async (bill: CridoraPayBillDTO, vaultGrams?: string) => {
-    const vg = vaultGrams ?? vaultGramsById[bill.id] ?? bill.quote.vault_grams_max
-    const out = await customerCridoraPayQuote(bill.id, vg)
+    const fallbackMax = bill.quote?.vault_grams_max ?? ''
+    const vg = vaultGrams ?? vaultGramsById[bill.id] ?? fallbackMax
+    const out = await customerCridoraPayQuote(bill.id, vg || undefined)
     if (out.ok) {
       setQuoteById((m) => ({ ...m, [bill.id]: out.data }))
     }
@@ -130,6 +134,10 @@ export function CustomerCridoraPayPanel() {
     setBusyId(bill.id)
     const mode = payModeById[bill.id] ?? 'vault'
     const quote = quoteById[bill.id] ?? bill.quote
+    if (!quote) {
+      setMsg('Could not load vault quote — tap Retry above.')
+      return
+    }
     try {
       const body =
         mode === 'upi'

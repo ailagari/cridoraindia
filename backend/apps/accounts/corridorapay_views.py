@@ -7,6 +7,7 @@ from decimal import Decimal, InvalidOperation
 
 from django.contrib.auth import get_user_model
 from django.db import transaction
+from django.db.utils import OperationalError, ProgrammingError
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
@@ -96,6 +97,18 @@ def _ser_bill(bill: CridoraPayBill, *, include_customer: bool, include_otp_expir
         except Exception:
             row["otp_expires_at"] = None
     return row
+
+
+def _db_unavailable_response() -> Response:
+    return Response(
+        {
+            "detail": (
+                "CridoraPay is not ready on this server. "
+                "Apply migration accounts.0038_corridorapay and redeploy."
+            )
+        },
+        status=status.HTTP_503_SERVICE_UNAVAILABLE,
+    )
 
 
 def _parse_decimal(raw, field: str) -> tuple[Decimal | None, Response | None]:
@@ -192,8 +205,16 @@ class JewellerCridoraPayBillsListView(APIView):
             qs = qs.filter(status__in=OPEN_STATUSES)
         elif status_filter != "all":
             qs = qs.filter(status=status_filter)
-        rows = [_ser_bill(b, include_customer=True, include_otp_expiry=True) for b in qs[:100]]
-        return Response({"results": rows})
+        try:
+            rows = []
+            for b in qs[:100]:
+                try:
+                    rows.append(_ser_bill(b, include_customer=True, include_otp_expiry=True))
+                except Exception:
+                    continue
+            return Response({"results": rows})
+        except (OperationalError, ProgrammingError):
+            return _db_unavailable_response()
 
 
 class JewellerCridoraPayVerifyVaultOtpView(APIView):
@@ -340,13 +361,16 @@ class CustomerCridoraPayBillsListView(APIView):
         if scope == "active":
             qs = qs.filter(status__in=OPEN_STATUSES)
         qs = qs.order_by("-created_at")[:50]
-        rows = []
-        for b in qs:
-            try:
-                rows.append(_ser_bill(b, include_customer=False, include_otp_expiry=True))
-            except Exception:
-                continue
-        return Response({"results": rows})
+        try:
+            rows = []
+            for b in qs:
+                try:
+                    rows.append(_ser_bill(b, include_customer=False, include_otp_expiry=True))
+                except Exception:
+                    continue
+            return Response({"results": rows})
+        except (OperationalError, ProgrammingError):
+            return _db_unavailable_response()
 
 
 class JewellerCridoraPayResendNotifyView(APIView):

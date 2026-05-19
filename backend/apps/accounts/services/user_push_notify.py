@@ -275,7 +275,7 @@ def notify_corridorapay_bill_created(bill: CridoraPayBill) -> None:
         bill.customer,
         title="Shop bill to review",
         body=f"{bill.jeweller.business_name or 'A jeweller'} sent a bill for ₹{total} — confirm and pay in CridoraPay.",
-        link_path=customer_dashboard("shop_cridorapay"),
+        link_path=customer_dashboard("invest_cridorapay"),
         tag=f"cp-bill-c-{bill.pk}",
     )
 
@@ -286,9 +286,9 @@ def notify_corridorapay_customer_reminder(bill: CridoraPayBill) -> None:
         title="CridoraPay bill pending",
         body=(
             f"Your bill {bill.reference} from {bill.jeweller.business_name or 'a jeweller'} "
-            "is waiting — open CridoraPay in Market."
+            "is waiting — open CridoraPay in Invest."
         ),
-        link_path=customer_dashboard("shop_cridorapay"),
+        link_path=customer_dashboard("invest_cridorapay"),
         tag=f"cp-remind-c-{bill.pk}",
     )
 
@@ -329,7 +329,7 @@ def notify_corridorapay_cash_pending(bill: CridoraPayBill) -> None:
         bill.customer,
         title="Balance due at counter",
         body=f"Vault applied for {bill.reference}. Pay ₹{cash} at the shop to complete.",
-        link_path=customer_dashboard("shop_cridorapay"),
+        link_path=customer_dashboard("invest_cridorapay"),
         tag=f"cp-cash-c-{bill.pk}",
     )
     notify_user_push(
@@ -347,7 +347,7 @@ def notify_corridorapay_completed(bill: CridoraPayBill) -> None:
         bill.customer,
         title="Purchase complete",
         body=f"{bill.title} ({grams_s} g) is recorded in your Gold Records.",
-        link_path=customer_dashboard("shop_cridorapay"),
+        link_path=customer_dashboard("invest_cridorapay"),
         tag=f"cp-done-c-{bill.pk}",
         kind=PortfolioUserNotification.KIND_JEWELLER_ADDED_HOLDING,
     )

@@ -1,5 +1,35 @@
 import { authFetch } from '@/lib/api'
 
+async function readResponseJson<T extends object>(res: Response): Promise<T | null> {
+  const text = await res.text()
+  const trimmed = text.trim()
+  if (!trimmed) return null
+  try {
+    return JSON.parse(trimmed) as T
+  } catch {
+    return null
+  }
+}
+
+function parseApiDetail(parsed: Record<string, unknown> | null, res: Response, fallback: string): string {
+  if (parsed) {
+    const detail = parsed.detail
+    if (typeof detail === 'string' && detail.trim()) return detail
+    const parts: string[] = []
+    for (const v of Object.values(parsed)) {
+      if (Array.isArray(v) && v.length > 0) parts.push(String(v[0]))
+      else if (typeof v === 'string' && v) parts.push(v)
+    }
+    if (parts.length > 0) return parts.join(' ')
+  }
+  if (res.status === 404) {
+    return 'CridoraPay is not available on this server yet. Deploy the latest backend and run migration 0038_corridorapay.'
+  }
+  if (res.status === 403) return 'You do not have access to CridoraPay bills.'
+  if (res.status >= 500) return `Server error loading bills (${res.status}). Try again shortly.`
+  return `${fallback} (${res.status})`
+}
+
 export type CridoraPayJewellerBrief = {
   id: number
   business_name: string
@@ -55,7 +85,7 @@ export type CridoraPayBillDTO = {
   created_at: string
   jeweller: CridoraPayJewellerBrief
   customer?: CridoraPayCustomerBrief
-  quote: CridoraPayQuote
+  quote?: CridoraPayQuote
   otp_expires_at?: string | null
   otp?: string
   otp_policy_seconds?: number
@@ -85,11 +115,11 @@ export async function jewellerCridoraPayList(
   status: 'open' | 'all' | string = 'open',
 ): Promise<{ ok: true; results: CridoraPayBillDTO[] } | { ok: false; detail: string }> {
   const res = await authFetch(`/api/v1/jeweller/cridorapay/bills/list/?status=${encodeURIComponent(status)}`)
-  const data = (await res.json().catch(() => ({}))) as { results?: CridoraPayBillDTO[]; detail?: string }
+  const data = await readResponseJson<{ results?: CridoraPayBillDTO[]; detail?: string }>(res)
   if (!res.ok) {
-    return { ok: false, detail: data.detail != null ? String(data.detail) : 'Could not load bills' }
+    return { ok: false, detail: parseApiDetail(data, res, 'Could not load bills') }
   }
-  return { ok: true, results: data.results ?? [] }
+  return { ok: true, results: data?.results ?? [] }
 }
 
 export async function jewellerCridoraPayResendNotify(
@@ -153,11 +183,11 @@ export async function customerCridoraPayList(
   scope: 'all' | 'active' = 'all',
 ): Promise<{ ok: true; results: CridoraPayBillDTO[] } | { ok: false; detail: string }> {
   const res = await authFetch(`/api/v1/cridorapay/bills/?scope=${encodeURIComponent(scope)}`)
-  const data = (await res.json().catch(() => ({}))) as { results?: CridoraPayBillDTO[]; detail?: string }
+  const data = await readResponseJson<{ results?: CridoraPayBillDTO[]; detail?: string }>(res)
   if (!res.ok) {
-    return { ok: false, detail: data.detail != null ? String(data.detail) : 'Could not load bills' }
+    return { ok: false, detail: parseApiDetail(data, res, 'Could not load bills') }
   }
-  return { ok: true, results: data.results ?? [] }
+  return { ok: true, results: data?.results ?? [] }
 }
 
 export async function customerCridoraPayQuote(
