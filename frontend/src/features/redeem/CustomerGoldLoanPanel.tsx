@@ -8,7 +8,10 @@ import {
   postGoldLoanOtpRegenerate,
   postGoldLoanQuote,
   postGoldLoanRepay,
+  postGoldLoanRepaymentCancel,
+  postGoldLoanRepaymentOtpRegenerate,
   type GoldLoanActiveDTO,
+  type GoldLoanRepaymentPendingDTO,
   type GoldLoanCompareDTO,
   type GoldLoanOfferDTO,
   type GoldLoanOutstandingDTO,
@@ -52,11 +55,26 @@ export function CustomerGoldLoanPanel() {
   const [otpBanner, setOtpBanner] = useState<{ code: string; expiresAt: string; loanId: number } | null>(
     null,
   )
+  const [pendingRepayments, setPendingRepayments] = useState<GoldLoanRepaymentPendingDTO[]>([])
+  const [repayOtpBanner, setRepayOtpBanner] = useState<{
+    code: string
+    expiresAt: string
+    repaymentId: number
+    loanId: number
+    amountInr: string
+  } | null>(null)
+  const [busyRepayRegen, setBusyRepayRegen] = useState(false)
   const compareSeq = useRef(0)
 
   function loanStatusHint(st: string): string {
     if (st === 'pending_jeweller') return 'awaiting jeweller'
     if (st === 'accepted_awaiting_otp') return 'jeweller accepted — share OTP after cash'
+    return st.replace(/_/g, ' ')
+  }
+
+  function repaymentStatusHint(st: string): string {
+    if (st === 'pending_jeweller') return 'awaiting jeweller to accept'
+    if (st === 'accepted_awaiting_otp') return 'pay cash at counter, then share OTP'
     return st.replace(/_/g, ' ')
   }
 
@@ -69,10 +87,12 @@ export function CustomerGoldLoanPanel() {
     if (!acc) {
       setOutstanding([])
       setActiveLoans([])
+      setPendingRepayments([])
       return
     }
     setOutstanding(acc.pending ?? [])
     setActiveLoans(acc.active ?? [])
+    setPendingRepayments(acc.pending_repayments ?? [])
     const max = Number.parseInt(acc.gold_loan_max_term_months, 10)
     if (Number.isFinite(max) && max >= 1) {
       setMaxTermMonths(max)
@@ -209,6 +229,15 @@ export function CustomerGoldLoanPanel() {
       return
     }
     setSuccessMsg(out.detail)
+    if (out.otp_code) {
+      setRepayOtpBanner({
+        code: out.otp_code,
+        expiresAt: out.otp_expires_at ?? '',
+        repaymentId: out.repayment.id,
+        loanId: loan.id,
+        amountInr: out.repayment.amount_inr,
+      })
+    }
     setRepayDraft((d) => {
       const next = { ...d }
       delete next[loan.id]
@@ -217,6 +246,49 @@ export function CustomerGoldLoanPanel() {
     void refreshAccounts()
     void refreshVaultRates()
   }
+
+  const runRepayRegenerate = async (repaymentId: number) => {
+    setBusyRepayRegen(true)
+    setActionErr('')
+    const out = await postGoldLoanRepaymentOtpRegenerate(repaymentId)
+    setBusyRepayRegen(false)
+    if (!out.ok) {
+      setActionErr(out.detail)
+      return
+    }
+    setRepayOtpBanner((b) =>
+      b && b.repaymentId === repaymentId
+        ? { ...b, code: out.otp_code, expiresAt: out.otp_expires_at }
+        : b,
+    )
+    setSuccessMsg('New repayment OTP issued.')
+  }
+
+  const onCancelRepayment = async (repaymentId: number) => {
+    setBusyRepayId(repaymentId)
+    setActionErr('')
+    const out = await postGoldLoanRepaymentCancel(repaymentId)
+    setBusyRepayId(null)
+    if (!out.ok) {
+      setActionErr(out.detail)
+      return
+    }
+    setRepayOtpBanner((b) => (b?.repaymentId === repaymentId ? null : b))
+    setSuccessMsg(out.detail)
+    void refreshAccounts()
+  }
+
+  const openRepaymentForLoan = useMemo(() => {
+    const map = new Map<number, GoldLoanRepaymentPendingDTO>()
+    for (const r of pendingRepayments) {
+      map.set(r.loan_id, r)
+    }
+    return map
+  }, [pendingRepayments])
+
+  const showRepayOtpBlock =
+    repayOtpBanner != null &&
+    pendingRepayments.some((r) => r.id === repayOtpBanner.repaymentId)
 
   const runRegenerate = async (loanId: number) => {
     setBusyRegen(true)
@@ -447,46 +519,128 @@ export function CustomerGoldLoanPanel() {
                 Paid: ₹{fmtInr(loan.principal_paid_inr)} / ₹{fmtInr(loan.gross_principal_inr)}
                 {loan.due_at ? ` · due ${new Date(loan.due_at).toLocaleDateString('en-IN')}` : ''}
               </p>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', alignItems: 'center', marginTop: '0.5rem' }}>
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  placeholder="Partial ₹"
-                  className="tabular"
-                  value={repayDraft[loan.id] ?? ''}
-                  disabled={busyRepayId === loan.id}
-                  onChange={(e) =>
-                    setRepayDraft((d) => ({ ...d, [loan.id]: e.target.value.replace(/[^\d.]/g, '') }))
-                  }
-                  style={{
-                    width: '8rem',
-                    padding: '0.35rem 0.45rem',
-                    borderRadius: 8,
-                    border: '1px solid var(--border-soft)',
-                    background: 'var(--veil)',
-                  }}
-                />
+              {openRepaymentForLoan.get(loan.id) ? (
+                <p style={{ margin: '0.5rem 0 0', fontSize: '0.8rem', color: 'var(--warning)' }}>
+                  Open repayment {openRepaymentForLoan.get(loan.id)!.reference} · ₹
+                  {fmtInr(openRepaymentForLoan.get(loan.id)!.amount_inr)} ·{' '}
+                  {repaymentStatusHint(openRepaymentForLoan.get(loan.id)!.status)}
+                  <button
+                    type="button"
+                    className="btn btn-ghost"
+                    style={{ fontSize: '0.68rem', padding: '0.15rem 0.4rem', marginLeft: '0.35rem' }}
+                    disabled={busyRepayId === openRepaymentForLoan.get(loan.id)!.id}
+                    onClick={() => void onCancelRepayment(openRepaymentForLoan.get(loan.id)!.id)}
+                  >
+                    Cancel
+                  </button>
+                </p>
+              ) : (
+                <div
+                  style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', alignItems: 'center', marginTop: '0.5rem' }}
+                >
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="Partial ₹"
+                    className="tabular"
+                    value={repayDraft[loan.id] ?? ''}
+                    disabled={busyRepayId === loan.id}
+                    onChange={(e) =>
+                      setRepayDraft((d) => ({ ...d, [loan.id]: e.target.value.replace(/[^\d.]/g, '') }))
+                    }
+                    style={{
+                      width: '8rem',
+                      padding: '0.35rem 0.45rem',
+                      borderRadius: 8,
+                      border: '1px solid var(--border-soft)',
+                      background: 'var(--veil)',
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-ghost"
+                    style={{ fontSize: '0.72rem' }}
+                    disabled={busyRepayId === loan.id}
+                    onClick={() => void onRepay(loan, false)}
+                  >
+                    Submit partial
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    style={{ fontSize: '0.72rem' }}
+                    disabled={busyRepayId === loan.id}
+                    onClick={() => void onRepay(loan, true)}
+                  >
+                    Submit full
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      ) : null}
+
+      {(showRepayOtpBlock || pendingRepayments.length > 0) ? (
+        <div
+          className="card"
+          style={{
+            marginTop: '1rem',
+            padding: '1rem 1.15rem',
+            borderRadius: 16,
+            border: '1px solid rgba(34, 197, 94, 0.35)',
+            background: 'rgba(34, 197, 94, 0.08)',
+          }}
+        >
+          <h3 style={{ margin: '0 0 0.65rem', fontSize: '0.95rem' }}>Open repayments</h3>
+          {repayOtpBanner && showRepayOtpBlock ? (
+            <div style={{ marginBottom: '0.85rem' }}>
+              <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                Repayment OTP (share only after you pay cash at the counter){' '}
                 <button
                   type="button"
                   className="btn btn-ghost"
-                  style={{ fontSize: '0.72rem' }}
-                  disabled={busyRepayId === loan.id}
-                  onClick={() => void onRepay(loan, false)}
+                  style={{ fontSize: '0.68rem', padding: '0.2rem 0.45rem', marginLeft: '0.35rem' }}
+                  disabled={busyRepayRegen}
+                  onClick={() => void runRepayRegenerate(repayOtpBanner.repaymentId)}
                 >
-                  Pay partial
+                  {busyRepayRegen ? '…' : 'Regenerate OTP'}
                 </button>
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  style={{ fontSize: '0.72rem' }}
-                  disabled={busyRepayId === loan.id}
-                  onClick={() => void onRepay(loan, true)}
-                >
-                  Pay full
-                </button>
-              </div>
+              </p>
+              <p style={{ margin: '0.2rem 0 0', fontSize: '0.78rem', color: 'var(--text-faint)' }}>
+                {repayOtpBanner.loanId ? `LN-${repayOtpBanner.loanId}` : ''} · ₹
+                {fmtInr(repayOtpBanner.amountInr)}
+              </p>
+              <p
+                className="tabular"
+                style={{
+                  margin: '0.35rem 0 0',
+                  fontSize: '1.65rem',
+                  fontWeight: 800,
+                  letterSpacing: '0.12em',
+                  color: 'var(--gold-light)',
+                }}
+              >
+                {repayOtpBanner.code}
+              </p>
+              <p style={{ margin: '0.25rem 0 0', fontSize: '0.72rem', color: 'var(--text-faint)' }}>
+                Expires{' '}
+                {repayOtpBanner.expiresAt
+                  ? new Date(repayOtpBanner.expiresAt).toLocaleString('en-IN')
+                  : '—'}
+              </p>
             </div>
-          ))}
+          ) : null}
+          {pendingRepayments.length > 0 ? (
+            <ul style={{ margin: 0, paddingLeft: '1.1rem', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+              {pendingRepayments.map((r) => (
+                <li key={r.id} style={{ marginBottom: '0.35rem' }}>
+                  <strong className="tabular">{r.reference}</strong> · {r.loan_reference} · ₹
+                  {fmtInr(r.amount_inr)} · {repaymentStatusHint(r.status)}
+                </li>
+              ))}
+            </ul>
+          ) : null}
         </div>
       ) : null}
 

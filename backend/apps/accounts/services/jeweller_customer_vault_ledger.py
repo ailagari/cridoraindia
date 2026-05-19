@@ -13,11 +13,13 @@ from django.utils import timezone
 from apps.accounts.models import (
     FractionalGoldPurchase,
     GoldDepositIntake,
+    GoldLoanRequest,
     GoldSellbackRequest,
     GoldTransfer,
     GoldVault,
     PersonalGoldHolding,
 )
+from apps.accounts.services.loan_portfolio_ledger import jeweller_loan_ledger_rows
 from apps.marketplace.models import jeweller_profile_for
 from apps.marketplace.pricing import reference_metal_rate_inr_per_gram_for_jeweller
 from apps.marketplace.spot_prices import resolve_cridora_base_22k_inr
@@ -57,7 +59,9 @@ def jeweller_can_access_customer_vault_ledger(jeweller: User, customer_id: int) 
         jeweller=jeweller, user_id=customer_id, is_removed=False
     ).exists():
         return True
-    return GoldDepositIntake.objects.filter(jeweller=jeweller, customer_id=customer_id).exists()
+    if GoldDepositIntake.objects.filter(jeweller=jeweller, customer_id=customer_id).exists():
+        return True
+    return GoldLoanRequest.objects.filter(jeweller=jeweller, customer_id=customer_id).exists()
 
 
 def jeweller_customer_vault_ledger_payload(
@@ -210,6 +214,23 @@ def jeweller_customer_vault_ledger_payload(
             }
         )
 
+    for lr in jeweller_loan_ledger_rows(jeweller):
+        if lr.get("customer_id") != customer_id:
+            continue
+        rows.append(
+            {
+                "occurred_at": lr["occurred_at"],
+                "transaction_type": lr["transaction_type"],
+                "grams": lr.get("grams") or "",
+                "metal_type": METAL_TYPE_LABEL,
+                "purchase_value_inr": None,
+                "invoice_total_inr": lr.get("amount_inr"),
+                "current_value_inr": lr.get("principal_outstanding_inr") or lr.get("amount_inr"),
+                "reference": lr["reference"],
+                "counterparty_label": lr.get("label") or "",
+            }
+        )
+
     rows.sort(key=lambda r: r["occurred_at"], reverse=True)
 
     allowed = {
@@ -221,6 +242,9 @@ def jeweller_customer_vault_ledger_payload(
         "transfer_in",
         "transfer_out",
         "sellback",
+        "loan_disbursed",
+        "loan_repayment",
+        "loan_pending",
     }
     lf = (ledger_filter or "all").strip().lower()
     if lf not in allowed:

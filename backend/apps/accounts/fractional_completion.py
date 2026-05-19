@@ -26,3 +26,6 @@ def apply_fractional_purchase_credit_and_liabilities(purchase: FractionalGoldPur
     from apps.accounts.services.user_push_notify import notify_fractional_purchase_completed
 
     notify_fractional_purchase_completed(purchase)
+    from .jeweller_revenue_service import record_fractional_sale_revenue
+
+    record_fractional_sale_revenue(purchase)

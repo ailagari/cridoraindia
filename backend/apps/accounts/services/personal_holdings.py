@@ -63,7 +63,16 @@ def customer_portfolio_totals_payload(user: User) -> dict[str, Any]:
     frac_g = by_type.get(VaultHolding.FRACTIONAL, Decimal("0"))
     dep_g = by_type.get(VaultHolding.DEPOSIT, Decimal("0"))
     scheme_g = by_type.get(VaultHolding.GOLDEN_SCHEME, Decimal("0"))
+    loan_locked_g = by_type.get(VaultHolding.LOAN_COLLATERAL, Decimal("0"))
     cridora_active_g = frac_g + dep_g + scheme_g
+
+    from apps.accounts.models import GoldLoanRequest
+
+    loan_outstanding = Decimal("0")
+    for ln in GoldLoanRequest.objects.filter(
+        customer=user, status=GoldLoanRequest.STATUS_DISBURSED
+    ):
+        loan_outstanding += ln.principal_outstanding_inr
 
     pers = PersonalGoldHolding.objects.filter(user=user, is_removed=False).aggregate(
         g=Coalesce(Sum("weight_grams"), Decimal("0")),
@@ -124,6 +133,8 @@ def customer_portfolio_totals_payload(user: User) -> dict[str, Any]:
         "personal_gain_on_recorded_cost_inr": personal_gain_inr_s,
         "personal_gain_on_recorded_cost_percent": personal_gain_pct_s,
         "total_estimated_value_inr": str(total_est_inr),
+        "loan_collateral_locked_grams": str(loan_locked_g.quantize(Decimal("0.000001"))),
+        "loan_principal_outstanding_inr": str(loan_outstanding.quantize(Decimal("0.01"))),
     }
 
 
@@ -338,6 +349,9 @@ def customer_portfolio_ledger_payload(user: User, ledger_filter: str = "all") ->
             }
         )
 
+    from apps.accounts.services.loan_portfolio_ledger import customer_loan_ledger_rows
+
+    rows.extend(customer_loan_ledger_rows(user))
     rows.sort(key=lambda x: x["occurred_at"], reverse=True)
     allowed = {
         "all",
@@ -350,6 +364,11 @@ def customer_portfolio_ledger_payload(user: User, ledger_filter: str = "all") ->
         "transfer",
         "sellback",
         "redemption_purchase",
+        "loan",
+        "loan_collateral_lock",
+        "loan_disbursement",
+        "loan_repayment",
+        "loan_collateral_release",
     }
     lf = (ledger_filter or "all").strip().lower()
     if lf not in allowed:
@@ -359,6 +378,8 @@ def customer_portfolio_ledger_payload(user: User, ledger_filter: str = "all") ->
             rows = [
                 x for x in rows if x["transaction_type"] in ("transfer_in", "transfer_out")
             ]
+        elif lf == "loan":
+            rows = [x for x in rows if x["transaction_type"].startswith("loan_")]
         else:
             rows = [x for x in rows if x["transaction_type"] == lf]
     return {"entries": rows}

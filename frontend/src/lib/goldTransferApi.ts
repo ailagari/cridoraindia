@@ -64,6 +64,8 @@ export type PortfolioTotalsDTO = {
   personal_gain_on_recorded_cost_inr?: string
   personal_gain_on_recorded_cost_percent?: string
   total_estimated_value_inr?: string
+  loan_collateral_locked_grams?: string
+  loan_principal_outstanding_inr?: string
 }
 
 export type GoldWalletDTO = {
@@ -89,6 +91,17 @@ export type GoldWalletDTO = {
   portfolio_unrealized?: PortfolioUnrealizedDTO | null
   /** Full wealth view: vault + personal (reference marks). */
   portfolio_totals?: PortfolioTotalsDTO | null
+  jeweller_total_revenue_inr?: string
+  jeweller_revenue_by_kind?: Record<string, string>
+  jeweller_portfolio?: {
+    revenue_summary?: { total_revenue_inr?: string; by_kind?: Record<string, string> }
+    loan_summary?: {
+      active_loan_count?: number
+      total_principal_outstanding_inr?: string
+      pending_request_count?: number
+    }
+    loan_customers?: unknown[]
+  }
 }
 
 /** Non-negative vaulted grams from wallet API (`balance_grams`) — sum across all custodians. */

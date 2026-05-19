@@ -704,6 +704,64 @@ class GoldLoanRepayment(models.Model):
         return f"GoldLoanRepayment(loan={self.loan_id}, ₹{self.amount_inr})"
 
 
+class GoldLoanRepaymentRequest(models.Model):
+    """Customer-initiated cash repayment awaiting jeweller OTP confirmation."""
+
+    STATUS_PENDING_JEWELLER = "pending_jeweller"
+    STATUS_REJECTED = "rejected"
+    STATUS_ACCEPTED_AWAITING_OTP = "accepted_awaiting_otp"
+    STATUS_COMPLETED = "completed"
+    STATUS_CANCELLED = "cancelled"
+
+    STATUS_CHOICES = [
+        (STATUS_PENDING_JEWELLER, "Pending jeweller"),
+        (STATUS_REJECTED, "Rejected"),
+        (STATUS_ACCEPTED_AWAITING_OTP, "Accepted awaiting OTP"),
+        (STATUS_COMPLETED, "Completed"),
+        (STATUS_CANCELLED, "Cancelled"),
+    ]
+
+    loan = models.ForeignKey(
+        GoldLoanRequest,
+        on_delete=models.CASCADE,
+        related_name="repayment_requests",
+    )
+    amount_inr = models.DecimalField(max_digits=16, decimal_places=2)
+    status = models.CharField(
+        max_length=32,
+        choices=STATUS_CHOICES,
+        default=STATUS_PENDING_JEWELLER,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-updated_at", "-created_at"]
+
+    def __str__(self):
+        return f"GoldLoanRepaymentRequest(loan={self.loan_id}, ₹{self.amount_inr})"
+
+
+class GoldLoanRepaymentOtp(models.Model):
+    """OTP customer shares with jeweller after paying cash toward a loan."""
+
+    repayment_request = models.OneToOneField(
+        GoldLoanRepaymentRequest,
+        on_delete=models.CASCADE,
+        related_name="settlement_otp",
+    )
+    code_hash = models.CharField(max_length=64)
+    expires_at = models.DateTimeField(db_index=True)
+    failed_attempts = models.PositiveSmallIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Gold loan repayment OTP"
+
+    def __str__(self):
+        return f"GoldLoanRepaymentOtp(request={self.repayment_request_id})"
+
+
 class GoldLoanOtp(models.Model):
     """OTP customer shares with jeweller after receiving cash loan disbursement."""
 
@@ -1037,6 +1095,98 @@ class JewellerLiabilityLedgerEntry(models.Model):
 
     def __str__(self):
         return f"JewellerLiabilityLedgerEntry(j={self.jeweller_id}, {self.grams}g)"
+
+
+class JewellerRevenueBalance(models.Model):
+    """Running total of recorded jeweller revenue (INR) from platform transactions."""
+
+    jeweller = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name="revenue_balance",
+        limit_choices_to={"user_type": User.JEWELLER},
+    )
+    total_revenue_inr = models.DecimalField(max_digits=16, decimal_places=2, default=Decimal("0"))
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"JewellerRevenueBalance({self.jeweller_id}, ₹{self.total_revenue_inr})"
+
+
+class JewellerRevenueLedgerEntry(models.Model):
+    """INR revenue credited to a jeweller (sales, loan fees, ornament checkout, etc.)."""
+
+    KIND_FRACTIONAL_SALE = "fractional_sale"
+    KIND_LOAN_PROCESSING_FEE = "loan_processing_fee"
+    KIND_ORNAMENT_SALE = "ornament_sale"
+    KIND_DEPOSIT_INTAKE = "deposit_intake"
+
+    KIND_CHOICES = [
+        (KIND_FRACTIONAL_SALE, "Fractional gold sale"),
+        (KIND_LOAN_PROCESSING_FEE, "Gold loan processing fee share"),
+        (KIND_ORNAMENT_SALE, "Ornament / vault product sale"),
+        (KIND_DEPOSIT_INTAKE, "Gold deposit intake"),
+    ]
+
+    jeweller = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="revenue_ledger_entries",
+        limit_choices_to={"user_type": User.JEWELLER},
+    )
+    customer = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="jeweller_revenue_entries_as_customer",
+        limit_choices_to={"user_type": User.CUSTOMER},
+    )
+    amount_inr = models.DecimalField(max_digits=16, decimal_places=2)
+    kind = models.CharField(max_length=32, choices=KIND_CHOICES)
+    reference_label = models.CharField(max_length=64, blank=True)
+    fractional_purchase = models.ForeignKey(
+        FractionalGoldPurchase,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="revenue_entries",
+    )
+    gold_loan = models.ForeignKey(
+        "GoldLoanRequest",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="revenue_entries",
+    )
+    vault_product_redemption = models.ForeignKey(
+        VaultProductRedemption,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="revenue_entries",
+    )
+    gold_deposit_intake = models.ForeignKey(
+        "GoldDepositIntake",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="revenue_entries",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["gold_loan", "kind"],
+                condition=models.Q(gold_loan__isnull=False, kind="loan_processing_fee"),
+                name="uniq_jeweller_revenue_loan_fee",
+            ),
+        ]
+
+    def __str__(self):
+        return f"JewellerRevenueLedgerEntry(j={self.jeweller_id}, ₹{self.amount_inr}, {self.kind})"
 
 
 class JewellerCrossPolicy(models.Model):

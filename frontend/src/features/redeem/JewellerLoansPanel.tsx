@@ -1,9 +1,14 @@
 ﻿import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
+  fetchJewellerLoanRepayments,
   fetchJewellerLoans,
   postJewellerLoanAccept,
   postJewellerLoanComplete,
   postJewellerLoanReject,
+  postJewellerLoanRepaymentAccept,
+  postJewellerLoanRepaymentComplete,
+  postJewellerLoanRepaymentReject,
+  type JewellerLoanRepaymentRowDTO,
   type JewellerLoanRowDTO,
 } from '@/lib/goldLoanApi'
 import { LIVE_BALANCE_POLL_MS } from '@/lib/liveDeskIntervals'
@@ -29,22 +34,34 @@ function statusLabel(st: string): string {
   return st.replace(/_/g, ' ')
 }
 
+function repaymentStatusLabel(st: string): string {
+  if (st === 'pending_jeweller') return 'Pending your action'
+  if (st === 'accepted_awaiting_otp') return 'Accepted · collect cash & enter OTP'
+  return st.replace(/_/g, ' ')
+}
+
 export function JewellerLoansPanel() {
   const [rows, setRows] = useState<JewellerLoanRowDTO[]>([])
+  const [repayments, setRepayments] = useState<JewellerLoanRepaymentRowDTO[]>([])
   const [loadErr, setLoadErr] = useState('')
   const [successMsg, setSuccessMsg] = useState('')
   const [otpDraft, setOtpDraft] = useState<Record<number, string>>({})
+  const [repayOtpDraft, setRepayOtpDraft] = useState<Record<number, string>>({})
   const [busyId, setBusyId] = useState<number | null>(null)
 
   const refresh = useCallback(async () => {
     setLoadErr('')
-    const payload = await fetchJewellerLoans()
+    const [payload, repayPayload] = await Promise.all([
+      fetchJewellerLoans(),
+      fetchJewellerLoanRepayments(),
+    ])
     if (!payload) {
       setLoadErr('Could not load loan requests.')
       setRows([])
-      return
+    } else {
+      setRows(payload.results ?? [])
     }
-    setRows(payload.results ?? [])
+    setRepayments(repayPayload?.results ?? [])
   }, [])
 
   useEffect(() => {
@@ -107,6 +124,54 @@ export function JewellerLoansPanel() {
     setLoadErr('')
     setSuccessMsg(out.detail)
     setOtpDraft((d) => {
+      const next = { ...d }
+      delete next[id]
+      return next
+    })
+    await refresh()
+  }
+
+  const onRepayAccept = async (id: number) => {
+    setBusyId(id)
+    const out = await postJewellerLoanRepaymentAccept(id)
+    setBusyId(null)
+    if (!out.ok) {
+      setLoadErr(out.detail)
+      return
+    }
+    setLoadErr('')
+    setSuccessMsg(out.detail)
+    await refresh()
+  }
+
+  const onRepayReject = async (id: number) => {
+    setBusyId(id)
+    const out = await postJewellerLoanRepaymentReject(id)
+    setBusyId(null)
+    if (!out.ok) {
+      setLoadErr(out.detail)
+      return
+    }
+    setLoadErr('')
+    await refresh()
+  }
+
+  const onRepayComplete = async (id: number) => {
+    const otp = (repayOtpDraft[id] ?? '').trim()
+    if (!otp) {
+      setLoadErr('Enter the customer\'s 6-digit OTP.')
+      return
+    }
+    setBusyId(id)
+    const out = await postJewellerLoanRepaymentComplete(id, otp)
+    setBusyId(null)
+    if (!out.ok) {
+      setLoadErr(out.detail)
+      return
+    }
+    setLoadErr('')
+    setSuccessMsg(out.detail)
+    setRepayOtpDraft((d) => {
       const next = { ...d }
       delete next[id]
       return next
@@ -219,16 +284,14 @@ export function JewellerLoansPanel() {
         </p>
       ) : null}
 
-      {rows.length === 0 && !loadErr ? (
-        <p style={{ color: 'var(--text-muted)' }}>No loan requests yet.</p>
-      ) : (
-        <>
-          <h3 style={{ margin: '0 0 0.55rem', fontSize: '0.95rem' }}>Needs action</h3>
-          {queue.length === 0 ? (
+      <>
+          <h3 style={{ margin: '0 0 0.55rem', fontSize: '0.95rem' }}>New loan requests</h3>
+          {rows.length === 0 && !loadErr ? (
             <p style={{ color: 'var(--text-muted)', marginBottom: '1rem', fontSize: '0.85rem' }}>
-              No pending loan requests.
+              No loan disbursement requests yet.
             </p>
-          ) : (
+          ) : null}
+          {queue.length === 0 ? null : (
             <div className="jeweller-sellbacks-wrap" style={{ marginBottom: '1.35rem' }}>
               <table className="jeweller-sellbacks-table">
                 <thead>
@@ -262,15 +325,117 @@ export function JewellerLoansPanel() {
                     <th scope="col">Phone</th>
                     <th scope="col">Status</th>
                     <th scope="col">Grams</th>
-                    <th scope="col">Net cash â‚¹</th>
+                    <th scope="col">Net cash ₹</th>
                   </tr>
                 </thead>
                 <tbody>{history.map((r) => <tr key={r.id}>{renderRowCells(r, false)}</tr>)}</tbody>
               </table>
             </div>
           )}
-        </>
-      )}
+
+          <h3 style={{ margin: '1.5rem 0 0.55rem', fontSize: '0.95rem' }}>Loan repayments</h3>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '0.75rem' }}>
+            Customer cash repayments against active loans. Accept, collect cash, then verify with the
+            customer&apos;s OTP.
+          </p>
+          {repayments.length === 0 ? (
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>No pending repayments.</p>
+          ) : (
+            <div className="jeweller-sellbacks-wrap">
+              <table className="jeweller-sellbacks-table">
+                <thead>
+                  <tr>
+                    <th scope="col">When</th>
+                    <th scope="col">Ref</th>
+                    <th scope="col">Loan</th>
+                    <th scope="col">Customer</th>
+                    <th scope="col">Amount ₹</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {repayments.map((r) => (
+                    <tr key={r.id}>
+                      <td data-label="When">{fmtWhen(r.updated_at)}</td>
+                      <td data-label="Ref">
+                        <strong className="tabular">{r.reference}</strong>
+                      </td>
+                      <td data-label="Loan">{r.loan_reference}</td>
+                      <td data-label="Customer">{r.customer_label}</td>
+                      <td data-label="Amount">
+                        <span className="tabular">₹{fmtInr(r.amount_inr)}</span>
+                      </td>
+                      <td data-label="Status">{repaymentStatusLabel(r.status)}</td>
+                      <td data-label="Actions">
+                        {r.status === 'pending_jeweller' ? (
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
+                            <button
+                              type="button"
+                              className="btn btn-primary"
+                              style={{ fontSize: '0.68rem', padding: '0.35rem 0.55rem' }}
+                              disabled={busyId === r.id}
+                              onClick={() => void onRepayAccept(r.id)}
+                            >
+                              Accept
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-ghost"
+                              style={{ fontSize: '0.68rem', padding: '0.35rem 0.55rem' }}
+                              disabled={busyId === r.id}
+                              onClick={() => void onRepayReject(r.id)}
+                            >
+                              Reject
+                            </button>
+                          </div>
+                        ) : r.status === 'accepted_awaiting_otp' ? (
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', alignItems: 'center' }}>
+                            <input
+                              type="text"
+                              inputMode="numeric"
+                              autoComplete="one-time-code"
+                              placeholder="Customer OTP"
+                              className="tabular"
+                              value={repayOtpDraft[r.id] ?? ''}
+                              maxLength={8}
+                              disabled={busyId === r.id}
+                              onChange={(e) =>
+                                setRepayOtpDraft((d) => ({
+                                  ...d,
+                                  [r.id]: e.target.value.replace(/\D/g, '').slice(0, 6),
+                                }))
+                              }
+                              style={{
+                                width: '7rem',
+                                padding: '0.35rem 0.45rem',
+                                borderRadius: 8,
+                                border: '1px solid var(--border-soft)',
+                                background: 'var(--veil)',
+                                fontFamily: 'var(--font)',
+                              }}
+                            />
+                            <button
+                              type="button"
+                              className="btn btn-primary"
+                              style={{ fontSize: '0.68rem', padding: '0.35rem 0.55rem' }}
+                              disabled={busyId === r.id}
+                              onClick={() => void onRepayComplete(r.id)}
+                            >
+                              Record (verify OTP)
+                            </button>
+                          </div>
+                        ) : (
+                          '—'
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+      </>
     </div>
   )
 }

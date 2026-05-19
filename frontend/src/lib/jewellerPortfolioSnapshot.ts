@@ -33,6 +33,10 @@ export type JewellerPortfolioSnapshot = {
   pendingCross: number
   pendingTotal: number
   recentCredits: LiabilityCreditRowDTO[]
+  ledgerRevenueInr: number
+  loanOutstandingInr: number
+  activeLoanCount: number
+  pendingLoanCount: number
 }
 
 export async function fetchJewellerPortfolioSnapshot(): Promise<JewellerPortfolioSnapshot | null> {
@@ -78,6 +82,12 @@ export async function fetchJewellerPortfolioSnapshot(): Promise<JewellerPortfoli
   }).length
 
   const depositPendingInr = pendingDeposits.reduce((s, r) => s + parseN(r.estimated_value_inr), 0)
+  const ledgerRevenueInr = parseN(wallet.jeweller_total_revenue_inr)
+  const loanOutstandingInr = parseN(
+    wallet.jeweller_portfolio?.loan_summary?.total_principal_outstanding_inr,
+  )
+  const activeLoanCount = wallet.jeweller_portfolio?.loan_summary?.active_loan_count ?? 0
+  const pendingLoanCount = wallet.jeweller_portfolio?.loan_summary?.pending_request_count ?? 0
 
   return {
     liabilityGrams: parseN(wallet.custodial_liability_grams),
@@ -98,5 +108,9 @@ export async function fetchJewellerPortfolioSnapshot(): Promise<JewellerPortfoli
     pendingCross,
     pendingTotal: pendingFrac.length + pendingDeposits.length + pendingSellbacks + pendingCross,
     recentCredits: wallet.recent_liability_credits ?? [],
+    ledgerRevenueInr,
+    loanOutstandingInr,
+    activeLoanCount,
+    pendingLoanCount,
   }
 }

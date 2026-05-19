@@ -4,6 +4,7 @@ import { jewellerFractionalPending, type JewellerFractionalPendingRow } from '@/
 import { LIVE_BALANCE_POLL_MS } from '@/lib/liveDeskIntervals'
 import { useLivePoll } from '@/lib/useLivePoll'
 import { LiabilityCreditsMiniList } from './LiabilityCreditsMiniList'
+import { JewellerPortfolioLedgerSection } from './JewellerPortfolioLedgerSection'
 
 function parseG(s: string): number {
   const n = Number.parseFloat(s)
@@ -154,6 +155,8 @@ export function JewellerPortfolioPanel({ embedded }: PanelProps = {}) {
         </header>
         <LiabilityCreditsMiniList rows={credits} limit={8} />
       </article>
+
+      <JewellerPortfolioLedgerSection />
     </div>
   )
 }

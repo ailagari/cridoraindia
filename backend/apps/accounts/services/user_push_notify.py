@@ -185,6 +185,38 @@ def notify_loan_awaiting_otp_customer(row) -> None:
     )
 
 
+def notify_loan_repayment_pending_jeweller(req) -> None:
+    from apps.accounts.models import GoldLoanRepaymentRequest
+
+    if not isinstance(req, GoldLoanRepaymentRequest):
+        return
+    loan = req.loan
+    notify_user_push(
+        loan.jeweller,
+        title="Loan repayment",
+        body=(
+            f"{_display_name(loan.customer)} wants to repay ₹{req.amount_inr} "
+            f"on LN-{loan.pk} — review in Redemption."
+        ),
+        url=jeweller_dashboard("txn_ops"),
+        tag=f"loan-repay-pending-j-{req.pk}",
+    )
+
+
+def notify_loan_repayment_awaiting_otp_customer(req) -> None:
+    from apps.accounts.models import GoldLoanRepaymentRequest
+
+    if not isinstance(req, GoldLoanRepaymentRequest):
+        return
+    notify_user_activity(
+        req.loan.customer,
+        title="Share repayment OTP",
+        body="Jeweller accepted your repayment. Pay cash at the counter, then share your OTP.",
+        link_path=customer_dashboard("redeem_loan"),
+        tag=f"loan-repay-otp-c-{req.pk}",
+    )
+
+
 def notify_cross_redemption_pending_source(req) -> None:
     from apps.accounts.models import CrossRedemptionRequest
 

@@ -8,6 +8,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .jeweller_liability_service import jeweller_liability_grams
+from .jeweller_revenue_service import jeweller_revenue_by_kind, jeweller_total_revenue_inr
+from .services.jeweller_portfolio_ledger import jeweller_portfolio_ledger_payload
 from .wallet_extras import (
     customer_completed_fractional_ledger,
     customer_portfolio_unrealized_summary,
@@ -83,6 +85,9 @@ def _wallet_payload(user: User) -> dict:
     portfolio_totals = (
         customer_portfolio_totals_payload(user) if user.user_type == User.CUSTOMER else {}
     )
+    jeweller_portfolio = {}
+    if user.user_type == User.JEWELLER:
+        jeweller_portfolio = jeweller_portfolio_ledger_payload(user, ledger_filter="all")
     return GoldWalletSerializer(
         {
             "cridora_member_id": user.cridora_member_id or "",
@@ -102,6 +107,15 @@ def _wallet_payload(user: User) -> dict:
             "recent_liability_credits": liab_credits,
             "portfolio_unrealized": pnl_block,
             "portfolio_totals": portfolio_totals,
+            "jeweller_total_revenue_inr": (
+                str(jeweller_total_revenue_inr(user).quantize(Decimal("0.01")))
+                if user.user_type == User.JEWELLER
+                else ""
+            ),
+            "jeweller_revenue_by_kind": (
+                jeweller_revenue_by_kind(user) if user.user_type == User.JEWELLER else {}
+            ),
+            "jeweller_portfolio": jeweller_portfolio,
         }
     ).data
 

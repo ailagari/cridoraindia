@@ -10,8 +10,16 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.accounts.gold_identity import MIN_TRANSFER_GRAMS
-from apps.accounts.models import GoldLoanRepayment, GoldLoanRequest
+from apps.accounts.models import (
+    GoldLoanRepayment,
+    GoldLoanRepaymentRequest,
+    GoldLoanRequest,
+)
 from apps.accounts.loan_otp import issue_loan_otp, verify_loan_otp
+from apps.accounts.loan_repayment_otp import (
+    issue_loan_repayment_otp,
+    verify_loan_repayment_otp,
+)
 from apps.accounts.vault_service import (
     customer_loan_custodian_ids,
     customer_loan_collateral_locked_grams,
@@ -457,6 +465,9 @@ def jeweller_complete_loan_with_otp(
         row.disbursed_at = now
         row.due_at = now + timedelta(days=30 * int(row.term_months))
         row.save(update_fields=["status", "disbursed_at", "due_at", "updated_at"])
+        from apps.accounts.jeweller_revenue_service import record_loan_processing_fee_revenue
+
+        record_loan_processing_fee_revenue(row)
     return row, None
 
 
@@ -468,6 +479,44 @@ def customer_active_loans(customer: User) -> list[GoldLoanRequest]:
         )
         .select_related("jeweller")
         .order_by("-disbursed_at", "-id")
+    )
+
+
+def _open_repayment_statuses() -> tuple[str, ...]:
+    return (
+        GoldLoanRepaymentRequest.STATUS_PENDING_JEWELLER,
+        GoldLoanRepaymentRequest.STATUS_ACCEPTED_AWAITING_OTP,
+    )
+
+
+def _serialize_repayment_request(req: GoldLoanRepaymentRequest) -> dict[str, str]:
+    loan = req.loan
+    jl = loan.jeweller
+    otp_row = getattr(req, "settlement_otp", None)
+    exp = otp_row.expires_at.isoformat() if otp_row else ""
+    return {
+        "id": req.id,
+        "reference": f"LRP-{req.id}",
+        "loan_id": loan.pk,
+        "loan_reference": f"LN-{loan.pk}",
+        "amount_inr": str(req.amount_inr),
+        "status": req.status,
+        "jeweller_id": str(loan.jeweller_id),
+        "jeweller_label": jl.business_name or jl.email or "",
+        "otp_expires_at": exp,
+        "created_at": req.created_at.isoformat(),
+        "updated_at": req.updated_at.isoformat(),
+    }
+
+
+def customer_open_loan_repayments(customer: User) -> list[GoldLoanRepaymentRequest]:
+    return list(
+        GoldLoanRepaymentRequest.objects.filter(
+            loan__customer=customer,
+            status__in=_open_repayment_statuses(),
+        )
+        .select_related("loan", "loan__jeweller", "settlement_otp")
+        .order_by("-updated_at")[:30]
     )
 
 
@@ -483,31 +532,19 @@ def customer_loan_accounts(customer: User) -> dict:
         .order_by("-updated_at")[:20]
     )
     active = customer_active_loans(customer)
+    pending_repayments = customer_open_loan_repayments(customer)
     return {
         "pending": pending,
         "active": active,
+        "pending_repayments": pending_repayments,
         "gold_loan_max_term_months": str(get_or_create_ticker().gold_loan_max_term_months),
     }
 
 
 @transaction.atomic
-def customer_repay_loan(
-    customer: User,
-    loan_id: int,
-    amount_inr: Decimal,
+def _apply_loan_repayment(
+    row: GoldLoanRequest, amount_inr: Decimal
 ) -> tuple[GoldLoanRepayment | None, dict | None, str | None]:
-    if amount_inr <= 0:
-        return None, None, "Enter a positive repayment amount."
-    row = (
-        GoldLoanRequest.objects.select_for_update()
-        .filter(pk=loan_id, customer=customer)
-        .select_related("jeweller")
-        .first()
-    )
-    if not row:
-        return None, None, "Loan not found."
-    if row.status != GoldLoanRequest.STATUS_DISBURSED:
-        return None, None, "Only active disbursed loans accept repayment."
     outstanding = row.principal_outstanding_inr
     if amount_inr > outstanding:
         return None, None, f"Amount exceeds outstanding principal (₹{outstanding})."
@@ -537,3 +574,165 @@ def customer_repay_loan(
     payload = _serialize_loan_account(row)
     payload["repayment_amount_inr"] = str(amount_inr)
     return rep, payload, None
+
+
+@transaction.atomic
+def customer_initiate_loan_repayment(
+    customer: User,
+    loan_id: int,
+    amount_inr: Decimal,
+) -> tuple[GoldLoanRepaymentRequest | None, str | None, str | None]:
+    """Create pending repayment + OTP; jeweller must verify before principal updates."""
+    if amount_inr <= 0:
+        return None, None, "Enter a positive repayment amount."
+    row = (
+        GoldLoanRequest.objects.select_for_update()
+        .filter(pk=loan_id, customer=customer)
+        .select_related("jeweller")
+        .first()
+    )
+    if not row:
+        return None, None, "Loan not found."
+    if row.status != GoldLoanRequest.STATUS_DISBURSED:
+        return None, None, "Only active disbursed loans accept repayment."
+    outstanding = row.principal_outstanding_inr
+    if amount_inr > outstanding:
+        return None, None, f"Amount exceeds outstanding principal (₹{outstanding})."
+    existing = (
+        GoldLoanRepaymentRequest.objects.select_for_update()
+        .filter(loan=row, status__in=_open_repayment_statuses())
+        .exists()
+    )
+    if existing:
+        return None, None, "Finish or cancel your open repayment request before starting another."
+    req = GoldLoanRepaymentRequest.objects.create(
+        loan=row,
+        amount_inr=amount_inr,
+        status=GoldLoanRepaymentRequest.STATUS_PENDING_JEWELLER,
+    )
+    code, _expires_at = issue_loan_repayment_otp(req)
+    from apps.accounts.services.user_push_notify import notify_loan_repayment_pending_jeweller
+
+    notify_loan_repayment_pending_jeweller(req)
+    return req, code, None
+
+
+def regenerate_customer_loan_repayment_otp(
+    customer: User, repayment_id: int
+) -> tuple[str | None, str | None]:
+    req = (
+        GoldLoanRepaymentRequest.objects.filter(
+            pk=repayment_id,
+            loan__customer=customer,
+            status__in=_open_repayment_statuses(),
+        )
+        .first()
+    )
+    if not req:
+        return None, "No open repayment found for this reference."
+    try:
+        code, _ = issue_loan_repayment_otp(req)
+    except ValueError as e:
+        return None, str(e)
+    return code, None
+
+
+def customer_cancel_loan_repayment(
+    customer: User, repayment_id: int
+) -> tuple[bool, str]:
+    with transaction.atomic():
+        req = (
+            GoldLoanRepaymentRequest.objects.select_for_update()
+            .filter(pk=repayment_id, loan__customer=customer)
+            .first()
+        )
+        if not req:
+            return False, "Repayment request not found."
+        if req.status not in _open_repayment_statuses():
+            return False, "Only open repayment requests can be cancelled."
+        req.status = GoldLoanRepaymentRequest.STATUS_CANCELLED
+        req.save(update_fields=["status", "updated_at"])
+    return True, ""
+
+
+def jeweller_open_loan_repayments(jeweller: User) -> list[GoldLoanRepaymentRequest]:
+    return list(
+        GoldLoanRepaymentRequest.objects.filter(
+            loan__jeweller=jeweller,
+            status__in=_open_repayment_statuses(),
+        )
+        .select_related("loan", "loan__customer", "settlement_otp")
+        .order_by("-updated_at")[:100]
+    )
+
+
+def jeweller_accept_loan_repayment(jeweller: User, repayment_id: int) -> tuple[bool, str]:
+    with transaction.atomic():
+        req = (
+            GoldLoanRepaymentRequest.objects.select_for_update()
+            .filter(pk=repayment_id, loan__jeweller=jeweller)
+            .select_related("loan")
+            .first()
+        )
+        if not req:
+            return False, "Repayment request not found."
+        if req.status != GoldLoanRepaymentRequest.STATUS_PENDING_JEWELLER:
+            return False, "Only pending repayments can be accepted."
+        req.status = GoldLoanRepaymentRequest.STATUS_ACCEPTED_AWAITING_OTP
+        req.save(update_fields=["status", "updated_at"])
+        from apps.accounts.services.user_push_notify import (
+            notify_loan_repayment_awaiting_otp_customer,
+        )
+
+        notify_loan_repayment_awaiting_otp_customer(req)
+    return True, ""
+
+
+def jeweller_reject_loan_repayment(jeweller: User, repayment_id: int) -> tuple[bool, str]:
+    with transaction.atomic():
+        req = (
+            GoldLoanRepaymentRequest.objects.select_for_update()
+            .filter(pk=repayment_id, loan__jeweller=jeweller)
+            .first()
+        )
+        if not req:
+            return False, "Repayment request not found."
+        if req.status != GoldLoanRepaymentRequest.STATUS_PENDING_JEWELLER:
+            return False, "Only pending repayments can be rejected."
+        req.status = GoldLoanRepaymentRequest.STATUS_REJECTED
+        req.save(update_fields=["status", "updated_at"])
+    return True, ""
+
+
+def jeweller_complete_loan_repayment_with_otp(
+    jeweller: User, repayment_id: int, otp: str
+) -> tuple[GoldLoanRepaymentRequest | None, dict | None, str | None]:
+    with transaction.atomic():
+        req = (
+            GoldLoanRepaymentRequest.objects.select_for_update()
+            .filter(pk=repayment_id, loan__jeweller=jeweller)
+            .select_related("loan", "loan__customer", "loan__jeweller")
+            .first()
+        )
+        if not req:
+            return None, None, "Repayment request not found."
+        if req.status != GoldLoanRepaymentRequest.STATUS_ACCEPTED_AWAITING_OTP:
+            return None, None, (
+                "Accept the repayment first, collect cash from the customer, then enter their OTP."
+            )
+        ok, detail = verify_loan_repayment_otp(req, otp)
+        if not ok:
+            return None, None, detail
+        loan = (
+            GoldLoanRequest.objects.select_for_update()
+            .filter(pk=req.loan_id)
+            .first()
+        )
+        if not loan or loan.status != GoldLoanRequest.STATUS_DISBURSED:
+            return None, None, "Loan is no longer active."
+        _rep, loan_payload, err = _apply_loan_repayment(loan, req.amount_inr)
+        if err:
+            return None, None, err
+        req.status = GoldLoanRepaymentRequest.STATUS_COMPLETED
+        req.save(update_fields=["status", "updated_at"])
+    return req, loan_payload, None

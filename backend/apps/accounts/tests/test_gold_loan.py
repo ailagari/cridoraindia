@@ -7,8 +7,10 @@ from rest_framework.test import APIClient
 from apps.accounts.loan_service import (
     compare_loan_offers,
     create_pending_loan_request,
-    customer_repay_loan,
+    customer_initiate_loan_repayment,
     customer_vault_loan_rates,
+    jeweller_accept_loan_repayment,
+    jeweller_complete_loan_repayment_with_otp,
     quote_customer_loan,
 )
 from apps.accounts.models import GoldLoanRequest, VaultHolding
@@ -186,14 +188,27 @@ class GoldLoanLockRepayTests(TestCase):
         row.save(update_fields=["status", "disbursed_at", "updated_at"])
         principal = row.gross_principal_inr_snapshot
         half = (principal / 2).quantize(Decimal("0.01"))
-        _, payload, rerr = customer_repay_loan(self.customer, row.pk, half)
-        self.assertIsNone(rerr)
+
+        def settle(amount: Decimal):
+            req, otp, ierr = customer_initiate_loan_repayment(
+                self.customer, row.pk, amount
+            )
+            self.assertIsNone(ierr)
+            assert req is not None and otp is not None
+            ok, aerr = jeweller_accept_loan_repayment(self.jeweller, req.pk)
+            self.assertTrue(ok, aerr)
+            _req, payload, cerr = jeweller_complete_loan_repayment_with_otp(
+                self.jeweller, req.pk, otp
+            )
+            self.assertIsNone(cerr)
+            return payload
+
+        payload = settle(half)
         assert payload is not None
         self.assertGreater(Decimal(payload["principal_outstanding_inr"]), Decimal("0"))
-        _, _payload2, rerr2 = customer_repay_loan(
-            self.customer, row.pk, Decimal(payload["principal_outstanding_inr"])
-        )
-        self.assertIsNone(rerr2)
+        row.refresh_from_db()
+        remainder = row.principal_outstanding_inr
+        settle(remainder)
         row.refresh_from_db()
         self.assertEqual(row.status, GoldLoanRequest.STATUS_REPAID)
         self.assertEqual(customer_loan_eligible_grams(self.customer, self.jeweller), Decimal("10"))

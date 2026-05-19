@@ -64,6 +64,14 @@ function formatPortfolioLedgerTxnType(t: string): string {
       return 'Deposit'
     case 'personal':
       return 'Personal'
+    case 'loan_collateral_lock':
+      return 'Loan · locked'
+    case 'loan_disbursement':
+      return 'Loan · cash in'
+    case 'loan_repayment':
+      return 'Loan · repayment'
+    case 'loan_collateral_release':
+      return 'Loan · gold back'
     default:
       return t.replace(/_/g, ' ')
   }
@@ -448,6 +456,7 @@ export function CustomerPortfolioPanel() {
                   ['sellback', 'Redemptions'],
                   ['redemption_purchase', 'Vault shop'],
                   ['personal', 'Personal'],
+                  ['loan', 'Loans'],
                 ] as const
               ).map(([id, label]) => (
                 <button

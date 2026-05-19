@@ -9,18 +9,25 @@ from rest_framework.views import APIView
 from .gold_identity import parse_grams
 from .loan_service import (
     _serialize_loan_account,
+    _serialize_repayment_request,
     compare_loan_offers,
     create_pending_loan_request,
+    customer_cancel_loan_repayment,
+    customer_initiate_loan_repayment,
     customer_loan_accounts,
-    customer_repay_loan,
     customer_vault_loan_rates,
     jeweller_accept_loan,
+    jeweller_accept_loan_repayment,
+    jeweller_complete_loan_repayment_with_otp,
     jeweller_complete_loan_with_otp,
+    jeweller_open_loan_repayments,
     jeweller_reject_loan,
+    jeweller_reject_loan_repayment,
     quote_customer_loan,
     regenerate_customer_loan_otp,
+    regenerate_customer_loan_repayment_otp,
 )
-from .models import GoldLoanOtp, GoldLoanRequest
+from .models import GoldLoanOtp, GoldLoanRepaymentOtp, GoldLoanRequest
 
 User = get_user_model()
 
@@ -207,6 +214,9 @@ class GoldLoanAccountsView(APIView):
                 "gold_loan_max_term_months": data["gold_loan_max_term_months"],
                 "pending": [_serialize_loan_customer(r) for r in data["pending"]],
                 "active": [_serialize_loan_account(r) for r in data["active"]],
+                "pending_repayments": [
+                    _serialize_repayment_request(r) for r in data["pending_repayments"]
+                ],
             }
         )
 
@@ -223,16 +233,55 @@ class GoldLoanRepayView(APIView):
             amount = Decimal(str(raw))
         except (InvalidOperation, TypeError):
             return Response({"detail": "amount_inr required."}, status=status.HTTP_400_BAD_REQUEST)
-        _rep, loan_payload, err = customer_repay_loan(user, pk, amount)
-        if err or loan_payload is None:
+        req, otp_plain, err = customer_initiate_loan_repayment(user, pk, amount)
+        if err or req is None:
             return Response({"detail": err or "Repayment failed."}, status=status.HTTP_400_BAD_REQUEST)
-        closed = loan_payload.get("status") == GoldLoanRequest.STATUS_REPAID
-        detail = (
-            "Loan fully repaid. Collateral gold returned to your vault holdings."
-            if closed
-            else f"Payment recorded. Outstanding principal ₹{loan_payload['principal_outstanding_inr']}."
+        from .models import GoldLoanRepaymentRequest
+
+        req = (
+            GoldLoanRepaymentRequest.objects.select_related("loan__jeweller", "settlement_otp")
+            .get(pk=req.pk)
         )
-        return Response({"detail": detail, "loan": loan_payload})
+        otp_row = getattr(req, "settlement_otp", None)
+        expires_iso = otp_row.expires_at.isoformat() if otp_row else ""
+        body: dict = {
+            "detail": (
+                "Repayment submitted. Pay cash at the counter, then share your OTP with the jeweller."
+            ),
+            "repayment": _serialize_repayment_request(req),
+        }
+        if otp_plain:
+            body["otp_code"] = otp_plain
+            body["otp_expires_at"] = expires_iso
+        return Response(body, status=status.HTTP_201_CREATED)
+
+
+class GoldLoanRepaymentOtpRegenerateView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk: int):
+        user = request.user
+        if user.user_type != User.CUSTOMER:
+            return Response({"detail": "Customers only."}, status=status.HTTP_403_FORBIDDEN)
+        code, err = regenerate_customer_loan_repayment_otp(user, pk)
+        if err or not code:
+            return Response({"detail": err or "Could not regenerate OTP."}, status=status.HTTP_400_BAD_REQUEST)
+        otp_obj = GoldLoanRepaymentOtp.objects.filter(repayment_request_id=pk).first()
+        exp = otp_obj.expires_at.isoformat() if otp_obj else ""
+        return Response({"otp_code": code, "otp_expires_at": exp})
+
+
+class GoldLoanRepaymentCancelView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk: int):
+        user = request.user
+        if user.user_type != User.CUSTOMER:
+            return Response({"detail": "Customers only."}, status=status.HTTP_403_FORBIDDEN)
+        ok, err = customer_cancel_loan_repayment(user, pk)
+        if not ok:
+            return Response({"detail": err}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"detail": "Repayment request cancelled."})
 
 
 class GoldLoanOtpRegenerateView(APIView):
@@ -319,6 +368,96 @@ class JewellerLoanCompleteView(APIView):
             {
                 "detail": "Loan disbursed. Vault gold locked as collateral.",
                 "loan": _serialize_loan_jeweller(row),
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+def _serialize_repayment_jeweller(req) -> dict:
+    loan = req.loan
+    c = loan.customer
+    phone = (getattr(c, "phone", None) or "").strip()
+    return {
+        "id": req.id,
+        "reference": f"LRP-{req.id}",
+        "loan_id": loan.pk,
+        "loan_reference": f"LN-{loan.pk}",
+        "amount_inr": str(req.amount_inr),
+        "status": req.status,
+        "customer_id": loan.customer_id,
+        "customer_label": _cust_label(c),
+        "customer_phone": phone if phone else "—",
+        "principal_outstanding_inr": str(loan.principal_outstanding_inr),
+        "created_at": req.created_at.isoformat(),
+        "updated_at": req.updated_at.isoformat(),
+    }
+
+
+class JewellerLoanRepaymentListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        if user.user_type != User.JEWELLER:
+            return Response({"detail": "Jewellers only."}, status=status.HTTP_403_FORBIDDEN)
+        rows = jeweller_open_loan_repayments(user)
+        return Response({"results": [_serialize_repayment_jeweller(r) for r in rows]})
+
+
+class JewellerLoanRepaymentAcceptView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk: int):
+        user = request.user
+        if user.user_type != User.JEWELLER:
+            return Response({"detail": "Jewellers only."}, status=status.HTTP_403_FORBIDDEN)
+        ok, err = jeweller_accept_loan_repayment(user, pk)
+        if not ok:
+            return Response({"detail": err}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {
+                "detail": (
+                    "Accepted. Collect cash from the customer, then enter their OTP to record repayment."
+                ),
+            }
+        )
+
+
+class JewellerLoanRepaymentRejectView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk: int):
+        user = request.user
+        if user.user_type != User.JEWELLER:
+            return Response({"detail": "Jewellers only."}, status=status.HTTP_403_FORBIDDEN)
+        ok, err = jeweller_reject_loan_repayment(user, pk)
+        if not ok:
+            return Response({"detail": err}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"detail": "Repayment request rejected."})
+
+
+class JewellerLoanRepaymentCompleteView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk: int):
+        user = request.user
+        if user.user_type != User.JEWELLER:
+            return Response({"detail": "Jewellers only."}, status=status.HTTP_403_FORBIDDEN)
+        otp = request.data.get("otp") or ""
+        req, loan_payload, err = jeweller_complete_loan_repayment_with_otp(user, pk, str(otp))
+        if err or req is None or loan_payload is None:
+            return Response({"detail": err or "Could not complete repayment."}, status=status.HTTP_400_BAD_REQUEST)
+        closed = loan_payload.get("status") == GoldLoanRequest.STATUS_REPAID
+        detail = (
+            "Repayment recorded. Loan fully repaid and collateral released."
+            if closed
+            else f"Repayment recorded. Outstanding principal ₹{loan_payload['principal_outstanding_inr']}."
+        )
+        return Response(
+            {
+                "detail": detail,
+                "repayment": _serialize_repayment_jeweller(req),
+                "loan": loan_payload,
             },
             status=status.HTTP_200_OK,
         )

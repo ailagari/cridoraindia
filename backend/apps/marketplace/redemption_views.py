@@ -463,6 +463,9 @@ class VaultRedemptionConfirmView(APIView):
                     release_custodial_liability_for_redemption_purchase(
                         jeweller, request.user, grams_to_debit, redemption
                     )
+                from apps.accounts.jeweller_revenue_service import record_ornament_sale_revenue
+
+                record_ornament_sale_revenue(redemption)
 
                 MarketplaceProduct.objects.filter(pk=locked.pk).update(
                     stock_quantity=F("stock_quantity") - 1

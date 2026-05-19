@@ -158,9 +158,16 @@ export function JewellerPortfolioOverviewPanel({ onNavigate }: Props) {
                 <span className="pf-kpi__hint">Vaulted</span>
               </div>
               <div className="pf-kpi pf-kpi--shimmer pf-kpi--mint">
-                <span className="pf-kpi__eyebrow">Shop revenue</span>
-                <p className="pf-kpi__value tabular">₹{fmtInr(snap.ornamentRevenueInr)}</p>
-                <span className="pf-kpi__hint">Shop</span>
+                <span className="pf-kpi__eyebrow">Recorded revenue</span>
+                <p className="pf-kpi__value tabular">₹{fmtInr(snap.ledgerRevenueInr)}</p>
+                <span className="pf-kpi__hint">Ledger total</span>
+              </div>
+              <div className="pf-kpi pf-kpi--pulse pf-kpi--mint">
+                <span className="pf-kpi__eyebrow">Loans outstanding</span>
+                <p className="pf-kpi__value tabular">₹{fmtInr(snap.loanOutstandingInr)}</p>
+                <span className="pf-kpi__hint">
+                  {snap.activeLoanCount} active · {snap.pendingLoanCount} pending
+                </span>
               </div>
               <div className="pf-kpi pf-kpi--pulse pf-kpi--iris">
                 <span className="pf-kpi__eyebrow">Counter pipeline</span>

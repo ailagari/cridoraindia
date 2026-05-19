@@ -455,6 +455,13 @@ class GoldWalletSerializer(serializers.Serializer):
     portfolio_totals = serializers.DictField(
         required=False, allow_null=True, default=dict
     )
+    jeweller_total_revenue_inr = serializers.CharField(
+        required=False, allow_blank=True, default=""
+    )
+    jeweller_revenue_by_kind = serializers.DictField(
+        required=False, default=dict
+    )
+    jeweller_portfolio = serializers.DictField(required=False, default=dict)
 
 
 class GoldTransferNotifySerializer(serializers.Serializer):
