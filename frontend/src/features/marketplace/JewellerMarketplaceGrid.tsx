@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { UserAvatar } from '@/components/UserAvatar'
 import { mergeJewellerListWithDemos } from '@/lib/jewellerMarketplaceDemos'
@@ -6,17 +6,6 @@ import { jewellerStorefrontFeatureChips } from '@/features/marketplace/jewellerM
 import { LIVE_STOREFRONT_GRID_POLL_MS } from '@/lib/liveDeskIntervals'
 import { fetchVerifiedJewellers, type JewellerStorefrontDTO } from '@/lib/marketplaceApi'
 import { useLiveCridoraBase } from '@/hooks/useLiveCridoraBase'
-
-const filterBarInput: CSSProperties = {
-  width: '100%',
-  padding: '0.9rem 0.9rem 0.9rem 2.5rem',
-  borderRadius: 16,
-  border: '1px solid var(--border-soft)',
-  background: 'var(--veil)',
-  color: 'var(--text)',
-  fontSize: '0.85rem',
-  fontFamily: 'var(--font)',
-}
 
 function formatInr(n: number, fractionDigits = 0): string {
   return n.toLocaleString('en-IN', { maximumFractionDigits: fractionDigits })
@@ -51,16 +40,7 @@ function JewellerCardLogo({ businessName, logoUrl }: { businessName: string; log
       imageUrl={logoUrl}
       fallback={fallback}
       imageFit="contain"
-      style={{
-        width: 48,
-        height: 48,
-        borderRadius: 14,
-        fontWeight: 800,
-        fontSize: '1.1rem',
-        background: 'var(--gold-soft)',
-        color: 'var(--gold-light)',
-        border: '1px solid rgba(180, 130, 48, 0.35)',
-      }}
+      className="jm-card__logo"
     />
   )
 }
@@ -68,6 +48,175 @@ function JewellerCardLogo({ businessName, logoUrl }: { businessName: string; log
 function dashEmpty(s: string): string {
   const t = s.trim()
   return t === '' ? '—' : t
+}
+
+type CardProps = {
+  j: JewellerStorefrontDTO
+  variant: 'public' | 'customer_dashboard'
+}
+
+function JewellerMarketplaceCard({ j, variant }: CardProps) {
+  const tags = jewellerStorefrontFeatureChips(j)
+  const cred =
+    j.credibility_score && j.credibility_score.trim() !== '' ? `${j.credibility_score}/100` : null
+  const years =
+    j.metric_years_active && parseNum(j.metric_years_active) > 0 ? `${j.metric_years_active} yr` : null
+
+  return (
+    <article className="jm-card card">
+      <header className="jm-card__hero">
+        <motion className="jm-card__identity">
+          <JewellerCardLogo businessName={j.business_name} logoUrl={j.logo_url ?? ''} />
+          <motion className="jm-card__head">
+            <div className="jm-card__title-row">
+              <h2 className="jm-card__title">{j.business_name}</h2>
+            </div>
+            <p className="jm-card__location">
+              {j.city}
+              {j.state ? `, ${j.state}` : ''}
+            </p>
+            <motion className="jm-card__badges">
+              <span
+                className="kyb-pill kyb-pill--ok"
+                style={{ fontSize: '0.58rem', padding: '0.15rem 0.45rem' }}
+                title={j.id > 0 ? 'KYB verified' : 'Demo preview'}
+              >
+                Verified
+              </span>
+              {cred ? <span className="jm-card__cred">Trust {cred}</span> : null}
+            </motion>
+          </motion>
+        </motion>
+      </header>
+
+      <div className="jm-card__body">
+        <section>
+          <p className="jm-card__section-label">Live rates</p>
+          <motion className="jm-card__rates">
+            <div className="jm-card__rate">
+              <p className="jm-card__rate-label">22K reference</p>
+              <p className="jm-card__rate-value tabular">
+                ₹{formatInr(parseNum(j.reference_metal_inr_per_gram), 2)}/g
+              </p>
+            </motion>
+            <div className="jm-card__rate jm-card__rate--highlight">
+              <p className="jm-card__rate-label">Buyback</p>
+              <p className="jm-card__rate-value jm-card__rate-value--gold tabular">
+                ₹{formatInr(parseNum(j.buyback_indicative_inr_per_gram), 2)}/g
+              </p>
+            </motion>
+          </motion>
+        </section>
+
+        <section>
+          <p className="jm-card__section-label">Redemption</p>
+          <div className="jm-card__redemption">
+            <motion>
+              <strong>Lock-in:</strong> {dashEmpty(j.lock_in_summary ?? '')}
+            </motion>
+            <motion>
+              <strong>Min redeem:</strong>{' '}
+              {j.minimum_redeemable_grams && j.minimum_redeemable_grams.trim() !== ''
+                ? `${j.minimum_redeemable_grams} g`
+                : '—'}
+            </motion>
+            <motion>
+              <strong>Same-store MC:</strong> {dashEmpty(j.same_store_mc_benefit ?? '')}
+            </motion>
+            {j.golden_scheme_enabled && (j.golden_scheme_summary ?? '').trim() !== '' ? (
+              <motion>
+                <strong>Golden scheme:</strong> {j.golden_scheme_summary}
+              </motion>
+            ) : null}
+          </div>
+        </section>
+
+        {tags.length > 0 ? (
+          <motion className="jm-card__chips">
+            {tags.map((t) => (
+              <span key={t.key} className="jm-card__chip jm-card__chip--on">
+                {t.label}
+              </span>
+            ))}
+          </motion>
+        ) : null}
+
+        <p className="jm-card__meta">
+          {years ? (
+            <span className="jm-card__meta-stat">
+              <span>Active</span>
+              <strong className="tabular">{years}</strong>
+            </span>
+          ) : null}
+          <span className="jm-card__meta-stat">
+            <span>Listings</span>
+            <strong className="tabular">{j.approved_listing_count}</strong>
+          </span>
+          <span className="jm-card__meta-stat">
+            <span>Making typ.</span>
+            <strong className="tabular">
+              ₹{formatInr(parseNum(j.representative_making_charge_inr_per_gram), 0)}/g
+            </strong>
+          </span>
+          {j.buyback_uses_headline_override ? <span>· headline sellback</span> : null}
+          {j.id <= 0 ? <span>· demo</span> : null}
+        </p>
+
+        <footer className="jm-card__footer">
+          <div className="jm-card__actions">
+            {j.id > 0 ? (
+              <Link to={`/jewellers/${j.id}`} className="btn btn-ghost">
+                View shop
+              </Link>
+            ) : (
+              <span
+                className="btn btn-ghost"
+                style={{ opacity: 0.55, cursor: 'default', pointerEvents: 'none' }}
+                title="Live when this jeweller is on the API"
+              >
+                View shop
+              </span>
+            )}
+            <Link
+              to={
+                j.id > 0
+                  ? variant === 'customer_dashboard'
+                    ? `/userdashboard?section=invest_fractional&jeweller_id=${j.id}`
+                    : `/signup?jeweller=${j.id}`
+                  : '/signup'
+              }
+              className="btn btn-primary"
+            >
+              {variant === 'customer_dashboard' ? 'Buy gold' : 'Invest'}
+            </Link>
+            <button
+              type="button"
+              className="btn btn-ghost"
+              disabled
+              style={{ opacity: 0.55 }}
+              title="Set default jeweller (coming soon)"
+            >
+              Set default
+            </button>
+            <Link
+              to={
+                j.id > 0
+                  ? variant === 'customer_dashboard'
+                    ? `/userdashboard?section=shop_products&jeweller=${j.id}`
+                    : `/marketplace?jeweller=${j.id}`
+                  : variant === 'customer_dashboard'
+                    ? '/userdashboard?section=shop_products'
+                    : '/marketplace'
+              }
+              className="jm-card__browse"
+            >
+              Catalogue →
+            </Link>
+          </div>
+        </footer>
+      </div>
+    </article>
+  )
 }
 
 type Props = {
@@ -159,21 +308,8 @@ export function JewellerMarketplaceGrid({ intro, variant = 'public' }: Props) {
         </p>
       ) : null}
 
-      <div
-        className="card"
-        style={{
-          marginBottom: '1rem',
-          padding: '0.65rem 1rem',
-          borderRadius: 16,
-          fontSize: '0.78rem',
-          color: 'var(--text-muted)',
-          display: 'flex',
-          flexWrap: 'wrap',
-          gap: '0.75rem 1.25rem',
-          alignItems: 'center',
-        }}
-      >
-        <span style={{ fontWeight: 700, color: 'var(--gold-light)' }}>Cridora 22K (live)</span>
+      <motion className="jm-live-strip card">
+        <span className="jm-live-strip__label">Cridora 22K (live)</span>
         <span className="tabular">
           ₹{liveBase?.platformBaseInrPerGram22k ? formatInr(parseNum(liveBase.platformBaseInrPerGram22k), 2) : '—'}/g
         </span>
@@ -181,65 +317,30 @@ export function JewellerMarketplaceGrid({ intro, variant = 'public' }: Props) {
           {liveBase?.source ? liveBase.source.replace(/_/g, ' ') : ''}
         </span>
         <span style={{ color: 'var(--text-faint)', marginLeft: 'auto' }}>Directory refreshes every minute</span>
-      </div>
+      </motion>
 
-      <div
-        className="card"
-        style={{
-          padding: '1.25rem',
-          borderRadius: 24,
-          boxShadow: 'var(--shadow-card)',
-          marginBottom: '1.5rem',
-        }}
-      >
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
-            gap: '0.75rem',
-            alignItems: 'stretch',
-          }}
-        >
-          <div style={{ position: 'relative', gridColumn: 'span 2 / auto' }}>
-            <span
-              style={{
-                position: 'absolute',
-                left: 12,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                color: 'var(--text-faint)',
-                fontSize: '0.75rem',
-                pointerEvents: 'none',
-              }}
-            >
-              ⌕
-            </span>
+      <div className="jm-filters card">
+        <div className="jm-filters__grid">
+          <div className="jm-filters__search">
+            <span className="jm-filters__icon">⌕</span>
             <input
               type="search"
+              className="jm-filters__input"
               placeholder="Search jeweller, city, or area…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              style={{ ...filterBarInput, paddingLeft: '2.25rem' }}
+              style={{ paddingLeft: '2.25rem' }}
             />
           </div>
           <div style={{ position: 'relative' }}>
-            <span
-              style={{
-                position: 'absolute',
-                left: 10,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                color: 'var(--text-faint)',
-                fontSize: '0.7rem',
-                pointerEvents: 'none',
-              }}
-            >
+            <span className="jm-filters__icon" style={{ left: 10, fontSize: '0.7rem' }}>
               ◎
             </span>
             <select
               value={selectedCity}
               onChange={(e) => setSelectedCity(e.target.value)}
-              style={{ ...filterBarInput, paddingLeft: '2rem', cursor: 'pointer' }}
+              className="jm-filters__input"
+              style={{ paddingLeft: '2rem', cursor: 'pointer' }}
             >
               {cities.map((c) => (
                 <option key={c} value={c}>
@@ -247,25 +348,16 @@ export function JewellerMarketplaceGrid({ intro, variant = 'public' }: Props) {
                 </option>
               ))}
             </select>
-          </div>
+          </motion>
           <div style={{ position: 'relative' }}>
-            <span
-              style={{
-                position: 'absolute',
-                left: 10,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                color: 'var(--text-faint)',
-                fontSize: '0.7rem',
-                pointerEvents: 'none',
-              }}
-            >
+            <span className="jm-filters__icon" style={{ left: 10, fontSize: '0.7rem' }}>
               ☰
             </span>
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as JewellerSortKey)}
-              style={{ ...filterBarInput, paddingLeft: '2rem', cursor: 'pointer' }}
+              className="jm-filters__input"
+              style={{ paddingLeft: '2rem', cursor: 'pointer' }}
             >
               {SORT_OPTIONS.map((o) => (
                 <option key={o.value} value={o.value}>
@@ -273,7 +365,7 @@ export function JewellerMarketplaceGrid({ intro, variant = 'public' }: Props) {
                 </option>
               ))}
             </select>
-          </div>
+          </motion>
           <button
             type="button"
             className="btn btn-ghost"
@@ -306,261 +398,14 @@ export function JewellerMarketplaceGrid({ intro, variant = 'public' }: Props) {
           No jewellers match this filter. Try another city or clear search.
         </p>
       ) : (
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))',
-            gap: '1.25rem',
-          }}
-        >
-          {filteredSorted.map((j) => {
-            const tags = jewellerStorefrontFeatureChips(j)
-            const cred =
-              j.credibility_score && j.credibility_score.trim() !== ''
-                ? `${j.credibility_score}/100`
-                : null
-            return (
-              <article
-                key={j.id <= 0 ? `demo-${j.business_name}` : j.id}
-                className="card"
-                style={{
-                  padding: '1.25rem',
-                  borderRadius: 24,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.65rem',
-                }}
-              >
-                <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
-                  <JewellerCardLogo businessName={j.business_name} logoUrl={j.logo_url ?? ''} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                      <h2 style={{ margin: 0, fontSize: '1.05rem', lineHeight: 1.25 }}>{j.business_name}</h2>
-                      <span
-                        className="kyb-pill kyb-pill--ok"
-                        style={{ fontSize: '0.58rem', padding: '0.15rem 0.4rem' }}
-                        title={j.id > 0 ? 'KYB verified' : 'Demo preview'}
-                      >
-                        Verified
-                      </span>
-                      {cred ? (
-                        <span style={{ fontSize: '0.72rem', color: 'var(--gold-light)', fontWeight: 700 }}>
-                          Score {cred}
-                        </span>
-                      ) : null}
-                    </div>
-                    <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', margin: '0.25rem 0 0' }}>
-                      {j.city}
-                      {j.state ? `, ${j.state}` : ''}
-                    </p>
-                  </div>
-                </div>
-
-                <div>
-                  <p
-                    style={{
-                      margin: '0 0 0.35rem',
-                      fontSize: '0.58rem',
-                      fontWeight: 800,
-                      letterSpacing: '0.1em',
-                      textTransform: 'uppercase',
-                      color: 'var(--text-faint)',
-                    }}
-                  >
-                    Gold
-                  </p>
-                  <div
-                    style={{
-                      display: 'grid',
-                      gridTemplateColumns: '1fr 1fr',
-                      gap: '0.45rem',
-                      fontSize: '0.72rem',
-                    }}
-                  >
-                    <div className="card" style={{ margin: 0, padding: '0.5rem', borderRadius: 12 }}>
-                      <p style={{ margin: 0, fontSize: '0.55rem', color: 'var(--text-faint)', fontWeight: 700 }}>
-                        Jeweller live rate
-                      </p>
-                      <p style={{ margin: '0.2rem 0 0', fontWeight: 800 }} className="tabular">
-                        ₹{formatInr(parseNum(j.reference_metal_inr_per_gram), 2)}/g
-                      </p>
-                    </div>
-                    <div className="card" style={{ margin: 0, padding: '0.5rem', borderRadius: 12 }}>
-                      <p style={{ margin: 0, fontSize: '0.55rem', color: 'var(--text-faint)', fontWeight: 700 }}>
-                        Jeweller live buyback
-                      </p>
-                      <p
-                        style={{ margin: '0.2rem 0 0', fontWeight: 800, color: 'var(--gold-light)' }}
-                        className="tabular"
-                      >
-                        ₹{formatInr(parseNum(j.buyback_indicative_inr_per_gram), 2)}/g
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <p
-                    style={{
-                      margin: '0 0 0.35rem',
-                      fontSize: '0.58rem',
-                      fontWeight: 800,
-                      letterSpacing: '0.1em',
-                      textTransform: 'uppercase',
-                      color: 'var(--text-faint)',
-                    }}
-                  >
-                    Redemption
-                  </p>
-                  <div
-                    style={{
-                      fontSize: '0.72rem',
-                      color: 'var(--text-muted)',
-                      display: 'grid',
-                      gap: '0.35rem',
-                    }}
-                  >
-                    <div>
-                      <strong style={{ color: 'var(--text)' }}>Lock-in:</strong> {dashEmpty(j.lock_in_summary ?? '')}
-                    </div>
-                    <div>
-                      <strong style={{ color: 'var(--text)' }}>Min redeem:</strong>{' '}
-                      {j.minimum_redeemable_grams && j.minimum_redeemable_grams.trim() !== ''
-                        ? `${j.minimum_redeemable_grams} g`
-                        : '—'}
-                    </div>
-                    <div>
-                      <strong style={{ color: 'var(--text)' }}>Same-store MC:</strong>{' '}
-                      {dashEmpty(j.same_store_mc_benefit ?? '')}
-                    </div>
-                    {j.golden_scheme_enabled && (j.golden_scheme_summary ?? '').trim() !== '' ? (
-                      <div>
-                        <strong style={{ color: 'var(--text)' }}>Golden Scheme:</strong> {j.golden_scheme_summary}
-                      </div>
-                    ) : null}
-                  </div>
-                </div>
-
-                {tags.length > 0 ? (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
-                    {tags.map((t) => (
-                      <span
-                        key={t.key}
-                        style={{
-                          fontSize: '0.58rem',
-                          fontWeight: 700,
-                          padding: '0.2rem 0.45rem',
-                          borderRadius: 8,
-                          background: 'var(--veil-35)',
-                          border: '1px solid var(--border-soft)',
-                          color: 'var(--text-muted)',
-                        }}
-                      >
-                        {t.label}
-                      </span>
-                    ))}
-                  </div>
-                ) : null}
-
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: '1fr',
-                    gap: '0.45rem',
-                    fontSize: '0.68rem',
-                    color: 'var(--text-muted)',
-                  }}
-                >
-                  <div className="card" style={{ margin: 0, padding: '0.45rem', borderRadius: 10 }}>
-                    <p style={{ margin: 0, fontSize: '0.55rem', color: 'var(--text-faint)' }}>Years</p>
-                    <p style={{ margin: '0.2rem 0 0', fontWeight: 800, color: 'var(--text)' }} className="tabular">
-                      {j.metric_years_active && parseNum(j.metric_years_active) > 0
-                        ? `${j.metric_years_active} yr`
-                        : '—'}
-                    </p>
-                  </div>
-                </div>
-
-                <p style={{ margin: 0, fontSize: '0.68rem', color: 'var(--text-faint)' }}>
-                  {j.approved_listing_count} listing{j.approved_listing_count === 1 ? '' : 's'}
-                  {j.buyback_uses_headline_override ? ' · headline sellback' : ''}
-                  {j.id <= 0 ? ' · demo' : ''} · Making typ. ₹
-                  {formatInr(parseNum(j.representative_making_charge_inr_per_gram), 0)}/g
-                </p>
-
-                <div
-                  style={{
-                    marginTop: 'auto',
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    gap: '0.45rem',
-                    alignItems: 'center',
-                  }}
-                >
-                  {j.id > 0 ? (
-                    <Link
-                      to={`/jewellers/${j.id}`}
-                      className="btn btn-ghost"
-                      style={{ padding: '0.4rem 0.65rem', borderRadius: 12, fontSize: '0.7rem' }}
-                    >
-                      View shop
-                    </Link>
-                  ) : (
-                    <span
-                      className="btn btn-ghost"
-                      style={{
-                        padding: '0.4rem 0.65rem',
-                        borderRadius: 12,
-                        fontSize: '0.7rem',
-                        opacity: 0.55,
-                        cursor: 'default',
-                        pointerEvents: 'none',
-                      }}
-                      title="Live when this jeweller is on the API"
-                    >
-                      View shop
-                    </span>
-                  )}
-                  <Link
-                    to={
-                      j.id > 0
-                        ? variant === 'customer_dashboard'
-                          ? `/userdashboard?section=invest_fractional&jeweller_id=${j.id}`
-                          : `/signup?jeweller=${j.id}`
-                        : '/signup'
-                    }
-                    className="btn btn-primary"
-                    style={{ padding: '0.4rem 0.65rem', borderRadius: 12, fontSize: '0.7rem' }}
-                  >
-                    {variant === 'customer_dashboard' ? 'Buy gold' : 'Invest'}
-                  </Link>
-                  <button
-                    type="button"
-                    className="btn btn-ghost"
-                    disabled
-                    style={{ padding: '0.4rem 0.65rem', borderRadius: 12, fontSize: '0.7rem', opacity: 0.55 }}
-                    title="Set default jeweller (coming soon)"
-                  >
-                    Set default
-                  </button>
-                  <Link
-                    to={
-                      j.id > 0
-                        ? variant === 'customer_dashboard'
-                          ? `/userdashboard?section=shop_products&jeweller=${j.id}`
-                          : `/marketplace?jeweller=${j.id}`
-                        : variant === 'customer_dashboard'
-                          ? '/userdashboard?section=shop_products'
-                          : '/marketplace'
-                    }
-                    style={{ fontSize: '0.72rem', color: 'var(--gold-light)', marginLeft: 4 }}
-                  >
-                    Browse products →
-                  </Link>
-                </div>
-              </article>
-            )
-          })}
+        <div className="jm-grid">
+          {filteredSorted.map((j) => (
+            <JewellerMarketplaceCard
+              key={j.id <= 0 ? `demo-${j.business_name}` : j.id}
+              j={j}
+              variant={variant}
+            />
+          ))}
         </div>
       )}
     </>

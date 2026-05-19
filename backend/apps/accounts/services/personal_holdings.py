@@ -31,11 +31,15 @@ def reference_gold_rate_inr_per_gram() -> tuple[Decimal, str]:
 
 
 def customer_personal_holdings_qs(user: User):
-    return PersonalGoldHolding.objects.filter(user=user, is_removed=False).annotate(
-        document_count=Count(
-            "documents",
-            filter=Q(documents__is_removed=False),
+    return (
+        PersonalGoldHolding.objects.filter(user=user, is_removed=False)
+        .annotate(
+            document_count=Count(
+                "documents",
+                filter=Q(documents__is_removed=False),
+            )
         )
+        .prefetch_related("cridorapay_bills")
     )
 
 
@@ -351,7 +355,16 @@ def customer_portfolio_ledger_payload(user: User, ledger_filter: str = "all") ->
                 }
             )
 
+    cp_bill_ids = set(
+        CridoraPayBill.objects.filter(
+            customer=user,
+            personal_holding_id__isnull=False,
+        ).values_list("personal_holding_id", flat=True)
+    )
+
     for ph in PersonalGoldHolding.objects.filter(user=user, is_removed=False).order_by("-created_at"):
+        if ph.id in cp_bill_ids:
+            continue
         jn = ""
         if ph.jeweller_id:
             ju = ph.jeweller

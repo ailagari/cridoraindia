@@ -5,6 +5,7 @@ from __future__ import annotations
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
+from django.core.files.base import ContentFile
 from django.db import transaction
 from django.utils import timezone
 
@@ -12,6 +13,7 @@ from apps.accounts.jeweller_liability_service import release_custodial_liability
 from apps.accounts.models import (
     CridoraPayBill,
     PersonalGoldHolding,
+    PersonalHoldingDocument,
     PersonalPortfolioAuditLog,
 )
 from apps.accounts.services.personal_holdings import (
@@ -31,6 +33,28 @@ def _jeweller_label(u: User) -> str:
 def _recalc_holding_inr(h: PersonalGoldHolding) -> None:
     rate, _ = reference_gold_rate_inr_per_gram()
     h.estimated_current_value_inr = calculate_holding_value_inr(h.weight_grams, rate)
+
+
+def _attach_bill_invoice_to_holding(bill: CridoraPayBill, holding: PersonalGoldHolding) -> None:
+    if not bill.purchase_invoice:
+        return
+    if PersonalHoldingDocument.objects.filter(
+        holding=holding,
+        document_type=PersonalHoldingDocument.PURCHASE_INVOICE,
+        is_removed=False,
+    ).exists():
+        return
+    fname = bill.purchase_invoice_filename or bill.purchase_invoice.name.rsplit("/", 1)[-1] or "invoice"
+    with bill.purchase_invoice.open("rb") as src:
+        content = src.read()
+    doc = PersonalHoldingDocument(
+        holding=holding,
+        document_type=PersonalHoldingDocument.PURCHASE_INVOICE,
+        original_filename=fname,
+        uploaded_by_type=PersonalHoldingDocument.UPLOADED_BY_JEWELLER,
+        uploaded_by_id=bill.jeweller_id,
+    )
+    doc.file.save(fname, ContentFile(content), save=True)
 
 
 def apply_vault_debit_for_bill(bill: CridoraPayBill) -> str | None:
@@ -95,6 +119,7 @@ def complete_corridorapay_bill(bill: CridoraPayBill) -> PersonalGoldHolding:
         holding=h,
         metadata={"corridorapay_bill_id": bill.id, "reference": bill.reference},
     )
+    _attach_bill_invoice_to_holding(bill, h)
 
     bill.personal_holding = h
     bill.status = CridoraPayBill.STATUS_COMPLETED

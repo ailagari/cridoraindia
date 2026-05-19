@@ -619,6 +619,28 @@ class CustomerCridoraPayCancelView(APIView):
         return Response(_ser_bill(bill, include_customer=False, include_otp_expiry=False))
 
 
+class CustomerCridoraPayLedgerView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if request.user.user_type != User.CUSTOMER:
+            return Response({"detail": "Customers only."}, status=status.HTTP_403_FORBIDDEN)
+        from apps.accounts.services.corridorapay.ledger import corridorapay_ledger_payload_for_customer
+
+        return Response(corridorapay_ledger_payload_for_customer(request.user))
+
+
+class JewellerCridoraPayLedgerView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if request.user.user_type != User.JEWELLER:
+            return Response({"detail": "Jewellers only."}, status=status.HTTP_403_FORBIDDEN)
+        from apps.accounts.services.corridorapay.ledger import corridorapay_ledger_payload_for_jeweller
+
+        return Response(corridorapay_ledger_payload_for_jeweller(request.user))
+
+
 class CridoraPayBillInvoiceView(APIView):
     permission_classes = [IsAuthenticated]
 

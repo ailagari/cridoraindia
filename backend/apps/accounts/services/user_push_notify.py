@@ -347,7 +347,7 @@ def notify_corridorapay_completed(bill: CridoraPayBill) -> None:
         bill.customer,
         title="Purchase complete",
         body=f"{bill.title} ({grams_s} g) is recorded in your Gold Records.",
-        link_path=customer_dashboard("invest_cridorapay"),
+        link_path=customer_dashboard("portfolio_overview", portfolio_tab="personal"),
         tag=f"cp-done-c-{bill.pk}",
         kind=PortfolioUserNotification.KIND_JEWELLER_ADDED_HOLDING,
     )

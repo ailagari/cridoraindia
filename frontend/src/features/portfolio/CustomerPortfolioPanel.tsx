@@ -64,6 +64,8 @@ function formatPortfolioLedgerTxnType(t: string): string {
       return 'Deposit'
     case 'personal':
       return 'Personal'
+    case 'cridorapay_purchase':
+      return 'CridoraPay'
     case 'loan_collateral_lock':
       return 'Loan · locked'
     case 'loan_disbursement':
@@ -90,6 +92,7 @@ function portfolioLedgerPillClass(t: string): string {
       return `${base} pf-ledger-pill--fee`
     case 'deposit':
     case 'personal':
+    case 'cridorapay_purchase':
       return `${base} pf-ledger-pill--xfer`
     case 'fractional':
     default:
@@ -455,6 +458,7 @@ export function CustomerPortfolioPanel() {
                   ['transfer', 'Transfers'],
                   ['sellback', 'Redemptions'],
                   ['redemption_purchase', 'Vault shop'],
+                  ['cridorapay_purchase', 'CridoraPay'],
                   ['personal', 'Personal'],
                   ['loan', 'Loans'],
                 ] as const

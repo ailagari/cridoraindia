@@ -188,29 +188,31 @@ def jeweller_customer_vault_ledger_payload(
 
     rows.sort(key=lambda r: r["occurred_at"], reverse=True)
 
-    personal_qs = (
-        PersonalGoldHolding.objects.filter(
+    from apps.accounts.models import CridoraPayBill
+
+    cp_qs = (
+        CridoraPayBill.objects.filter(
             jeweller=jeweller,
-            user_id=customer_id,
-            is_removed=False,
+            customer_id=customer_id,
+            status=CridoraPayBill.STATUS_COMPLETED,
         )
-        .select_related("user")
-        .order_by("-created_at")[:_MAX_ROWS]
+        .select_related("customer")
+        .order_by("-completed_at", "-created_at")[:_MAX_ROWS]
     )
-    for ph in personal_qs:
-        g = ph.weight_grams
-        current_inr = (g * cridora_base).quantize(Decimal("0.01"))
+    for bill in cp_qs:
+        g = bill.weight_grams
+        current_inr = bill.total_inr.quantize(Decimal("0.01"))
         rows.append(
             {
-                "occurred_at": _occurred_iso(ph.created_at),
-                "transaction_type": "personal",
+                "occurred_at": _occurred_iso(bill.completed_at or bill.created_at),
+                "transaction_type": "cridorapay_purchase",
                 "grams": str(g),
                 "metal_type": METAL_TYPE_LABEL,
-                "purchase_value_inr": None,
-                "invoice_total_inr": None,
+                "purchase_value_inr": str(current_inr),
+                "invoice_total_inr": str(current_inr),
                 "current_value_inr": str(current_inr),
-                "reference": f"PH-{ph.id}",
-                "counterparty_label": ph.title[:120],
+                "reference": bill.reference,
+                "counterparty_label": bill.title[:120],
             }
         )
 
@@ -238,10 +240,10 @@ def jeweller_customer_vault_ledger_payload(
         "fractional",
         "deposit",
         "golden_scheme",
-        "personal",
         "transfer_in",
         "transfer_out",
         "sellback",
+        "cridorapay_purchase",
         "loan_disbursed",
         "loan_repayment",
         "loan_pending",

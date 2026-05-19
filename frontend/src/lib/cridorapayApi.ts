@@ -279,3 +279,40 @@ export async function fetchCridoraPayInvoiceBlob(
     return { ok: false, detail: e instanceof Error ? e.message : 'Could not load invoice' }
   }
 }
+
+export type CridoraPayLedgerEntryDTO = {
+  occurred_at: string
+  transaction_type: string
+  reference: string
+  status: string
+  label: string
+  grams: string
+  total_inr: string
+  payment_method: string
+  vault_grams_chosen: string
+  cash_payable_inr: string
+  personal_holding_id: number | null
+  counterparty_label: string
+}
+
+export async function fetchCustomerCridoraPayLedger(): Promise<
+  { ok: true; entries: CridoraPayLedgerEntryDTO[] } | { ok: false; detail: string }
+> {
+  const res = await authFetch('/api/v1/cridorapay/ledger/')
+  const data = await readResponseJson<{ entries?: CridoraPayLedgerEntryDTO[]; detail?: string }>(res)
+  if (!res.ok) {
+    return { ok: false, detail: parseApiDetail(data, res, 'Could not load CridoraPay ledger') }
+  }
+  return { ok: true, entries: data?.entries ?? [] }
+}
+
+export async function fetchJewellerCridoraPayLedger(): Promise<
+  { ok: true; entries: CridoraPayLedgerEntryDTO[] } | { ok: false; detail: string }
+> {
+  const res = await authFetch('/api/v1/jeweller/cridorapay/ledger/')
+  const data = await readResponseJson<{ entries?: CridoraPayLedgerEntryDTO[]; detail?: string }>(res)
+  if (!res.ok) {
+    return { ok: false, detail: parseApiDetail(data, res, 'Could not load CridoraPay ledger') }
+  }
+  return { ok: true, entries: data?.entries ?? [] }
+}

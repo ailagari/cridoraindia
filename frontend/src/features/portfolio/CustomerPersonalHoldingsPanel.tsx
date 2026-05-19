@@ -701,6 +701,9 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
                       ) : null}
                     </span>
                     <span className="pf-vault-acc__trigger-side">
+                      {h.is_cridorapay ? (
+                        <span className="pf-vault-badge pf-vault-badge--verified">CridoraPay</span>
+                      ) : null}
                       <span className={`pf-vault-badge pf-vault-badge--${h.verification_status}`}>{h.status_badge}</span>
                       <span className="pf-vault-acc__doc-count">
                         {h.document_count} doc{h.document_count === 1 ? '' : 's'}

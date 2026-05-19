@@ -1,4 +1,3 @@
-import { DeferredFilePicker } from '@/components/ui'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   fetchJewellerCustodyVaults,
@@ -7,7 +6,6 @@ import {
   type JewellerVaultLedgerEntryDTO,
   type JewellerVaultLedgerPayloadDTO,
 } from '@/lib/goldTransferApi'
-import { jewellerCreatePersonalHolding, jewellerLookupCustomer } from '@/lib/personalHoldingsApi'
 import { LIVE_BALANCE_POLL_MS } from '@/lib/liveDeskIntervals'
 import { useLivePoll } from '@/lib/useLivePoll'
 import { formatJewellerMetalRateAsOf } from '@/features/marketplace/productPricing'
@@ -33,8 +31,8 @@ function formatLedgerTxnType(t: string | null | undefined): string {
       return 'Golden scheme'
     case 'deposit':
       return 'Gold deposit'
-    case 'personal':
-      return 'Personal holding'
+    case 'cridorapay_purchase':
+      return 'CridoraPay'
     default:
       return raw.replace(/_/g, ' ')
   }
@@ -183,7 +181,6 @@ export function JewellerCustomerVaultsPanel() {
   const [expandedLedgerIds, setExpandedLedgerIds] = useState<number[]>([])
   const ledgerFilterRef = useRef(ledgerFilter)
   const expandedLedgerRef = useRef(expandedLedgerIds)
-  const [addOpen, setAddOpen] = useState(false)
 
   useEffect(() => {
     ledgerFilterRef.current = ledgerFilter
@@ -292,21 +289,6 @@ export function JewellerCustomerVaultsPanel() {
 
       {loadErr ? <p className="form-error">{loadErr}</p> : null}
 
-      <article className="pf-card pf-card--lift pf-card--wide pf-card--ledger jeweller-vault-add-card">
-        <header className="pf-card__head pf-ledger-head">
-          <div>
-            <h3 className="pf-card__title">Add personal holding</h3>
-            <p className="pf-card__meta">
-              Verified customers only · appears in their Gold Records Vault as “Purchased From” your showroom.
-            </p>
-          </div>
-          <button type="button" className="btn btn-ghost btn-sm" onClick={() => setAddOpen((x) => !x)}>
-            {addOpen ? 'Close' : 'Open'}
-          </button>
-        </header>
-        {addOpen ? <JewellerPersonalHoldingInline onDone={() => void refresh()} /> : null}
-      </article>
-
       <article className="pf-card pf-card--lift pf-card--wide pf-card--ledger pf-card--ledger-table-wrap jeweller-vault-filter-card">
         <header className="pf-card__head pf-ledger-head">
           <div>
@@ -324,7 +306,7 @@ export function JewellerCustomerVaultsPanel() {
               ['transfer_in', 'Transfer in'],
               ['transfer_out', 'Transfer out'],
               ['sellback', 'Sellback'],
-              ['personal', 'Personal'],
+              ['cridorapay_purchase', 'CridoraPay'],
             ] as const
           ).map(([id, label]) => (
             <button
@@ -456,155 +438,6 @@ export function JewellerCustomerVaultsPanel() {
           ))}
         </div>
       )}
-    </div>
-  )
-}
-
-function JewellerPersonalHoldingInline({ onDone }: { onDone: () => void }) {
-  const [memberId, setMemberId] = useState('')
-  const [phone, setPhone] = useState('')
-  const [customerId, setCustomerId] = useState<number | null>(null)
-  const [customerLabel, setCustomerLabel] = useState('')
-  const [lookupErr, setLookupErr] = useState('')
-  const [title, setTitle] = useState('')
-  const [category, setCategory] = useState('ornament')
-  const [weight, setWeight] = useState('')
-  const [purity, setPurity] = useState('BIS 916')
-  const [invoiceNumber, setInvoiceNumber] = useState('')
-  const [productImageFile, setProductImageFile] = useState<File | null>(null)
-  const [invoiceMediaFile, setInvoiceMediaFile] = useState<File | null>(null)
-  const [busy, setBusy] = useState(false)
-  const [formErr, setFormErr] = useState('')
-  const [formSuccess, setFormSuccess] = useState('')
-
-  useEffect(() => {
-    if (!formSuccess) return
-    const t = window.setTimeout(() => setFormSuccess(''), 7000)
-    return () => window.clearTimeout(t)
-  }, [formSuccess])
-
-  const runLookup = async () => {
-    setLookupErr('')
-    const r = await jewellerLookupCustomer({
-      cridora_member_id: memberId.trim() || undefined,
-      phone: phone.trim() || undefined,
-    })
-    if (!r.found || !r.customer) {
-      setLookupErr(r.detail ?? 'Customer not found.')
-      setCustomerId(null)
-      setCustomerLabel('')
-      return
-    }
-    setCustomerId(r.customer.id)
-    setCustomerLabel(`${r.customer.label} · ${r.customer.cridora_member_id}`)
-  }
-
-  const submit = async () => {
-    setFormErr('')
-    setFormSuccess('')
-    if (customerId == null) {
-      setFormErr('Look up a verified customer first.')
-      return
-    }
-    setBusy(true)
-    const fd = new FormData()
-    fd.set('customer_id', String(customerId))
-    fd.set('title', title.trim())
-    fd.set('category', category)
-    fd.set('weight_grams', weight.trim())
-    fd.set('purity', purity.trim() || 'BIS 916')
-    if (invoiceNumber.trim()) fd.set('invoice_number', invoiceNumber.trim())
-    if (productImageFile) fd.set('product_image', productImageFile)
-    if (invoiceMediaFile) fd.set('invoice_file', invoiceMediaFile)
-    const res = await jewellerCreatePersonalHolding(fd)
-    setBusy(false)
-    if (!res.ok) {
-      setFormErr(res.detail)
-      return
-    }
-    setTitle('')
-    setWeight('')
-    setInvoiceNumber('')
-    setProductImageFile(null)
-    setInvoiceMediaFile(null)
-    setFormSuccess(`Added “${res.data.title}” to the customer’s Gold Records Vault.`)
-    onDone()
-  }
-
-  return (
-    <div style={{ marginTop: '1rem', display: 'grid', gap: '0.85rem' }}>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'flex-end' }}>
-        <label className="pf-vault-field" style={{ flex: '1 1 160px' }}>
-          <span>Cridora ID</span>
-          <input className="input" value={memberId} onChange={(e) => setMemberId(e.target.value)} placeholder="CRI…" />
-        </label>
-        <label className="pf-vault-field" style={{ flex: '1 1 160px' }}>
-          <span>Phone</span>
-          <input className="input" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Customer phone" />
-        </label>
-        <button type="button" className="btn btn-primary" onClick={() => void runLookup()}>
-          Find customer
-        </button>
-      </div>
-      {lookupErr ? <p className="form-error">{lookupErr}</p> : null}
-      {customerId != null ? (
-        <p style={{ margin: 0, fontSize: '0.9rem', fontWeight: 650, color: 'var(--gold-light)' }}>
-          Selected: {customerLabel}
-        </p>
-      ) : null}
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '0.65rem' }}>
-        <label className="pf-vault-field">
-          <span>Title</span>
-          <input className="input" value={title} onChange={(e) => setTitle(e.target.value)} />
-        </label>
-        <label className="pf-vault-field">
-          <span>Category</span>
-          <select className="input" value={category} onChange={(e) => setCategory(e.target.value)}>
-            <option value="ornament">Ornament</option>
-            <option value="coin">Coin</option>
-            <option value="bar">Bar</option>
-            <option value="other">Other</option>
-          </select>
-        </label>
-        <label className="pf-vault-field">
-          <span>Grams</span>
-          <input className="input tabular" value={weight} onChange={(e) => setWeight(e.target.value)} />
-        </label>
-        <label className="pf-vault-field">
-          <span>Purity</span>
-          <input className="input" value={purity} onChange={(e) => setPurity(e.target.value)} />
-        </label>
-        <label className="pf-vault-field">
-          <span>Invoice # (optional)</span>
-          <input className="input" value={invoiceNumber} onChange={(e) => setInvoiceNumber(e.target.value)} />
-        </label>
-      </div>
-      <div className="jeweller-vault-files" style={{ display: 'grid', gap: '0.75rem', maxWidth: '520px' }}>
-        <DeferredFilePicker
-          label="Product photo"
-          accept=".jpg,.jpeg,.png,.webp"
-          file={productImageFile}
-          onChange={setProductImageFile}
-          disabled={busy}
-        />
-        <DeferredFilePicker
-          label="Invoice PDF or photo"
-          accept=".jpg,.jpeg,.png,.webp,.pdf"
-          file={invoiceMediaFile}
-          onChange={setInvoiceMediaFile}
-          disabled={busy}
-        />
-      </div>
-      {formSuccess ? (
-        <p className="form-feedback form-feedback--success" role="status">
-          {formSuccess}
-        </p>
-      ) : null}
-      {formErr ? <p className="form-error">{formErr}</p> : null}
-      <button type="button" className="btn btn-primary" disabled={busy || customerId == null} onClick={() => void submit()}>
-        Add to customer vault
-      </button>
     </div>
   )
 }

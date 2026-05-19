@@ -61,6 +61,8 @@ export type PersonalHoldingDTO = {
   created_at: string
   updated_at: string
   mvp_note: string
+  is_cridorapay?: boolean
+  cridorapay_reference?: string
   documents?: PersonalDocumentDTO[]
 }
 

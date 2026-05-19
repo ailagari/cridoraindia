@@ -96,6 +96,15 @@ def _holding_detail_dict(
         PersonalGoldHolding.JEWELLER_ADDED: "Added by Jeweller",
         PersonalGoldHolding.VERIFIED: "Verified",
     }
+    cp_bills = list(h.cridorapay_bills.all()) if hasattr(h, "cridorapay_bills") else []
+    cp = cp_bills[0] if cp_bills else None
+    if cp is None and not hasattr(h, "_prefetched_objects_cache"):
+        from apps.accounts.models import CridoraPayBill
+
+        cp = CridoraPayBill.objects.filter(personal_holding=h).only("id", "reference").first()
+    status_badge = status_map.get(h.verification_status, h.verification_status)
+    if cp is not None:
+        status_badge = "CridoraPay purchase"
     out = {
         "id": h.id,
         "holding_type": h.holding_type,
@@ -114,7 +123,9 @@ def _holding_detail_dict(
         "estimated_current_value_inr": str(live_inr),
         "is_self_declared": h.is_self_declared,
         "verification_status": h.verification_status,
-        "status_badge": status_map.get(h.verification_status, h.verification_status),
+        "status_badge": status_badge,
+        "is_cridorapay": cp is not None,
+        "corridorapay_reference": cp.reference if cp else "",
         "created_by_type": h.created_by_type,
         "created_by_id": h.created_by_id,
         "jeweller_id": h.jeweller_id,
