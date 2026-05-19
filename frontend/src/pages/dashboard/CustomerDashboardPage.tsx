@@ -13,6 +13,7 @@ import { ChangePasswordPanel } from '@/features/auth/ChangePasswordPanel'
 import { ComingSoonPanel } from '@/components/ui'
 import { CustomerPortfolioPanel } from '@/features/portfolio/CustomerPortfolioPanel'
 import { CustomerVaultsPanel } from '@/features/portfolio/CustomerVaultsPanel'
+import { CustomerCridoraPayPanel } from '@/features/cridorapay/CustomerCridoraPayPanel'
 import { CustomerCrossRedemptionPanel } from '@/features/crossRedemption/CustomerCrossRedemptionPanel'
 import { CustomerGoldLoanPanel } from '@/features/redeem/CustomerGoldLoanPanel'
 import { CustomerSellbackPanel } from '@/features/redeem/CustomerSellbackPanel'
@@ -105,6 +106,7 @@ export function CustomerDashboardPage() {
       {active === 'portfolio_vault_ids' ? <CustomerVaultAddressesPanel /> : null}
       {active === 'shop_jewellers' ? <CustomerJewellersBrowsePanel /> : null}
       {active === 'shop_products' ? <CustomerProductsBrowsePanel /> : null}
+      {active === 'shop_cridorapay' ? <CustomerCridoraPayPanel /> : null}
       {active === 'invest_fractional' ? <FractionalPurchasePanel /> : null}
       {active === 'invest_deposit' ? <CustomerDepositInfoPanel /> : null}
       {active === 'invest_scheme' ? <ComingSoonPanel title="Golden scheme" /> : null}

@@ -10,6 +10,7 @@ export const CUSTOMER_NAV_GROUPS: DashboardNavGroup[] = [
     items: [
       { sectionKey: 'shop_jewellers', label: 'Search jeweller' },
       { sectionKey: 'shop_products', label: 'Products' },
+      { sectionKey: 'shop_cridorapay', label: 'CridoraPay' },
     ],
   },
   {
@@ -70,6 +71,7 @@ export const CUSTOMER_LEGACY_SECTION: Record<string, string> = {
   payments: 'profile_personal',
   shop_offers: 'shop_products',
   shop_schemes: 'invest_scheme',
+  shop_cridorapay: 'shop_cridorapay',
   invest_deposit: 'invest_deposit',
   invest_goldnest: 'invest_fractional',
   invest_history: 'invest_fractional',

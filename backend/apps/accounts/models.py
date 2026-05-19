@@ -965,6 +965,106 @@ class VaultProductRedemption(models.Model):
         return f"VaultProductRedemption({self.customer_id}, {self.product_name[:40]})"
 
 
+class CridoraPayBill(models.Model):
+    """Jeweller counter bill — customer pays via vault and/or UPI; completes as one personal holding."""
+
+    STATUS_AWAITING_CUSTOMER = "awaiting_customer"
+    STATUS_UPI_PENDING = "upi_pending"
+    STATUS_VAULT_OTP_PENDING = "vault_otp_pending"
+    STATUS_CASH_PENDING = "cash_pending"
+    STATUS_COMPLETED = "completed"
+    STATUS_CANCELLED = "cancelled"
+    STATUS_EXPIRED = "expired"
+
+    STATUS_CHOICES = [
+        (STATUS_AWAITING_CUSTOMER, "Awaiting customer"),
+        (STATUS_UPI_PENDING, "UPI pending"),
+        (STATUS_VAULT_OTP_PENDING, "Vault OTP pending"),
+        (STATUS_CASH_PENDING, "Cash pending"),
+        (STATUS_COMPLETED, "Completed"),
+        (STATUS_CANCELLED, "Cancelled"),
+        (STATUS_EXPIRED, "Expired"),
+    ]
+
+    PAY_VAULT = "vault"
+    PAY_UPI = "upi"
+    PAYMENT_CHOICES = [(PAY_VAULT, "Vault"), (PAY_UPI, "UPI")]
+
+    customer = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="cridorapay_bills",
+        limit_choices_to={"user_type": User.CUSTOMER},
+    )
+    jeweller = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="cridorapay_bills_as_jeweller",
+        limit_choices_to={"user_type": User.JEWELLER},
+    )
+    title = models.CharField(max_length=255, default="Shop purchase")
+    category = models.CharField(
+        max_length=24,
+        default="ornament",
+    )
+    weight_grams = models.DecimalField(max_digits=16, decimal_places=6)
+    purity = models.CharField(max_length=64, default="BIS 916")
+    total_inr = models.DecimalField(max_digits=16, decimal_places=2)
+    metal_rate_inr_per_gram = models.DecimalField(max_digits=12, decimal_places=2)
+    jeweller_note = models.CharField(max_length=500, blank=True)
+    status = models.CharField(
+        max_length=32,
+        choices=STATUS_CHOICES,
+        default=STATUS_AWAITING_CUSTOMER,
+    )
+    payment_method = models.CharField(max_length=16, choices=PAYMENT_CHOICES, blank=True, default="")
+    vault_grams_chosen = models.DecimalField(max_digits=16, decimal_places=6, default=0)
+    vault_inr_applied = models.DecimalField(max_digits=16, decimal_places=2, default=0)
+    cash_payable_inr = models.DecimalField(max_digits=16, decimal_places=2, default=0)
+    vault_debited = models.BooleanField(default=False)
+    payee_upi_vpa = models.CharField(max_length=128, blank=True, default="")
+    payment_note = models.CharField(max_length=128, blank=True, default="")
+    personal_holding = models.ForeignKey(
+        "PersonalGoldHolding",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="cridorapay_bills",
+    )
+    expires_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    @property
+    def reference(self) -> str:
+        return f"CP-{self.pk}"
+
+    def __str__(self):
+        return f"CridoraPayBill({self.reference}, {self.customer_id})"
+
+
+class CridoraPayOtp(models.Model):
+    bill = models.OneToOneField(
+        CridoraPayBill,
+        on_delete=models.CASCADE,
+        related_name="settlement_otp",
+    )
+    code_hash = models.CharField(max_length=64)
+    expires_at = models.DateTimeField()
+    failed_attempts = models.PositiveSmallIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "CridoraPay OTP"
+
+    def __str__(self):
+        return f"CridoraPayOtp(bill={self.bill_id})"
+
+
 class PlatformOperationalSettings(models.Model):
     """Singleton (pk=1): runtime operational limits configurable without redeploy."""
 
@@ -1022,6 +1122,7 @@ class JewellerLiabilityLedgerEntry(models.Model):
     LEDGER_KIND_CROSS_REDEMPTION_DEST_ASSUME = "cross_redemption_dest_assume"
     LEDGER_KIND_CROSS_REDEMPTION_SOURCE_ROLLBACK = "cr_xr_src_rel_rb"
     LEDGER_KIND_CROSS_REDEMPTION_DEST_ROLLBACK = "cr_xr_dst_asm_rb"
+    LEDGER_KIND_CORRIDORAPAY_RELEASE = "corridorapay_release"
     LEDGER_KIND_CHOICES = [
         (LEDGER_KIND_FRACTIONAL_CREDIT, "Fractional credit"),
         (LEDGER_KIND_SELLBACK_RELEASE, "Sellback release"),
@@ -1031,6 +1132,7 @@ class JewellerLiabilityLedgerEntry(models.Model):
         (LEDGER_KIND_CROSS_REDEMPTION_DEST_ASSUME, "Cross redemption destination assume"),
         (LEDGER_KIND_CROSS_REDEMPTION_SOURCE_ROLLBACK, "Cross redemption source rollback"),
         (LEDGER_KIND_CROSS_REDEMPTION_DEST_ROLLBACK, "Cross redemption dest rollback"),
+        (LEDGER_KIND_CORRIDORAPAY_RELEASE, "CridoraPay vault release"),
     ]
 
     jeweller = models.ForeignKey(
@@ -1083,6 +1185,13 @@ class JewellerLiabilityLedgerEntry(models.Model):
     )
     cross_redemption_request = models.ForeignKey(
         "CrossRedemptionRequest",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="liability_entries",
+    )
+    corridorapay_bill = models.ForeignKey(
+        "CridoraPayBill",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,

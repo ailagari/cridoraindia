@@ -7,6 +7,7 @@ from decimal import Decimal
 
 from django.contrib.auth import get_user_model
 from apps.accounts.models import (
+    CridoraPayBill,
     FractionalGoldPurchase,
     GoldDepositIntake,
     GoldSellbackRequest,
@@ -265,4 +266,75 @@ def notify_gold_deposit_completed(intake: GoldDepositIntake) -> None:
         title="Gold deposit credited",
         body=f"{grams_s} g deposit vault credit is complete.",
         link_path=customer_dashboard("portfolio_holdings"),
+    )
+
+
+def notify_corridorapay_bill_created(bill: CridoraPayBill) -> None:
+    total = format(bill.total_inr, "f").rstrip("0").rstrip(".")
+    notify_user_activity(
+        bill.customer,
+        title="Shop bill to review",
+        body=f"{bill.jeweller.business_name or 'A jeweller'} sent a bill for ₹{total} — confirm and pay in CridoraPay.",
+        link_path=customer_dashboard("shop_cridorapay"),
+        tag=f"cp-bill-c-{bill.pk}",
+    )
+
+
+def notify_corridorapay_upi_selected(bill: CridoraPayBill) -> None:
+    notify_user_push(
+        bill.jeweller,
+        title="Customer paying by UPI",
+        body=f"{_display_name(bill.customer)} will pay {bill.reference} (₹{bill.total_inr}) outside the app — mark paid when received.",
+        url=jeweller_dashboard("txn_cridorapay"),
+        tag=f"cp-upi-j-{bill.pk}",
+    )
+
+
+def notify_corridorapay_vault_selected(bill: CridoraPayBill) -> None:
+    notify_user_push(
+        bill.jeweller,
+        title="Vault payment selected",
+        body=f"{_display_name(bill.customer)} chose vault for {bill.reference}. Enter their OTP when ready.",
+        url=jeweller_dashboard("txn_cridorapay"),
+        tag=f"cp-vault-j-{bill.pk}",
+    )
+
+
+def notify_corridorapay_otp_issued(bill: CridoraPayBill) -> None:
+    notify_user_push(
+        bill.jeweller,
+        title="CridoraPay OTP ready",
+        body=f"{_display_name(bill.customer)} generated a vault OTP for {bill.reference}.",
+        url=jeweller_dashboard("txn_cridorapay"),
+        tag=f"cp-otp-j-{bill.pk}",
+    )
+
+
+def notify_corridorapay_cash_pending(bill: CridoraPayBill) -> None:
+    cash = format(bill.cash_payable_inr, "f").rstrip("0").rstrip(".")
+    notify_user_activity(
+        bill.customer,
+        title="Balance due at counter",
+        body=f"Vault applied for {bill.reference}. Pay ₹{cash} at the shop to complete.",
+        link_path=customer_dashboard("shop_cridorapay"),
+        tag=f"cp-cash-c-{bill.pk}",
+    )
+    notify_user_push(
+        bill.jeweller,
+        title="Collect cash balance",
+        body=f"Vault debited for {bill.reference}. Collect ₹{cash} from {_display_name(bill.customer)}.",
+        url=jeweller_dashboard("txn_cridorapay"),
+        tag=f"cp-cash-j-{bill.pk}",
+    )
+
+
+def notify_corridorapay_completed(bill: CridoraPayBill) -> None:
+    grams_s = _format_grams(bill.weight_grams)
+    notify_user_activity(
+        bill.customer,
+        title="Purchase complete",
+        body=f"{bill.title} ({grams_s} g) is recorded in your Gold Records.",
+        link_path=customer_dashboard("shop_cridorapay"),
+        tag=f"cp-done-c-{bill.pk}",
+        kind=PortfolioUserNotification.KIND_JEWELLER_ADDED_HOLDING,
     )

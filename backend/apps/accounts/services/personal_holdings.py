@@ -299,6 +299,26 @@ def customer_portfolio_ledger_payload(user: User, ledger_filter: str = "all") ->
             }
         )
 
+    from apps.accounts.models import CridoraPayBill
+
+    for bill in CridoraPayBill.objects.filter(
+        customer=user, status=CridoraPayBill.STATUS_COMPLETED
+    ).select_related("jeweller"):
+        j = bill.jeweller
+        jlabel = j.business_name or j.email or ""
+        occurred = (bill.completed_at or bill.created_at).isoformat()
+        rows.append(
+            {
+                "occurred_at": occurred,
+                "transaction_type": "cridorapay_purchase",
+                "reference": bill.reference,
+                "grams": str(bill.weight_grams),
+                "label": f"CridoraPay · {bill.title}",
+                "jeweller_name": jlabel,
+                "current_value_inr": str(bill.total_inr.quantize(Decimal("0.01"))),
+            }
+        )
+
     other_holdings = Prefetch(
         "holdings",
         queryset=VaultHolding.objects.exclude(
@@ -364,6 +384,7 @@ def customer_portfolio_ledger_payload(user: User, ledger_filter: str = "all") ->
         "transfer",
         "sellback",
         "redemption_purchase",
+        "cridorapay_purchase",
         "loan",
         "loan_collateral_lock",
         "loan_disbursement",

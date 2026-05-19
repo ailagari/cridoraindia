@@ -145,6 +145,36 @@ def release_custodial_liability_for_redemption_purchase(
     JewellerLiabilityBalance.objects.filter(pk=bal.pk).update(liability_grams=new_liab)
 
 
+def release_custodial_liability_for_corridorapay(
+    jeweller: User,
+    customer: User,
+    grams: Decimal,
+    bill,
+) -> None:
+    if jeweller.user_type != User.JEWELLER:
+        raise ValueError("Liability jeweller must be a jeweller user.")
+    if customer.user_type != User.CUSTOMER:
+        raise ValueError("Customer required.")
+    JewellerLiabilityLedgerEntry.objects.create(
+        jeweller=jeweller,
+        customer=customer,
+        grams=grams,
+        kind=JewellerLiabilityLedgerEntry.LEDGER_KIND_CORRIDORAPAY_RELEASE,
+        fractional_purchase=None,
+        gold_sellback=None,
+        corridorapay_bill=bill,
+    )
+    bal, _ = JewellerLiabilityBalance.objects.select_for_update().get_or_create(
+        jeweller=jeweller,
+        defaults={"liability_grams": Decimal("0")},
+    )
+    bal.refresh_from_db()
+    new_liab = bal.liability_grams - grams
+    if new_liab < Decimal("0"):
+        new_liab = Decimal("0")
+    JewellerLiabilityBalance.objects.filter(pk=bal.pk).update(liability_grams=new_liab)
+
+
 def release_custodial_liability_cross_redemption_source(
     jeweller: User,
     customer: User,

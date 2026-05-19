@@ -135,6 +135,19 @@ from .views_personal_portfolio import (
     PortfolioUserNotificationsListView,
     PortfolioUserNotificationsMarkReadView,
 )
+from .corridorapay_views import (
+    CustomerCridoraPayAcceptView,
+    CustomerCridoraPayBillsListView,
+    CustomerCridoraPayCancelView,
+    CustomerCridoraPayQuoteView,
+    CustomerCridoraPayVaultOtpIssueView,
+    JewellerCridoraPayBillCreateView,
+    JewellerCridoraPayBillsListView,
+    JewellerCridoraPayCancelView,
+    JewellerCridoraPayMarkCashPaidView,
+    JewellerCridoraPayMarkUpiPaidView,
+    JewellerCridoraPayVerifyVaultOtpView,
+)
 from .cross_redemption_views import (
     AdminCrossRedemptionListView,
     AdminCrossRedemptionRiskBlockView,
@@ -342,6 +355,32 @@ urlpatterns = [
         AdminDocumentRequestReuploadView.as_view(),
     ),
     path("admin/users/<int:user_id>/freeze/", AdminFreezeUserView.as_view()),
+    path("jeweller/cridorapay/bills/", JewellerCridoraPayBillCreateView.as_view()),
+    path("jeweller/cridorapay/bills/list/", JewellerCridoraPayBillsListView.as_view()),
+    path(
+        "jeweller/cridorapay/bills/<int:pk>/verify-vault-otp/",
+        JewellerCridoraPayVerifyVaultOtpView.as_view(),
+    ),
+    path(
+        "jeweller/cridorapay/bills/<int:pk>/mark-upi-paid/",
+        JewellerCridoraPayMarkUpiPaidView.as_view(),
+    ),
+    path(
+        "jeweller/cridorapay/bills/<int:pk>/mark-cash-paid/",
+        JewellerCridoraPayMarkCashPaidView.as_view(),
+    ),
+    path(
+        "jeweller/cridorapay/bills/<int:pk>/cancel/",
+        JewellerCridoraPayCancelView.as_view(),
+    ),
+    path("corridorapay/bills/", CustomerCridoraPayBillsListView.as_view()),
+    path("corridorapay/bills/<int:pk>/quote/", CustomerCridoraPayQuoteView.as_view()),
+    path("corridorapay/bills/<int:pk>/accept/", CustomerCridoraPayAcceptView.as_view()),
+    path(
+        "corridorapay/bills/<int:pk>/vault-otp/",
+        CustomerCridoraPayVaultOtpIssueView.as_view(),
+    ),
+    path("corridorapay/bills/<int:pk>/cancel/", CustomerCridoraPayCancelView.as_view()),
     path("cross-redemption/authorize/", CustomerCrossRedemptionAuthorizeView.as_view()),
     path("cross-redemption/", CustomerCrossRedemptionListView.as_view()),
     path("cross-redemption/<int:pk>/cancel/", CustomerCrossRedemptionCancelView.as_view()),
