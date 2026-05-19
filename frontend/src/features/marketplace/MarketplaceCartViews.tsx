@@ -12,10 +12,12 @@ import {
 } from '@/lib/marketplacePricing'
 import {
   fetchGoldWallet,
+  holdingsJewellerIdsFromWallet,
   vaultCheckoutEligibleGramsAtJeweller,
   walletBalanceGrams,
   type GoldWalletDTO,
 } from '@/lib/goldTransferApi'
+import { VaultCheckoutGramsControl } from '@/features/marketplace/VaultCheckoutGramsControl'
 import { useLivePoll } from '@/lib/useLivePoll'
 import { LIVE_BALANCE_POLL_MS } from '@/lib/liveDeskIntervals'
 import type { MarketplaceProductDTO } from '@/lib/marketplaceApi'
@@ -255,7 +257,9 @@ export function MarketplaceCartCheckout({
   const [payMode, setPayMode] = useState<'cash' | 'vault'>('cash')
   const [vaultGrams, setVaultGrams] = useState(0)
   const [goldWallet, setGoldWallet] = useState<GoldWalletDTO | null>(null)
+  const [walletLoading, setWalletLoading] = useState(true)
   const [totalVaultedAllPartners, setTotalVaultedAllPartners] = useState(0)
+  const [localPricingCtx, setLocalPricingCtx] = useState<CheckoutPricingContext | undefined>(undefined)
   const [checkoutStep, setCheckoutStep] = useState<'pay' | 'cash' | 'receipt'>('pay')
   const [receipt, setReceipt] = useState<MarketplaceCheckoutReceipt | null>(null)
   const singleLine = lines.length === 1 && lines[0].qty === 1 ? lines[0] : null
@@ -273,10 +277,17 @@ export function MarketplaceCartCheckout({
     if (!w) {
       setGoldWallet(null)
       setTotalVaultedAllPartners(0)
+      setLocalPricingCtx(undefined)
+      setWalletLoading(false)
       return
     }
     setGoldWallet(w)
     setTotalVaultedAllPartners(walletBalanceGrams(w))
+    setLocalPricingCtx({
+      customerDefaultJewellerId: w.default_jeweller_id,
+      holdingsJewellerIds: holdingsJewellerIdsFromWallet(w),
+    })
+    setWalletLoading(false)
   }, [])
 
   useEffect(() => {
@@ -285,8 +296,14 @@ export function MarketplaceCartCheckout({
 
   useLivePoll(refreshWallet, LIVE_BALANCE_POLL_MS, true)
 
-  const eligibleGramsAtSeller = singleJewellerId != null ? vaultCheckoutEligibleGramsAtJeweller(goldWallet, singleJewellerId) : 0
+  const effectivePricingCtx = localPricingCtx ?? pricingCtx
+  const eligibleGramsAtSeller =
+    singleJewellerId != null ? vaultCheckoutEligibleGramsAtJeweller(goldWallet, singleJewellerId) : 0
   const maxVaultGrams = eligibleGramsAtSeller
+  const metalRateOk =
+    singleLine != null &&
+    Number.isFinite(Number.parseFloat(singleLine.product.metal_rate_inr_per_gram_used)) &&
+    Number.parseFloat(singleLine.product.metal_rate_inr_per_gram_used) > 0
 
   useEffect(() => {
     setVaultGrams((g) => Math.min(g, maxVaultGrams))
@@ -297,13 +314,13 @@ export function MarketplaceCartCheckout({
     const lbs: { product: MarketplaceProductDTO; qty: number; bd: PriceBreakdown }[] = []
     const jn = new Set<string>()
     for (const l of lines) {
-      const bd = calculateCheckoutPrice(l.product, 0, 0, pricingCtx, l.qty)
+      const bd = calculateCheckoutPrice(l.product, 0, 0, effectivePricingCtx, l.qty)
       sum += bd.finalAmount
       jn.add(l.product.jeweller_name)
       lbs.push({ product: l.product, qty: l.qty, bd })
     }
     return { sumFinal: sum, lineBreakdowns: lbs, jewellerNames: [...jn].sort() }
-  }, [lines, pricingCtx])
+  }, [lines, effectivePricingCtx])
 
   const blendRate = useMemo(() => cartBlendedMetalRateInrPerGram(lines), [lines])
 
@@ -313,7 +330,7 @@ export function MarketplaceCartCheckout({
           singleLine.product,
           payMode === 'vault' ? vaultGrams : 0,
           eligibleGramsAtSeller,
-          pricingCtx,
+          effectivePricingCtx,
           singleLine.qty,
         )
       : null
@@ -323,9 +340,18 @@ export function MarketplaceCartCheckout({
   const gstOnGoldSaved = cartBreakdown?.gstOnGoldSaved ?? 0
   const gramsSuggestedFullOrder =
     singleLine != null
-      ? suggestedVaultGramsForFullOrder(singleLine.product, eligibleGramsAtSeller, pricingCtx, singleLine.qty)
+      ? suggestedVaultGramsForFullOrder(singleLine.product, eligibleGramsAtSeller, effectivePricingCtx, singleLine.qty)
       : vaultGramsAtListingRateForOrderInr(sumFinal, blendRate)
   const kycOk = user?.kyc_status === 'verified'
+
+  useEffect(() => {
+    if (payMode !== 'vault' || maxVaultGrams <= 0 || !metalRateOk) return
+    const target =
+      Number.isFinite(gramsSuggestedFullOrder) && gramsSuggestedFullOrder > 0
+        ? Math.min(maxVaultGrams, gramsSuggestedFullOrder)
+        : maxVaultGrams
+    setVaultGrams((g) => (g > 1e-6 ? Math.min(g, maxVaultGrams) : target))
+  }, [payMode, maxVaultGrams, metalRateOk, gramsSuggestedFullOrder])
 
   const { busy, error, setError, runConfirm } = useMarketplaceOrderConfirm({
     product: singleLine?.product ?? lines[0].product,
@@ -353,7 +379,7 @@ export function MarketplaceCartCheckout({
       setError('This listing has no metal ₹/g. Ask the jeweller to set pricing on the SKU.')
       return
     }
-    const cashOnly = calculateCheckoutPrice(singleLine.product, 0, 0, pricingCtx, singleLine.qty)
+    const cashOnly = calculateCheckoutPrice(singleLine.product, 0, 0, effectivePricingCtx, singleLine.qty)
     if (cashOnly.finalAmount <= 0) {
       setError('Order total is ₹0 — check gold weight and making charges on this listing.')
       return
@@ -542,53 +568,18 @@ export function MarketplaceCartCheckout({
 
           {payMode === 'vault' && vaultAllowed ? (
             <div style={{ marginBottom: '1rem' }}>
-              <div style={{ marginBottom: '0.5rem' }}>
-                <button
-                  type="button"
-                  className="btn btn-ghost"
-                  style={{ padding: '0.35rem 0.65rem', fontSize: '0.72rem', borderRadius: 12 }}
-                  onClick={() => setVaultGrams(Math.min(maxVaultGrams, gramsSuggestedFullOrder))}
-                  disabled={maxVaultGrams <= 0 || !Number.isFinite(gramsSuggestedFullOrder)}
-                >
-                  Use suggested — full order in gold
-                </button>
-              </div>
-              <label htmlFor="vault-grams-cart" style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)' }}>
-                Grams (0 – {maxVaultGrams.toFixed(3)})
-              </label>
-              <input
-                id="vault-grams-cart"
-                type="range"
-                min={0}
-                max={maxVaultGrams}
-                step={0.001}
-                value={Math.min(vaultGrams, maxVaultGrams)}
-                onChange={(e) => setVaultGrams(Number.parseFloat(e.target.value))}
-                style={{ width: '100%', marginTop: '0.5rem' }}
-              />
-              <input
-                type="number"
-                min={0}
-                max={maxVaultGrams}
-                step={0.001}
-                value={vaultGrams}
-                onChange={(e) => {
-                  const v = Number.parseFloat(e.target.value)
-                  if (!Number.isFinite(v)) setVaultGrams(0)
-                  else setVaultGrams(Math.max(0, Math.min(maxVaultGrams, v)))
-                }}
-                style={{
-                  width: '100%',
-                  marginTop: '0.5rem',
-                  padding: '0.5rem',
-                  borderRadius: 10,
-                  border: '1px solid var(--border-soft)',
-                  background: 'var(--veil)',
-                  color: 'var(--text)',
-                  fontFamily: 'var(--font)',
-                }}
-              />
-            </div>
+              <VaultCheckoutGramsControl
+                maxGrams={maxVaultGrams}
+                grams={vaultGrams}
+                suggestedGrams={gramsSuggestedFullOrder}
+                metalRateOk={metalRateOk}
+                walletLoading={walletLoading}
+                jewellerName={firstName}
+                totalVaultedAllPartners={totalVaultedAllPartners}
+                onGramsChange={setVaultGrams}
+                suggestLabel="Use suggested — full order in gold"
+                rangeId="vault-grams-cart"
+              />            </div>
           ) : null}
 
           <div

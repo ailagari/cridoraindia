@@ -7,8 +7,9 @@ import {
 } from '@/lib/jewellerPortfolioSnapshot'
 import { LIVE_BALANCE_POLL_MS, LIVE_PROFILE_POLL_MS } from '@/lib/liveDeskIntervals'
 import { useLivePoll } from '@/lib/useLivePoll'
-import { PortfolioBarChart, PortfolioDonut, PortfolioTrendChart } from './PortfolioCharts'
+import { PortfolioBarChart, PortfolioDonut, PortfolioSparkRow } from './PortfolioCharts'
 import { JewellerPortfolioPanel } from './JewellerPortfolioPanel'
+import { LiabilityCreditsMiniList } from './LiabilityCreditsMiniList'
 import { DashboardActions } from '@/components/ui'
 
 const DONUT_COLORS = ['#fbbf24', '#d4a85c', '#67e8f9', '#a78bfa']
@@ -190,28 +191,30 @@ export function JewellerPortfolioOverviewPanel({ onNavigate }: Props) {
 
             <details className="dash-disclosure">
               <summary>Analytics</summary>
-              <div className="dash-disclosure__body pf-grid pf-grid--charts pf-stagger">
-              <article className="pf-card pf-card--lift">
-                <h3 className="pf-card__title">Gold in custody (grams)</h3>
-                <p className="pf-card__meta">Split by product type across your customers.</p>
+              <div className="dash-disclosure__body pf-grid pf-grid--charts-compact pf-stagger">
+              <article className="pf-card pf-card--lift pf-card--chart-compact">
+                <h3 className="pf-card__title">Gold in custody</h3>
+                <p className="pf-card__meta">By product type</p>
                 {gramsBar.values.length > 0 ? (
+                  <div className="pf-card__viz pf-card__viz--sm">
                   <PortfolioBarChart
                     values={gramsBar.values}
                     labels={gramsBar.labels}
                     colors={gramsBar.labels.map((_, i) => DONUT_COLORS[i % DONUT_COLORS.length]!)}
                     ariaLabel="Grams in custody by product type"
                   />
+                  </div>
                 ) : (
                   <p className="pf-groww-footnote">No vaulted balances yet.</p>
                 )}
               </article>
-              <article className="pf-card pf-card--lift">
+              <article className="pf-card pf-card--lift pf-card--chart-compact">
                 <h3 className="pf-card__title">Open queues</h3>
-                <p className="pf-card__meta">Items needing counter action.</p>
+                <p className="pf-card__meta">Needs action</p>
                 {pendingDonut.length > 0 ? (
-                  <>
+                  <div className="pf-donut-wrap--chart-inline">
                     <PortfolioDonut segments={pendingDonut} ariaLabel="Open queue breakdown" />
-                    <ul className="pf-donut-legend">
+                    <ul className="pf-donut-legend pf-donut-legend--tight">
                       {pendingDonut.map((s) => (
                         <li key={s.label} className="pf-donut-legend__row">
                           <span className="pf-swatch" style={{ background: s.color }} />
@@ -220,24 +223,20 @@ export function JewellerPortfolioOverviewPanel({ onNavigate }: Props) {
                         </li>
                       ))}
                     </ul>
-                  </>
+                  </div>
                 ) : (
                   <p className="pf-groww-footnote">All queues clear.</p>
                 )}
               </article>
-              <article className="pf-card pf-card--lift pf-card--wide">
-                <h3 className="pf-card__title">Recent liability credits</h3>
-                <p className="pf-card__meta">Grams posted when counter purchases complete.</p>
-                {creditTrend.length > 1 ? (
-                  <PortfolioTrendChart
-                    values={creditTrend}
-                    stroke="var(--gold-light)"
-                    fillId="jeweller-credit-trend"
-                    ariaLabel="Recent liability credit grams"
-                  />
-                ) : (
-                  <p className="pf-groww-footnote">Credits will appear after verified purchases.</p>
-                )}
+              <article className="pf-card pf-card--lift pf-card--chart-compact">
+                <h3 className="pf-card__title">Liability credits</h3>
+                <p className="pf-card__meta">Recent grams posted</p>
+                {creditTrend.length > 0 ? (
+                  <div className="pf-card__viz pf-card__viz--sm">
+                    <PortfolioSparkRow points={creditTrend} stroke="var(--gold-light)" />
+                  </div>
+                ) : null}
+                <LiabilityCreditsMiniList rows={snap.recentCredits} limit={4} />
               </article>
               </div>
             </details>

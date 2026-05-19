@@ -98,6 +98,12 @@ export function walletBalanceGrams(w: GoldWalletDTO | null | undefined): number 
   return Number.isFinite(n) ? Math.max(0, n) : 0
 }
 
+function sameCustodianJewellerId(a: number | string | undefined, b: number | string | undefined): boolean {
+  const na = Number(a)
+  const nb = Number(b)
+  return Number.isFinite(na) && Number.isFinite(nb) && na > 0 && na === nb
+}
+
 /**
  * Grams the customer can apply at checkout for a listing from this custodian jeweller:
  * fractional + deposit + golden scheme (and transfers, which credit fractional), matching server debit order.
@@ -107,16 +113,17 @@ export function vaultCheckoutEligibleGramsAtJeweller(
   w: GoldWalletDTO | null | undefined,
   jewellerId: number,
 ): number {
-  if (!w?.vaults?.length || !Number.isFinite(jewellerId) || jewellerId <= 0) return 0
-  const row = w.vaults.find((v) => v.custodian_id === jewellerId)
-  if (!row) return 0
-  const vt = Number.parseFloat(row.vault_total_grams ?? '0')
-  if (Number.isFinite(vt) && vt > 0) return Math.max(0, vt)
-  const fg = Number.parseFloat(row.fractional_grams ?? '0')
-  const dg = Number.parseFloat(row.deposit_grams ?? '0')
-  const gg = Number.parseFloat(row.golden_scheme_grams ?? '0')
-  const sum = (Number.isFinite(fg) ? fg : 0) + (Number.isFinite(dg) ? dg : 0) + (Number.isFinite(gg) ? gg : 0)
-  return Math.max(0, sum)
+  const jid = Number(jewellerId)
+  if (!w || !Number.isFinite(jid) || jid <= 0) return 0
+  if (w.vaults?.length) {
+    const row = w.vaults.find((v) => sameCustodianJewellerId(v.custodian_id, jid))
+    if (row) return vaultRowTotalGrams(row)
+  }
+  const total = walletBalanceGrams(w)
+  if (total > 1e-9 && w.default_jeweller_id != null && sameCustodianJewellerId(w.default_jeweller_id, jid)) {
+    return total
+  }
+  return 0
 }
 
 /** Custodian jeweller IDs where the customer holds any positive vaulted grams. */
@@ -124,14 +131,9 @@ export function holdingsJewellerIdsFromWallet(w: GoldWalletDTO | null | undefine
   if (!w?.vaults?.length) return new Set<number>()
   const out = new Set<number>()
   for (const v of w.vaults) {
-    const id = v.custodian_id
+    const id = Number(v.custodian_id)
     if (!Number.isFinite(id) || id <= 0) continue
-    const vt = Number.parseFloat(v.vault_total_grams ?? '0')
-    const fg = Number.parseFloat(v.fractional_grams ?? '0')
-    const dg = Number.parseFloat(v.deposit_grams ?? '0')
-    const gg = Number.parseFloat(v.golden_scheme_grams ?? '0')
-    const grams = Number.isFinite(vt) && vt > 0 ? vt : fg + dg + gg
-    if (Number.isFinite(grams) && grams > 1e-9) out.add(id)
+    if (vaultRowTotalGrams(v) > 1e-9) out.add(id)
   }
   return out
 }

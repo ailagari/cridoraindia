@@ -3960,6 +3960,141 @@ select.input {
   }
 }
 
+.pf-grid--charts-compact {
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+@media (min-width: 768px) {
+  .pf-grid--charts-compact {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.pf-card--chart-compact {
+  padding: 0.75rem 0.85rem;
+}
+
+.pf-card--chart-compact .pf-card__title {
+  font-size: 0.88rem;
+}
+
+.pf-card--chart-compact .pf-card__meta {
+  margin-top: 0.15rem;
+  font-size: 0.68rem;
+  line-height: 1.35;
+}
+
+.pf-card__viz--sm {
+  height: 72px;
+  min-height: 72px;
+  margin-top: 0.35rem;
+  padding: 0.35rem 0.45rem;
+  border-radius: 10px;
+  background: var(--pf-viz-radial), var(--pf-viz-fill);
+  border: 1px solid rgba(165, 180, 252, 0.1);
+  overflow: hidden;
+}
+
+.pf-donut-wrap--chart-inline {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin-top: 0.35rem;
+}
+
+.pf-donut-wrap--chart-inline .pf-donut-svg {
+  width: 72px;
+  height: 72px;
+  flex-shrink: 0;
+  margin-inline: 0;
+}
+
+.pf-donut-wrap--chart-inline .pf-donut-legend {
+  flex: 1;
+  min-width: 0;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+}
+
+.pf-credits-mini {
+  list-style: none;
+  margin: 0.45rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  max-height: 9.5rem;
+  overflow-y: auto;
+}
+
+.pf-credits-mini__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.2rem 0.65rem;
+  align-items: center;
+  padding: 0.4rem 0.5rem;
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.45);
+  border: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.pf-credits-mini__main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.pf-credits-mini__who {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-silk);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pf-credits-mini__ref {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pf-credits-mini__end {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.1rem;
+  text-align: right;
+}
+
+.pf-credits-mini__grams {
+  font-size: 0.75rem;
+  color: var(--success);
+}
+
+.pf-credits-mini__when {
+  font-size: 0.62rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.pf-card--ledger-compact {
+  padding: 0.85rem 0.95rem;
+}
+
+.pf-card--ledger-compact .pf-card__title {
+  font-size: 0.9rem;
+}
+
+.pf-card--ledger-compact .pf-ledger-scroll {
+  max-height: 14rem;
+}
+
 .pf-card--wide {
   grid-column: 1 / -1;
 }

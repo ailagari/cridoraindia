@@ -3,6 +3,7 @@ import { fetchGoldWallet } from '@/lib/goldTransferApi'
 import { jewellerFractionalPending, type JewellerFractionalPendingRow } from '@/lib/fractionalPurchaseApi'
 import { LIVE_BALANCE_POLL_MS } from '@/lib/liveDeskIntervals'
 import { useLivePoll } from '@/lib/useLivePoll'
+import { LiabilityCreditsMiniList } from './LiabilityCreditsMiniList'
 
 function parseG(s: string): number {
   const n = Number.parseFloat(s)
@@ -144,55 +145,14 @@ export function JewellerPortfolioPanel({ embedded }: PanelProps = {}) {
         )}
       </article>
 
-      <article
-        className="pf-card pf-card--lift pf-card--wide pf-card--ledger-table-wrap pf-stagger"
-        style={{ marginTop: '1rem' }}
-      >
+      <article className="pf-card pf-card--lift pf-card--ledger-compact pf-stagger" style={{ marginTop: '1rem' }}>
         <header className="pf-card__head pf-ledger-head">
           <div>
             <h3 className="pf-card__title">Recent liability credits</h3>
-            <p className="pf-card__meta">Grams posted to your custodial liability when purchases complete.</p>
+            <p className="pf-card__meta">Grams posted when purchases complete.</p>
           </div>
         </header>
-        {credits.length === 0 ? (
-          <p style={{ color: 'var(--text-muted)', margin: 0 }}>No recent credits yet.</p>
-        ) : (
-          <div className="pf-ledger-scroll">
-            <table className="pf-ledger-table">
-              <thead>
-                <tr>
-                  <th>Credited</th>
-                  <th>Customer</th>
-                  <th className="tabular">Member ID</th>
-                  <th className="tabular">Grams</th>
-                  <th className="tabular">Purchase</th>
-                </tr>
-              </thead>
-              <tbody>
-                {credits.map((row, i) => (
-                  <tr
-                    key={`${row.purchase_reference}-${row.created_at}-${row.customer_member_id}-${i}`}
-                    className="pf-ledger-row"
-                  >
-                    <td className="pf-ledger-date" data-label="Credited">
-                      {fmtWhen(row.created_at)}
-                    </td>
-                    <td data-label="Customer">{row.customer_label ?? '—'}</td>
-                    <td className="tabular" data-label="Member ID">
-                      {row.customer_member_id ?? '—'}
-                    </td>
-                    <td className="tabular pf-ledger-grams" data-label="Grams">
-                      +{parseG(row.grams).toFixed(6)} g
-                    </td>
-                    <td className="tabular" data-label="Purchase">
-                      {row.purchase_reference ?? '—'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <LiabilityCreditsMiniList rows={credits} limit={8} />
       </article>
     </div>
   )

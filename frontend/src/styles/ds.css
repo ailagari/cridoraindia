@@ -1354,11 +1354,36 @@ label.field textarea:focus {
     padding: var(--sp-3);
     border-radius: var(--r-xl);
   }
+  .dash-action-panel__head {
+    margin-bottom: var(--sp-2);
+  }
   .dash-action-panel__grid {
-    grid-template-columns: 1fr;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: var(--sp-2);
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 2px;
+    scrollbar-width: none;
+  }
+  .dash-action-panel__grid::-webkit-scrollbar {
+    display: none;
   }
   .dash-action-card {
-    min-height: 64px;
+    flex: 0 0 auto;
+    min-width: min(11.25rem, 78vw);
+    min-height: 48px;
+    padding: var(--sp-3) var(--sp-4);
+  }
+  .dash-action-card__label {
+    font-size: var(--ts-sm);
+    white-space: nowrap;
+  }
+  .dash-action-card__desc {
+    font-size: var(--ts-micro);
+    white-space: nowrap;
   }
   .transaction-row {
     grid-template-columns: minmax(0, 1fr) auto;

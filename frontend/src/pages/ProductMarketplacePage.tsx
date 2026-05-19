@@ -36,6 +36,7 @@ import { mergeJewellerListWithDemos } from '@/lib/jewellerMarketplaceDemos'
 import { LIVE_BALANCE_POLL_MS, LIVE_CATALOG_POLL_MS, LIVE_DIRECTORY_POLL_MS } from '@/lib/liveDeskIntervals'
 import { mergeProductCatalogWithDemos } from '@/lib/productMarketplaceDemos'
 import { MarketplaceProductListSummary, formatInr } from '@/features/marketplace/productPricing'
+import { VaultCheckoutGramsControl } from '@/features/marketplace/VaultCheckoutGramsControl'
 import {
   MarketplaceCartCheckout,
   MarketplaceCartReview,
@@ -94,6 +95,7 @@ function CheckoutView({
   /** Spendable vaulted grams custodied with this listing's jeweller (fractional + deposit + scheme). */
   const [eligibleGramsAtSeller, setEligibleGramsAtSeller] = useState(0)
   const [totalVaultedAllPartners, setTotalVaultedAllPartners] = useState(0)
+  const [walletLoading, setWalletLoading] = useState(true)
 
   const refreshWallet = useCallback(async () => {
     const w = await fetchGoldWallet()
@@ -101,6 +103,7 @@ function CheckoutView({
       setPricingCtx(undefined)
       setEligibleGramsAtSeller(0)
       setTotalVaultedAllPartners(0)
+      setWalletLoading(false)
       return
     }
     setPricingCtx({
@@ -109,6 +112,7 @@ function CheckoutView({
     })
     setTotalVaultedAllPartners(walletBalanceGrams(w))
     setEligibleGramsAtSeller(vaultCheckoutEligibleGramsAtJeweller(w, product.jeweller_id))
+    setWalletLoading(false)
   }, [product.jeweller_id])
 
   useEffect(() => {
@@ -147,6 +151,16 @@ function CheckoutView({
   const payDisplay = Math.max(0, p.payableAmount)
   const vaultActive = payMode === 'vault'
   const kycOk = user?.kyc_status === 'verified'
+  const metalRateOk = Number.isFinite(metalRate) && metalRate > 0
+
+  useEffect(() => {
+    if (payMode !== 'vault' || maxVaultGrams <= 0 || !metalRateOk) return
+    const target =
+      Number.isFinite(gramsSuggestedFullOrder) && gramsSuggestedFullOrder > 0
+        ? Math.min(maxVaultGrams, gramsSuggestedFullOrder)
+        : maxVaultGrams
+    setVaultGrams((g) => (g > 1e-6 ? Math.min(g, maxVaultGrams) : target))
+  }, [payMode, maxVaultGrams, metalRateOk, gramsSuggestedFullOrder])
 
   const { busy, error, setError, runConfirm } = useMarketplaceOrderConfirm({
     product,
@@ -464,53 +478,16 @@ function CheckoutView({
 
           {vaultActive ? (
             <div style={{ marginBottom: '1rem' }}>
-              <div style={{ marginBottom: '0.5rem' }}>
-                <button
-                  type="button"
-                  className="btn btn-ghost"
-                  style={{ padding: '0.35rem 0.65rem', fontSize: '0.72rem', borderRadius: 12 }}
-                  onClick={() =>
-                    setVaultGrams(Math.min(maxVaultGrams, gramsSuggestedFullOrder))
-                  }
-                  disabled={maxVaultGrams <= 0 || !Number.isFinite(gramsSuggestedFullOrder)}
-                >
-                  Use suggested — pay full order in gold
-                </button>
-              </div>
-              <label htmlFor="vault-grams" style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)' }}>
-                Grams at vault rate (0 – {maxVaultGrams.toFixed(3)})
-              </label>
-              <input
-                id="vault-grams"
-                type="range"
-                min={0}
-                max={maxVaultGrams}
-                step={0.001}
-                value={Math.min(vaultGrams, maxVaultGrams)}
-                onChange={(e) => setVaultGrams(Number.parseFloat(e.target.value))}
-                style={{ width: '100%', marginTop: '0.5rem' }}
-              />
-              <input
-                type="number"
-                min={0}
-                max={maxVaultGrams}
-                step={0.001}
-                value={vaultGrams}
-                onChange={(e) => {
-                  const v = Number.parseFloat(e.target.value)
-                  if (!Number.isFinite(v)) setVaultGrams(0)
-                  else setVaultGrams(Math.max(0, Math.min(maxVaultGrams, v)))
-                }}
-                style={{
-                  width: '100%',
-                  marginTop: '0.5rem',
-                  padding: '0.5rem',
-                  borderRadius: 10,
-                  border: '1px solid var(--border-soft)',
-                  background: 'var(--veil)',
-                  color: 'var(--text)',
-                  fontFamily: 'var(--font)',
-                }}
+              <VaultCheckoutGramsControl
+                maxGrams={maxVaultGrams}
+                grams={vaultGrams}
+                suggestedGrams={gramsSuggestedFullOrder}
+                metalRateOk={metalRateOk}
+                walletLoading={walletLoading}
+                jewellerName={product.jeweller_name}
+                totalVaultedAllPartners={totalVaultedAllPartners}
+                onGramsChange={setVaultGrams}
+                rangeId="vault-grams"
               />
               <p
                 className="form-footnote"

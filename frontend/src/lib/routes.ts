@@ -1,4 +1,6 @@
 import type { AuthUser } from '@/context/AuthContext'
+import { CUSTOMER_DEFAULT_SECTION } from '@/lib/mobileNav/customerNav'
+import { JEWELLER_DEFAULT_SECTION } from '@/lib/mobileNav/jewellerNav'
 
 /** In-app dashboards (SPA); marketing site uses PublicLayout. */
 export function isDashboardPath(pathname: string): boolean {
@@ -18,16 +20,30 @@ export function userDashboardPath(user: AuthUser): string {
   }
 }
 
-/** After login or “open dashboard”: surface KYC/KYB until the account is verified. */
+function dashboardPortfolioSection(user: AuthUser): string | null {
+  if (user.user_type === 'customer') {
+    if (user.kyc_status !== 'verified') return 'profile_kyc'
+    return CUSTOMER_DEFAULT_SECTION
+  }
+  if (user.user_type === 'jeweller') {
+    if (user.kyc_status !== 'verified') return 'prof_kyb'
+    return JEWELLER_DEFAULT_SECTION
+  }
+  return null
+}
+
+/** After login, app open, or “open dashboard”: portfolio (or KYC/KYB when pending). */
 export function dashboardLandingPath(user: AuthUser): string {
   const base = userDashboardPath(user)
-  if (user.user_type === 'customer' && user.kyc_status !== 'verified') {
-    return `${base}?section=profile_kyc`
+  const section = dashboardPortfolioSection(user)
+  if (!section) return base
+  const isDefaultPortfolio =
+    (user.user_type === 'customer' && section === CUSTOMER_DEFAULT_SECTION) ||
+    (user.user_type === 'jeweller' && section === JEWELLER_DEFAULT_SECTION)
+  if (isDefaultPortfolio && user.user_type === 'customer') {
+    return base
   }
-  if (user.user_type === 'jeweller' && user.kyc_status !== 'verified') {
-    return `${base}?section=prof_kyb`
-  }
-  return base
+  return `${base}?section=${section}`
 }
 
 /** Public bottom nav “Account” tab — profile/settings hub, distinct from main Dashboard landing. */

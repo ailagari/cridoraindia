@@ -4,7 +4,7 @@ import { AuthProvider } from '@/context/AuthContext'
 import { ThemeProvider } from '@/context/ThemeContext'
 import { PublicLayout } from '@/components/PublicLayout'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
-import { HomePage } from '@/pages/HomePage'
+import { HomeOrDashboardRedirect } from '@/pages/HomeOrDashboardRedirect'
 import { WhyCridoraPage } from '@/pages/WhyCridoraPage'
 import { FeaturesPage } from '@/pages/FeaturesPage'
 import { HowItWorksPage } from '@/pages/HowItWorksPage'
@@ -28,6 +28,7 @@ import { RedirectPreserveSearch } from '@/pages/dashboard/RedirectPreserveSearch
 import { NativeNotificationBridge } from '@/components/NativeNotificationBridge'
 import { NativeAppDiagnostics } from '@/components/NativeAppDiagnostics'
 import { NativeAppSplash } from '@/components/NativeAppSplash'
+import { NativeAppEntryRoute } from '@/components/NativeAppEntryRoute'
 import { isNativePlatform } from '@/lib/capacitorPlatform'
 import '@/styles/index.css'
 import '@/styles/tokens.css'
@@ -46,9 +47,10 @@ export default function App() {
       <ThemeProvider>
         <AuthProvider>
           <NativeAppSplash />
+          <NativeAppEntryRoute />
           <Routes>
             <Route element={<PublicLayout />}>
-              <Route index element={<HomePage />} />
+              <Route index element={<HomeOrDashboardRedirect />} />
               <Route path="discover" element={<DiscoverPage />} />
               <Route path="shop" element={<ShopHubPage />} />
               <Route path="join" element={<JoinHubPage />} />
