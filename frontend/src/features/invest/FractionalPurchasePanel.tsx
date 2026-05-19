@@ -10,6 +10,8 @@ import {
   type FractionalPurchaseDTO,
   type FractionalQuoteDTO,
 } from '@/lib/fractionalPurchaseApi'
+import { FractionalUpiPayStep } from '@/features/invest/FractionalUpiPayStep'
+import { usePublicLayoutMax767 } from '@/hooks/usePublicLayoutMax767'
 import { useCounterOtpCountdown } from '@/features/invest/useCounterOtpCountdown'
 import { fetchGoldWallet } from '@/lib/goldTransferApi'
 import { LIVE_BALANCE_POLL_MS } from '@/lib/liveDeskIntervals'
@@ -29,6 +31,7 @@ function formatExpiry(iso: string): string {
 }
 
 export function FractionalPurchasePanel() {
+  const narrow = usePublicLayoutMax767()
   const [params] = useSearchParams()
   const jewellerFromUrl = params.get('jeweller_id')
 
@@ -47,8 +50,17 @@ export function FractionalPurchasePanel() {
   const [balanceHint, setBalanceHint] = useState('')
   const [otpReveal, setOtpReveal] = useState<{ orderId: number; otp: string; expiresAt: string } | null>(null)
   const [otpPolicySeconds, setOtpPolicySeconds] = useState<number | null>(null)
+  const [paymentMethod, setPaymentMethod] = useState<'upi' | 'counter'>('upi')
+  const [successToast, setSuccessToast] = useState('')
+  const [activeUpiOrder, setActiveUpiOrder] = useState<FractionalPurchaseDTO | null>(null)
 
   const otpCountdown = useCounterOtpCountdown(otpReveal?.expiresAt ?? null)
+
+  useEffect(() => {
+    if (!successToast) return
+    const timer = window.setTimeout(() => setSuccessToast(''), 2800)
+    return () => window.clearTimeout(timer)
+  }, [successToast])
 
   const refreshOrders = useCallback(async () => {
     setOrders(await fractionalListOrders())
@@ -92,6 +104,26 @@ export function FractionalPurchasePanel() {
     if (row && row.status !== 'awaiting_counter') setOtpReveal(null)
   }, [orders, otpReveal?.orderId])
 
+  useEffect(() => {
+    if (!lastOrder || lastOrder.payment_method !== 'upi') return
+    const row = orders.find((x) => x.id === lastOrder.id) ?? lastOrder
+    if (row.status === 'completed' && lastOrder.status !== 'completed') {
+      setSuccessToast(`${row.reference} completed — ${row.grams} g credited.`)
+    }
+    setLastOrder(row)
+    if (row.payment_method === 'upi' && (row.status === 'pending_payment' || row.status === 'awaiting_utr_verify')) {
+      setActiveUpiOrder(row)
+    } else if (row.status === 'completed') {
+      setActiveUpiOrder(null)
+    }
+  }, [orders, lastOrder])
+
+  useEffect(() => {
+    if (!activeUpiOrder) return
+    const row = orders.find((x) => x.id === activeUpiOrder.id)
+    if (row) setActiveUpiOrder(row)
+  }, [orders, activeUpiOrder?.id])
+
   useLivePoll(refreshOrders, LIVE_BALANCE_POLL_MS, !busy)
   useLivePoll(refreshWalletHint, LIVE_BALANCE_POLL_MS, !busy)
 
@@ -130,6 +162,7 @@ export function FractionalPurchasePanel() {
     setOrderMsg('')
     setLastOrder(null)
     setOtpReveal(null)
+    setActiveUpiOrder(null)
     if (!quote || jewellerId === '') {
       setOrderMsg('Update the live quote first.')
       return
@@ -138,7 +171,7 @@ export function FractionalPurchasePanel() {
     try {
       const out = await fractionalCreateOrder({
         jeweller_id: jewellerId,
-        payment_method: 'counter',
+        payment_method: paymentMethod,
         mode: inputMode === 'by_grams' ? 'by_grams' : 'by_total_inr',
         grams: inputMode === 'by_grams' ? gramsInput.trim() : undefined,
         total_inr: inputMode === 'by_total_inr' ? inrInput.trim() : undefined,
@@ -149,9 +182,16 @@ export function FractionalPurchasePanel() {
         return
       }
       setLastOrder(out.data)
-      setOrderMsg(
-        `Order ${out.data.reference} created. Pay ₹${formatInr(out.data.total_inr)} at the jeweller counter (cash or their QR/UPI). Then tap Generate OTP and show the code to the jeweller — they enter it under Purchases to credit your gold.`,
-      )
+      if (out.data.payment_method === 'upi') {
+        setActiveUpiOrder(out.data)
+        setOrderMsg(
+          `Order ${out.data.reference} created. Pay ₹${formatInr(out.data.total_inr)} to the jeweller via UPI, then paste your UTR below.`,
+        )
+      } else {
+        setOrderMsg(
+          `Order ${out.data.reference} created. Pay ₹${formatInr(out.data.total_inr)} at the jeweller counter (cash or their QR/UPI). Then tap Generate OTP and show the code to the jeweller — they enter it under Purchases to credit your gold.`,
+        )
+      }
       await refreshOrders()
       const w = await fetchGoldWallet()
       if (w) setBalanceHint(w.balance_grams)
@@ -187,9 +227,8 @@ export function FractionalPurchasePanel() {
   return (
     <div className="dash-panel-max fractional-buy-panel">
       <p className="dash-panel-lead">
-        Buy fractional gold at the selected jeweller&apos;s metal rate (their manual ₹/g or the platform benchmark with their
-        percentage and fixed ₹/g markups). GST on gold value is included in the quote. Pay at the showroom, then generate an
-        in-app OTP so the jeweller can verify payment and credit grams to your wallet.
+        Buy fractional gold at the selected jeweller&apos;s metal rate. Pay online via the jeweller&apos;s UPI (paste UTR
+        after payment) or at the showroom counter (OTP verification).
       </p>
 
       <p className="fractional-buy-live-rate" aria-live="polite" style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>
@@ -323,9 +362,64 @@ export function FractionalPurchasePanel() {
             </div>
           ) : null}
 
+          <fieldset style={{ border: 'none', padding: 0, margin: 0 }}>
+            <legend className="fractional-buy-legend">Payment method</legend>
+            <div
+              className={narrow ? 'gold-transfer-mobile__segments' : ''}
+              style={narrow ? undefined : { display: 'flex', flexWrap: 'wrap', gap: '1rem' }}
+              role="tablist"
+              aria-label="Payment method"
+            >
+              <button
+                type="button"
+                role="tab"
+                aria-selected={paymentMethod === 'upi'}
+                className={narrow ? `dash-mobile-segment-btn${paymentMethod === 'upi' ? ' dash-mobile-segment-btn--active' : ''}` : undefined}
+                style={narrow ? undefined : { font: 'inherit', cursor: 'pointer' }}
+                onClick={() => setPaymentMethod('upi')}
+              >
+                {narrow ? (
+                  <span className="dash-mobile-segment-btn__label">Pay online (UPI)</span>
+                ) : (
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                    <input type="radio" name="frac-pay" checked={paymentMethod === 'upi'} readOnly />
+                    Pay online (UPI)
+                  </label>
+                )}
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={paymentMethod === 'counter'}
+                className={
+                  narrow ? `dash-mobile-segment-btn${paymentMethod === 'counter' ? ' dash-mobile-segment-btn--active' : ''}` : undefined
+                }
+                style={narrow ? undefined : { font: 'inherit', cursor: 'pointer' }}
+                onClick={() => setPaymentMethod('counter')}
+              >
+                {narrow ? (
+                  <span className="dash-mobile-segment-btn__label">Pay at counter</span>
+                ) : (
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                    <input type="radio" name="frac-pay" checked={paymentMethod === 'counter'} readOnly />
+                    Pay at counter
+                  </label>
+                )}
+              </button>
+            </div>
+          </fieldset>
+
           <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-muted)', lineHeight: 1.45 }}>
-            Payment is <strong>at the jeweller counter only</strong> for now (cash or the jeweller&apos;s own QR/UPI). Cridora
-            records grams after OTP verification.
+            {paymentMethod === 'upi' ? (
+              <>
+                Pay the jeweller directly in GPay / PhonePe, then paste the <strong>UPI reference</strong> from your receipt.
+                The jeweller confirms before gold is credited.
+              </>
+            ) : (
+              <>
+                Pay at the showroom, then generate an in-app <strong>OTP</strong> for the jeweller to verify under Purchases.
+              </>
+            )}
           </p>
 
           <div className="field">
@@ -349,7 +443,24 @@ export function FractionalPurchasePanel() {
 
           {orderMsg ? <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.88rem' }}>{orderMsg}</p> : null}
 
-          {lastOrder && lastOrder.status === 'awaiting_counter' ? (
+          {activeUpiOrder &&
+          (activeUpiOrder.status === 'pending_payment' ||
+            activeUpiOrder.status === 'awaiting_utr_verify' ||
+            activeUpiOrder.status === 'completed') ? (
+            <FractionalUpiPayStep
+              order={activeUpiOrder}
+              busy={busy}
+              setBusy={setBusy}
+              onUpdated={async () => {
+                await refreshOrders()
+                const w = await fetchGoldWallet()
+                if (w) setBalanceHint(w.balance_grams)
+              }}
+              onSuccess={(msg) => setSuccessToast(msg)}
+            />
+          ) : null}
+
+          {lastOrder && lastOrder.payment_method === 'counter' && lastOrder.status === 'awaiting_counter' ? (
             <div className="dash-form-stack" style={{ marginTop: '0.5rem' }}>
               <button
                 type="button"
@@ -466,11 +577,46 @@ export function FractionalPurchasePanel() {
                         : 'Generate OTP'}
                   </button>
                 ) : null}
+                {o.payment_method === 'upi' && o.status === 'pending_payment' ? (
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn--block"
+                    style={{ marginTop: '0.25rem' }}
+                    disabled={busy}
+                    onClick={() => {
+                      setActiveUpiOrder(o)
+                      setLastOrder(o)
+                      setOrderMsg(`Continue payment for ${o.reference}.`)
+                    }}
+                  >
+                    Continue UPI payment
+                  </button>
+                ) : null}
+                {o.payment_method === 'upi' && o.status === 'awaiting_utr_verify' ? (
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn--block"
+                    style={{ marginTop: '0.25rem' }}
+                    disabled={busy}
+                    onClick={() => {
+                      setActiveUpiOrder(o)
+                      setLastOrder(o)
+                    }}
+                  >
+                    View UTR status
+                  </button>
+                ) : null}
               </li>
             ))}
           </ul>
         )}
       </div>
+
+      {successToast ? (
+        <div className="gold-transfer-mobile-toast fractional-buy-toast" role="status" aria-live="polite">
+          {successToast}
+        </div>
+      ) : null}
     </div>
   )
 }

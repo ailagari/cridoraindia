@@ -45,6 +45,13 @@ from .fractional_views import (
     JewellerFractionalPendingView,
     JewellerFractionalVerifyView,
 )
+from .fractional_upi_views import (
+    FractionalOrderPaymentView,
+    FractionalOrderSubmitUtrView,
+    JewellerFractionalConfirmUtrView,
+    JewellerFractionalPendingUpiView,
+    JewellerUpiProfileView,
+)
 from .gold_deposit_views import (
     CustomerGoldDepositCounterOtpIssueView,
     CustomerGoldDepositIntakesView,
@@ -196,7 +203,17 @@ urlpatterns = [
         "fractional/orders/<int:pk>/confirm-upi/",
         FractionalOrderConfirmUpiView.as_view(),
     ),
+    path(
+        "fractional/orders/<int:pk>/payment/",
+        FractionalOrderPaymentView.as_view(),
+    ),
+    path(
+        "fractional/orders/<int:pk>/submit-utr/",
+        FractionalOrderSubmitUtrView.as_view(),
+    ),
     path("jeweller/fractional/pending/", JewellerFractionalPendingView.as_view()),
+    path("jeweller/fractional/pending-upi/", JewellerFractionalPendingUpiView.as_view()),
+    path("jeweller/profile/upi/", JewellerUpiProfileView.as_view()),
     path("jeweller/sellbacks/<int:pk>/accept/", JewellerSellbackAcceptView.as_view()),
     path("jeweller/sellbacks/<int:pk>/reject/", JewellerSellbackRejectView.as_view()),
     path("jeweller/sellbacks/<int:pk>/complete/", JewellerSellbackCompleteView.as_view()),
@@ -209,6 +226,10 @@ urlpatterns = [
     path(
         "jeweller/fractional/orders/<int:pk>/verify/",
         JewellerFractionalVerifyView.as_view(),
+    ),
+    path(
+        "jeweller/fractional/orders/<int:pk>/confirm-utr/",
+        JewellerFractionalConfirmUtrView.as_view(),
     ),
     path("auth/token/refresh/", TokenRefreshView.as_view()),
     path("auth/logout/", LogoutView.as_view()),

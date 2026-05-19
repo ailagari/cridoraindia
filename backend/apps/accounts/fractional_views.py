@@ -18,6 +18,11 @@ from .fractional_service import (
     validate_minimums,
 )
 from .models import FractionalCounterOtp, FractionalGoldPurchase
+from .services.fractional_upi import (
+    default_payment_expires_at,
+    jeweller_upi_vpa,
+    payment_note_for,
+)
 from apps.marketplace.models import jeweller_profile_for
 from apps.marketplace.pricing import jeweller_rate_effective_updated_at
 
@@ -33,7 +38,7 @@ def _ser_jeweller_brief(j: User) -> dict:
 
 
 def _ser_purchase(p: FractionalGoldPurchase) -> dict:
-    return {
+    row = {
         "id": p.id,
         "reference": f"FR-{p.id}",
         "jeweller": _ser_jeweller_brief(p.jeweller),
@@ -51,6 +56,17 @@ def _ser_purchase(p: FractionalGoldPurchase) -> dict:
         if p.jeweller_verified_at
         else None,
     }
+    if p.payment_method == FractionalGoldPurchase.PAY_UPI:
+        row["payee_upi_vpa"] = p.payee_upi_vpa or ""
+        row["payment_note"] = p.payment_note or ""
+        row["payment_expires_at"] = (
+            p.payment_expires_at.isoformat() if p.payment_expires_at else None
+        )
+        row["upi_utr"] = p.upi_utr or ""
+        row["utr_submitted_at"] = (
+            p.utr_submitted_at.isoformat() if p.utr_submitted_at else None
+        )
+    return row
 
 
 class FractionalQuoteView(APIView):
@@ -157,9 +173,19 @@ class FractionalOrdersView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
         pay = (request.data.get("payment_method") or "").strip().lower()
-        if pay != FractionalGoldPurchase.PAY_COUNTER:
+        if pay not in (
+            FractionalGoldPurchase.PAY_COUNTER,
+            FractionalGoldPurchase.PAY_UPI,
+        ):
             return Response(
-                {"detail": "Only pay-at-counter purchases are available."},
+                {"detail": "payment_method must be counter or upi."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if pay == FractionalGoldPurchase.PAY_UPI and not jeweller_upi_vpa(jeweller):
+            return Response(
+                {
+                    "detail": "This jeweller has not configured online UPI yet. Use counter or choose another jeweller.",
+                },
                 status=status.HTTP_400_BAD_REQUEST,
             )
         mode = (request.data.get("mode") or "").strip().lower()
@@ -186,6 +212,28 @@ class FractionalOrdersView(APIView):
             return Response({"detail": err}, status=status.HTTP_400_BAD_REQUEST)
 
         note = (request.data.get("customer_note") or "").strip()[:255]
+
+        if pay == FractionalGoldPurchase.PAY_UPI:
+            vpa = jeweller_upi_vpa(jeweller)
+            assert vpa is not None
+            p = FractionalGoldPurchase.objects.create(
+                customer=user,
+                jeweller=jeweller,
+                metal_rate_inr_per_gram=rate,
+                grams=b["grams"],
+                gold_value_inr_pre_gst=b["gold_value_inr_pre_gst"],
+                gst_percent=GST_PERCENT,
+                gst_inr=b["gst_inr"],
+                total_inr=b["total_inr"],
+                payment_method=FractionalGoldPurchase.PAY_UPI,
+                status=FractionalGoldPurchase.PENDING_PAYMENT,
+                customer_note=note,
+                payee_upi_vpa=vpa,
+                payment_expires_at=default_payment_expires_at(),
+            )
+            p.payment_note = payment_note_for(p.id)
+            p.save(update_fields=["payment_note", "updated_at"])
+            return Response(_ser_purchase(p), status=status.HTTP_201_CREATED)
 
         p = FractionalGoldPurchase.objects.create(
             customer=user,

@@ -315,6 +315,17 @@ class JewellerPricingProfile(models.Model):
     )
     updated_at = models.DateTimeField(auto_now=True)
 
+    upi_vpa = models.CharField(
+        max_length=128,
+        blank=True,
+        help_text="Jeweller UPI ID (VPA) for online fractional payments, e.g. shop@okicici.",
+    )
+    upi_display_name = models.CharField(
+        max_length=80,
+        blank=True,
+        help_text="Payee name shown on UPI apps (optional; defaults to business name).",
+    )
+
     logo_url = models.URLField(
         max_length=512,
         blank=True,

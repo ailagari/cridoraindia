@@ -1,0 +1,151 @@
+"""UPI pay-at-jeweller helpers for fractional orders (Model A — paste UTR)."""
+
+from __future__ import annotations
+
+import re
+from datetime import timedelta
+from decimal import Decimal
+from urllib.parse import quote
+
+from django.utils import timezone
+
+from apps.marketplace.models import jeweller_profile_for
+
+from ..models import FractionalGoldPurchase
+
+UPI_VPA_RE = re.compile(r"^[a-z0-9._-]+@[a-z0-9._-]+$", re.I)
+UTR_MIN_LEN = 8
+UTR_MAX_LEN = 20
+PAYMENT_EXPIRY_MINUTES = 60
+
+
+def normalize_upi_vpa(raw: str) -> str | None:
+    s = (raw or "").strip().lower()
+    if not s or len(s) > 128 or not UPI_VPA_RE.match(s):
+        return None
+    return s
+
+
+def normalize_utr(raw: str) -> str | None:
+    s = re.sub(r"\s+", "", (raw or "").strip()).upper()
+    if len(s) < UTR_MIN_LEN or len(s) > UTR_MAX_LEN:
+        return None
+    if not re.fullmatch(r"[A-Z0-9]+", s):
+        return None
+    return s
+
+
+def jeweller_upi_vpa(jeweller) -> str | None:
+    profile = jeweller_profile_for(jeweller)
+    return normalize_upi_vpa(profile.upi_vpa or "")
+
+
+def jeweller_upi_payee_name(jeweller) -> str:
+    profile = jeweller_profile_for(jeweller)
+    custom = (profile.upi_display_name or "").strip()
+    if custom:
+        return custom[:80]
+    return (jeweller.business_name or jeweller.email or "Jeweller")[:80]
+
+
+def payment_reference(purchase_id: int) -> str:
+    return f"FR-{purchase_id}"
+
+
+def payment_note_for(purchase_id: int) -> str:
+    return f"Cridora {payment_reference(purchase_id)}"
+
+
+def build_upi_pay_uri(
+    *,
+    vpa: str,
+    payee_name: str,
+    amount_inr: Decimal,
+    purchase_id: int,
+) -> str:
+    ref = payment_reference(purchase_id)
+    note = payment_note_for(purchase_id)
+    amount = format(amount_inr.quantize(Decimal("0.01")), "f")
+    query = (
+        f"pa={quote(vpa)}"
+        f"&pn={quote(payee_name[:80])}"
+        f"&am={amount}"
+        f"&cu=INR"
+        f"&tn={quote(note)}"
+        f"&tr={quote(ref)}"
+    )
+    return f"upi://pay?{query}"
+
+
+def default_payment_expires_at():
+    return timezone.now() + timedelta(minutes=PAYMENT_EXPIRY_MINUTES)
+
+
+def is_payment_expired(purchase: FractionalGoldPurchase) -> bool:
+    if purchase.payment_expires_at is None:
+        return False
+    return timezone.now() > purchase.payment_expires_at
+
+
+def utr_already_used(utr: str, *, exclude_purchase_id: int | None = None) -> bool:
+    qs = FractionalGoldPurchase.objects.filter(upi_utr=utr).exclude(
+        status=FractionalGoldPurchase.CANCELLED
+    )
+    if exclude_purchase_id is not None:
+        qs = qs.exclude(pk=exclude_purchase_id)
+    return qs.exists()
+
+
+def payment_payload_for(purchase: FractionalGoldPurchase) -> dict:
+    vpa = (purchase.payee_upi_vpa or "").strip()
+    payee = jeweller_upi_payee_name(purchase.jeweller)
+    return {
+        "reference": payment_reference(purchase.id),
+        "payee_vpa": vpa,
+        "payee_name": payee,
+        "amount_inr": str(purchase.total_inr),
+        "payment_note": purchase.payment_note or payment_note_for(purchase.id),
+        "upi_uri": build_upi_pay_uri(
+            vpa=vpa,
+            payee_name=payee,
+            amount_inr=purchase.total_inr,
+            purchase_id=purchase.id,
+        ),
+        "payment_expires_at": purchase.payment_expires_at.isoformat()
+        if purchase.payment_expires_at
+        else None,
+        "expired": is_payment_expired(purchase),
+    }
+
+
+def submit_utr(purchase: FractionalGoldPurchase, raw_utr: str) -> tuple[bool, str]:
+    if purchase.payment_method != FractionalGoldPurchase.PAY_UPI:
+        return False, "This order is not an online UPI purchase."
+    if purchase.status != FractionalGoldPurchase.PENDING_PAYMENT:
+        return False, "Order is not awaiting payment."
+    if is_payment_expired(purchase):
+        return False, "Payment window expired. Place a new order."
+    utr = normalize_utr(raw_utr)
+    if not utr:
+        return False, "Enter a valid UPI reference (8–20 letters or digits)."
+    if utr_already_used(utr, exclude_purchase_id=purchase.pk):
+        return False, "This UPI reference is already linked to another order."
+    purchase.upi_utr = utr
+    purchase.utr_submitted_at = timezone.now()
+    purchase.status = FractionalGoldPurchase.AWAITING_UTR_VERIFY
+    purchase.save(
+        update_fields=["upi_utr", "utr_submitted_at", "status", "updated_at"]
+    )
+    return True, "UTR submitted. Waiting for jeweller verification."
+
+
+def confirm_utr_for_jeweller(purchase: FractionalGoldPurchase, jeweller) -> tuple[bool, str]:
+    if purchase.jeweller_id != jeweller.pk:
+        return False, "Order not found."
+    if purchase.payment_method != FractionalGoldPurchase.PAY_UPI:
+        return False, "Not an online UPI order."
+    if purchase.status != FractionalGoldPurchase.AWAITING_UTR_VERIFY:
+        return False, "Order is not awaiting UTR verification."
+    if not purchase.upi_utr:
+        return False, "No UTR on this order."
+    return True, "OK"

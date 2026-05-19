@@ -392,12 +392,14 @@ class FractionalGoldPurchase(models.Model):
 
     PENDING_PAYMENT = "pending_payment"
     AWAITING_COUNTER = "awaiting_counter"
+    AWAITING_UTR_VERIFY = "awaiting_utr_verify"
     COMPLETED = "completed"
     CANCELLED = "cancelled"
 
     STATUS_CHOICES = [
         (PENDING_PAYMENT, "Pending payment"),
         (AWAITING_COUNTER, "Awaiting counter confirmation"),
+        (AWAITING_UTR_VERIFY, "Awaiting UTR verification"),
         (COMPLETED, "Completed"),
         (CANCELLED, "Cancelled"),
     ]
@@ -423,10 +425,33 @@ class FractionalGoldPurchase(models.Model):
     total_inr = models.DecimalField(max_digits=14, decimal_places=2)
     payment_method = models.CharField(max_length=16, choices=PAYMENT_CHOICES)
     status = models.CharField(
-        max_length=24, choices=STATUS_CHOICES, default=PENDING_PAYMENT
+        max_length=32, choices=STATUS_CHOICES, default=PENDING_PAYMENT
     )
     jeweller_verified_at = models.DateTimeField(null=True, blank=True)
     customer_note = models.CharField(max_length=255, blank=True)
+    payee_upi_vpa = models.CharField(
+        max_length=128,
+        blank=True,
+        help_text="Snapshot of jeweller UPI VPA when the order was created.",
+    )
+    payment_note = models.CharField(
+        max_length=128,
+        blank=True,
+        help_text="UPI transaction note, e.g. Cridora FR-42.",
+    )
+    payment_expires_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When an unfunded UPI order should expire.",
+    )
+    upi_utr = models.CharField(
+        max_length=32,
+        null=True,
+        blank=True,
+        unique=True,
+        help_text="Customer-submitted UPI reference number.",
+    )
+    utr_submitted_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

@@ -8232,11 +8232,97 @@ select.input {
   box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.45);
 }
 
-.gold-transfer-scan-overlay__hint {
-  margin: 0;
-  padding: 1rem 1.25rem calc(1.25rem + env(safe-area-inset-bottom, 0px));
-  text-align: center;
-  font-size: 0.82rem;
-  color: rgba(255, 255, 255, 0.72);
+.fractional-jeweller-verify-tabs {
+  display: flex;
+  gap: 0.35rem;
+  padding: 0.28rem;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--dash-pill-bg) 88%, transparent);
+  border: 1px solid var(--border-soft);
+  max-width: 420px;
+}
+
+.fractional-jeweller-verify-tabs .dash-mobile-segment-btn {
+  flex: 1;
+}
+
+.fractional-upi-pay {
+  margin-top: 0.75rem;
+  padding: 1rem;
+  border-radius: 16px;
+  border: 1px solid color-mix(in srgb, var(--gold) 28%, var(--border-soft));
+  background: color-mix(in srgb, var(--gold) 6%, var(--veil));
+}
+
+.fractional-upi-pay__title {
+  margin: 0 0 0.35rem;
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--gold-light);
+}
+
+.fractional-upi-pay__lead {
+  margin: 0 0 0.85rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.fractional-upi-pay__payee {
+  margin-bottom: 0.85rem;
+}
+
+.fractional-upi-pay__label {
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.fractional-upi-pay__vpa {
+  margin: 0.25rem 0 0;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.fractional-upi-pay__meta {
+  margin: 0.2rem 0 0;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.fractional-upi-pay__qr {
+  display: block;
+  margin: 0 auto 0.85rem;
+  border-radius: 12px;
+  border: 1px solid var(--border-soft);
+  background: #fff;
+}
+
+.fractional-upi-pay__actions {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.fractional-upi-utr-display {
+  font-size: 0.95rem;
+  letter-spacing: 0.04em;
+  word-break: break-all;
+}
+
+.fractional-buy-toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px));
+  z-index: 2000;
+  transform: translateX(-50%);
+}
+
+@media (min-width: 768px) {
+  .fractional-buy-toast {
+    bottom: 1.5rem;
+  }
 }
 

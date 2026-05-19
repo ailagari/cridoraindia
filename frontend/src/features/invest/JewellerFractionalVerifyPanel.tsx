@@ -1,12 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
+  jewellerFractionalConfirmUtr,
   jewellerFractionalPending,
+  jewellerFractionalPendingUpi,
   jewellerFractionalVerify,
   type JewellerFractionalPendingRow,
+  type JewellerFractionalPendingUpiRow,
 } from '@/lib/fractionalPurchaseApi'
 import { useCounterOtpCountdown } from '@/features/invest/useCounterOtpCountdown'
 import { LIVE_BALANCE_POLL_MS } from '@/lib/liveDeskIntervals'
 import { useLivePoll } from '@/lib/useLivePoll'
+import { usePublicLayoutMax767 } from '@/hooks/usePublicLayoutMax767'
 
 function formatInr(s: string): string {
   const n = Number.parseFloat(s)
@@ -19,6 +23,7 @@ type VerifiedReceipt = {
   grams: string
   totalInr: string
   customerLabel: string
+  mode: 'counter' | 'upi'
 }
 
 const OTP_LEN = 6
@@ -54,8 +59,13 @@ function CustomerOtpExpiryHint({ expiresAt }: { expiresAt?: string | null }) {
   )
 }
 
+type VerifyMode = 'counter' | 'upi'
+
 export function JewellerFractionalVerifyPanel() {
-  const [rows, setRows] = useState<JewellerFractionalPendingRow[]>([])
+  const narrow = usePublicLayoutMax767()
+  const [mode, setMode] = useState<VerifyMode>('counter')
+  const [counterRows, setCounterRows] = useState<JewellerFractionalPendingRow[]>([])
+  const [upiRows, setUpiRows] = useState<JewellerFractionalPendingUpiRow[]>([])
   const [verifiedReceipt, setVerifiedReceipt] = useState<VerifiedReceipt | null>(null)
   const [err, setErr] = useState('')
   const [busyId, setBusyId] = useState<number | null>(null)
@@ -64,7 +74,9 @@ export function JewellerFractionalVerifyPanel() {
 
   const load = useCallback(async () => {
     setErr('')
-    setRows(await jewellerFractionalPending())
+    const [counter, upi] = await Promise.all([jewellerFractionalPending(), jewellerFractionalPendingUpi()])
+    setCounterRows(counter)
+    setUpiRows(upi)
   }, [])
 
   useEffect(() => {
@@ -79,13 +91,13 @@ export function JewellerFractionalVerifyPanel() {
     }
   }, [verifiedReceipt])
 
-  const verify = async (id: number) => {
+  const verifyOtp = async (id: number) => {
     const otp = (otpByOrderId[id] ?? '').trim()
     if (otp.length !== OTP_LEN) {
       setErr(`Enter all ${OTP_LEN} digits from the customer’s app.`)
       return
     }
-    const row = rows.find((r) => r.id === id)
+    const row = counterRows.find((r) => r.id === id)
     const customerLabel = row ? row.customer.name || row.customer.email : 'Customer'
 
     setBusyId(id)
@@ -101,6 +113,7 @@ export function JewellerFractionalVerifyPanel() {
         grams: out.data.grams,
         totalInr: out.data.total_inr,
         customerLabel,
+        mode: 'counter',
       })
       setOtpByOrderId((m) => {
         const next = { ...m }
@@ -113,13 +126,64 @@ export function JewellerFractionalVerifyPanel() {
     }
   }
 
+  const confirmUtr = async (id: number) => {
+    const row = upiRows.find((r) => r.id === id)
+    const customerLabel = row ? row.customer.name || row.customer.email : 'Customer'
+
+    setBusyId(id)
+    setErr('')
+    try {
+      const out = await jewellerFractionalConfirmUtr(id)
+      if (!out.ok) {
+        setErr(out.detail)
+        return
+      }
+      setVerifiedReceipt({
+        reference: out.data.reference,
+        grams: out.data.grams,
+        totalInr: out.data.total_inr,
+        customerLabel,
+        mode: 'upi',
+      })
+      await load()
+    } finally {
+      setBusyId(null)
+    }
+  }
+
   return (
     <div className="dash-panel-max jeweller-counter-verify-panel">
       <p className="dash-panel-lead">
-        When a customer pays at your counter, they generate a <strong>6-digit OTP</strong> in their Cridora app after paying.
-        Enter that code below — when it matches, their gold is credited and a matching <strong>custodial liability</strong> is
-        recorded on your ledger.
+        Confirm fractional purchases after customers pay you. <strong>Counter</strong> orders use a 6-digit OTP;{' '}
+        <strong>Online UPI</strong> orders show the customer&apos;s pasted UTR — match amount and reference in your UPI app
+        before confirming.
       </p>
+
+      <div
+        className={narrow ? 'gold-transfer-mobile__segments' : 'fractional-jeweller-verify-tabs'}
+        role="tablist"
+        aria-label="Purchase verification type"
+        style={{ marginBottom: '1rem' }}
+      >
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mode === 'counter'}
+          className={`dash-mobile-segment-btn${mode === 'counter' ? ' dash-mobile-segment-btn--active' : ''}`}
+          onClick={() => setMode('counter')}
+        >
+          <span className="dash-mobile-segment-btn__label">Counter OTP</span>
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mode === 'upi'}
+          className={`dash-mobile-segment-btn${mode === 'upi' ? ' dash-mobile-segment-btn--active' : ''}`}
+          onClick={() => setMode('upi')}
+        >
+          <span className="dash-mobile-segment-btn__label">Online UPI</span>
+        </button>
+      </div>
 
       <div style={{ marginBottom: '1rem', display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center' }}>
         <button type="button" className="btn btn-ghost" onClick={() => void load()}>
@@ -163,10 +227,10 @@ export function JewellerFractionalVerifyPanel() {
               <p style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: 'var(--success)' }}>Payment verified</p>
               <p style={{ margin: '0.35rem 0 0', fontSize: '0.88rem', fontWeight: 600, color: 'var(--text)', lineHeight: 1.45 }}>
                 Order <strong className="tabular">{verifiedReceipt.reference}</strong> —{' '}
-                <strong className="tabular">{verifiedReceipt.customerLabel}</strong> has been credited{' '}
+                <strong className="tabular">{verifiedReceipt.customerLabel}</strong> credited{' '}
                 <strong className="tabular">{verifiedReceipt.grams} g</strong> for{' '}
-                <strong className="tabular">₹{formatInr(verifiedReceipt.totalInr)}</strong> (incl. GST). Custodial liability
-                updated on your books.
+                <strong className="tabular">₹{formatInr(verifiedReceipt.totalInr)}</strong>
+                {verifiedReceipt.mode === 'upi' ? ' (online UPI)' : ' (counter OTP)'}.
               </p>
               <button
                 type="button"
@@ -187,9 +251,15 @@ export function JewellerFractionalVerifyPanel() {
         </p>
       ) : null}
 
-      {rows.length === 0 ? (
+      {mode === 'counter' && counterRows.length === 0 ? (
         <p style={{ color: 'var(--text-muted)' }}>No counter payments awaiting OTP verification.</p>
-      ) : (
+      ) : null}
+
+      {mode === 'upi' && upiRows.length === 0 ? (
+        <p style={{ color: 'var(--text-muted)' }}>No online UPI payments awaiting UTR confirmation.</p>
+      ) : null}
+
+      {mode === 'counter' && counterRows.length > 0 ? (
         <div className="jeweller-purchases-wrap">
           <table className="jeweller-purchases-table">
             <thead>
@@ -201,7 +271,7 @@ export function JewellerFractionalVerifyPanel() {
               </tr>
             </thead>
             <tbody>
-              {rows.map((r) => {
+              {counterRows.map((r) => {
                 const otp = otpByOrderId[r.id] ?? ''
                 const otpComplete = otp.length === OTP_LEN
                 return (
@@ -212,12 +282,6 @@ export function JewellerFractionalVerifyPanel() {
                           {r.customer.name || r.customer.email}
                         </strong>
                         <span className="jeweller-purchases-customer-email">{r.customer.email}</span>
-                        {r.customer.cridora_member_id ? (
-                          <span className="jeweller-purchases-member">
-                            Member ID{' '}
-                            <strong className="tabular">{r.customer.cridora_member_id}</strong>
-                          </span>
-                        ) : null}
                       </div>
                     </td>
                     <td data-label="Metal & total">
@@ -226,7 +290,7 @@ export function JewellerFractionalVerifyPanel() {
                           <strong className="tabular">{r.grams} g</strong>
                         </span>
                         <span>
-                          <strong className="tabular">₹{formatInr(r.total_inr)}</strong> total (incl. GST)
+                          <strong className="tabular">₹{formatInr(r.total_inr)}</strong> total
                         </span>
                       </div>
                     </td>
@@ -235,20 +299,10 @@ export function JewellerFractionalVerifyPanel() {
                         <span className="jeweller-purchases-order-ref">
                           <strong className="tabular">{r.reference}</strong>
                         </span>
-                        <span className="jeweller-purchases-order-rate">
-                          rate ₹{formatInr(r.metal_rate_inr_per_gram)}/g (22K metal)
-                        </span>
-                        {r.customer_note ? (
-                          <span className="jeweller-purchases-note">Note: {r.customer_note}</span>
-                        ) : null}
                       </div>
                     </td>
                     <td data-label="Verify OTP" className="jeweller-purchases-otp-cell">
                       <div className="jeweller-purchases-otp-stack">
-                        <p className="jeweller-purchases-otp-lead">
-                          Ask them to open <strong>Buy gold</strong> and tap <strong>Generate OTP</strong> after payment.
-                          Enter the {OTP_LEN}-digit code exactly as shown.
-                        </p>
                         <label htmlFor={`otp-${r.id}`} className="sr-only">
                           6-digit OTP for order {r.reference}
                         </label>
@@ -256,13 +310,8 @@ export function JewellerFractionalVerifyPanel() {
                           id={`otp-${r.id}`}
                           type="text"
                           inputMode="numeric"
-                          pattern="[0-9]*"
-                          autoComplete="one-time-code"
                           maxLength={OTP_LEN}
                           className="tabular jeweller-purchases-otp-input"
-                          style={{
-                            border: otpComplete ? '2px solid var(--success)' : '1px solid var(--border-soft)',
-                          }}
                           value={otp}
                           onChange={(e) => {
                             setErr('')
@@ -272,17 +321,13 @@ export function JewellerFractionalVerifyPanel() {
                             }))
                           }}
                           placeholder="······"
-                          aria-describedby={`otp-hint-${r.id}`}
                         />
-                        <p id={`otp-hint-${r.id}`} className="jeweller-purchases-otp-count">
-                          {otp.length}/{OTP_LEN} digits
-                        </p>
                         <CustomerOtpExpiryHint expiresAt={r.otp_expires_at} />
                         <button
                           type="button"
                           className="btn btn-primary jeweller-purchases-verify-btn"
                           disabled={busyId != null || !otpComplete}
-                          onClick={() => void verify(r.id)}
+                          onClick={() => void verifyOtp(r.id)}
                         >
                           {busyId === r.id ? 'Verifying…' : 'Verify OTP & credit gold'}
                         </button>
@@ -294,7 +339,61 @@ export function JewellerFractionalVerifyPanel() {
             </tbody>
           </table>
         </div>
-      )}
+      ) : null}
+
+      {mode === 'upi' && upiRows.length > 0 ? (
+        <div className="jeweller-purchases-wrap">
+          <table className="jeweller-purchases-table">
+            <thead>
+              <tr>
+                <th scope="col">Customer</th>
+                <th scope="col">Amount</th>
+                <th scope="col">UTR</th>
+                <th scope="col">Confirm</th>
+              </tr>
+            </thead>
+            <tbody>
+              {upiRows.map((r) => (
+                <tr key={r.id}>
+                  <td data-label="Customer">
+                    <strong>{r.customer.name || r.customer.email}</strong>
+                    <span style={{ display: 'block', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                      {r.reference}
+                    </span>
+                  </td>
+                  <td data-label="Amount">
+                    <strong className="tabular">₹{formatInr(r.total_inr)}</strong>
+                    <span style={{ display: 'block', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                      {r.grams} g
+                    </span>
+                  </td>
+                  <td data-label="UTR">
+                    <strong className="tabular fractional-upi-utr-display">{r.upi_utr || '—'}</strong>
+                    {r.utr_submitted_at ? (
+                      <span style={{ display: 'block', fontSize: '0.72rem', color: 'var(--text-faint)' }}>
+                        Submitted {formatExpiryShort(r.utr_submitted_at)}
+                      </span>
+                    ) : null}
+                  </td>
+                  <td data-label="Confirm">
+                    <p style={{ margin: '0 0 0.5rem', fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>
+                      Check your UPI app for ₹{formatInr(r.total_inr)} and this UTR before confirming.
+                    </p>
+                    <button
+                      type="button"
+                      className="btn btn-primary jeweller-purchases-verify-btn"
+                      disabled={busyId != null}
+                      onClick={() => void confirmUtr(r.id)}
+                    >
+                      {busyId === r.id ? 'Confirming…' : 'Confirm payment & credit gold'}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
     </div>
   )
 }
