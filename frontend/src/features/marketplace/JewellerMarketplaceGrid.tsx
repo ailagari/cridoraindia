@@ -65,9 +65,9 @@ function JewellerMarketplaceCard({ j, variant }: CardProps) {
   return (
     <article className="jm-card card">
       <header className="jm-card__hero">
-        <motion className="jm-card__identity">
+        <div className="jm-card__identity">
           <JewellerCardLogo businessName={j.business_name} logoUrl={j.logo_url ?? ''} />
-          <motion className="jm-card__head">
+          <div className="jm-card__head">
             <div className="jm-card__title-row">
               <h2 className="jm-card__title">{j.business_name}</h2>
             </div>
@@ -75,7 +75,7 @@ function JewellerMarketplaceCard({ j, variant }: CardProps) {
               {j.city}
               {j.state ? `, ${j.state}` : ''}
             </p>
-            <motion className="jm-card__badges">
+            <div className="jm-card__badges">
               <span
                 className="kyb-pill kyb-pill--ok"
                 style={{ fontSize: '0.58rem', padding: '0.15rem 0.45rem' }}
@@ -84,61 +84,61 @@ function JewellerMarketplaceCard({ j, variant }: CardProps) {
                 Verified
               </span>
               {cred ? <span className="jm-card__cred">Trust {cred}</span> : null}
-            </motion>
-          </motion>
-        </motion>
+            </div>
+          </div>
+        </div>
       </header>
 
       <div className="jm-card__body">
         <section>
           <p className="jm-card__section-label">Live rates</p>
-          <motion className="jm-card__rates">
+          <div className="jm-card__rates">
             <div className="jm-card__rate">
               <p className="jm-card__rate-label">22K reference</p>
               <p className="jm-card__rate-value tabular">
                 ₹{formatInr(parseNum(j.reference_metal_inr_per_gram), 2)}/g
               </p>
-            </motion>
+            </div>
             <div className="jm-card__rate jm-card__rate--highlight">
               <p className="jm-card__rate-label">Buyback</p>
               <p className="jm-card__rate-value jm-card__rate-value--gold tabular">
                 ₹{formatInr(parseNum(j.buyback_indicative_inr_per_gram), 2)}/g
               </p>
-            </motion>
-          </motion>
+            </div>
+          </div>
         </section>
 
         <section>
           <p className="jm-card__section-label">Redemption</p>
           <div className="jm-card__redemption">
-            <motion>
+            <div>
               <strong>Lock-in:</strong> {dashEmpty(j.lock_in_summary ?? '')}
-            </motion>
-            <motion>
+            </div>
+            <div>
               <strong>Min redeem:</strong>{' '}
               {j.minimum_redeemable_grams && j.minimum_redeemable_grams.trim() !== ''
                 ? `${j.minimum_redeemable_grams} g`
                 : '—'}
-            </motion>
-            <motion>
+            </div>
+            <div>
               <strong>Same-store MC:</strong> {dashEmpty(j.same_store_mc_benefit ?? '')}
-            </motion>
+            </div>
             {j.golden_scheme_enabled && (j.golden_scheme_summary ?? '').trim() !== '' ? (
-              <motion>
+              <div>
                 <strong>Golden scheme:</strong> {j.golden_scheme_summary}
-              </motion>
+              </div>
             ) : null}
           </div>
         </section>
 
         {tags.length > 0 ? (
-          <motion className="jm-card__chips">
+          <div className="jm-card__chips">
             {tags.map((t) => (
               <span key={t.key} className="jm-card__chip jm-card__chip--on">
                 {t.label}
               </span>
             ))}
-          </motion>
+          </div>
         ) : null}
 
         <p className="jm-card__meta">
@@ -308,7 +308,7 @@ export function JewellerMarketplaceGrid({ intro, variant = 'public' }: Props) {
         </p>
       ) : null}
 
-      <motion className="jm-live-strip card">
+      <div className="jm-live-strip card">
         <span className="jm-live-strip__label">Cridora 22K (live)</span>
         <span className="tabular">
           ₹{liveBase?.platformBaseInrPerGram22k ? formatInr(parseNum(liveBase.platformBaseInrPerGram22k), 2) : '—'}/g
@@ -317,7 +317,7 @@ export function JewellerMarketplaceGrid({ intro, variant = 'public' }: Props) {
           {liveBase?.source ? liveBase.source.replace(/_/g, ' ') : ''}
         </span>
         <span style={{ color: 'var(--text-faint)', marginLeft: 'auto' }}>Directory refreshes every minute</span>
-      </motion>
+      </div>
 
       <div className="jm-filters card">
         <div className="jm-filters__grid">
@@ -348,7 +348,7 @@ export function JewellerMarketplaceGrid({ intro, variant = 'public' }: Props) {
                 </option>
               ))}
             </select>
-          </motion>
+          </div>
           <div style={{ position: 'relative' }}>
             <span className="jm-filters__icon" style={{ left: 10, fontSize: '0.7rem' }}>
               ☰
@@ -365,7 +365,7 @@ export function JewellerMarketplaceGrid({ intro, variant = 'public' }: Props) {
                 </option>
               ))}
             </select>
-          </motion>
+          </div>
           <button
             type="button"
             className="btn btn-ghost"
