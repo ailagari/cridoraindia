@@ -14,6 +14,7 @@ import {
 } from './PortfolioCharts'
 import { PortfolioGrowwHero, PortfolioSpotPillsRow, PortfolioVaultHoldingsList } from './PortfolioGrowwViews'
 import { CustomerVaultsPanel } from './CustomerVaultsPanel'
+import { DashboardActions } from '@/components/ui'
 
 const DONUT_COLORS = ['#fbbf24', '#d4a85c', '#67e8f9', '#a78bfa', '#34d399', '#f472b6', '#38bdf8']
 const SESSION_VALUE_SAMPLES_CAP = 56
@@ -266,6 +267,16 @@ export function CustomerPortfolioPanel() {
       <div className="pf-groww-shell pf-stagger">
         <PortfolioSpotPillsRow spot={spotPayload} tickerFallback={goldTickerFallback} />
 
+        <DashboardActions
+          title="Quick moves"
+          actions={[
+            { label: 'Check holdings', description: `${activeVaultCount} active vaults`, tone: 'primary', onClick: () => setPortfolioTab('active') },
+            { label: 'Track personal gold', description: 'Add off-platform items', onClick: () => setPortfolioTab('personal') },
+            { label: 'Review ledger', description: 'Recent credits and redemptions', onClick: () => setPortfolioTab('transactions') },
+          ]}
+          aside={totalGrams > 0 ? `${totalGrams.toFixed(4)} g total` : undefined}
+        />
+
         <nav ref={portfolioTabsRef} className="pf-groww-tabs" aria-label="Portfolio sections">
           {(
             [
@@ -320,13 +331,6 @@ export function CustomerPortfolioPanel() {
               }
             />
 
-            {totals ? (
-              <p className="pf-groww-footnote" style={{ marginTop: '0.85rem', marginBottom: '1rem' }}>
-                Total metal combines balances held with jewellers on Cridora plus personal items you track. Reference ₹/g on personal rows
-                is the platform 22K mark — not your store&apos;s invoice rate. Optional purchase ₹/g unlocks indicative gain vs that reference.
-              </p>
-            ) : null}
-
             <PortfolioVaultHoldingsList
               vaults={vaults}
               allocatedCost={allocatedCost}
@@ -334,14 +338,23 @@ export function CustomerPortfolioPanel() {
               masked={privacyMasked}
             />
 
-            {unrealized?.basis_note ? (
-              <p className="pf-groww-footnote">{unrealized.basis_note}</p>
-            ) : null}
-
-            {wallet?.cridora_member_id ? (
-              <p className="pf-groww-footnote">
-                Cridora member ID <strong className="tabular">{wallet.cridora_member_id}</strong>
-              </p>
+            {unrealized?.basis_note || wallet?.cridora_member_id || totals ? (
+              <details className="dash-disclosure">
+                <summary>Portfolio notes</summary>
+                <div className="dash-disclosure__body">
+                  {totals ? (
+                    <p className="pf-groww-footnote" style={{ marginTop: 0 }}>
+                      Total metal includes Cridora vaults and personal tracked items.
+                    </p>
+                  ) : null}
+                  {unrealized?.basis_note ? <p className="pf-groww-footnote">{unrealized.basis_note}</p> : null}
+                  {wallet?.cridora_member_id ? (
+                    <p className="pf-groww-footnote">
+                      Member ID <strong className="tabular">{wallet.cridora_member_id}</strong>
+                    </p>
+                  ) : null}
+                </div>
+              </details>
             ) : null}
           </>
         ) : null}
@@ -410,10 +423,6 @@ export function CustomerPortfolioPanel() {
 
         {portfolioTab === 'active' ? (
           <div>
-            <p className="dash-panel-lead" style={{ marginBottom: '1rem' }}>
-              <strong>Active Cridora holdings</strong> — vaulted fractional, deposit, and scheme grams with your partner jewellers.{' '}
-              Personal physical gold lives under the Personal tab (tracking-only in MVP).
-            </p>
             <CustomerVaultsPanel />
           </div>
         ) : null}
@@ -424,11 +433,8 @@ export function CustomerPortfolioPanel() {
           <article className="pf-card pf-card--lift pf-card--wide pf-card--ledger-table-wrap">
             <header className="pf-card__head pf-ledger-head">
               <div>
-                <h3 className="pf-card__title">Portfolio ledger</h3>
-                <p className="pf-card__meta">
-                  Credits, vault positions, transfers, and completed redemptions (sellbacks). Filter by row type; redemption rows
-                  show indicative cash from the quote at settlement.
-                </p>
+                <h3 className="pf-card__title">Ledger</h3>
+                <p className="pf-card__meta">Filter by movement type.</p>
               </div>
             </header>
             <div className="pf-ledger-filter" role="group" aria-label="Ledger filter">

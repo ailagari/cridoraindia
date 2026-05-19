@@ -30,6 +30,8 @@ import { NativeAppDiagnostics } from '@/components/NativeAppDiagnostics'
 import { NativeAppSplash } from '@/components/NativeAppSplash'
 import { isNativePlatform } from '@/lib/capacitorPlatform'
 import '@/styles/index.css'
+import '@/styles/tokens.css'
+import '@/styles/ds.css'
 
 const useHashRouter =
   import.meta.env.VITE_CAPACITOR_BUILD === 'true' || isNativePlatform()

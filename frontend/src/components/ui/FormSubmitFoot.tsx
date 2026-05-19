@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { Feedback } from './Feedback'
 
 type FormSubmitFootProps = {
   error?: string
@@ -14,16 +15,8 @@ export function FormSubmitFoot({ error, success, children, className }: FormSubm
     <div className={className ? `form-submit-foot ${className}` : 'form-submit-foot'}>
       {hasFeedback ? (
         <div className="form-submit-foot__feedback" aria-live="polite">
-          {error?.trim() ? (
-            <p className="form-error" role="alert">
-              {error}
-            </p>
-          ) : null}
-          {success?.trim() ? (
-            <p className="form-feedback form-feedback--success" role="status">
-              {success}
-            </p>
-          ) : null}
+          {error?.trim() ? <Feedback>{error}</Feedback> : null}
+          {success?.trim() ? <Feedback tone="success">{success}</Feedback> : null}
         </div>
       ) : null}
       <div className="form-submit-foot__actions">{children}</div>

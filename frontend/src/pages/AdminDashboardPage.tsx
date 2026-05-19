@@ -11,6 +11,7 @@ import { AdminFractionalOtpPolicyPanel } from '@/features/admin/AdminFractionalO
 import { ChangePasswordPanel } from '@/features/auth/ChangePasswordPanel'
 import { AdminFestivalBroadcastPanel } from '@/features/admin/AdminFestivalBroadcastPanel'
 import { AdminGoldTickerPanel, AdminMarketplaceCatalogSetupPanel } from '@/features/marketplace/AdminMarketplaceSection'
+import { DashboardActions } from '@/components/ui'
 
 import { ADMIN_DEFAULT_SECTION, ADMIN_NAV_GROUPS, normalizeAdminSection } from '@/lib/mobileNav/adminNav'
 
@@ -476,6 +477,28 @@ export function AdminDashboardPage() {
 
         {active === 'ops_overview' && data ? (
           <>
+            <DashboardActions
+              actions={[
+                {
+                  label: 'Review KYC / KYB',
+                  description: `${data.stats.kyc_review_queue_count + data.stats.kyb_review_queue_count} waiting`,
+                  tone: 'primary',
+                  onClick: () => setSection('users_kyc_kyb'),
+                },
+                {
+                  label: 'Check portfolio',
+                  description: 'Vault and liability totals',
+                  onClick: () => setSection('ops_portfolio'),
+                },
+                {
+                  label: 'Update gold ticker',
+                  description: 'Rates and platform controls',
+                  onClick: () => setSection('plat_gold'),
+                },
+              ]}
+              aside={`${data.stats.total_users} users`}
+            />
+
             <div className="admin-dash-widgets">
               <div className="admin-dash-stat admin-dash-stat--emerald">
                 <span className="admin-dash-stat__eyebrow">Total users</span>
@@ -503,42 +526,39 @@ export function AdminDashboardPage() {
               </div>
             </div>
 
-            <div className="admin-dash-widgets" style={{ marginTop: '1rem' }}>
-              <div className="admin-dash-stat admin-dash-stat--emerald">
-                <span className="admin-dash-stat__eyebrow">Customer vault grams</span>
-                <p className="admin-dash-stat__value">{fmtStatGrams(data.stats.customer_fractional_grams_total)}</p>
-                <p className="admin-dash-stat__sub">Fractional gold stored for customers</p>
+            <details className="dash-disclosure">
+              <summary>Platform balances</summary>
+              <div className="dash-disclosure__body admin-dash-widgets">
+                <div className="admin-dash-stat admin-dash-stat--emerald">
+                  <span className="admin-dash-stat__eyebrow">Customer vault grams</span>
+                  <p className="admin-dash-stat__value">{fmtStatGrams(data.stats.customer_fractional_grams_total)}</p>
+                </div>
+                <div className="admin-dash-stat admin-dash-stat--iris">
+                  <span className="admin-dash-stat__eyebrow">Jeweller liability grams</span>
+                  <p className="admin-dash-stat__value">{fmtStatGrams(data.stats.jeweller_custodial_liability_grams_total)}</p>
+                </div>
+                <div className="admin-dash-stat admin-dash-stat--amber">
+                  <span className="admin-dash-stat__eyebrow">Counter pending</span>
+                  <p className="admin-dash-stat__value">{data.stats.fractional_orders_pending_counter ?? 0}</p>
+                </div>
+                <div className="admin-dash-stat admin-dash-stat--cyan">
+                  <span className="admin-dash-stat__eyebrow">Fractional completed</span>
+                  <p className="admin-dash-stat__value">{data.stats.fractional_orders_completed ?? 0}</p>
+                </div>
+                <div className="admin-dash-stat admin-dash-stat--amber">
+                  <span className="admin-dash-stat__eyebrow">Deposit OTP pending</span>
+                  <p className="admin-dash-stat__value">{data.stats.gold_deposit_pending_otp ?? 0}</p>
+                </div>
+                <div className="admin-dash-stat admin-dash-stat--emerald">
+                  <span className="admin-dash-stat__eyebrow">Deposits completed</span>
+                  <p className="admin-dash-stat__value">{data.stats.gold_deposit_completed ?? 0}</p>
+                </div>
               </div>
-              <div className="admin-dash-stat admin-dash-stat--iris">
-                <span className="admin-dash-stat__eyebrow">Jeweller liability grams</span>
-                <p className="admin-dash-stat__value">{fmtStatGrams(data.stats.jeweller_custodial_liability_grams_total)}</p>
-                <p className="admin-dash-stat__sub">Outstanding custodial obligations</p>
-              </div>
-              <div className="admin-dash-stat admin-dash-stat--amber">
-                <span className="admin-dash-stat__eyebrow">Counter pending</span>
-                <p className="admin-dash-stat__value">{data.stats.fractional_orders_pending_counter ?? 0}</p>
-                <p className="admin-dash-stat__sub">Fractional orders awaiting OTP</p>
-              </div>
-              <div className="admin-dash-stat admin-dash-stat--cyan">
-                <span className="admin-dash-stat__eyebrow">Fractional completed</span>
-                <p className="admin-dash-stat__value">{data.stats.fractional_orders_completed ?? 0}</p>
-                <p className="admin-dash-stat__sub">Verified purchases on record</p>
-              </div>
-              <div className="admin-dash-stat admin-dash-stat--amber">
-                <span className="admin-dash-stat__eyebrow">Deposit OTP pending</span>
-                <p className="admin-dash-stat__value">{data.stats.gold_deposit_pending_otp ?? 0}</p>
-                <p className="admin-dash-stat__sub">Physical gold intakes awaiting saver code</p>
-              </div>
-              <div className="admin-dash-stat admin-dash-stat--emerald">
-                <span className="admin-dash-stat__eyebrow">Deposits completed</span>
-                <p className="admin-dash-stat__value">{data.stats.gold_deposit_completed ?? 0}</p>
-                <p className="admin-dash-stat__sub">Verified gold deposit credits</p>
-              </div>
-            </div>
+            </details>
 
             {data.recent_gold_deposits && data.recent_gold_deposits.length > 0 ? (
-              <div style={{ marginTop: '1.25rem' }}>
-                <h3 style={{ margin: '0 0 0.65rem', fontSize: '1rem' }}>Recent gold deposit intakes</h3>
+              <details className="dash-disclosure">
+                <summary>Recent gold deposit intakes</summary>
                 <div className="dash-table-scroll card">
                   <table className="admin-user-table">
                     <thead>
@@ -572,7 +592,7 @@ export function AdminDashboardPage() {
                     </tbody>
                   </table>
                 </div>
-              </div>
+              </details>
             ) : null}
           </>
         ) : null}
@@ -583,9 +603,7 @@ export function AdminDashboardPage() {
 
         {active === 'ops_personal_vault' ? <AdminPersonalHoldingsPanel /> : null}
 
-        {active === 'ops_portfolio' && data ? (
-          <AdminPortfolioPanel stats={data.stats} />
-        ) : null}
+        {active === 'ops_portfolio' && data ? <AdminPortfolioPanel stats={data.stats} onNavigate={setSection} /> : null}
 
         {active === 'ops_portfolio' && !data && !loadError ? (
           <p className="dash-footnote" style={{ padding: '1rem 0' }}>
@@ -687,7 +705,7 @@ export function AdminDashboardPage() {
         ) : null}
 
         {active === 'plat_security' ? (
-          <ChangePasswordPanel description="Update your admin sign-in password. Use a strong unique password for platform access." />
+          <ChangePasswordPanel />
         ) : null}
 
         {active === 'plat_account' ? (

@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { buildPlatformUserTrend, type AdminPortfolioStats } from './series'
 import { PortfolioBarChart, PortfolioDonut, PortfolioTrendChart } from './PortfolioCharts'
+import { DashboardActions } from '@/components/ui'
 
 function parseStatGrams(s: string | undefined): number {
   if (!s?.trim()) return 0
@@ -8,7 +9,13 @@ function parseStatGrams(s: string | undefined): number {
   return Number.isFinite(n) ? n : 0
 }
 
-export function AdminPortfolioPanel({ stats }: { stats: AdminPortfolioStats }) {
+export function AdminPortfolioPanel({
+  stats,
+  onNavigate,
+}: {
+  stats: AdminPortfolioStats
+  onNavigate?: (sectionKey: string) => void
+}) {
   const trend = useMemo(() => buildPlatformUserTrend(stats.total_users), [stats.total_users])
   const barValues = [
     stats.total_customers || 1,
@@ -54,10 +61,22 @@ export function AdminPortfolioPanel({ stats }: { stats: AdminPortfolioStats }) {
 
   return (
     <div className="dash-panel-max pf-scope">
-      <p className="dash-panel-lead pf-lead-intro">
-        Network cohort view — live fractional totals sit alongside KYC/KYB queues and user momentum charts (user trend is
-        scaled from headcount; bars use live queue counts).
-      </p>
+      {onNavigate ? (
+        <DashboardActions
+          title="Portfolio actions"
+          actions={[
+            {
+              label: 'Review queues',
+              description: `${stats.kyc_review_queue_count + stats.kyb_review_queue_count} waiting`,
+              tone: 'primary',
+              onClick: () => onNavigate('users_kyc_kyb'),
+            },
+            { label: 'Personal vault', description: 'Platform-owned gold', onClick: () => onNavigate('ops_personal_vault') },
+            { label: 'Gold ticker', description: 'Rates and controls', onClick: () => onNavigate('plat_gold') },
+          ]}
+          aside={`${stats.total_users} accounts`}
+        />
+      ) : null}
 
       <div className="pf-grid pf-grid--kpis pf-stagger">
         <div className="pf-kpi pf-kpi--pulse pf-kpi--mint">
@@ -82,42 +101,41 @@ export function AdminPortfolioPanel({ stats }: { stats: AdminPortfolioStats }) {
         </div>
       </div>
 
-      <div className="pf-grid pf-grid--kpis pf-stagger" style={{ marginTop: '0.35rem' }}>
-        <div className="pf-kpi pf-kpi--pulse pf-kpi--gold">
-          <span className="pf-kpi__eyebrow">Customer vault grams</span>
-          <p className="pf-kpi__value">{parseStatGrams(stats.customer_fractional_grams_total).toFixed(6)}</p>
-          <span className="pf-kpi__hint">Fractional gold across customer vaults</span>
+      <details className="dash-disclosure">
+        <summary>Operational details</summary>
+        <div className="dash-disclosure__body pf-grid pf-grid--kpis pf-stagger">
+          <div className="pf-kpi pf-kpi--pulse pf-kpi--gold">
+            <span className="pf-kpi__eyebrow">Customer vault grams</span>
+            <p className="pf-kpi__value">{parseStatGrams(stats.customer_fractional_grams_total).toFixed(6)}</p>
+          </div>
+          <div className="pf-kpi pf-kpi--pulse pf-kpi--rose">
+            <span className="pf-kpi__eyebrow">Jeweller liability grams</span>
+            <p className="pf-kpi__value">{parseStatGrams(stats.jeweller_custodial_liability_grams_total).toFixed(6)}</p>
+          </div>
+          <div className="pf-kpi pf-kpi--pulse pf-kpi--iris">
+            <span className="pf-kpi__eyebrow">Counter pending</span>
+            <p className="pf-kpi__value">{fracPending}</p>
+          </div>
+          <div className="pf-kpi pf-kpi--pulse pf-kpi--mint">
+            <span className="pf-kpi__eyebrow">Fractional completed</span>
+            <p className="pf-kpi__value">{fracDone}</p>
+          </div>
+          <div className="pf-kpi pf-kpi--pulse pf-kpi--ocean">
+            <span className="pf-kpi__eyebrow">Deposit OTP pending</span>
+            <p className="pf-kpi__value">{depPending}</p>
+          </div>
+          <div className="pf-kpi pf-kpi--pulse pf-kpi--rose">
+            <span className="pf-kpi__eyebrow">Deposits completed</span>
+            <p className="pf-kpi__value">{depDone}</p>
+          </div>
         </div>
-        <div className="pf-kpi pf-kpi--pulse pf-kpi--rose">
-          <span className="pf-kpi__eyebrow">Jeweller liability grams</span>
-          <p className="pf-kpi__value">{parseStatGrams(stats.jeweller_custodial_liability_grams_total).toFixed(6)}</p>
-          <span className="pf-kpi__hint">Custodial obligations on jeweller books</span>
-        </div>
-        <div className="pf-kpi pf-kpi--pulse pf-kpi--iris">
-          <span className="pf-kpi__eyebrow">Counter orders pending</span>
-          <p className="pf-kpi__value">{fracPending}</p>
-          <span className="pf-kpi__hint">Awaiting jeweller OTP</span>
-        </div>
-        <div className="pf-kpi pf-kpi--pulse pf-kpi--mint">
-          <span className="pf-kpi__eyebrow">Fractional completed</span>
-          <p className="pf-kpi__value">{fracDone}</p>
-          <span className="pf-kpi__hint">Fully verified purchases</span>
-        </div>
-        <div className="pf-kpi pf-kpi--pulse pf-kpi--ocean">
-          <span className="pf-kpi__eyebrow">Deposit OTP pending</span>
-          <p className="pf-kpi__value">{depPending}</p>
-          <span className="pf-kpi__hint">Gold deposit intakes</span>
-        </div>
-        <div className="pf-kpi pf-kpi--pulse pf-kpi--rose">
-          <span className="pf-kpi__eyebrow">Deposits completed</span>
-          <p className="pf-kpi__value">{depDone}</p>
-          <span className="pf-kpi__hint">Credited vault grams</span>
-        </div>
-      </div>
+      </details>
 
       {stats.ledger_note ? <p className="dash-footnote">{stats.ledger_note}</p> : null}
 
-      <div className="pf-grid pf-grid--charts pf-stagger">
+      <details className="dash-disclosure">
+        <summary>Analytics</summary>
+        <div className="dash-disclosure__body pf-grid pf-grid--charts pf-stagger">
         <article className="pf-card pf-card--lift pf-card--wide">
           <header className="pf-card__head">
             <h3 className="pf-card__title">Fractional grams alignment</h3>
@@ -185,7 +203,8 @@ export function AdminPortfolioPanel({ stats }: { stats: AdminPortfolioStats }) {
             </ul>
           </div>
         </article>
-      </div>
+        </div>
+      </details>
     </div>
   )
 }

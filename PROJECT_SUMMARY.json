@@ -1,0 +1,78 @@
+{
+  "project": "Cridora India",
+  "repository": "cridoraindia",
+  "audit_date": "2026-05-19",
+  "audit_basis": "implemented_code_only",
+  "documentation_path": "docs/audit/",
+  "stack": {
+    "frontend": "React 18.3 + Vite 6 + TypeScript 5.6 + React Router 6",
+    "backend": "Django 5 + Django REST Framework + SimpleJWT",
+    "database": "PostgreSQL (production) / SQLite (local fallback)",
+    "deploy": "Docker multi-stage → Gunicorn + WhiteNoise SPA on Railway",
+    "mobile": "Capacitor 7 Android + PWA (Workbox injectManifest)",
+    "push": "Web Push (VAPID) + Firebase FCM (native)"
+  },
+  "user_types": ["customer", "jeweller", "admin"],
+  "api_base": "/api/v1/",
+  "migrations": {
+    "accounts": 30,
+    "marketplace": 24
+  },
+  "route_count": {
+    "public_spa": 17,
+    "protected_spa": 4,
+    "rest_endpoints": 120
+  },
+  "feature_status_counts": {
+    "fully_implemented": 22,
+    "partially_implemented": 12,
+    "ui_only": 5,
+    "backend_only": 4,
+    "placeholder_disabled": 8
+  },
+  "health_scores": {
+    "mvp_readiness_percent": 68,
+    "production_readiness_percent": 48,
+    "ui_completion_percent": 74,
+    "backend_completion_percent": 72,
+    "security_readiness_percent": 52,
+    "scalability_readiness_percent": 55
+  },
+  "strongest_modules": [
+    "fractional_gold_purchase",
+    "gold_sellback",
+    "gold_deposit_intake",
+    "vault_and_gold_upi",
+    "marketplace_catalog",
+    "cross_redemption_saga",
+    "kyc_kyb_admin_review"
+  ],
+  "weakest_areas": [
+    "payment_gateway_integration",
+    "golden_scheme_customer_flow",
+    "gold_loans",
+    "admin_settlement_treasury_ui",
+    "sms_phone_otp_login",
+    "automated_bank_settlement"
+  ],
+  "critical_risks": [
+    "manual_upi_utr_without_payment_gateway",
+    "no_api_rate_limiting",
+    "PhoneOTPChallenge_unused",
+    "integration_outbox_stub",
+    "guest_notification_mock_data",
+    "CustomerVaultRedemptionShopPanel_unwired"
+  ],
+  "documentation_files": [
+    "docs/audit/MASTER_DOCUMENTATION.md",
+    "docs/audit/SYSTEM_ARCHITECTURE.md",
+    "docs/audit/USER_FLOWS.md",
+    "docs/audit/FEATURE_STATUS_REPORT.md",
+    "docs/audit/DATABASE_REPORT.md",
+    "docs/audit/API_REPORT.md",
+    "docs/audit/UI_UX_STRUCTURE.md",
+    "docs/audit/PENDING_TASKS.md",
+    "docs/audit/SECURITY_AND_RISK_REPORT.md",
+    "docs/audit/DEPLOYMENT_AND_ENV_REPORT.md"
+  ]
+}

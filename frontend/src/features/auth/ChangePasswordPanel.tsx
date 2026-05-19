@@ -1,15 +1,18 @@
 import { type FormEvent, useState } from 'react'
 import { useAuth } from '@/context/AuthContext'
+import {
+  Button,
+  DashboardPanel,
+  Feedback,
+  Input,
+  PageHeader,
+} from '@/components/ui'
 
 type Props = {
   title?: string
-  description?: string
 }
 
-export function ChangePasswordPanel({
-  title = 'Change password',
-  description = 'Enter your current password, then choose a new one (minimum 8 characters).',
-}: Props) {
+export function ChangePasswordPanel({ title = 'Change password' }: Props) {
   const { changePassword } = useAuth()
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
@@ -36,7 +39,7 @@ export function ChangePasswordPanel({
       setCurrentPassword('')
       setNewPassword('')
       setConfirmPassword('')
-      setSuccess('Password updated. You remain signed in on this device.')
+      setSuccess('Password updated.')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not change password.')
     } finally {
@@ -45,57 +48,41 @@ export function ChangePasswordPanel({
   }
 
   return (
-    <div className="dash-panel-max">
-      <h2 className="dash-coming__title" style={{ fontSize: '1.15rem', marginBottom: '0.5rem' }}>
-        {title}
-      </h2>
-      <p className="dash-panel-lead">{description}</p>
-      <form onSubmit={(e) => void onSubmit(e)} style={{ marginTop: '1rem', display: 'grid', gap: '0.85rem', maxWidth: 420 }}>
-        <label className="field">
-          <span>Current password</span>
-          <input
-            className="input"
-            type="password"
-            autoComplete="current-password"
-            value={currentPassword}
-            onChange={(e) => setCurrentPassword(e.target.value)}
-            required
-          />
-        </label>
-        <label className="field">
-          <span>New password</span>
-          <input
-            className="input"
-            type="password"
-            autoComplete="new-password"
-            value={newPassword}
-            onChange={(e) => setNewPassword(e.target.value)}
-            required
-            minLength={8}
-          />
-        </label>
-        <label className="field">
-          <span>Confirm new password</span>
-          <input
-            className="input"
-            type="password"
-            autoComplete="new-password"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            required
-            minLength={8}
-          />
-        </label>
-        {error ? <p className="form-error">{error}</p> : null}
-        {success ? (
-          <p className="form-feedback form-feedback--success" role="status">
-            {success}
-          </p>
-        ) : null}
-        <button type="submit" className="btn btn-primary" disabled={busy} style={{ justifySelf: 'start' }}>
-          {busy ? 'Updating…' : 'Update password'}
-        </button>
+    <DashboardPanel>
+      <PageHeader title={title} />
+      <form onSubmit={(e) => void onSubmit(e)} className="ds-form" style={{ maxWidth: 420 }}>
+        <Input
+          label="Current password"
+          type="password"
+          autoComplete="current-password"
+          value={currentPassword}
+          onChange={(e) => setCurrentPassword(e.target.value)}
+          required
+        />
+        <Input
+          label="New password"
+          type="password"
+          autoComplete="new-password"
+          value={newPassword}
+          onChange={(e) => setNewPassword(e.target.value)}
+          required
+          minLength={8}
+        />
+        <Input
+          label="Confirm new password"
+          type="password"
+          autoComplete="new-password"
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          required
+          minLength={8}
+        />
+        {error ? <Feedback>{error}</Feedback> : null}
+        {success ? <Feedback tone="success">{success}</Feedback> : null}
+        <Button type="submit" variant="primary" loading={busy}>
+          Update password
+        </Button>
       </form>
-    </div>
+    </DashboardPanel>
   )
 }

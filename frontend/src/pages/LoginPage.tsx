@@ -2,6 +2,8 @@ import { type FormEvent, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
 import { dashboardLandingPath } from '@/lib/routes'
+import { AuthShell } from '@/layouts/auth-shell'
+import { Button, Card, Feedback, Heading, Input, Text } from '@/components/ui'
 
 export function LoginPage() {
   const { login, user, loading } = useAuth()
@@ -31,51 +33,38 @@ export function LoginPage() {
   }
 
   return (
-    <div className="container page" style={{ maxWidth: 440 }}>
-      <div className="card">
-        <span className="pill">Account · login</span>
-        <h1 style={{ marginTop: '0.75rem', fontSize: 'clamp(1.35rem, 3vw, 1.65rem)' }}>Welcome back</h1>
-        <p style={{ color: 'var(--text-muted)', marginTop: 0 }}>
-          Use your email and password. KYC/KYB continue in your role dashboard (site admin handles approvals).
-        </p>
-        <form onSubmit={onSubmit} style={{ marginTop: '1.25rem', display: 'grid', gap: '1rem' }}>
-          <div className="field">
-            <label htmlFor="email">Email</label>
-            <input
-              id="email"
-              type="email"
-              autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="password">Password</label>
-            <input
-              id="password"
-              type="password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </div>
-          {error ? <p className="form-error">{error}</p> : null}
-          <button type="submit" className="btn btn-primary btn--block" disabled={busy}>
-            {busy ? 'Signing in…' : 'Sign in'}
-          </button>
+    <AuthShell>
+      <Card>
+        <Text tone="faint" size="micro">Account</Text>
+        <Heading level={1} style={{ marginTop: 'var(--sp-2)' }}>Welcome back</Heading>
+        <form onSubmit={onSubmit} className="ds-form" style={{ marginTop: 'var(--sp-5)' }}>
+          <Input
+            label="Email"
+            type="email"
+            autoComplete="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+          <Input
+            label="Password"
+            type="password"
+            autoComplete="current-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+          {error ? <Feedback>{error}</Feedback> : null}
+          <Button type="submit" variant="primary" block loading={busy}>
+            Sign in
+          </Button>
         </form>
-        <p className="form-footnote" style={{ marginTop: '1rem' }}>
+        <p className="form-footnote" style={{ marginTop: 'var(--sp-4)' }}>
           New here?{' '}
           <Link to="/signup">Create a customer account</Link> or{' '}
           <Link to="/jeweller/apply">apply as a jeweller</Link>.
         </p>
-        <p className="form-footnote" style={{ marginTop: '0.65rem', fontSize: '0.85rem' }}>
-          Site admins: sign in here with your <strong>email</strong> to open the app admin dashboard. Django staff UI is at{' '}
-          <a href="/admin/">/admin/</a> (same host).
-        </p>
-      </div>
-    </div>
+      </Card>
+    </AuthShell>
   )
 }

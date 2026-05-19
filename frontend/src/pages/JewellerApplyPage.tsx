@@ -2,6 +2,18 @@ import { type FormEvent, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
 import { dashboardLandingPath } from '@/lib/routes'
+import { AuthShell } from '@/layouts/auth-shell'
+import {
+  Button,
+  Card,
+  Feedback,
+  Heading,
+  Input,
+  Select,
+  Spinner,
+  Text,
+  Textarea,
+} from '@/components/ui'
 
 const states = [
   'Andhra Pradesh',
@@ -61,9 +73,9 @@ export function JewellerApplyPage() {
 
   if (loading) {
     return (
-      <div className="container page">
-        <p style={{ color: 'var(--text-muted)' }}>Loading…</p>
-      </div>
+      <AuthShell maxWidth={560}>
+        <Spinner />
+      </AuthShell>
     )
   }
   if (user) {
@@ -71,96 +83,67 @@ export function JewellerApplyPage() {
   }
 
   return (
-    <div className="container page" style={{ maxWidth: 560 }}>
-      <div className="card">
-        <span className="pill">Jeweller KYB</span>
-        <h1 style={{ marginTop: '0.75rem', fontSize: 'clamp(1.35rem, 3vw, 1.65rem)' }}>Apply to join the network</h1>
-        <p style={{ color: 'var(--text-muted)', marginTop: 0, lineHeight: 1.55 }}>
-          Create your account with email and password — signed in immediately. Upload KYB documents next; add your GSTIN later under{' '}
-          <strong style={{ color: 'var(--text)' }}>Business</strong> in the jeweller dashboard. Approved jewellers unlock operational tools.
-        </p>
-        <form onSubmit={onSubmit} style={{ marginTop: '1.25rem', display: 'grid', gap: '0.85rem' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-            <div className="field">
-              <label htmlFor="jfn">First name</label>
-              <input id="jfn" value={firstName} onChange={(e) => setFirstName(e.target.value)} required />
-            </div>
-            <div className="field">
-              <label htmlFor="jln">Last name</label>
-              <input id="jln" value={lastName} onChange={(e) => setLastName(e.target.value)} required />
-            </div>
+    <AuthShell maxWidth={560}>
+      <Card>
+        <Text tone="faint" size="micro">Jeweller KYB</Text>
+        <Heading level={1} style={{ marginTop: 'var(--sp-2)' }}>Apply to join</Heading>
+        <form onSubmit={onSubmit} className="ds-form" style={{ marginTop: 'var(--sp-5)' }}>
+          <div className="ds-field-row">
+            <Input label="First name" value={firstName} onChange={(e) => setFirstName(e.target.value)} required />
+            <Input label="Last name" value={lastName} onChange={(e) => setLastName(e.target.value)} required />
           </div>
-          <div className="field">
-            <label htmlFor="jemail">Work email</label>
-            <input
-              id="jemail"
-              type="email"
-              autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
+          <Input
+            label="Work email"
+            type="email"
+            autoComplete="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+          <Input label="Mobile" type="tel" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
+          <Input
+            label="Password"
+            type="password"
+            autoComplete="new-password"
+            minLength={8}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+          <Input
+            label="Business name"
+            value={businessName}
+            onChange={(e) => setBusinessName(e.target.value)}
+            required
+          />
+          <Textarea
+            label="Shop address"
+            rows={3}
+            value={shopAddress}
+            onChange={(e) => setShopAddress(e.target.value)}
+            required
+          />
+          <div className="ds-field-row">
+            <Input label="City" value={city} onChange={(e) => setCity(e.target.value)} required />
+            <Select label="State / UT" value={state} onChange={(e) => setState(e.target.value)} required>
+              <option value="">Select</option>
+              {states.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </Select>
           </div>
-          <div className="field">
-            <label htmlFor="jphone">Mobile (optional)</label>
-            <input id="jphone" type="tel" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
-          </div>
-          <div className="field">
-            <label htmlFor="jpw">Password</label>
-            <input
-              id="jpw"
-              type="password"
-              autoComplete="new-password"
-              minLength={8}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="biz">Registered business / brand name</label>
-            <input id="biz" value={businessName} onChange={(e) => setBusinessName(e.target.value)} required />
-          </div>
-          <div className="field">
-            <label htmlFor="addr">Shop address</label>
-            <textarea
-              id="addr"
-              rows={3}
-              value={shopAddress}
-              onChange={(e) => setShopAddress(e.target.value)}
-              required
-            />
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-            <div className="field">
-              <label htmlFor="city">City</label>
-              <input id="city" value={city} onChange={(e) => setCity(e.target.value)} required />
-            </div>
-            <div className="field">
-              <label htmlFor="state">State / UT</label>
-              <select id="state" value={state} onChange={(e) => setState(e.target.value)} required>
-                <option value="">Select</option>
-                {states.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <div className="field">
-            <label htmlFor="pin">PIN code</label>
-            <input id="pin" value={pincode} onChange={(e) => setPincode(e.target.value)} required />
-          </div>
-          {error ? <p className="form-error">{error}</p> : null}
-          <button type="submit" className="btn btn-primary btn--block" disabled={busy}>
-            {busy ? 'Submitting…' : 'Create account & continue to documents'}
-          </button>
+          <Input label="PIN code" value={pincode} onChange={(e) => setPincode(e.target.value)} required />
+          {error ? <Feedback>{error}</Feedback> : null}
+          <Button type="submit" variant="primary" block loading={busy}>
+            Create account
+          </Button>
         </form>
-        <p className="form-footnote" style={{ marginTop: '1rem' }}>
+        <p className="form-footnote" style={{ marginTop: 'var(--sp-4)' }}>
           Retail customer? <Link to="/signup">Sign up</Link>
         </p>
-      </div>
-    </div>
+      </Card>
+    </AuthShell>
   )
 }

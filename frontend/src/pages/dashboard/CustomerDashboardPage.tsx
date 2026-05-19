@@ -10,6 +10,7 @@ import { FractionalPurchasePanel } from '@/features/invest/FractionalPurchasePan
 import { CustomerAccountDetailsPanel } from '@/features/customer/CustomerAccountDetailsPanel'
 import { CustomerKycWorkflow } from '@/features/customer/CustomerKycWorkflow'
 import { ChangePasswordPanel } from '@/features/auth/ChangePasswordPanel'
+import { ComingSoonPanel } from '@/components/ui'
 import { CustomerPortfolioPanel } from '@/features/portfolio/CustomerPortfolioPanel'
 import { CustomerVaultsPanel } from '@/features/portfolio/CustomerVaultsPanel'
 import { CustomerCrossRedemptionPanel } from '@/features/crossRedemption/CustomerCrossRedemptionPanel'
@@ -30,17 +31,6 @@ function customerTitle(section: string): string {
     return hub ? `${hub.label} · ${row.label}` : row.label
   }
   return 'Dashboard'
-}
-
-function ComingSoon({ title, children }: { title: string; children: string }) {
-  return (
-    <div className="dash-panel-max">
-      <div className="dash-coming dash-coming--payments">
-        <h2 className="dash-coming__title">{title}</h2>
-        <p className="dash-coming__text">{children}</p>
-      </div>
-    </div>
-  )
 }
 
 export function CustomerDashboardPage() {
@@ -116,25 +106,13 @@ export function CustomerDashboardPage() {
       {active === 'shop_products' ? <CustomerProductsBrowsePanel /> : null}
       {active === 'invest_fractional' ? <FractionalPurchasePanel /> : null}
       {active === 'invest_deposit' ? <CustomerDepositInfoPanel /> : null}
-      {active === 'invest_scheme' ? (
-        <ComingSoon
-          title="Golden scheme"
-          children="Enroll in partner jeweller monthly schemes from here. Browse jewellers under Market to see live scheme terms."
-        />
-      ) : null}
+      {active === 'invest_scheme' ? <ComingSoonPanel title="Golden scheme" /> : null}
       {active === 'redeem_cash' ? <CustomerSellbackPanel /> : null}
       {active === 'redeem_transfer' ? <GoldTransferPanel roleLabel="customer" /> : null}
-      {active === 'redeem_loan' ? (
-        <ComingSoon
-          title="Gold loan"
-          children="Vault-backed loans against your holdings will appear here when lending partners go live."
-        />
-      ) : null}
+      {active === 'redeem_loan' ? <ComingSoonPanel title="Gold loan" /> : null}
       {active === 'redeem_emergency' ? <CustomerCrossRedemptionPanel /> : null}
       {active === 'profile_cridora_id' || active === 'profile_qr' ? <CustomerVaultAddressesPanel /> : null}
-      {active === 'profile_security' ? (
-        <ChangePasswordPanel description="Update your sign-in password. Other devices will need to sign in again after their session expires." />
-      ) : null}
+      {active === 'profile_security' ? <ChangePasswordPanel /> : null}
       {active === 'profile_personal' ? <CustomerAccountDetailsPanel /> : null}
       {active === 'profile_kyc' ? (
         <div className="dash-panel-max">

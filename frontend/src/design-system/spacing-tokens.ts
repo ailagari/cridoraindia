@@ -1,0 +1,1 @@
+export { spacingScale } from '@/theme'

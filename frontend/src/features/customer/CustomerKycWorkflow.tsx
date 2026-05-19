@@ -3,6 +3,7 @@ import { authFetch, authUpload } from '@/lib/api'
 import { useAuth } from '@/context/AuthContext'
 import { LIVE_KYC_POLL_MS } from '@/lib/liveDeskIntervals'
 import { useLivePoll } from '@/lib/useLivePoll'
+import { Badge, Button, Card, CardHeader, DashboardWidget, Input, Table, statusTone } from '@/components/ui'
 
 type DocRow = {
   id: number
@@ -116,140 +117,106 @@ export function CustomerKycWorkflow() {
 
   return (
     <div className="kyc-workflow">
-      <span className="pill">Customer KYC</span>
-      <h2 className="dash-panel-title">Identity &amp; bank verification</h2>
-      <p className="dash-panel-lead">
-        Status <span className={`kyc-pill kyc-pill--${kycTone}`}>{user?.kyc_status}</span> — Aadhaar, PAN, live selfie, and bank details are reviewed by Cridora compliance before full platform access.
-      </p>
-      <p style={{ color: 'var(--text-muted)', fontSize: '0.92rem', lineHeight: 1.5, marginTop: '-0.35rem' }}>
-        Uploads and bank details support compliance review, but <strong>verification is decided by Cridora admin</strong> — they may approve accounts they already know without waiting for every file.
-      </p>
-
-      <div className="kyc-stat-grid">
-        <div className={`kyc-stat kyc-stat--${kycTone}`}>
-          <span className="kyc-stat__eyebrow">Account KYC</span>
-          <p className="kyc-stat__value">{user?.kyc_status}</p>
-          <p className="kyc-stat__sub">Site admin reviews in Cridora admin</p>
+      <div className="page-header page-header--compact">
+        <div className="page-header__text">
+          <h1 className="page-header__title">Verification</h1>
         </div>
-        <div className={`kyc-stat kyc-stat--${docDone ? 'ok' : 'gold'}`}>
-          <span className="kyc-stat__eyebrow">ID documents</span>
-          <p className="kyc-stat__value">{[has('aadhaar'), has('pan'), has('selfie_photo')].filter(Boolean).length} / 3</p>
-          <p className="kyc-stat__sub">Identity bundle</p>
-        </div>
-        <div className="kyc-stat kyc-stat--violet">
-          <span className="kyc-stat__eyebrow">Bank</span>
-          <p className="kyc-stat__value">{bankStatus ?? '—'}</p>
-          <p className="kyc-stat__sub">Payouts &amp; settlements</p>
+        <div className="page-header__actions">
+          <Badge tone={kycTone === 'ok' ? 'success' : kycTone === 'bad' ? 'danger' : 'warning'}>{user?.kyc_status}</Badge>
         </div>
       </div>
 
-      {message ? <p className="message-success">{message}</p> : null}
-      {error ? <p className="form-error">{error}</p> : null}
+      <div className="ds-grid-3">
+        <DashboardWidget
+          label="KYC"
+          value={user?.kyc_status}
+          tone={kycTone === 'ok' ? 'success' : kycTone === 'bad' ? 'danger' : 'gold'}
+        />
+        <DashboardWidget
+          label="Documents"
+          value={`${[has('aadhaar'), has('pan'), has('selfie_photo')].filter(Boolean).length} / 3`}
+          tone={docDone ? 'success' : 'gold'}
+        />
+        <DashboardWidget label="Bank" value={bankStatus ?? '—'} tone={bankStatus === 'verified' ? 'success' : 'default'} />
+      </div>
 
-      <div className="kyc-table-wrap card" style={{ marginBottom: '1.25rem' }}>
-        <table className="kyc-doc-table">
-          <thead>
-            <tr>
-              <th>Document</th>
-              <th>Status</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {(
-              [
-                { key: 'aadhaar', label: 'Aadhaar card' },
-                { key: 'pan', label: 'PAN card' },
-                { key: 'selfie_photo', label: 'Live selfie' },
-              ] as const
-            ).map((row) => {
+      {message ? <p className="ds-feedback ds-feedback--success" role="status">{message}</p> : null}
+      {error ? <p className="ds-feedback ds-feedback--error" role="alert">{error}</p> : null}
+
+      <Table
+        columns={[
+          {
+            key: 'document',
+            header: 'Document',
+            render: (row) => row.label,
+          },
+          {
+            key: 'status',
+            header: 'Status',
+            render: (row) => {
               const d = docs.find((x) => x.doc_type === row.key)
-              const st = d
-                ? d.status === 'verified'
-                  ? 'ok'
-                  : d.status === 'rejected'
-                    ? 'bad'
-                    : 'wait'
-                : 'mute'
+              return <Badge tone={d ? statusTone(d.status) : 'neutral'}>{d ? d.status : 'Not uploaded'}</Badge>
+            },
+          },
+          {
+            key: 'action',
+            header: 'Action',
+            render: (row) => {
+              const d = docs.find((x) => x.doc_type === row.key)
               const inputId = `cust-kyc-${row.key}`
               return (
-                <tr key={row.key}>
-                  <td>
-                    <div className="kyb-doc-name">{row.label}</div>
-                    <div className="kyb-doc-hint">
-                      {row.key === 'selfie_photo' ? 'Recent photo, clear face, JPG / PNG' : 'PDF or clear photo, max ~8 MB'}
-                    </div>
-                  </td>
-                  <td>
-                    <span className={`kyb-pill kyb-pill--${st}`}>
-                      {d ? d.status : 'Not uploaded'}
-                    </span>
-                  </td>
-                  <td>
-                    <input
-                      id={inputId}
-                      type="file"
-                      className="sr-only"
-                      accept={row.key === 'selfie_photo' ? 'image/*' : 'image/*,.pdf'}
-                      onChange={(e) => {
-                        void uploadDoc(row.key, e.target.files?.[0] ?? null)
-                        e.target.value = ''
-                      }}
-                    />
-                    <label htmlFor={inputId} className="btn btn-primary kyb-btn-sm">
-                      {d ? 'Replace' : 'Upload'}
-                    </label>
-                    {d?.file_url ? (
-                      <a
-                        className="btn btn-ghost kyb-btn-sm"
-                        href={d.file_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        View
-                      </a>
-                    ) : null}
-                  </td>
-                </tr>
+                <div className="ds-row">
+                  <input
+                    id={inputId}
+                    type="file"
+                    className="sr-only"
+                    accept={row.key === 'selfie_photo' ? 'image/*' : 'image/*,.pdf'}
+                    onChange={(e) => {
+                      void uploadDoc(row.key, e.target.files?.[0] ?? null)
+                      e.target.value = ''
+                    }}
+                  />
+                  <label htmlFor={inputId} className="btn btn-primary kyb-btn-sm">
+                    {d ? 'Replace' : 'Upload'}
+                  </label>
+                  {d?.file_url ? (
+                    <a className="btn btn-ghost kyb-btn-sm" href={d.file_url} target="_blank" rel="noopener noreferrer">
+                      View
+                    </a>
+                  ) : null}
+                </div>
               )
-            })}
-          </tbody>
-        </table>
-      </div>
+            },
+          },
+        ]}
+        rows={[
+          { key: 'aadhaar', label: 'Aadhaar' },
+          { key: 'pan', label: 'PAN' },
+          { key: 'selfie_photo', label: 'Selfie' },
+        ]}
+        getRowKey={(row) => row.key}
+      />
 
-      <div className="card">
-        <h3 className="kyc-card-heading">Bank account</h3>
-        {bankStatus ? (
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginTop: 0 }}>
-            Saved status: <strong>{bankStatus}</strong>
-          </p>
-        ) : null}
-        <form onSubmit={saveBank} style={{ display: 'grid', gap: '0.75rem' }}>
-          <div className="field">
-            <label htmlFor="ach">Account holder name (as per bank)</label>
-            <input id="ach" value={accountHolder} onChange={(e) => setAccountHolder(e.target.value)} required />
+      <Card>
+        <CardHeader
+          title="Bank account"
+          action={bankStatus ? (
+            <Badge tone={bankStatus === 'verified' ? 'success' : bankStatus === 'rejected' ? 'danger' : 'warning'}>{bankStatus}</Badge>
+          ) : null}
+        />
+        <form onSubmit={saveBank} className="ds-form ds-form--compact">
+          <div className="ds-field-row">
+            <Input label="Account holder" value={accountHolder} onChange={(e) => setAccountHolder(e.target.value)} required />
+            <Input label="Account number" value={accountNumber} onChange={(e) => setAccountNumber(e.target.value)} required />
           </div>
-          <div className="field">
-            <label htmlFor="acn">Account number</label>
-            <input id="acn" value={accountNumber} onChange={(e) => setAccountNumber(e.target.value)} required />
+          <div className="ds-field-row">
+            <Input label="IFSC" value={ifsc} onChange={(e) => setIfsc(e.target.value.toUpperCase())} mono required />
+            <Input label="Bank name" value={bankName} onChange={(e) => setBankName(e.target.value)} />
           </div>
-          <div className="field">
-            <label htmlFor="ifsc">IFSC code</label>
-            <input id="ifsc" value={ifsc} onChange={(e) => setIfsc(e.target.value.toUpperCase())} required />
-          </div>
-          <div className="field">
-            <label htmlFor="bnk">Bank name</label>
-            <input id="bnk" value={bankName} onChange={(e) => setBankName(e.target.value)} />
-          </div>
-          <div className="field">
-            <label htmlFor="br">Branch (optional)</label>
-            <input id="br" value={branch} onChange={(e) => setBranch(e.target.value)} />
-          </div>
-          <button type="submit" className="btn btn-primary btn--block" disabled={busyBank}>
-            {busyBank ? 'Saving…' : 'Save bank details'}
-          </button>
+          <Input label="Branch" value={branch} onChange={(e) => setBranch(e.target.value)} />
+          <Button type="submit" variant="primary" block loading={busyBank}>Save bank details</Button>
         </form>
-      </div>
+      </Card>
     </div>
   )
 }

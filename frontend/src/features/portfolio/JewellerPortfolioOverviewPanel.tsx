@@ -9,6 +9,7 @@ import { LIVE_BALANCE_POLL_MS, LIVE_PROFILE_POLL_MS } from '@/lib/liveDeskInterv
 import { useLivePoll } from '@/lib/useLivePoll'
 import { PortfolioBarChart, PortfolioDonut, PortfolioTrendChart } from './PortfolioCharts'
 import { JewellerPortfolioPanel } from './JewellerPortfolioPanel'
+import { DashboardActions } from '@/components/ui'
 
 const DONUT_COLORS = ['#fbbf24', '#d4a85c', '#67e8f9', '#a78bfa']
 
@@ -25,15 +26,6 @@ function fmtInr(n: number): string {
 function fmtG(n: number): string {
   return `${n.toFixed(4)} g`
 }
-
-const QUICK_SECTIONS: { sectionKey: string; title: string; blurb: string }[] = [
-  { sectionKey: 'cust_hub', title: 'Customers', blurb: 'Vault balances & ledgers' },
-  { sectionKey: 'txn_purchases', title: 'Purchases', blurb: 'Counter OTP verification' },
-  { sectionKey: 'txn_deposits', title: 'Deposits', blurb: 'Physical gold intake' },
-  { sectionKey: 'txn_ops', title: 'Redemptions', blurb: 'Sellbacks & ornament orders' },
-  { sectionKey: 'mkt_products', title: 'Catalogue', blurb: 'SKU listings' },
-  { sectionKey: 'mkt_policy', title: 'Rates', blurb: 'Schemes & deposit yield' },
-]
 
 export function JewellerPortfolioOverviewPanel({ onNavigate }: Props) {
   const { user } = useAuth()
@@ -113,10 +105,19 @@ export function JewellerPortfolioOverviewPanel({ onNavigate }: Props) {
               GSTIN {me?.gstin ?? '—'}
             </p>
             <h2 className="pf-jeweller-hero__title">{me?.business_name ?? 'Your showroom'}</h2>
-            <p className="pf-jeweller-hero__sub">Portfolio at a glance — sales, custody, and live queues.</p>
+            <p className="pf-jeweller-hero__sub">Today’s actions first.</p>
           </div>
           <span className={`pf-jeweller-kyb pf-jeweller-kyb--${kybTone}`}>{user?.kyc_status ?? 'pending'}</span>
         </header>
+
+        <DashboardActions
+          actions={[
+            { label: 'Verify purchases', description: `${snap?.pendingPurchases ?? 0} waiting`, tone: 'primary', onClick: () => onNavigate('txn_purchases') },
+            { label: 'Check deposits', description: `${snap?.pendingDeposits ?? 0} open`, onClick: () => onNavigate('txn_deposits') },
+            { label: 'Manage catalogue', description: 'Products and rates', onClick: () => onNavigate('mkt_products') },
+          ]}
+          aside={snap ? `${snap.pendingTotal} open` : undefined}
+        />
 
         <nav className="pf-groww-tabs" aria-label="Portfolio views">
           <button
@@ -148,46 +149,48 @@ export function JewellerPortfolioOverviewPanel({ onNavigate }: Props) {
               <div className="pf-kpi pf-kpi--shimmer pf-kpi--gold">
                 <span className="pf-kpi__eyebrow">Custody value</span>
                 <p className="pf-kpi__value tabular">₹{fmtInr(snap.custodyValueInr)}</p>
-                <span className="pf-kpi__hint">{snap.customerCount} customers · vaulted</span>
+                <span className="pf-kpi__hint">{snap.customerCount} customers</span>
               </div>
               <div className="pf-kpi pf-kpi--pulse pf-kpi--ocean">
                 <span className="pf-kpi__eyebrow">Total vaulted</span>
                 <p className="pf-kpi__value tabular">{fmtG(snap.custodyGrams)}</p>
-                <span className="pf-kpi__hint">Fractional + deposits + schemes</span>
+                <span className="pf-kpi__hint">Vaulted</span>
               </div>
               <div className="pf-kpi pf-kpi--shimmer pf-kpi--mint">
                 <span className="pf-kpi__eyebrow">Shop revenue</span>
                 <p className="pf-kpi__value tabular">₹{fmtInr(snap.ornamentRevenueInr)}</p>
-                <span className="pf-kpi__hint">Ornament redemptions (listed)</span>
+                <span className="pf-kpi__hint">Shop</span>
               </div>
               <div className="pf-kpi pf-kpi--pulse pf-kpi--iris">
                 <span className="pf-kpi__eyebrow">Counter pipeline</span>
                 <p className="pf-kpi__value tabular">₹{fmtInr(snap.investmentSalesInr)}</p>
-                <span className="pf-kpi__hint">Pending purchase orders (INR)</span>
+                <span className="pf-kpi__hint">Pipeline</span>
               </div>
               <div className="pf-kpi pf-kpi--shimmer pf-kpi--rose">
                 <span className="pf-kpi__eyebrow">Deposits (gold)</span>
                 <p className="pf-kpi__value tabular">{fmtG(snap.depositGrams)}</p>
-                <span className="pf-kpi__hint">Customer deposit holdings</span>
+                <span className="pf-kpi__hint">Deposits</span>
               </div>
               <div className="pf-kpi pf-kpi--pulse pf-kpi--gold">
                 <span className="pf-kpi__eyebrow">Investments</span>
                 <p className="pf-kpi__value tabular">{fmtG(snap.fractionalGrams)}</p>
-                <span className="pf-kpi__hint">Fractional grams in custody</span>
+                <span className="pf-kpi__hint">Fractional</span>
               </div>
               <div className="pf-kpi pf-kpi--shimmer pf-kpi--rose">
                 <span className="pf-kpi__eyebrow">Custodial liability</span>
                 <p className="pf-kpi__value tabular">{fmtG(snap.liabilityGrams)}</p>
-                <span className="pf-kpi__hint">Gold owed to customers</span>
+                <span className="pf-kpi__hint">Liability</span>
               </div>
               <div className="pf-kpi pf-kpi--pulse pf-kpi--ocean">
                 <span className="pf-kpi__eyebrow">Pending actions</span>
                 <p className="pf-kpi__value tabular">{snap.pendingTotal}</p>
-                <span className="pf-kpi__hint">Across purchases, deposits, redemptions</span>
+                <span className="pf-kpi__hint">Needs action</span>
               </div>
             </div>
 
-            <div className="pf-grid pf-grid--charts pf-stagger">
+            <details className="dash-disclosure">
+              <summary>Analytics</summary>
+              <div className="dash-disclosure__body pf-grid pf-grid--charts pf-stagger">
               <article className="pf-card pf-card--lift">
                 <h3 className="pf-card__title">Gold in custody (grams)</h3>
                 <p className="pf-card__meta">Split by product type across your customers.</p>
@@ -236,26 +239,8 @@ export function JewellerPortfolioOverviewPanel({ onNavigate }: Props) {
                   <p className="pf-groww-footnote">Credits will appear after verified purchases.</p>
                 )}
               </article>
-            </div>
-
-            <section className="pf-jeweller-sections pf-stagger" aria-label="Dashboard sections">
-              <h3 className="pf-card__title" style={{ margin: '0 0 0.75rem' }}>
-                Sections
-              </h3>
-              <div className="pf-jeweller-sections__grid">
-                {QUICK_SECTIONS.map((s) => (
-                  <button
-                    key={s.sectionKey}
-                    type="button"
-                    className="pf-jeweller-section-card"
-                    onClick={() => onNavigate(s.sectionKey)}
-                  >
-                    <span className="pf-jeweller-section-card__title">{s.title}</span>
-                    <span className="pf-jeweller-section-card__blurb">{s.blurb}</span>
-                  </button>
-                ))}
               </div>
-            </section>
+            </details>
           </>
         ) : null}
 

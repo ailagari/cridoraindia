@@ -17,17 +17,12 @@ import { fetchGoldWallet } from '@/lib/goldTransferApi'
 import { LIVE_BALANCE_POLL_MS } from '@/lib/liveDeskIntervals'
 import { useLivePoll } from '@/lib/useLivePoll'
 import { formatJewellerMetalRateAsOf } from '@/features/marketplace/productPricing'
+import { Badge, Button, Card, CardHeader, Input, Select } from '@/components/ui'
 
 function formatInr(s: string): string {
   const n = Number.parseFloat(s)
   if (!Number.isFinite(n)) return s
   return n.toLocaleString('en-IN', { maximumFractionDigits: 2 })
-}
-
-function formatExpiry(iso: string): string {
-  const t = Date.parse(iso)
-  if (Number.isNaN(t)) return iso
-  return new Date(t).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })
 }
 
 const PAYMENT_METHODS = [
@@ -188,13 +183,9 @@ export function FractionalPurchasePanel() {
       setLastOrder(out.data)
       if (out.data.payment_method === 'upi') {
         setActiveUpiOrder(out.data)
-        setOrderMsg(
-          `Order ${out.data.reference} created. Pay ₹${formatInr(out.data.total_inr)} to the jeweller via UPI, then paste your UTR below.`,
-        )
+        setOrderMsg(`${out.data.reference} · Pay ₹${formatInr(out.data.total_inr)} via UPI, then paste UTR below.`)
       } else {
-        setOrderMsg(
-          `Order ${out.data.reference} created. Pay ₹${formatInr(out.data.total_inr)} at the jeweller counter (cash or their QR/UPI). Then tap Generate OTP and show the code to the jeweller — they enter it under Purchases to credit your gold.`,
-        )
+        setOrderMsg(`${out.data.reference} · Pay ₹${formatInr(out.data.total_inr)} at counter, then tap Generate OTP.`)
       }
       await refreshOrders()
       const w = await fetchGoldWallet()
@@ -230,44 +221,36 @@ export function FractionalPurchasePanel() {
 
   return (
     <div className="dash-panel-max fractional-buy-panel">
-      <p className="dash-panel-lead">
-        Buy fractional gold at the selected jeweller&apos;s metal rate. Pay online via the jeweller&apos;s UPI (paste UTR
-        after payment) or at the showroom counter (OTP verification).
-      </p>
+      <div className="page-header page-header--compact">
+        <div className="page-header__text">
+          <h1 className="page-header__title">Buy gold</h1>
+          <p className="page-header__sub">At jeweller's live rate · UPI or counter</p>
+        </div>
+        {otpPolicySeconds != null ? (
+          <span className="badge badge--neutral" title="Counter OTP validity">
+            OTP {Math.round(otpPolicySeconds / 60)} min
+          </span>
+        ) : null}
+      </div>
 
-      <p className="fractional-buy-live-rate" aria-live="polite" style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>
-        Quotes always use <strong>your jeweller&apos;s rate</strong>, not a generic platform headline. Use <strong>Show live
-        quote</strong> to refresh ₹/g and see when that rate was last updated.
-      </p>
-
-      {otpPolicySeconds != null ? (
-        <p style={{ margin: '0 0 1rem', fontSize: '0.82rem', color: 'var(--text-muted)' }} aria-live="polite">
-          Counter OTP codes stay valid for about <strong className="tabular">{Math.round(otpPolicySeconds / 60)}</strong>{' '}
-          minutes ({otpPolicySeconds}s); platform admins set this window.
-        </p>
-      ) : null}
-
-      <div className="card" style={{ marginBottom: '1.25rem', maxWidth: 560 }}>
-        <div className="dash-form-stack">
-          <div className="field">
-            <label htmlFor="frac-jeweller">Jeweller</label>
-            <select
-              id="frac-jeweller"
-              value={jewellerId === '' ? '' : String(jewellerId)}
-              onChange={(e) => {
-                const v = e.target.value
-                setJewellerId(v === '' ? '' : Number.parseInt(v, 10))
-                setQuote(null)
-              }}
-            >
-              <option value="">Select verified jeweller</option>
-              {jewellers.map((j) => (
-                <option key={j.id} value={j.id}>
-                  {j.business_name} · {j.city}
-                </option>
-              ))}
-            </select>
-          </div>
+      <Card style={{ marginBottom: 'var(--sp-5)', maxWidth: 560 }}>
+        <div className="ds-form">
+          <Select
+            label="Jeweller"
+            value={jewellerId === '' ? '' : String(jewellerId)}
+            onChange={(e) => {
+              const v = e.target.value
+              setJewellerId(v === '' ? '' : Number.parseInt(v, 10))
+              setQuote(null)
+            }}
+          >
+            <option value="">Select verified jeweller</option>
+            {jewellers.map((j) => (
+              <option key={j.id} value={j.id}>
+                {j.business_name} · {j.city}
+              </option>
+            ))}
+          </Select>
 
           <fieldset style={{ border: 'none', padding: 0, margin: 0 }}>
             <legend className="fractional-buy-legend">Quote basis</legend>
@@ -300,70 +283,39 @@ export function FractionalPurchasePanel() {
           </fieldset>
 
           {inputMode === 'by_total_inr' ? (
-            <div className="field">
-              <label htmlFor="frac-inr">Total payable (₹)</label>
-              <input
-                id="frac-inr"
-                type="text"
-                inputMode="decimal"
-                value={inrInput}
-                onChange={(e) => setInrInput(e.target.value)}
-              />
-            </div>
+            <Input label="Total payable (₹)" type="text" inputMode="decimal" value={inrInput} onChange={(e) => setInrInput(e.target.value)} mono />
           ) : (
-            <div className="field">
-              <label htmlFor="frac-g">Gold (grams)</label>
-              <input
-                id="frac-g"
-                type="text"
-                inputMode="decimal"
-                value={gramsInput}
-                onChange={(e) => setGramsInput(e.target.value)}
-              />
-            </div>
+            <Input label="Gold (grams)" type="text" inputMode="decimal" value={gramsInput} onChange={(e) => setGramsInput(e.target.value)} mono />
           )}
 
-          <button type="button" className="btn btn-ghost btn--block" disabled={busy} onClick={() => void runQuote()}>
+          <Button type="button" variant="secondary" block disabled={busy} onClick={() => void runQuote()}>
             Show live quote
-          </button>
-          {quoteErr ? <p className="form-error">{quoteErr}</p> : null}
+          </Button>
+          {quoteErr ? <p className="ds-feedback ds-feedback--error" role="alert">{quoteErr}</p> : null}
 
           {quote ? (
-            <div
-              style={{
-                padding: '1rem',
-                borderRadius: 12,
-                border: '1px solid var(--border-soft)',
-                background: 'var(--veil-35)',
-                fontSize: '0.88rem',
-              }}
-            >
-              <p style={{ margin: '0 0 0.65rem', fontWeight: 800, color: 'var(--gold-light)', fontSize: '0.95rem' }}>
+            <Card tone="flat">
+              <p style={{ margin: '0 0 var(--sp-3)', fontWeight: 600, color: 'var(--gold-light)', fontSize: 'var(--ts-h3)' }}>
                 Live quote
               </p>
               <div className="fractional-buy-quote-stack">
                 <p className="fractional-buy-quote-row" style={{ color: 'var(--text-muted)' }}>
-                  Jeweller metal rate (22K live market incl. their default markup):{' '}
-                  <strong className="tabular">₹{formatInr(quote.metal_rate_inr_per_gram)}/g</strong>
-                </p>
-                <p className="fractional-buy-quote-row" style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>
-                  Rate last updated:{' '}
-                  <strong>{formatJewellerMetalRateAsOf(quote.jeweller_metal_rate_last_updated_at) ?? '—'}</strong>
+                  Rate/g <strong className="tabular">₹{formatInr(quote.metal_rate_inr_per_gram)}</strong>
+                  <span style={{ fontSize: 'var(--ts-caption)', marginLeft: 6 }}>
+                    · updated {formatJewellerMetalRateAsOf(quote.jeweller_metal_rate_last_updated_at) ?? '—'}
+                  </span>
                 </p>
                 <p className="fractional-buy-quote-row" style={{ color: 'var(--text-muted)' }}>
-                  Gold weight: <strong className="tabular">{quote.grams} g</strong>
+                  Weight <strong className="tabular">{quote.grams} g</strong>
                 </p>
                 <p className="fractional-buy-quote-row" style={{ color: 'var(--text-muted)' }}>
-                  Gold value (pre-GST): <strong className="tabular">₹{formatInr(quote.gold_value_inr_pre_gst)}</strong>
-                </p>
-                <p className="fractional-buy-quote-row" style={{ color: 'var(--text-muted)' }}>
-                  GST ({quote.gst_percent}%): <strong className="tabular">₹{formatInr(quote.gst_inr)}</strong>
+                  GST ({quote.gst_percent}%) <strong className="tabular">₹{formatInr(quote.gst_inr)}</strong>
                 </p>
                 <p className="fractional-buy-quote-row fractional-buy-quote-total" style={{ fontWeight: 800 }}>
-                  Total payable: <span className="tabular">₹{formatInr(quote.total_inr)}</span>
+                  Total <span className="tabular">₹{formatInr(quote.total_inr)}</span>
                 </p>
               </div>
-            </div>
+            </Card>
           ) : null}
 
           <fieldset style={{ border: 'none', padding: 0, margin: 0 }}>
@@ -377,39 +329,23 @@ export function FractionalPurchasePanel() {
             />
           </fieldset>
 
-          <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-muted)', lineHeight: 1.45 }}>
-            {paymentMethod === 'upi' ? (
-              <>
-                Pay the jeweller directly in GPay / PhonePe, then paste the <strong>UPI reference</strong> from your receipt.
-                The jeweller confirms before gold is credited.
-              </>
-            ) : (
-              <>
-                Pay at the showroom, then generate an in-app <strong>OTP</strong> for the jeweller to verify under Purchases.
-              </>
-            )}
+          <p style={{ margin: 0, fontSize: 'var(--ts-caption)', color: 'var(--text-faint)', lineHeight: 1.4 }}>
+            {paymentMethod === 'upi' ? 'Pay via GPay / PhonePe · paste UTR after payment' : 'Pay at showroom · show OTP to jeweller'}
           </p>
 
-          <div className="field">
-            <label htmlFor="frac-note">Reference note (optional)</label>
-            <input
-              id="frac-note"
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder="Receipt id"
-            />
-          </div>
+          <Input label="Reference note" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Receipt id" />
 
-          <button
+          <Button
             type="button"
-            className="btn btn-primary btn--block"
+            variant="primary"
+            block
             disabled={busy || !quote}
             onClick={() => void submitOrder()}
           >
             Place order
-          </button>
+          </Button>
 
-          {orderMsg ? <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.88rem' }}>{orderMsg}</p> : null}
+          {orderMsg ? <p className="ds-feedback ds-feedback--success" role="status">{orderMsg}</p> : null}
 
           {activeUpiOrder &&
           (activeUpiOrder.status === 'pending_payment' ||
@@ -428,16 +364,17 @@ export function FractionalPurchasePanel() {
               onCancelled={() => {
                 setActiveUpiOrder(null)
                 setLastOrder(null)
-                setOrderMsg('Order cancelled. You can place a new order when ready.')
+                setOrderMsg('Order cancelled.')
               }}
             />
           ) : null}
 
           {lastOrder && lastOrder.payment_method === 'counter' && lastOrder.status === 'awaiting_counter' ? (
             <div className="dash-form-stack" style={{ marginTop: '0.5rem' }}>
-              <button
+              <Button
                 type="button"
-                className="btn btn-primary btn--block"
+                variant="primary"
+                block
                 disabled={busy || (otpReveal?.orderId === lastOrder.id && !otpCountdown.expired)}
                 onClick={() => void issueOtp(lastOrder.id)}
               >
@@ -446,67 +383,50 @@ export function FractionalPurchasePanel() {
                   : otpReveal?.orderId === lastOrder.id && !otpCountdown.expired
                     ? 'OTP active — use timer below'
                     : 'Generate verification OTP'}
-              </button>
+              </Button>
             </div>
           ) : null}
 
           {otpReveal ? (
-            <div
-              style={{
-                marginTop: '0.65rem',
-                padding: '1rem',
-                borderRadius: 12,
-                border: '1px solid var(--gold-muted, #b8860b)',
-                background: 'var(--veil-35)',
-                opacity: otpCountdown.expired ? 0.65 : 1,
-              }}
+            <Card
+              tone="accent"
+              style={{ opacity: otpCountdown.expired ? 0.65 : 1, border: '1px solid var(--gold-line-20)' }}
               role="status"
               aria-live="polite"
             >
-              <p style={{ margin: '0 0 0.35rem', fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 700 }}>
-                Order #{otpReveal.orderId} · Show this to the jeweller
+              <p style={{ margin: '0 0 var(--sp-2)', fontSize: 'var(--ts-caption)', color: 'var(--text-muted)', fontWeight: 500 }}>
+                #{otpReveal.orderId} · Show to jeweller
               </p>
-              <p
-                className="tabular"
-                style={{
-                  margin: '0 0 0.5rem',
-                  fontSize: '1.75rem',
-                  fontWeight: 800,
-                  letterSpacing: '0.25em',
-                  fontVariantNumeric: 'tabular-nums',
-                }}
-              >
+              <p className="tabular" style={{ margin: '0 0 var(--sp-2)', fontSize: 'var(--ts-display)', fontWeight: 700, letterSpacing: '0.25em' }}>
                 {otpReveal.otp}
               </p>
-              <p style={{ margin: '0 0 0.35rem', fontSize: '0.82rem', color: otpCountdown.expired ? 'var(--danger)' : 'var(--text-muted)', fontWeight: 700 }}>
-                {otpCountdown.expired
-                  ? 'This OTP has expired.'
-                  : `Time remaining ${otpCountdown.labelMmSs} · expires ${formatExpiry(otpReveal.expiresAt)}`}
+              <p style={{ margin: '0 0 var(--sp-3)', fontSize: 'var(--ts-caption)', color: otpCountdown.expired ? 'var(--danger)' : 'var(--text-muted)' }}>
+                {otpCountdown.expired ? 'Expired' : `${otpCountdown.labelMmSs} remaining`}
               </p>
-              <button
+              <Button
                 type="button"
-                className="btn btn-primary btn--block"
-                style={{ marginTop: '0.65rem' }}
+                variant="primary"
+                block
                 disabled={busy || !otpCountdown.expired}
                 onClick={() => void issueOtp(otpReveal.orderId)}
               >
-                {otpCountdown.expired ? 'Generate new OTP' : 'Regenerate OTP after expiry'}
-              </button>
-            </div>
+                {otpCountdown.expired ? 'New OTP' : 'Active'}
+              </Button>
+            </Card>
           ) : null}
 
           {balanceHint ? (
-            <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-              Wallet balance after last action: <strong className="tabular">{balanceHint} g</strong>
+            <p style={{ margin: 0, fontSize: 'var(--ts-caption)', color: 'var(--text-muted)' }}>
+              Wallet <strong className="tabular">{balanceHint} g</strong>
             </p>
           ) : null}
         </div>
-      </div>
+      </Card>
 
-      <div className="card" style={{ maxWidth: 640 }}>
-        <h3 style={{ margin: '0 0 1rem', fontSize: '1rem' }}>Recent fractional orders</h3>
+      <Card style={{ maxWidth: 640 }}>
+        <CardHeader title="Orders" />
         {orders.length === 0 ? (
-          <p style={{ color: 'var(--text-muted)', margin: 0 }}>No orders yet.</p>
+          <p style={{ color: 'var(--text-faint)', margin: 0, fontSize: 'var(--ts-sm)' }}>No orders yet.</p>
         ) : (
           <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: '0.75rem' }}>
             {orders.map((o) => (
@@ -532,13 +452,16 @@ export function FractionalPurchasePanel() {
                   <span aria-hidden="true"> · </span>
                   <span>{o.payment_method}</span>
                 </p>
-                <p className="fractional-order-li-meta fractional-order-li-status" style={{ margin: '0 0 0.5rem' }}>
-                  {o.status.replace(/_/g, ' ')}
+                <p className="fractional-order-li-meta" style={{ margin: '0 0 0.5rem' }}>
+                  <Badge tone={o.status === 'completed' ? 'success' : o.status === 'cancelled' ? 'danger' : o.status === 'awaiting_counter' || o.status === 'awaiting_utr_verify' ? 'gold' : 'warning'}>
+                    {o.status.replace(/_/g, ' ')}
+                  </Badge>
                 </p>
                 {o.status === 'awaiting_counter' ? (
-                  <button
+                  <Button
                     type="button"
-                    className="btn btn-ghost btn--block"
+                    variant="secondary"
+                    block
                     style={{ marginTop: '0.25rem' }}
                     disabled={busy || (otpReveal?.orderId === o.id && !otpCountdown.expired)}
                     onClick={() => void issueOtp(o.id)}
@@ -548,12 +471,13 @@ export function FractionalPurchasePanel() {
                       : otpReveal?.orderId === o.id && !otpCountdown.expired
                         ? 'OTP active'
                         : 'Generate OTP'}
-                  </button>
+                  </Button>
                 ) : null}
                 {o.payment_method === 'upi' && o.status === 'pending_payment' ? (
-                  <button
+                  <Button
                     type="button"
-                    className="btn btn-ghost btn--block"
+                    variant="secondary"
+                    block
                     style={{ marginTop: '0.25rem' }}
                     disabled={busy}
                     onClick={() => {
@@ -563,12 +487,13 @@ export function FractionalPurchasePanel() {
                     }}
                   >
                     Continue UPI payment
-                  </button>
+                  </Button>
                 ) : null}
                 {o.payment_method === 'upi' && o.status === 'awaiting_utr_verify' ? (
-                  <button
+                  <Button
                     type="button"
-                    className="btn btn-ghost btn--block"
+                    variant="secondary"
+                    block
                     style={{ marginTop: '0.25rem' }}
                     disabled={busy}
                     onClick={() => {
@@ -577,13 +502,13 @@ export function FractionalPurchasePanel() {
                     }}
                   >
                     View UTR status
-                  </button>
+                  </Button>
                 ) : null}
               </li>
             ))}
           </ul>
         )}
-      </div>
+      </Card>
 
       {successToast ? (
         <div className="gold-transfer-mobile-toast fractional-buy-toast" role="status" aria-live="polite">

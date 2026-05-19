@@ -99,7 +99,7 @@ export function JewellerDashboardPage() {
         </div>
       ) : null}
       {active === 'prof_security' ? (
-        <ChangePasswordPanel description="Update your jeweller account password used to sign in to the Cridora desk." />
+        <ChangePasswordPanel />
       ) : null}
       {active === 'prof_more' ? <JewellerBusinessProfilePanel /> : null}
     </DashboardLayout>
