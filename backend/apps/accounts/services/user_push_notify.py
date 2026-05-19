@@ -6,21 +6,16 @@ import logging
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
-from django.db.models import Q
-
 from apps.accounts.models import (
     FractionalGoldPurchase,
     GoldDepositIntake,
     GoldSellbackRequest,
-    GoldVault,
-    PersonalGoldHolding,
     PortfolioUserNotification,
-    VaultHolding,
 )
 from apps.accounts.push_payload import build_push_payload
 from apps.accounts.services.portfolio_user_notify import create_portfolio_notification
 from apps.accounts.services.push_deep_links import customer_dashboard, jeweller_dashboard
-from apps.accounts.webpush_service import push_delivery_configured, send_push_to_user, send_push_to_users
+from apps.accounts.webpush_service import push_delivery_configured, send_push_to_user
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -34,6 +29,36 @@ def _display_name(user: User) -> str:
 def _format_grams(grams: Decimal) -> str:
     text = format(grams, "f").rstrip("0").rstrip(".")
     return text or "0"
+
+
+def notify_user_activity(
+    user: User,
+    *,
+    title: str,
+    body: str,
+    link_path: str,
+    tag: str,
+    kind: str = PortfolioUserNotification.KIND_VERIFICATION_UPDATED,
+    image_url: str | None = None,
+) -> int:
+    """In-app portfolio feed row (customers) + push to this user's devices only."""
+    if user.user_type == User.CUSTOMER:
+        create_portfolio_notification(
+            user=user,
+            kind=kind,
+            title=title,
+            body=body,
+            link_path=link_path,
+            send_push=False,
+        )
+    return notify_user_push(
+        user,
+        title=title,
+        body=body,
+        url=link_path,
+        tag=tag,
+        image_url=image_url,
+    )
 
 
 def notify_user_push(
@@ -58,28 +83,6 @@ def notify_user_push(
         return 0
 
 
-def customers_with_gold_interest():
-    """Customers who hold personal gold and/or vaulted grams (for rate / value alerts)."""
-    vault_owner_ids = (
-        VaultHolding.objects.filter(balance_grams__gt=0)
-        .values_list("vault__owner_id", flat=True)
-        .distinct()
-    )
-    personal_ids = (
-        PersonalGoldHolding.objects.filter(is_removed=False)
-        .values_list("user_id", flat=True)
-        .distinct()
-    )
-    ids = set(vault_owner_ids) | set(personal_ids)
-    if not ids:
-        return User.objects.none()
-    return User.objects.filter(pk__in=ids, user_type=User.CUSTOMER).distinct()
-
-
-def send_push_to_customers_with_gold_interest(payload: dict) -> int:
-    return send_push_to_users(customers_with_gold_interest(), payload)
-
-
 # --- OTP workflow (never include OTP digits in push body) ---
 
 
@@ -94,23 +97,23 @@ def notify_fractional_counter_otp_issued(purchase: FractionalGoldPurchase) -> No
         url=jeweller_dashboard("txn_purchases"),
         tag=f"otp-frac-j-{purchase.pk}",
     )
-    notify_user_push(
+    notify_user_activity(
         customer,
         title="OTP generated",
         body=f"Show your code to {jeweller.business_name or 'the jeweller'} after paying {grams_s} g at the counter.",
-        url=customer_dashboard("invest_fractional"),
+        link_path=customer_dashboard("invest_fractional"),
         tag=f"otp-frac-c-{purchase.pk}",
     )
 
 
 def notify_gold_deposit_intake_created(intake: GoldDepositIntake) -> None:
     grams_s = _format_grams(intake.grams)
-    notify_user_push(
+    notify_user_activity(
         intake.customer,
         title="Deposit recorded — OTP needed",
         body=f"{intake.jeweller.business_name or 'Your jeweller'} logged {grams_s} g. Generate your OTP in the app to complete the deposit.",
-        url=customer_dashboard("invest_deposit"),
-        tag=f"otp-dep-c-{intake.pk}",
+        link_path=customer_dashboard("invest_deposit"),
+        tag=f"otp-dep-intake-c-{intake.pk}",
     )
 
 
@@ -123,11 +126,11 @@ def notify_gold_deposit_counter_otp_issued(intake: GoldDepositIntake) -> None:
         url=jeweller_dashboard("txn_deposits"),
         tag=f"otp-dep-j-{intake.pk}",
     )
-    notify_user_push(
+    notify_user_activity(
         intake.customer,
         title="Deposit OTP generated",
         body="Show your code to the jeweller. Open Deposits if you need to view it again.",
-        url=customer_dashboard("invest_deposit"),
+        link_path=customer_dashboard("invest_deposit"),
         tag=f"otp-dep-c-ready-{intake.pk}",
     )
 
@@ -144,11 +147,11 @@ def notify_sellback_pending_jeweller(row: GoldSellbackRequest) -> None:
 
 
 def notify_sellback_awaiting_otp_customer(row: GoldSellbackRequest) -> None:
-    notify_user_push(
+    notify_user_activity(
         row.customer,
         title="Share sellback OTP",
         body="Jeweller accepted your sellback. Open Cash sell and share your OTP after you receive payment.",
-        url=customer_dashboard("redeem_cash"),
+        link_path=customer_dashboard("redeem_cash"),
         tag=f"sellback-otp-c-{row.pk}",
     )
 
@@ -173,11 +176,11 @@ def notify_loan_awaiting_otp_customer(row) -> None:
 
     if not isinstance(row, GoldLoanRequest):
         return
-    notify_user_push(
+    notify_user_activity(
         row.customer,
         title="Share loan OTP",
         body="Jeweller accepted your loan. Open Loan and share your OTP after you receive cash.",
-        url=customer_dashboard("redeem_loan"),
+        link_path=customer_dashboard("redeem_loan"),
         tag=f"loan-otp-c-{row.pk}",
     )
 
@@ -202,11 +205,11 @@ def notify_cross_redemption_pending_source(req) -> None:
         url=jeweller_dashboard("txn_ops"),
         tag=f"cr-dst-j-{req.pk}",
     )
-    notify_user_push(
+    notify_user_activity(
         req.user,
         title="Cross-redemption submitted",
         body=f"Request {req.public_reference or req.pk} is awaiting source jeweller approval.",
-        url=customer_dashboard("redeem_emergency"),
+        link_path=customer_dashboard("redeem_emergency"),
         tag=f"cr-c-{req.pk}",
     )
 

@@ -2,20 +2,29 @@
 
 from __future__ import annotations
 
+from datetime import timedelta
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
 from django.db import transaction
+from django.utils import timezone
 
 from apps.accounts.gold_identity import MIN_TRANSFER_GRAMS
-from apps.accounts.models import GoldLoanRequest
+from apps.accounts.models import GoldLoanRepayment, GoldLoanRequest
 from apps.accounts.loan_otp import issue_loan_otp, verify_loan_otp
 from apps.accounts.vault_service import (
     customer_loan_custodian_ids,
+    customer_loan_collateral_locked_grams,
     customer_loan_eligible_grams,
     debit_customer_loan_collateral,
+    lock_customer_loan_collateral,
+    release_customer_loan_collateral,
 )
-from apps.marketplace.loan_policy import compute_loan_amounts, jeweller_effective_ltv_percent
+from apps.marketplace.loan_policy import (
+    compute_loan_amounts,
+    jeweller_effective_ltv_percent,
+    validate_loan_term_months,
+)
 from apps.marketplace.models import JewellerPricingProfile, jeweller_profile_for
 from apps.marketplace.pricing import reference_metal_rate_inr_per_gram_for_jeweller
 from apps.marketplace.spot_prices import get_or_create_ticker, resolve_cridora_base_22k_inr
@@ -32,6 +41,32 @@ def _loan_policy_payload(ticker) -> dict[str, str]:
             ticker.gold_loan_processing_fee_jeweller_share_percent
         ),
         "gold_loan_interest_apr_percent": str(ticker.gold_loan_interest_apr_percent),
+        "gold_loan_max_term_months": str(ticker.gold_loan_max_term_months),
+    }
+
+
+def _serialize_loan_account(row: GoldLoanRequest) -> dict[str, str]:
+    outstanding = row.principal_outstanding_inr
+    return {
+        "id": row.id,
+        "reference": f"LN-{row.id}",
+        "status": row.status,
+        "jeweller_id": str(row.jeweller_id),
+        "jeweller_label": row.jeweller.business_name or row.jeweller.email or "",
+        "grams": str(row.grams),
+        "collateral_fractional_grams": str(row.collateral_fractional_grams),
+        "collateral_deposit_grams": str(row.collateral_deposit_grams),
+        "collateral_locked_grams": str(row.collateral_fractional_grams + row.collateral_deposit_grams),
+        "collateral_value_inr": str(row.collateral_value_inr_snapshot),
+        "gross_principal_inr": str(row.gross_principal_inr_snapshot),
+        "principal_paid_inr": str(row.principal_paid_inr),
+        "principal_outstanding_inr": str(outstanding),
+        "net_disbursement_inr": str(row.net_disbursement_inr_snapshot),
+        "term_months": str(row.term_months),
+        "disbursed_at": row.disbursed_at.isoformat() if row.disbursed_at else "",
+        "due_at": row.due_at.isoformat() if row.due_at else "",
+        "created_at": row.created_at.isoformat(),
+        "updated_at": row.updated_at.isoformat(),
     }
 
 
@@ -152,6 +187,7 @@ def customer_vault_loan_rates(customer: User) -> list[dict[str, str]]:
     for jeweller in jewellers:
         profile = jeweller_profile_for(jeweller)
         available = customer_loan_eligible_grams(customer, jeweller)
+        locked = customer_loan_collateral_locked_grams(customer, jeweller)
         ref_metal = reference_metal_rate_inr_per_gram_for_jeweller(profile, cridora_base)
         ltv = jeweller_effective_ltv_percent(profile, ticker)
         is_primary = bool(
@@ -164,6 +200,7 @@ def customer_vault_loan_rates(customer: User) -> list[dict[str, str]]:
                     "jeweller_label": jeweller.business_name or jeweller.email or "",
                     "is_primary_custodian": "true" if is_primary else "false",
                     "eligible_vault_balance_grams": str(available),
+                    "loan_collateral_locked_grams": str(locked),
                     "reference_metal_inr_per_gram": str(ref_metal),
                     "ltv_percent": "",
                     "gross_loan_inr_per_gram": "",
@@ -190,6 +227,7 @@ def customer_vault_loan_rates(customer: User) -> list[dict[str, str]]:
                 "jeweller_label": jeweller.business_name or jeweller.email or "",
                 "is_primary_custodian": "true" if is_primary else "false",
                 "eligible_vault_balance_grams": str(available),
+                "loan_collateral_locked_grams": str(locked),
                 "reference_metal_inr_per_gram": str(ref_metal),
                 "ltv_percent": str(ltv),
                 "gross_loan_inr_per_gram": str(amounts["gross_principal_inr"]),
@@ -280,10 +318,21 @@ def create_pending_loan_request(
     customer: User,
     jeweller: User,
     grams: Decimal,
+    *,
+    term_months: int = 12,
 ) -> tuple[GoldLoanRequest | None, str | None, str | None]:
+    ticker = get_or_create_ticker()
+    term_err = validate_loan_term_months(term_months, ticker)
+    if term_err:
+        return None, term_err, None
+
     payload, err = quote_customer_loan(customer, jeweller, grams=grams)
     if err or payload is None:
         return None, err or "Could not quote loan.", None
+
+    frac_g, dep_g, lock_err = lock_customer_loan_collateral(customer, jeweller, grams)
+    if lock_err:
+        return None, lock_err, None
 
     row = GoldLoanRequest.objects.create(
         customer=customer,
@@ -300,6 +349,9 @@ def create_pending_loan_request(
         ),
         net_disbursement_inr_snapshot=Decimal(payload["net_disbursement_inr"]),
         payment_method=GoldLoanRequest.PAY_CASH,
+        term_months=term_months,
+        collateral_fractional_grams=frac_g,
+        collateral_deposit_grams=dep_g,
         status=GoldLoanRequest.STATUS_PENDING_JEWELLER,
     )
     code, _expires_at = issue_loan_otp(row)
@@ -307,6 +359,20 @@ def create_pending_loan_request(
 
     notify_loan_pending_jeweller(row)
     return row, None, code
+
+
+def _release_loan_collateral_if_any(row: GoldLoanRequest) -> str | None:
+    frac = row.collateral_fractional_grams
+    dep = row.collateral_deposit_grams
+    if frac + dep <= 0:
+        return None
+    err = release_customer_loan_collateral(row.customer, row.jeweller, frac, dep)
+    if err:
+        return err
+    row.collateral_fractional_grams = Decimal("0")
+    row.collateral_deposit_grams = Decimal("0")
+    row.save(update_fields=["collateral_fractional_grams", "collateral_deposit_grams", "updated_at"])
+    return None
 
 
 def regenerate_customer_loan_otp(customer: User, loan_id: int) -> tuple[str | None, str | None]:
@@ -357,6 +423,9 @@ def jeweller_reject_loan(jeweller: User, loan_id: int) -> tuple[bool, str]:
             return False, "Loan not found."
         if row.status != GoldLoanRequest.STATUS_PENDING_JEWELLER:
             return False, "Only pending requests can be rejected."
+        err = _release_loan_collateral_if_any(row)
+        if err:
+            return False, err
         row.status = GoldLoanRequest.STATUS_REJECTED
         row.save(update_fields=["status", "updated_at"])
     return True, ""
@@ -378,9 +447,93 @@ def jeweller_complete_loan_with_otp(
         ok, detail = verify_loan_otp(row, otp)
         if not ok:
             return None, detail
-        err_debit = debit_customer_loan_collateral(row.customer, row.jeweller, row.grams)
-        if err_debit:
-            return None, err_debit
+        locked = row.collateral_fractional_grams + row.collateral_deposit_grams
+        if locked < row.grams:
+            err_debit = debit_customer_loan_collateral(row.customer, row.jeweller, row.grams)
+            if err_debit:
+                return None, err_debit
+        now = timezone.now()
         row.status = GoldLoanRequest.STATUS_DISBURSED
-        row.save(update_fields=["status", "updated_at"])
+        row.disbursed_at = now
+        row.due_at = now + timedelta(days=30 * int(row.term_months))
+        row.save(update_fields=["status", "disbursed_at", "due_at", "updated_at"])
     return row, None
+
+
+def customer_active_loans(customer: User) -> list[GoldLoanRequest]:
+    return list(
+        GoldLoanRequest.objects.filter(
+            customer=customer,
+            status=GoldLoanRequest.STATUS_DISBURSED,
+        )
+        .select_related("jeweller")
+        .order_by("-disbursed_at", "-id")
+    )
+
+
+def customer_loan_accounts(customer: User) -> dict:
+    """Open requests + active disbursed loans for customer dashboard."""
+    open_statuses = (
+        GoldLoanRequest.STATUS_PENDING_JEWELLER,
+        GoldLoanRequest.STATUS_ACCEPTED_AWAITING_OTP,
+    )
+    pending = list(
+        GoldLoanRequest.objects.filter(customer=customer, status__in=open_statuses)
+        .select_related("jeweller", "settlement_otp")
+        .order_by("-updated_at")[:20]
+    )
+    active = customer_active_loans(customer)
+    return {
+        "pending": pending,
+        "active": active,
+        "gold_loan_max_term_months": str(get_or_create_ticker().gold_loan_max_term_months),
+    }
+
+
+@transaction.atomic
+def customer_repay_loan(
+    customer: User,
+    loan_id: int,
+    amount_inr: Decimal,
+) -> tuple[GoldLoanRepayment | None, dict | None, str | None]:
+    if amount_inr <= 0:
+        return None, None, "Enter a positive repayment amount."
+    row = (
+        GoldLoanRequest.objects.select_for_update()
+        .filter(pk=loan_id, customer=customer)
+        .select_related("jeweller")
+        .first()
+    )
+    if not row:
+        return None, None, "Loan not found."
+    if row.status != GoldLoanRequest.STATUS_DISBURSED:
+        return None, None, "Only active disbursed loans accept repayment."
+    outstanding = row.principal_outstanding_inr
+    if amount_inr > outstanding:
+        return None, None, f"Amount exceeds outstanding principal (₹{outstanding})."
+    row.principal_paid_inr += amount_inr
+    after = row.principal_outstanding_inr
+    rep = GoldLoanRepayment.objects.create(
+        loan=row,
+        amount_inr=amount_inr,
+        principal_after_inr=after,
+    )
+    if after <= 0:
+        err = _release_loan_collateral_if_any(row)
+        if err:
+            return None, None, err
+        row.status = GoldLoanRequest.STATUS_REPAID
+        row.save(
+            update_fields=[
+                "principal_paid_inr",
+                "status",
+                "collateral_fractional_grams",
+                "collateral_deposit_grams",
+                "updated_at",
+            ]
+        )
+    else:
+        row.save(update_fields=["principal_paid_inr", "updated_at"])
+    payload = _serialize_loan_account(row)
+    payload["repayment_amount_inr"] = str(amount_inr)
+    return rep, payload, None

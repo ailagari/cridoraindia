@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  fetchGoldLoanOutstanding,
+  fetchGoldLoanAccounts,
   fetchGoldLoanVaultRates,
   postGoldLoanCompare,
   postGoldLoanConfirm,
   postGoldLoanOtpRegenerate,
   postGoldLoanQuote,
+  postGoldLoanRepay,
+  type GoldLoanActiveDTO,
   type GoldLoanCompareDTO,
   type GoldLoanOfferDTO,
   type GoldLoanOutstandingDTO,
@@ -38,6 +40,11 @@ export function CustomerGoldLoanPanel() {
   const [selectedJewellerId, setSelectedJewellerId] = useState<number | null>(null)
   const [quote, setQuote] = useState<GoldLoanQuoteDTO | null>(null)
   const [outstanding, setOutstanding] = useState<GoldLoanOutstandingDTO[]>([])
+  const [activeLoans, setActiveLoans] = useState<GoldLoanActiveDTO[]>([])
+  const [maxTermMonths, setMaxTermMonths] = useState(12)
+  const [termMonths, setTermMonths] = useState(12)
+  const [repayDraft, setRepayDraft] = useState<Record<number, string>>({})
+  const [busyRepayId, setBusyRepayId] = useState<number | null>(null)
   const [actionErr, setActionErr] = useState('')
   const [successMsg, setSuccessMsg] = useState('')
   const [busy, setBusy] = useState(false)
@@ -57,14 +64,26 @@ export function CustomerGoldLoanPanel() {
     setVaultRates((await fetchGoldLoanVaultRates()) ?? [])
   }, [])
 
-  const refreshOutstanding = useCallback(async () => {
-    setOutstanding((await fetchGoldLoanOutstanding()) ?? [])
+  const refreshAccounts = useCallback(async () => {
+    const acc = await fetchGoldLoanAccounts()
+    if (!acc) {
+      setOutstanding([])
+      setActiveLoans([])
+      return
+    }
+    setOutstanding(acc.pending ?? [])
+    setActiveLoans(acc.active ?? [])
+    const max = Number.parseInt(acc.gold_loan_max_term_months, 10)
+    if (Number.isFinite(max) && max >= 1) {
+      setMaxTermMonths(max)
+      setTermMonths((t) => Math.min(t, max))
+    }
   }, [])
 
   useEffect(() => {
     void refreshVaultRates()
-    void refreshOutstanding()
-  }, [refreshVaultRates, refreshOutstanding])
+    void refreshAccounts()
+  }, [refreshVaultRates, refreshAccounts])
 
   useLivePoll(refreshVaultRates, LIVE_BALANCE_POLL_MS, true)
 
@@ -122,6 +141,11 @@ export function CustomerGoldLoanPanel() {
         setActionErr(detail)
         return
       }
+      const max = Number.parseInt(data.gold_loan_max_term_months ?? '12', 10)
+      if (Number.isFinite(max) && max >= 1) {
+        setMaxTermMonths(max)
+        setTermMonths((t) => Math.min(t, max))
+      }
       await applyCompareResult(data)
     },
     [applyCompareResult],
@@ -149,7 +173,7 @@ export function CustomerGoldLoanPanel() {
     if (!selectedJewellerId || !compare) return
     setBusy(true)
     setActionErr('')
-    const out = await postGoldLoanConfirm(selectedJewellerId, compare.grams)
+    const out = await postGoldLoanConfirm(selectedJewellerId, compare.grams, termMonths)
     setBusy(false)
     if (!out.ok) {
       setActionErr(out.detail)
@@ -166,7 +190,31 @@ export function CustomerGoldLoanPanel() {
     setQuote(null)
     setCompare(null)
     setGramsInput('')
-    void refreshOutstanding()
+    void refreshAccounts()
+    void refreshVaultRates()
+  }
+
+  const onRepay = async (loan: GoldLoanActiveDTO, payFull: boolean) => {
+    const amount = payFull ? loan.principal_outstanding_inr : (repayDraft[loan.id] ?? '').trim()
+    if (!amount || Number.parseFloat(amount) <= 0) {
+      setActionErr('Enter a valid repayment amount.')
+      return
+    }
+    setBusyRepayId(loan.id)
+    setActionErr('')
+    const out = await postGoldLoanRepay(loan.id, amount)
+    setBusyRepayId(null)
+    if (!out.ok) {
+      setActionErr(out.detail)
+      return
+    }
+    setSuccessMsg(out.detail)
+    setRepayDraft((d) => {
+      const next = { ...d }
+      delete next[loan.id]
+      return next
+    })
+    void refreshAccounts()
     void refreshVaultRates()
   }
 
@@ -240,7 +288,10 @@ export function CustomerGoldLoanPanel() {
                     {v.is_primary_custodian === 'true' ? ' (primary)' : ' (secondary)'}
                   </strong>
                   <span className="tabular" style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                    {parseG(v.eligible_vault_balance_grams).toFixed(3)} g eligible
+                    {parseG(v.eligible_vault_balance_grams).toFixed(3)} g available
+                    {parseG(v.loan_collateral_locked_grams ?? '0') > 0
+                      ? ` · ${parseG(v.loan_collateral_locked_grams ?? '0').toFixed(3)} g locked in loans`
+                      : ''}
                   </span>
                 </div>
                 {v.loan_available === 'true' ? (
@@ -338,9 +389,22 @@ export function CustomerGoldLoanPanel() {
               </h4>
               <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--text-muted)' }}>
                 ₹{fmtInr(quote.net_loan_inr_per_gram ?? '0')}/g net · collateral ₹
-                {fmtInr(quote.collateral_value_inr)} ({quote.grams} g) → you receive ₹
+                {fmtInr(quote.collateral_value_inr)} ({quote.grams} g locked on submit) → you receive ₹
                 {fmtInr(quote.net_disbursement_inr)} after {quote.processing_fee_percent}% processing fee.
               </p>
+              <label className="field" style={{ marginTop: '0.75rem' }}>
+                <span>Loan term (months, max {maxTermMonths})</span>
+                <select
+                  value={termMonths}
+                  onChange={(e) => setTermMonths(Number.parseInt(e.target.value, 10))}
+                >
+                  {Array.from({ length: maxTermMonths }, (_, i) => i + 1).map((m) => (
+                    <option key={m} value={m}>
+                      {m} month{m === 1 ? '' : 's'}
+                    </option>
+                  ))}
+                </select>
+              </label>
               <button
                 type="button"
                 className="btn btn-primary"
@@ -352,6 +416,77 @@ export function CustomerGoldLoanPanel() {
               </button>
             </div>
           ) : null}
+        </div>
+      ) : null}
+
+      {activeLoans.length > 0 ? (
+        <div
+          className="card"
+          style={{ marginTop: '1.5rem', padding: '1rem 1.15rem', borderRadius: 16 }}
+        >
+          <h3 style={{ margin: '0 0 0.75rem', fontSize: '0.95rem' }}>Active loans (collateral locked)</h3>
+          {activeLoans.map((loan) => (
+            <div
+              key={loan.id}
+              style={{
+                padding: '0.85rem',
+                marginBottom: '0.65rem',
+                borderRadius: 12,
+                border: '1px solid var(--border-soft)',
+                background: 'var(--veil)',
+              }}
+            >
+              <p style={{ margin: 0, fontSize: '0.88rem' }}>
+                <strong>{loan.reference}</strong> · {loan.jeweller_label} ·{' '}
+                <span className="tabular">{loan.collateral_locked_grams} g locked</span>
+              </p>
+              <p style={{ margin: '0.35rem 0', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                Principal outstanding:{' '}
+                <strong className="tabular">₹{fmtInr(loan.principal_outstanding_inr)}</strong>
+                {' · '}
+                Paid: ₹{fmtInr(loan.principal_paid_inr)} / ₹{fmtInr(loan.gross_principal_inr)}
+                {loan.due_at ? ` · due ${new Date(loan.due_at).toLocaleDateString('en-IN')}` : ''}
+              </p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', alignItems: 'center', marginTop: '0.5rem' }}>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="Partial ₹"
+                  className="tabular"
+                  value={repayDraft[loan.id] ?? ''}
+                  disabled={busyRepayId === loan.id}
+                  onChange={(e) =>
+                    setRepayDraft((d) => ({ ...d, [loan.id]: e.target.value.replace(/[^\d.]/g, '') }))
+                  }
+                  style={{
+                    width: '8rem',
+                    padding: '0.35rem 0.45rem',
+                    borderRadius: 8,
+                    border: '1px solid var(--border-soft)',
+                    background: 'var(--veil)',
+                  }}
+                />
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  style={{ fontSize: '0.72rem' }}
+                  disabled={busyRepayId === loan.id}
+                  onClick={() => void onRepay(loan, false)}
+                >
+                  Pay partial
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  style={{ fontSize: '0.72rem' }}
+                  disabled={busyRepayId === loan.id}
+                  onClick={() => void onRepay(loan, true)}
+                >
+                  Pay full
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
       ) : null}
 
@@ -406,7 +541,10 @@ export function CustomerGoldLoanPanel() {
               {outstanding.map((r) => (
                 <li key={r.id} style={{ marginBottom: '0.35rem' }}>
                   <strong className="tabular">{r.reference}</strong> · {r.jeweller_label} ·{' '}
-                  <span className="tabular">{r.grams} g</span> · ₹{fmtInr(r.net_disbursement_inr)} ·{' '}
+                  <span className="tabular">
+                    {r.collateral_locked_grams ?? r.grams} g locked
+                  </span>{' '}
+                  · ₹{fmtInr(r.net_disbursement_inr)} ·{' '}
                   <span style={{ color: 'var(--text)' }}>{loanStatusHint(r.status)}</span>
                   {r.status === 'pending_jeweller' && !showOtpBlock ? (
                     <button

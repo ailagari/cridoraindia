@@ -175,10 +175,22 @@ _LOAN_COLLATERAL_DEBIT_ORDER = (
 )
 
 
-def debit_customer_loan_collateral(customer: User, custodian: User, grams: Decimal) -> str | None:
-    """Lock pledged grams: fractional then deposit at custodian."""
+def _loan_collateral_holding(vault: GoldVault) -> VaultHolding:
+    return _vault_holding(vault, VaultHolding.LOAN_COLLATERAL)
+
+
+def lock_customer_loan_collateral(
+    customer: User, custodian: User, grams: Decimal
+) -> tuple[Decimal, Decimal, str | None]:
+    """
+    Move pledged grams from fractional/deposit into loan_collateral holding.
+    Returns (fractional_grams_locked, deposit_grams_locked, error).
+    """
     vault = ensure_vault(customer, custodian)
     holdings = {ht: _vault_holding(vault, ht) for ht in _LOAN_COLLATERAL_DEBIT_ORDER}
+    collateral_h = _loan_collateral_holding(vault)
+    frac_locked = Decimal("0")
+    dep_locked = Decimal("0")
     with transaction.atomic():
         locked_bal: dict[str, Decimal] = {}
         total_avail = Decimal("0")
@@ -194,7 +206,7 @@ def debit_customer_loan_collateral(customer: User, custodian: User, grams: Decim
             locked_bal[ht] = bal
             total_avail += bal
         if total_avail < grams:
-            return "Insufficient vault balance to pledge as collateral."
+            return Decimal("0"), Decimal("0"), "Insufficient vault balance to pledge as collateral."
         remaining = grams
         for ht in _LOAN_COLLATERAL_DEBIT_ORDER:
             if remaining <= 0:
@@ -204,8 +216,78 @@ def debit_customer_loan_collateral(customer: User, custodian: User, grams: Decim
                 VaultHolding.objects.filter(pk=holdings[ht].pk).update(
                     balance_grams=F("balance_grams") - take
                 )
+                VaultHolding.objects.filter(pk=collateral_h.pk).update(
+                    balance_grams=F("balance_grams") + take
+                )
+                if ht == VaultHolding.FRACTIONAL:
+                    frac_locked += take
+                else:
+                    dep_locked += take
                 remaining -= take
     sync_customer_aggregate_balance(customer)
+    return frac_locked, dep_locked, None
+
+
+def release_customer_loan_collateral(
+    customer: User,
+    custodian: User,
+    fractional_grams: Decimal,
+    deposit_grams: Decimal,
+) -> str | None:
+    """Return locked collateral to fractional/deposit holdings."""
+    total = fractional_grams + deposit_grams
+    if total <= 0:
+        return None
+    vault = ensure_vault(customer, custodian)
+    collateral_h = _loan_collateral_holding(vault)
+    with transaction.atomic():
+        bal = (
+            VaultHolding.objects.select_for_update()
+            .filter(pk=collateral_h.pk)
+            .values_list("balance_grams", flat=True)
+            .first()
+        )
+        collateral_bal = bal if bal is not None else Decimal("0")
+        if collateral_bal < total:
+            return "Collateral release mismatch."
+        VaultHolding.objects.filter(pk=collateral_h.pk).update(
+            balance_grams=F("balance_grams") - total
+        )
+        if fractional_grams > 0:
+            hid = _fractional_holding(vault).pk
+            VaultHolding.objects.filter(pk=hid).update(
+                balance_grams=F("balance_grams") + fractional_grams
+            )
+        if deposit_grams > 0:
+            hid = _deposit_holding(vault).pk
+            VaultHolding.objects.filter(pk=hid).update(
+                balance_grams=F("balance_grams") + deposit_grams
+            )
+    sync_customer_aggregate_balance(customer)
+    return None
+
+
+def customer_loan_collateral_locked_grams(customer: User, custodian: User) -> Decimal:
+    try:
+        vault = GoldVault.objects.get(owner=customer, custodian=custodian)
+    except GoldVault.DoesNotExist:
+        return Decimal("0")
+    h = VaultHolding.objects.filter(
+        vault=vault, holding_type=VaultHolding.LOAN_COLLATERAL
+    ).first()
+    return h.balance_grams if h else Decimal("0")
+
+
+def debit_customer_loan_collateral(customer: User, custodian: User, grams: Decimal) -> str | None:
+    """Legacy disburse debit — prefer lock on init; no-op if already in loan_collateral."""
+    locked = customer_loan_collateral_locked_grams(customer, custodian)
+    if locked >= grams:
+        return None
+    frac, dep, err = lock_customer_loan_collateral(customer, custodian, grams)
+    if err:
+        return err
+    if frac + dep < grams:
+        return "Insufficient vault balance to pledge as collateral."
     return None
 
 

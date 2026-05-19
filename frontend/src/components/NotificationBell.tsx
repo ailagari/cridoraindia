@@ -51,6 +51,16 @@ function formatNotifyTime(iso: string): string {
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 }
 
+type ApiPortfolioNotification = {
+  id: number
+  kind: string
+  title: string
+  body: string
+  link_path: string
+  created_at: string
+  read_at: string | null
+}
+
 function mapAdminApiRow(r: ApiAdminNotification): AppNotification {
   const kind: AppNotification['kind'] =
     r.kind === 'kyb_upload' || r.kind === 'kyc_upload'
@@ -59,11 +69,25 @@ function mapAdminApiRow(r: ApiAdminNotification): AppNotification {
         ? 'promo'
         : 'alert'
   return {
-    id: String(r.id),
+    id: `admin-${r.id}`,
     title: r.title,
     body: r.body,
     time: formatNotifyTime(r.created_at),
     read: !r.unread,
+    kind,
+    link_path: r.link_path,
+  }
+}
+
+function mapPortfolioApiRow(r: ApiPortfolioNotification): AppNotification {
+  const kind: AppNotification['kind'] =
+    r.kind === 'holding_added' || r.kind === 'jeweller_added_holding' ? 'transaction' : 'alert'
+  return {
+    id: `portfolio-${r.id}`,
+    title: r.title,
+    body: r.body,
+    time: formatNotifyTime(r.created_at),
+    read: Boolean(r.read_at),
     kind,
     link_path: r.link_path,
   }
@@ -155,22 +179,37 @@ export function NotificationBell({
   const loadPlatformFeed = useCallback(async () => {
     if (!usePlatformFeed) return
     setPlatformFeedError('')
-    const res = await authFetch('/api/v1/notifications/?limit=40', { cache: 'no-store' })
-    const body = (await res.json().catch(() => ({}))) as {
+    const [platformRes, portfolioRes] = await Promise.all([
+      authFetch('/api/v1/notifications/?limit=40', { cache: 'no-store' }),
+      user?.user_type === 'customer'
+        ? authFetch('/api/v1/portfolio/notifications/?limit=40', { cache: 'no-store' })
+        : Promise.resolve(null),
+    ])
+    const body = (await platformRes.json().catch(() => ({}))) as {
       detail?: string
       results?: ApiAdminNotification[]
     }
-    if (!res.ok) {
+    if (!platformRes.ok) {
       setPlatformFeedError(body.detail ?? 'Could not load alerts.')
       return
     }
-    const rows = Array.isArray(body.results) ? body.results.map(mapAdminApiRow) : []
+    const platformRows = Array.isArray(body.results) ? body.results.map(mapAdminApiRow) : []
+    let portfolioRows: AppNotification[] = []
+    if (portfolioRes) {
+      const pBody = (await portfolioRes.json().catch(() => ({}))) as {
+        results?: ApiPortfolioNotification[]
+      }
+      if (portfolioRes.ok && Array.isArray(pBody.results)) {
+        portfolioRows = pBody.results.map(mapPortfolioApiRow)
+      }
+    }
+    const rows = [...portfolioRows, ...platformRows]
     setPlatformItems((prev) => {
       const merged = mergeFeedWithPriorRead(rows, prev)
       notifyBellFeedUpdates(prev, merged)
       return merged
     })
-  }, [usePlatformFeed, mergeFeedWithPriorRead])
+  }, [usePlatformFeed, mergeFeedWithPriorRead, user?.user_type])
 
   const refreshPushState = useCallback(async () => {
     if (!pushNotificationsSupported()) {
@@ -438,8 +477,19 @@ export function NotificationBell({
       if (!n.read) {
         setItemsReadLocal([n.id])
       }
-      const nid = Number.parseInt(n.id, 10)
-      if (!Number.isNaN(nid)) {
+      const portfolioMatch = /^portfolio-(\d+)$/.exec(n.id)
+      const adminMatch = /^admin-(\d+)$/.exec(n.id)
+      const legacyId = Number.parseInt(n.id, 10)
+      const nid = adminMatch ? Number.parseInt(adminMatch[1], 10) : legacyId
+      if (portfolioMatch) {
+        const pid = Number.parseInt(portfolioMatch[1], 10)
+        if (!Number.isNaN(pid)) {
+          await authFetch('/api/v1/portfolio/notifications/mark-read/', {
+            method: 'POST',
+            jsonBody: { notification_ids: [pid] },
+          })
+        }
+      } else if (!Number.isNaN(nid)) {
         const url = useAdminFeed
           ? '/api/v1/admin/notifications/mark-read/'
           : '/api/v1/notifications/mark-read/'
@@ -447,16 +497,15 @@ export function NotificationBell({
           method: 'POST',
           jsonBody: { notification_ids: [nid] },
         })
-        if (res.ok) {
-          if (useAdminFeed) await loadAdminFeed()
-          else await loadPlatformFeed()
-        } else {
+        if (!res.ok) {
           const body = (await res.json().catch(() => ({}))) as { detail?: string }
           const msg = body.detail ?? `Could not mark read (${res.status}).`
           if (useAdminFeed) setAdminFeedError(msg)
           else setPlatformFeedError(msg)
         }
       }
+      if (useAdminFeed) await loadAdminFeed()
+      else if (usePlatformFeed) await loadPlatformFeed()
       if (n.link_path) {
         navigate(n.link_path)
         setOpen(false)

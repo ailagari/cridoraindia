@@ -7,6 +7,15 @@ from decimal import ROUND_HALF_UP, Decimal
 from .models import GoldTickerConfig, JewellerPricingProfile
 
 
+def validate_loan_term_months(months: int, ticker: GoldTickerConfig) -> str | None:
+    max_m = int(getattr(ticker, "gold_loan_max_term_months", 12) or 12)
+    if months < 1:
+        return "Loan term must be at least 1 month."
+    if months > max_m:
+        return f"Loan term cannot exceed {max_m} months."
+    return None
+
+
 def validate_ltv_bounds(
     ltv: Decimal,
     ticker: GoldTickerConfig,

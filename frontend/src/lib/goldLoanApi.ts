@@ -32,6 +32,7 @@ export type GoldLoanVaultRateDTO = {
   processing_fee_percent: string
   loan_available: string
   loan_unavailable_reason: string
+  loan_collateral_locked_grams?: string
 }
 
 export type GoldLoanCompareDTO = {
@@ -47,6 +48,7 @@ export type GoldLoanCompareDTO = {
   gold_loan_processing_fee_percent: string
   gold_loan_processing_fee_jeweller_share_percent: string
   gold_loan_interest_apr_percent: string
+  gold_loan_max_term_months?: string
 }
 
 export type GoldLoanQuoteDTO = GoldLoanOfferDTO & {
@@ -71,8 +73,38 @@ export type GoldLoanOutstandingDTO = {
   reference_metal_inr_per_gram: string
   payment_method?: string
   otp_expires_at?: string | null
+  term_months?: number
+  collateral_locked_grams?: string
+  principal_outstanding_inr?: string
+  due_at?: string | null
   created_at: string
   updated_at: string
+}
+
+export type GoldLoanActiveDTO = {
+  id: number
+  reference: string
+  status: string
+  jeweller_id: string
+  jeweller_label: string
+  grams: string
+  collateral_locked_grams: string
+  collateral_value_inr: string
+  gross_principal_inr: string
+  principal_paid_inr: string
+  principal_outstanding_inr: string
+  net_disbursement_inr: string
+  term_months: string
+  disbursed_at: string
+  due_at: string
+  created_at: string
+  updated_at: string
+}
+
+export type GoldLoanAccountsDTO = {
+  gold_loan_max_term_months: string
+  pending: GoldLoanOutstandingDTO[]
+  active: GoldLoanActiveDTO[]
 }
 
 export type JewellerLoanRowDTO = {
@@ -129,16 +161,41 @@ export async function postGoldLoanQuote(
   return { data: j, detail: '' }
 }
 
+export async function fetchGoldLoanAccounts(): Promise<GoldLoanAccountsDTO | null> {
+  const res = await authFetch('/api/v1/gold/loans/accounts/')
+  if (!res.ok) return null
+  return (await res.json()) as GoldLoanAccountsDTO
+}
+
+export async function postGoldLoanRepay(
+  loanId: number,
+  amountInr: string,
+): Promise<{ ok: true; detail: string; loan: GoldLoanActiveDTO } | { ok: false; detail: string }> {
+  const res = await authFetch(`/api/v1/gold/loans/${loanId}/repay/`, {
+    method: 'POST',
+    jsonBody: { amount_inr: amountInr },
+  })
+  const j = (await res.json().catch(() => ({}))) as {
+    detail?: string
+    loan?: GoldLoanActiveDTO
+  }
+  if (!res.ok || !j.loan) {
+    return { ok: false, detail: j.detail ?? 'Repayment failed.' }
+  }
+  return { ok: true, detail: j.detail ?? 'Payment recorded.', loan: j.loan }
+}
+
 export async function postGoldLoanConfirm(
   jewellerId: number,
   grams: string,
+  termMonths: number,
 ): Promise<
   | { ok: true; detail: string; loan: GoldLoanOutstandingDTO; otp_code?: string; otp_expires_at?: string }
   | { ok: false; detail: string }
 > {
   const res = await authFetch('/api/v1/gold/loans/confirm/', {
     method: 'POST',
-    jsonBody: { jeweller_id: jewellerId, grams },
+    jsonBody: { jeweller_id: jewellerId, grams, term_months: termMonths },
   })
   const j = (await res.json().catch(() => ({}))) as {
     detail?: string

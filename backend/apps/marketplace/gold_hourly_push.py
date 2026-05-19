@@ -9,9 +9,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.accounts.push_payload import build_push_payload
-from apps.accounts.services.push_deep_links import customer_dashboard
-from apps.accounts.services.user_push_notify import send_push_to_customers_with_gold_interest
-from apps.accounts.webpush_service import push_delivery_configured
+from apps.accounts.webpush_service import push_delivery_configured, send_push_broadcast
 
 from .models import GoldTickerConfig, get_or_create_ticker
 from .spot_prices import resolve_cridora_base_22k_inr
@@ -30,7 +28,7 @@ def _fmt_inr(d: Decimal) -> str:
 
 def run_hourly_gold_price_push_digest(*, force: bool = False) -> dict:
     """
-    Compare current public 22K reference to the last hourly snapshot; notify gold holders when price moved.
+    Compare current public 22K reference to the last hourly snapshot; broadcast when price moved (all subscribers).
     The first successful run only stores a baseline (no notification).
 
     Schedule: run management command `run_hourly_gold_push` every hour (e.g. Railway Cron).
@@ -46,7 +44,7 @@ def run_hourly_gold_price_push_digest(*, force: bool = False) -> dict:
 
     body: str | None = None
     title = "Gold price update"
-    link = customer_dashboard("portfolio_holdings")
+    link = "/marketplace"
     image_url = ""
     with transaction.atomic():
         t = GoldTickerConfig.objects.select_for_update().get(pk=ticker_pk)
@@ -55,9 +53,7 @@ def run_hourly_gold_price_push_digest(*, force: bool = False) -> dict:
             return result
 
         title = (t.hourly_gold_push_title or "Gold price update").strip() or "Gold price update"
-        link = (t.hourly_gold_push_link or customer_dashboard("portfolio_holdings")).strip() or customer_dashboard(
-            "portfolio_holdings"
-        )
+        link = (t.hourly_gold_push_link or "/marketplace").strip() or "/marketplace"
         image_url = (t.gold_push_image_url or "").strip()
 
         baseline = t.hourly_gold_push_baseline_inr_per_gram_22k
@@ -98,7 +94,7 @@ def run_hourly_gold_price_push_digest(*, force: bool = False) -> dict:
             result["current_inr"] = str(current)
             result["delta_inr"] = str(delta)
             return result
-        n = send_push_to_customers_with_gold_interest(
+        n = send_push_broadcast(
             build_push_payload(
                 title=title,
                 body=body,

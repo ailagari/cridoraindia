@@ -140,6 +140,10 @@ class GoldTickerConfig(models.Model):
         default=Decimal("99"),
         help_text="Maximum loan-to-value (%) jewellers may offer against custodied vault gold.",
     )
+    gold_loan_max_term_months = models.PositiveSmallIntegerField(
+        default=12,
+        help_text="Maximum gold loan tenure in months (customer-selectable up to this).",
+    )
     cross_platform_fee_inr = models.DecimalField(
         max_digits=12,
         decimal_places=2,

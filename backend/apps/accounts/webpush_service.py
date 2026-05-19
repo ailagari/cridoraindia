@@ -76,7 +76,11 @@ def send_push_to_users(users, payload: dict[str, Any]) -> int:
 
 
 def send_push_broadcast(payload: dict[str, Any]) -> int:
-    """Broadcast to all subscribers — use only for admin festival / platform announcements."""
+    """Broadcast to all push subscribers (customers, jewellers, guests who enabled alerts).
+
+    Use for public market gold-rate alerts, hourly price digests, and admin festival announcements.
+    Not for OTP, deposits, loans, or portfolio-specific activity — use ``send_push_to_user`` instead.
+    """
     n = 0
     if webpush_configured():
         for sub in WebPushSubscription.objects.all().iterator(chunk_size=200):

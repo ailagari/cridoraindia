@@ -1,3 +1,5 @@
+from decimal import Decimal, InvalidOperation
+
 from django.contrib.auth import get_user_model
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
@@ -6,8 +8,11 @@ from rest_framework.views import APIView
 
 from .gold_identity import parse_grams
 from .loan_service import (
+    _serialize_loan_account,
     compare_loan_offers,
     create_pending_loan_request,
+    customer_loan_accounts,
+    customer_repay_loan,
     customer_vault_loan_rates,
     jeweller_accept_loan,
     jeweller_complete_loan_with_otp,
@@ -44,6 +49,12 @@ def _serialize_loan_customer(row: GoldLoanRequest) -> dict:
         "reference_metal_inr_per_gram": str(row.reference_metal_inr_per_gram_snapshot),
         "payment_method": row.payment_method,
         "otp_expires_at": exp,
+        "term_months": row.term_months,
+        "collateral_locked_grams": str(
+            row.collateral_fractional_grams + row.collateral_deposit_grams
+        ),
+        "principal_outstanding_inr": str(row.principal_outstanding_inr),
+        "due_at": row.due_at.isoformat() if row.due_at else None,
         "created_at": row.created_at.isoformat(),
         "updated_at": row.updated_at.isoformat(),
     }
@@ -139,7 +150,13 @@ class GoldLoanConfirmView(APIView):
             jeweller = User.objects.get(pk=jid, user_type=User.JEWELLER)
         except User.DoesNotExist:
             return Response({"detail": "Jeweller not found."}, status=status.HTTP_404_NOT_FOUND)
-        row, err, otp_plain = create_pending_loan_request(user, jeweller, grams)
+        try:
+            term_months = int(request.data.get("term_months", 12))
+        except (TypeError, ValueError):
+            return Response({"detail": "term_months must be an integer."}, status=status.HTTP_400_BAD_REQUEST)
+        row, err, otp_plain = create_pending_loan_request(
+            user, jeweller, grams, term_months=term_months
+        )
         if err or row is None:
             return Response({"detail": err or "Loan request failed."}, status=status.HTTP_400_BAD_REQUEST)
         otp_row = getattr(row, "settlement_otp", None)
@@ -173,6 +190,49 @@ class GoldLoanOutstandingView(APIView):
             .order_by("-updated_at")[:20]
         )
         return Response({"results": [_serialize_loan_customer(r) for r in rows]})
+
+
+class GoldLoanAccountsView(APIView):
+    """Pending requests and active disbursed loans (locked collateral + repayment balance)."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        if user.user_type != User.CUSTOMER:
+            return Response({"detail": "Customers only."}, status=status.HTTP_403_FORBIDDEN)
+        data = customer_loan_accounts(user)
+        return Response(
+            {
+                "gold_loan_max_term_months": data["gold_loan_max_term_months"],
+                "pending": [_serialize_loan_customer(r) for r in data["pending"]],
+                "active": [_serialize_loan_account(r) for r in data["active"]],
+            }
+        )
+
+
+class GoldLoanRepayView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk: int):
+        user = request.user
+        if user.user_type != User.CUSTOMER:
+            return Response({"detail": "Customers only."}, status=status.HTTP_403_FORBIDDEN)
+        raw = request.data.get("amount_inr")
+        try:
+            amount = Decimal(str(raw))
+        except (InvalidOperation, TypeError):
+            return Response({"detail": "amount_inr required."}, status=status.HTTP_400_BAD_REQUEST)
+        _rep, loan_payload, err = customer_repay_loan(user, pk, amount)
+        if err or loan_payload is None:
+            return Response({"detail": err or "Repayment failed."}, status=status.HTTP_400_BAD_REQUEST)
+        closed = loan_payload.get("status") == GoldLoanRequest.STATUS_REPAID
+        detail = (
+            "Loan fully repaid. Collateral gold returned to your vault holdings."
+            if closed
+            else f"Payment recorded. Outstanding principal ₹{loan_payload['principal_outstanding_inr']}."
+        )
+        return Response({"detail": detail, "loan": loan_payload})
 
 
 class GoldLoanOtpRegenerateView(APIView):

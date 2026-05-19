@@ -4,8 +4,21 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from rest_framework.test import APIClient
 
-from apps.accounts.loan_service import compare_loan_offers, customer_vault_loan_rates, quote_customer_loan
-from apps.accounts.vault_service import credit_customer_deposit, credit_customer_fractional, ensure_vault
+from apps.accounts.loan_service import (
+    compare_loan_offers,
+    create_pending_loan_request,
+    customer_repay_loan,
+    customer_vault_loan_rates,
+    quote_customer_loan,
+)
+from apps.accounts.models import GoldLoanRequest, VaultHolding
+from apps.accounts.vault_service import (
+    credit_customer_deposit,
+    credit_customer_fractional,
+    customer_loan_collateral_locked_grams,
+    customer_loan_eligible_grams,
+    ensure_vault,
+)
 from apps.marketplace.loan_policy import compute_loan_amounts
 from apps.marketplace.models import JewellerPricingProfile, get_or_create_ticker, jeweller_profile_for
 
@@ -118,3 +131,74 @@ class GoldLoanQuoteTests(TestCase):
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0]["loan_available"], "true")
         self.assertGreater(Decimal(rows[0]["net_loan_inr_per_gram"]), Decimal("0"))
+
+
+class GoldLoanLockRepayTests(TestCase):
+    def setUp(self):
+        self.customer = User.objects.create_user(
+            username="loan-lock-cust",
+            email="loan-lock-cust@test.com",
+            password="x",
+            user_type=User.CUSTOMER,
+            kyc_status=User.KYC_VERIFIED,
+        )
+        self.jeweller = User.objects.create_user(
+            username="loan-lock-j",
+            email="loan-lock-j@test.com",
+            password="x",
+            user_type=User.JEWELLER,
+            kyc_status=User.KYC_VERIFIED,
+            business_name="Lock Jeweller",
+        )
+        ticker = get_or_create_ticker()
+        ticker.gold_loan_max_term_months = 12
+        ticker.save()
+        profile = jeweller_profile_for(self.jeweller)
+        profile.feat_loan_available = True
+        profile.gold_loan_ltv_percent = Decimal("98")
+        profile.save()
+        ensure_vault(self.customer, self.jeweller)
+        credit_customer_fractional(self.customer, self.jeweller, Decimal("10"))
+
+    def test_init_locks_collateral(self):
+        self.assertEqual(customer_loan_eligible_grams(self.customer, self.jeweller), Decimal("10"))
+        row, err, _code = create_pending_loan_request(
+            self.customer, self.jeweller, Decimal("4"), term_months=6
+        )
+        self.assertIsNone(err)
+        assert row is not None
+        self.assertEqual(row.term_months, 6)
+        self.assertEqual(customer_loan_eligible_grams(self.customer, self.jeweller), Decimal("6"))
+        self.assertEqual(
+            customer_loan_collateral_locked_grams(self.customer, self.jeweller), Decimal("4")
+        )
+
+    def test_partial_then_full_repay_releases_gold(self):
+        from django.utils import timezone
+
+        row, err, _ = create_pending_loan_request(
+            self.customer, self.jeweller, Decimal("5"), term_months=12
+        )
+        self.assertIsNone(err)
+        assert row is not None
+        row.status = GoldLoanRequest.STATUS_DISBURSED
+        row.disbursed_at = timezone.now()
+        row.save(update_fields=["status", "disbursed_at", "updated_at"])
+        principal = row.gross_principal_inr_snapshot
+        half = (principal / 2).quantize(Decimal("0.01"))
+        _, payload, rerr = customer_repay_loan(self.customer, row.pk, half)
+        self.assertIsNone(rerr)
+        assert payload is not None
+        self.assertGreater(Decimal(payload["principal_outstanding_inr"]), Decimal("0"))
+        _, _payload2, rerr2 = customer_repay_loan(
+            self.customer, row.pk, Decimal(payload["principal_outstanding_inr"])
+        )
+        self.assertIsNone(rerr2)
+        row.refresh_from_db()
+        self.assertEqual(row.status, GoldLoanRequest.STATUS_REPAID)
+        self.assertEqual(customer_loan_eligible_grams(self.customer, self.jeweller), Decimal("10"))
+        vault = ensure_vault(self.customer, self.jeweller)
+        locked = VaultHolding.objects.filter(
+            vault=vault, holding_type=VaultHolding.LOAN_COLLATERAL
+        ).first()
+        self.assertTrue(not locked or locked.balance_grams == 0)

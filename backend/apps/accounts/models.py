@@ -316,10 +316,12 @@ class VaultHolding(models.Model):
     FRACTIONAL = "fractional"
     DEPOSIT = "deposit"
     GOLDEN_SCHEME = "golden_scheme"
+    LOAN_COLLATERAL = "loan_collateral"
     HOLDING_TYPE_CHOICES = [
         (FRACTIONAL, "Fractional gold"),
         (DEPOSIT, "Gold deposit"),
         (GOLDEN_SCHEME, "Golden scheme"),
+        (LOAN_COLLATERAL, "Loan collateral (locked)"),
     ]
 
     vault = models.ForeignKey(
@@ -576,6 +578,7 @@ class GoldLoanRequest(models.Model):
     STATUS_REJECTED = "rejected"
     STATUS_ACCEPTED_AWAITING_OTP = "accepted_awaiting_otp"
     STATUS_DISBURSED = "disbursed"
+    STATUS_REPAID = "repaid"
     STATUS_CANCELLED = "cancelled"
     # Legacy alias kept for old rows until migrated
     STATUS_APPROVED = STATUS_ACCEPTED_AWAITING_OTP
@@ -585,6 +588,7 @@ class GoldLoanRequest(models.Model):
         (STATUS_REJECTED, "Rejected"),
         (STATUS_ACCEPTED_AWAITING_OTP, "Accepted awaiting OTP"),
         (STATUS_DISBURSED, "Disbursed"),
+        (STATUS_REPAID, "Repaid"),
         (STATUS_CANCELLED, "Cancelled"),
     ]
 
@@ -635,6 +639,28 @@ class GoldLoanRequest(models.Model):
         choices=PAYMENT_CHOICES,
         default=PAY_CASH,
     )
+    term_months = models.PositiveSmallIntegerField(
+        default=12,
+        help_text="Loan tenure in months (1–platform max, typically 12).",
+    )
+    collateral_fractional_grams = models.DecimalField(
+        max_digits=16,
+        decimal_places=6,
+        default=Decimal("0"),
+    )
+    collateral_deposit_grams = models.DecimalField(
+        max_digits=16,
+        decimal_places=6,
+        default=Decimal("0"),
+    )
+    principal_paid_inr = models.DecimalField(
+        max_digits=16,
+        decimal_places=2,
+        default=Decimal("0"),
+        help_text="Cumulative principal repaid in INR.",
+    )
+    disbursed_at = models.DateTimeField(null=True, blank=True)
+    due_at = models.DateTimeField(null=True, blank=True)
     status = models.CharField(
         max_length=32,
         choices=STATUS_CHOICES,
@@ -646,8 +672,36 @@ class GoldLoanRequest(models.Model):
     class Meta:
         ordering = ["-updated_at", "-created_at"]
 
+    @property
+    def principal_outstanding_inr(self) -> Decimal:
+        owed = self.gross_principal_inr_snapshot - self.principal_paid_inr
+        return owed if owed > 0 else Decimal("0")
+
     def __str__(self):
         return f"GoldLoanRequest({self.customer_id}, {self.jeweller_id}, {self.grams}g)"
+
+
+class GoldLoanRepayment(models.Model):
+    """Customer repayment (partial or full) against an active gold loan."""
+
+    loan = models.ForeignKey(
+        GoldLoanRequest,
+        on_delete=models.CASCADE,
+        related_name="repayments",
+    )
+    amount_inr = models.DecimalField(max_digits=16, decimal_places=2)
+    principal_after_inr = models.DecimalField(
+        max_digits=16,
+        decimal_places=2,
+        help_text="Principal outstanding immediately after this payment.",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"GoldLoanRepayment(loan={self.loan_id}, ₹{self.amount_inr})"
 
 
 class GoldLoanOtp(models.Model):
