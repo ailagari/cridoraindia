@@ -1,8 +1,9 @@
-"""Runtime operational settings (OTP TTL, etc.)."""
+"""Runtime operational settings (OTP TTL, fractional markup, etc.)."""
 
 from __future__ import annotations
 
 from datetime import timedelta
+from decimal import Decimal
 
 from ..models import PlatformOperationalSettings
 
@@ -25,4 +26,21 @@ def set_fractional_counter_otp_ttl_seconds(value: int) -> int:
     row = PlatformOperationalSettings.load()
     row.fractional_counter_otp_ttl_seconds = v
     row.save(update_fields=["fractional_counter_otp_ttl_seconds", "updated_at"])
+    return v
+
+
+def fractional_markup_percent() -> Decimal:
+    row = PlatformOperationalSettings.objects.filter(pk=1).first()
+    if row is None:
+        return Decimal("0")
+    return Decimal(row.fractional_markup_percent)
+
+
+def set_fractional_markup_percent(value: Decimal | str | float | int) -> Decimal:
+    v = Decimal(str(value))
+    if v < 0 or v > 100:
+        raise ValueError("Fractional markup must be between 0 and 100 percent.")
+    row = PlatformOperationalSettings.load()
+    row.fractional_markup_percent = v
+    row.save(update_fields=["fractional_markup_percent", "updated_at"])
     return v

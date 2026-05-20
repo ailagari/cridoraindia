@@ -301,6 +301,13 @@ export function FractionalPurchasePanel() {
               <div className="fractional-buy-quote-stack">
                 <p className="fractional-buy-quote-row" style={{ color: 'var(--text-muted)' }}>
                   Rate/g <strong className="tabular">₹{formatInr(quote.metal_rate_inr_per_gram)}</strong>
+                  {quote.fractional_markup_percent &&
+                  Number.parseFloat(quote.fractional_markup_percent) > 0 &&
+                  quote.base_metal_rate_inr_per_gram ? (
+                    <span style={{ fontSize: 'var(--ts-caption)', marginLeft: 6 }}>
+                      (board ₹{formatInr(quote.base_metal_rate_inr_per_gram)} + {quote.fractional_markup_percent}% platform)
+                    </span>
+                  ) : null}
                   <span style={{ fontSize: 'var(--ts-caption)', marginLeft: 6 }}>
                     · updated {formatJewellerMetalRateAsOf(quote.jeweller_metal_rate_last_updated_at) ?? '—'}
                   </span>

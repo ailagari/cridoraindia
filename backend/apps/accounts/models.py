@@ -1075,6 +1075,13 @@ class PlatformOperationalSettings(models.Model):
         validators=[MinValueValidator(60), MaxValueValidator(86400)],
         help_text="Counter fractional OTP validity window (60–86400 seconds).",
     )
+    fractional_markup_percent = models.DecimalField(
+        max_digits=8,
+        decimal_places=3,
+        default=Decimal("0"),
+        validators=[MinValueValidator(Decimal("0")), MaxValueValidator(Decimal("100"))],
+        help_text="Platform markup on fractional purchase metal rate (0–100%).",
+    )
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:

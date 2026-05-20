@@ -10,6 +10,8 @@ from apps.marketplace.models import jeweller_profile_for
 from apps.marketplace.pricing import reference_metal_rate_inr_per_gram_for_jeweller
 from apps.marketplace.spot_prices import resolve_cridora_base_22k_inr
 
+from .services.platform_operational import fractional_markup_percent
+
 User = get_user_model()
 
 GST_PERCENT = Decimal("3")  # GST on gold value; aligned with marketplace metal GST handling
@@ -20,6 +22,18 @@ def jeweller_metal_rate_inr_per_gram(jeweller: User) -> Decimal:
     cridora_base, _ = resolve_cridora_base_22k_inr()
     profile = jeweller_profile_for(jeweller)
     return reference_metal_rate_inr_per_gram_for_jeweller(profile, cridora_base)
+
+
+def apply_fractional_platform_markup(base_rate: Decimal) -> Decimal:
+    markup = fractional_markup_percent()
+    if markup <= 0:
+        return base_rate.quantize(Decimal("0.01"))
+    factor = Decimal("1") + markup / Decimal("100")
+    return (base_rate * factor).quantize(Decimal("0.01"))
+
+
+def fractional_metal_rate_inr_per_gram(jeweller: User) -> Decimal:
+    return apply_fractional_platform_markup(jeweller_metal_rate_inr_per_gram(jeweller))
 
 
 def breakdown_from_grams(grams: Decimal, rate: Decimal) -> dict[str, Decimal]:

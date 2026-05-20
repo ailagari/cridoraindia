@@ -14,9 +14,11 @@ from .fractional_service import (
     GST_PERCENT,
     breakdown_from_grams,
     breakdown_from_total_inr,
+    fractional_metal_rate_inr_per_gram,
     jeweller_metal_rate_inr_per_gram,
     validate_minimums,
 )
+from .services.platform_operational import fractional_markup_percent
 from .models import FractionalCounterOtp, FractionalGoldPurchase
 from .services.fractional_upi import (
     default_payment_expires_at,
@@ -94,7 +96,8 @@ class FractionalQuoteView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
         mode = (request.data.get("mode") or "").strip().lower()
-        rate = jeweller_metal_rate_inr_per_gram(jeweller)
+        base_rate = jeweller_metal_rate_inr_per_gram(jeweller)
+        rate = fractional_metal_rate_inr_per_gram(jeweller)
         try:
             if mode == "by_grams":
                 g = Decimal(str(request.data.get("grams", "0")))
@@ -120,6 +123,8 @@ class FractionalQuoteView(APIView):
         return Response(
             {
                 "jeweller": _ser_jeweller_brief(jeweller),
+                "base_metal_rate_inr_per_gram": str(base_rate),
+                "fractional_markup_percent": str(fractional_markup_percent()),
                 "metal_rate_inr_per_gram": str(rate),
                 "jeweller_metal_rate_last_updated_at": rate_as_of,
                 "grams": str(b["grams"]),
@@ -189,7 +194,7 @@ class FractionalOrdersView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
         mode = (request.data.get("mode") or "").strip().lower()
-        rate = jeweller_metal_rate_inr_per_gram(jeweller)
+        rate = fractional_metal_rate_inr_per_gram(jeweller)
         try:
             if mode == "by_grams":
                 g = Decimal(str(request.data.get("grams", "0")))

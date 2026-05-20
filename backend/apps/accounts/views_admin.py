@@ -32,7 +32,9 @@ from .services.festival_broadcast import process_due_festival_broadcasts
 from .services.kyc_review import customer_in_review_queue, jeweller_in_review_queue
 from .services.platform_operational import (
     fractional_counter_otp_ttl_seconds_int,
+    fractional_markup_percent,
     set_fractional_counter_otp_ttl_seconds,
+    set_fractional_markup_percent,
 )
 
 User = get_user_model()
@@ -503,30 +505,54 @@ class AdminFreezeUserView(APIView):
 class AdminFractionalCounterOtpPolicyView(APIView):
     permission_classes = [IsAuthenticated]
 
+    def _policy_payload(self) -> dict:
+        row = PlatformOperationalSettings.objects.filter(pk=1).first()
+        secs = row.fractional_counter_otp_ttl_seconds if row else 900
+        markup = row.fractional_markup_percent if row else Decimal("0")
+        return {
+            "fractional_counter_otp_ttl_seconds": secs,
+            "fractional_markup_percent": str(markup),
+        }
+
     def get(self, request):
         err = _require_admin(request)
         if err:
             return err
-        row = PlatformOperationalSettings.objects.filter(pk=1).first()
-        secs = row.fractional_counter_otp_ttl_seconds if row else 900
-        return Response({"fractional_counter_otp_ttl_seconds": secs})
+        return Response(self._policy_payload())
 
     def patch(self, request):
         err = _require_admin(request)
         if err:
             return err
-        raw = request.data.get("fractional_counter_otp_ttl_seconds")
-        try:
-            val = int(raw)
-        except (TypeError, ValueError):
-            return Response(
-                {"detail": "fractional_counter_otp_ttl_seconds must be an integer."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        try:
-            set_fractional_counter_otp_ttl_seconds(val)
-        except ValueError as e:
-            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        return Response(
-            {"fractional_counter_otp_ttl_seconds": fractional_counter_otp_ttl_seconds_int()}
-        )
+        data = request.data if isinstance(request.data, dict) else {}
+        out = self._policy_payload()
+
+        if "fractional_counter_otp_ttl_seconds" in data:
+            raw = data.get("fractional_counter_otp_ttl_seconds")
+            try:
+                val = int(raw)
+            except (TypeError, ValueError):
+                return Response(
+                    {"detail": "fractional_counter_otp_ttl_seconds must be an integer."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            try:
+                set_fractional_counter_otp_ttl_seconds(val)
+            except ValueError as e:
+                return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            out["fractional_counter_otp_ttl_seconds"] = fractional_counter_otp_ttl_seconds_int()
+
+        if "fractional_markup_percent" in data:
+            raw = data.get("fractional_markup_percent")
+            try:
+                set_fractional_markup_percent(raw)
+            except (TypeError, ValueError, ArithmeticError):
+                return Response(
+                    {"detail": "fractional_markup_percent must be a number."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            except ValueError as e:
+                return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            out["fractional_markup_percent"] = str(fractional_markup_percent())
+
+        return Response(out)
