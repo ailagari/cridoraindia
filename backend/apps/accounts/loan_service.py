@@ -484,7 +484,11 @@ def customer_active_loans(customer: User) -> list[GoldLoanRequest]:
 
 def _open_repayment_statuses() -> tuple[str, ...]:
     return (
+        GoldLoanRepaymentRequest.STATUS_PENDING_PAYMENT,
+        GoldLoanRepaymentRequest.STATUS_SIGNAL_RECEIVED,
         GoldLoanRepaymentRequest.STATUS_PENDING_JEWELLER,
+        GoldLoanRepaymentRequest.STATUS_PENDING_REVIEW,
+        GoldLoanRepaymentRequest.STATUS_NEEDS_MANUAL_VERIFICATION,
         GoldLoanRepaymentRequest.STATUS_ACCEPTED_AWAITING_OTP,
     )
 
@@ -501,6 +505,9 @@ def _serialize_repayment_request(req: GoldLoanRepaymentRequest) -> dict[str, str
         "loan_reference": f"LN-{loan.pk}",
         "amount_inr": str(req.amount_inr),
         "status": req.status,
+        "payment_method": req.payment_method,
+        "order_reference": req.order_reference,
+        "reconciliation_score": str(req.reconciliation_score or ""),
         "jeweller_id": str(loan.jeweller_id),
         "jeweller_label": jl.business_name or jl.email or "",
         "otp_expires_at": exp,
@@ -581,8 +588,10 @@ def customer_initiate_loan_repayment(
     customer: User,
     loan_id: int,
     amount_inr: Decimal,
+    *,
+    payment_method: str = GoldLoanRepaymentRequest.PAY_CASH,
 ) -> tuple[GoldLoanRepaymentRequest | None, str | None, str | None]:
-    """Create pending repayment + OTP; jeweller must verify before principal updates."""
+    """Create pending repayment; cash uses OTP, UPI uses reconciliation engine."""
     if amount_inr <= 0:
         return None, None, "Enter a positive repayment amount."
     row = (
@@ -605,15 +614,42 @@ def customer_initiate_loan_repayment(
     )
     if existing:
         return None, None, "Finish or cancel your open repayment request before starting another."
-    req = GoldLoanRepaymentRequest.objects.create(
-        loan=row,
-        amount_inr=amount_inr,
-        status=GoldLoanRepaymentRequest.STATUS_PENDING_JEWELLER,
-    )
-    code, _expires_at = issue_loan_repayment_otp(req)
+    pay = (payment_method or GoldLoanRepaymentRequest.PAY_CASH).strip().lower()
+    if pay not in (GoldLoanRepaymentRequest.PAY_CASH, GoldLoanRepaymentRequest.PAY_UPI):
+        return None, None, "payment_method must be cash or upi."
+    if pay == GoldLoanRepaymentRequest.PAY_UPI:
+        from apps.accounts.services.fractional_upi import (
+            default_payment_expires_at,
+            jeweller_upi_vpa,
+        )
+        from apps.accounts.services.payment_reconciliation.signals import loan_payment_note_for
+
+        vpa = jeweller_upi_vpa(row.jeweller)
+        if not vpa:
+            return None, None, "Jeweller has not configured UPI for online repayment."
+        req = GoldLoanRepaymentRequest.objects.create(
+            loan=row,
+            amount_inr=amount_inr,
+            payment_method=GoldLoanRepaymentRequest.PAY_UPI,
+            status=GoldLoanRepaymentRequest.STATUS_PENDING_PAYMENT,
+            payee_upi_vpa=vpa,
+            payment_expires_at=default_payment_expires_at(),
+        )
+        req.payment_note = loan_payment_note_for(req.pk)
+        req.save(update_fields=["payment_note", "updated_at"])
+    else:
+        req = GoldLoanRepaymentRequest.objects.create(
+            loan=row,
+            amount_inr=amount_inr,
+            payment_method=GoldLoanRepaymentRequest.PAY_CASH,
+            status=GoldLoanRepaymentRequest.STATUS_PENDING_JEWELLER,
+        )
+        code, _expires_at = issue_loan_repayment_otp(req)
     from apps.accounts.services.user_push_notify import notify_loan_repayment_pending_jeweller
 
     notify_loan_repayment_pending_jeweller(req)
+    if pay == GoldLoanRepaymentRequest.PAY_UPI:
+        return req, None, None
     return req, code, None
 
 
@@ -702,6 +738,43 @@ def jeweller_reject_loan_repayment(jeweller: User, repayment_id: int) -> tuple[b
         req.status = GoldLoanRepaymentRequest.STATUS_REJECTED
         req.save(update_fields=["status", "updated_at"])
     return True, ""
+
+
+def jeweller_approve_loan_repayment_upi(
+    jeweller: User, repayment_id: int
+) -> tuple[GoldLoanRepaymentRequest | None, dict | None, str | None]:
+    from apps.accounts.services.payment_reconciliation.loan_engine import (
+        _apply_loan_repayment_confirmed,
+    )
+    from apps.accounts.services.payment_reconciliation.signals import (
+        capture_loan_jeweller_confirmation_signal,
+    )
+
+    with transaction.atomic():
+        req = (
+            GoldLoanRepaymentRequest.objects.select_for_update()
+            .filter(pk=repayment_id, loan__jeweller=jeweller)
+            .select_related("loan")
+            .first()
+        )
+        if not req:
+            return None, None, "Repayment request not found."
+        if req.payment_method != GoldLoanRepaymentRequest.PAY_UPI:
+            return None, None, "Not a UPI repayment."
+        if req.status == GoldLoanRepaymentRequest.STATUS_COMPLETED:
+            loan = req.loan
+            return req, {"loan_id": loan.pk, "status": loan.status}, None
+        if req.status not in (
+            GoldLoanRepaymentRequest.STATUS_PENDING_REVIEW,
+            GoldLoanRepaymentRequest.STATUS_NEEDS_MANUAL_VERIFICATION,
+            GoldLoanRepaymentRequest.STATUS_SIGNAL_RECEIVED,
+            GoldLoanRepaymentRequest.STATUS_PENDING_PAYMENT,
+        ):
+            return None, None, "Repayment is not awaiting UPI approval."
+        capture_loan_jeweller_confirmation_signal(req)
+        _apply_loan_repayment_confirmed(req, jeweller)
+        loan = GoldLoanRequest.objects.get(pk=req.loan_id)
+        return req, {"loan_id": loan.pk, "status": loan.status}, None
 
 
 def jeweller_complete_loan_repayment_with_otp(

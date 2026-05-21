@@ -9,14 +9,14 @@ from rest_framework.views import APIView
 
 from apps.marketplace.models import jeweller_profile_for
 
-from .fractional_completion import apply_fractional_purchase_credit_and_liabilities
+from .fractional_reconciliation_views import JewellerFractionalApproveView
 from .fractional_views import _ser_purchase
 from .models import FractionalGoldPurchase
 from .services.fractional_upi import (
     cancel_upi_order,
-    confirm_utr_for_jeweller,
     jeweller_upi_vpa,
     normalize_upi_vpa,
+    order_reference_cr,
     payment_payload_for,
     submit_utr,
 )
@@ -129,7 +129,11 @@ class JewellerFractionalPendingUpiView(APIView):
         qs = FractionalGoldPurchase.objects.filter(
             jeweller=request.user,
             payment_method=FractionalGoldPurchase.PAY_UPI,
-            status=FractionalGoldPurchase.AWAITING_UTR_VERIFY,
+            status__in=(
+                FractionalGoldPurchase.PENDING_REVIEW,
+                FractionalGoldPurchase.NEEDS_MANUAL_VERIFICATION,
+                FractionalGoldPurchase.AWAITING_UTR_VERIFY,
+            ),
         ).select_related("customer")[:100]
         out = []
         for p in qs:
@@ -143,34 +147,8 @@ class JewellerFractionalPendingUpiView(APIView):
         return Response({"results": out})
 
 
-class JewellerFractionalConfirmUtrView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request, pk: int):
-        if request.user.user_type != User.JEWELLER:
-            return Response(
-                {"detail": "Jewellers only."},
-                status=status.HTTP_403_FORBIDDEN,
-            )
-        try:
-            with transaction.atomic():
-                purchase = FractionalGoldPurchase.objects.select_for_update().get(
-                    pk=pk,
-                    jeweller=request.user,
-                )
-                ok, detail = confirm_utr_for_jeweller(purchase, request.user)
-                if not ok:
-                    return Response(
-                        {"detail": detail},
-                        status=status.HTTP_400_BAD_REQUEST,
-                    )
-                apply_fractional_purchase_credit_and_liabilities(purchase)
-        except FractionalGoldPurchase.DoesNotExist:
-            return Response(
-                {"detail": "Pending UPI order not found."},
-                status=status.HTTP_404_NOT_FOUND,
-            )
-        return Response(_ser_purchase(purchase))
+class JewellerFractionalConfirmUtrView(JewellerFractionalApproveView):
+    """Legacy alias for jeweller approve."""
 
 
 class JewellerUpiProfileView(APIView):

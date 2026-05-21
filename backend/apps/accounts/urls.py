@@ -56,12 +56,26 @@ from .fractional_upi_views import (
     JewellerFractionalPendingUpiView,
     JewellerUpiProfileView,
 )
+from .fractional_reconciliation_views import (
+    FractionalOrderPaymentAckView,
+    FractionalOrderPaymentSmsView,
+    JewellerFractionalApproveView,
+    JewellerFractionalBulkApproveView,
+    JewellerFractionalPendingReconciliationView,
+    JewellerFractionalRejectView,
+)
 from .gold_deposit_views import (
     CustomerGoldDepositCounterOtpIssueView,
     CustomerGoldDepositIntakesView,
     JewellerGoldDepositIntakeCreateView,
     JewellerGoldDepositPendingView,
     JewellerGoldDepositVerifyView,
+)
+from .loan_repayment_upi_views import (
+    LoanRepaymentPaymentAckView,
+    LoanRepaymentPaymentSmsView,
+    LoanRepaymentPaymentView,
+    LoanRepaymentSubmitUtrView,
 )
 from .loan_views import (
     GoldLoanCompareView,
@@ -80,6 +94,7 @@ from .loan_views import (
     JewellerLoanListView,
     JewellerLoanRejectView,
     JewellerLoanRepaymentAcceptView,
+    JewellerLoanRepaymentApproveUpiView,
     JewellerLoanRepaymentCompleteView,
     JewellerLoanRepaymentListView,
     JewellerLoanRepaymentRejectView,
@@ -235,6 +250,22 @@ urlpatterns = [
         "gold/loans/repayments/<int:pk>/cancel/",
         GoldLoanRepaymentCancelView.as_view(),
     ),
+    path(
+        "gold/loans/repayments/<int:pk>/payment/",
+        LoanRepaymentPaymentView.as_view(),
+    ),
+    path(
+        "gold/loans/repayments/<int:pk>/submit-utr/",
+        LoanRepaymentSubmitUtrView.as_view(),
+    ),
+    path(
+        "gold/loans/repayments/<int:pk>/payment-ack/",
+        LoanRepaymentPaymentAckView.as_view(),
+    ),
+    path(
+        "gold/loans/repayments/<int:pk>/payment-signal/sms/",
+        LoanRepaymentPaymentSmsView.as_view(),
+    ),
     path("gold/sellback/quote/", GoldSellbackQuoteView.as_view()),
     path("gold/sellback/confirm/", GoldSellbackConfirmView.as_view()),
     path("gold/sellback/outstanding/", GoldSellbackOutstandingView.as_view()),
@@ -282,11 +313,35 @@ urlpatterns = [
         FractionalOrderSubmitUtrView.as_view(),
     ),
     path(
+        "fractional/orders/<int:pk>/payment-ack/",
+        FractionalOrderPaymentAckView.as_view(),
+    ),
+    path(
+        "fractional/orders/<int:pk>/payment-signal/sms/",
+        FractionalOrderPaymentSmsView.as_view(),
+    ),
+    path(
         "fractional/orders/<int:pk>/cancel-upi/",
         FractionalOrderCancelUpiView.as_view(),
     ),
     path("jeweller/fractional/pending/", JewellerFractionalPendingView.as_view()),
     path("jeweller/fractional/pending-upi/", JewellerFractionalPendingUpiView.as_view()),
+    path(
+        "jeweller/fractional/pending-reconciliation/",
+        JewellerFractionalPendingReconciliationView.as_view(),
+    ),
+    path(
+        "jeweller/fractional/reconciliation/bulk-approve/",
+        JewellerFractionalBulkApproveView.as_view(),
+    ),
+    path(
+        "jeweller/fractional/orders/<int:pk>/approve/",
+        JewellerFractionalApproveView.as_view(),
+    ),
+    path(
+        "jeweller/fractional/orders/<int:pk>/reject/",
+        JewellerFractionalRejectView.as_view(),
+    ),
     path("jeweller/profile/upi/", JewellerUpiProfileView.as_view()),
     path("jeweller/sellbacks/<int:pk>/accept/", JewellerSellbackAcceptView.as_view()),
     path("jeweller/sellbacks/<int:pk>/reject/", JewellerSellbackRejectView.as_view()),
@@ -311,6 +366,10 @@ urlpatterns = [
     path(
         "jeweller/loan-repayments/<int:pk>/complete/",
         JewellerLoanRepaymentCompleteView.as_view(),
+    ),
+    path(
+        "jeweller/loan-repayments/<int:pk>/approve-upi/",
+        JewellerLoanRepaymentApproveUpiView.as_view(),
     ),
     path("jeweller/sellbacks/", JewellerSellbackListView.as_view()),
     path(

@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
-  jewellerFractionalConfirmUtr,
+  jewellerFractionalApprove,
+  jewellerFractionalBulkApprove,
   jewellerFractionalPending,
-  jewellerFractionalPendingUpi,
+  jewellerFractionalPendingReconciliation,
+  jewellerFractionalReject,
   jewellerFractionalVerify,
   type JewellerFractionalPendingRow,
   type JewellerFractionalPendingUpiRow,
@@ -70,6 +72,11 @@ export function JewellerFractionalVerifyPanel() {
   const [mode, setMode] = useState<VerifyMode>('counter')
   const [counterRows, setCounterRows] = useState<JewellerFractionalPendingRow[]>([])
   const [upiRows, setUpiRows] = useState<JewellerFractionalPendingUpiRow[]>([])
+  const [reconSummary, setReconSummary] = useState<{
+    high_count: number
+    exception_count: number
+    avg_score_high: number
+  } | null>(null)
   const [verifiedReceipt, setVerifiedReceipt] = useState<VerifiedReceipt | null>(null)
   const [err, setErr] = useState('')
   const [busyId, setBusyId] = useState<number | null>(null)
@@ -78,9 +85,18 @@ export function JewellerFractionalVerifyPanel() {
 
   const load = useCallback(async () => {
     setErr('')
-    const [counter, upi] = await Promise.all([jewellerFractionalPending(), jewellerFractionalPendingUpi()])
+    const [counter, recon] = await Promise.all([
+      jewellerFractionalPending(),
+      jewellerFractionalPendingReconciliation(),
+    ])
     setCounterRows(counter)
-    setUpiRows(upi)
+    if (recon) {
+      setUpiRows([...recon.high_confidence, ...recon.exceptions])
+      setReconSummary(recon.summary)
+    } else {
+      setUpiRows([])
+      setReconSummary(null)
+    }
   }, [])
 
   useEffect(() => {
@@ -130,6 +146,30 @@ export function JewellerFractionalVerifyPanel() {
     }
   }
 
+  const bulkApprove = async () => {
+    setErr('')
+    setBusyId(-1)
+    try {
+      const out = await jewellerFractionalBulkApprove(60)
+      if (!out.ok) {
+        setErr(out.detail)
+        return
+      }
+      if (out.approved > 0) {
+        setVerifiedReceipt({
+          reference: `${out.approved} order(s)`,
+          grams: '—',
+          totalInr: '—',
+          customerLabel: 'Bulk approval',
+          mode: 'upi',
+        })
+      }
+      await load()
+    } finally {
+      setBusyId(null)
+    }
+  }
+
   const confirmUtr = async (id: number) => {
     const row = upiRows.find((r) => r.id === id)
     const customerLabel = row ? row.customer.name || row.customer.email : 'Customer'
@@ -137,7 +177,7 @@ export function JewellerFractionalVerifyPanel() {
     setBusyId(id)
     setErr('')
     try {
-      const out = await jewellerFractionalConfirmUtr(id)
+      const out = await jewellerFractionalApprove(id)
       if (!out.ok) {
         setErr(out.detail)
         return
@@ -159,8 +199,7 @@ export function JewellerFractionalVerifyPanel() {
     <div className="dash-panel-max jeweller-counter-verify-panel">
       <p className="dash-panel-lead">
         Confirm fractional purchases after customers pay you. <strong>Counter</strong> orders use a 6-digit OTP;{' '}
-        <strong>Online UPI</strong> orders show the customer&apos;s pasted UTR — match amount and reference in your UPI app
-        before confirming.
+        <strong>Online UPI</strong> uses auto-matching; approve high-confidence batches or review exceptions manually.
       </p>
 
       <DashSegmentPair
@@ -241,8 +280,27 @@ export function JewellerFractionalVerifyPanel() {
         <p style={{ color: 'var(--text-muted)' }}>No counter payments awaiting OTP verification.</p>
       ) : null}
 
+      {mode === 'upi' && reconSummary && upiRows.length > 0 ? (
+        <p style={{ marginBottom: '0.75rem', fontSize: '0.88rem', color: 'var(--text-muted)' }}>
+          {reconSummary.high_count} high-confidence · {reconSummary.exception_count} exceptions
+          {reconSummary.avg_score_high > 0 ? ` · avg score ${reconSummary.avg_score_high}%` : ''}
+        </p>
+      ) : null}
+
+      {mode === 'upi' && upiRows.length > 0 ? (
+        <button
+          type="button"
+          className="btn btn-primary"
+          style={{ marginBottom: '1rem' }}
+          disabled={busyId != null}
+          onClick={() => void bulkApprove()}
+        >
+          {busyId === -1 ? 'Approving…' : 'Approve all high confidence (≥60%)'}
+        </button>
+      ) : null}
+
       {mode === 'upi' && upiRows.length === 0 ? (
-        <p style={{ color: 'var(--text-muted)' }}>No online UPI payments awaiting UTR confirmation.</p>
+        <p style={{ color: 'var(--text-muted)' }}>No online UPI payments awaiting review.</p>
       ) : null}
 
       {mode === 'counter' && counterRows.length > 0 ? (
@@ -334,8 +392,8 @@ export function JewellerFractionalVerifyPanel() {
               <tr>
                 <th scope="col">Customer</th>
                 <th scope="col">Amount</th>
-                <th scope="col">UTR</th>
-                <th scope="col">Confirm</th>
+                <th scope="col">Score / UTR</th>
+                <th scope="col">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -353,25 +411,38 @@ export function JewellerFractionalVerifyPanel() {
                       {r.grams} g
                     </span>
                   </td>
-                  <td data-label="UTR">
-                    <strong className="tabular fractional-upi-utr-display">{r.upi_utr || '—'}</strong>
-                    {r.utr_submitted_at ? (
-                      <span style={{ display: 'block', fontSize: '0.72rem', color: 'var(--text-faint)' }}>
-                        Submitted {formatExpiryShort(r.utr_submitted_at)}
+                  <td data-label="Score / UTR">
+                    {r.reconciliation_score != null ? (
+                      <span style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700 }}>
+                        {r.reconciliation_score}% match
                       </span>
                     ) : null}
+                    <strong className="tabular fractional-upi-utr-display">{r.upi_utr || '—'}</strong>
                   </td>
-                  <td data-label="Confirm">
-                    <p style={{ margin: '0 0 0.5rem', fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>
-                      Check your UPI app for ₹{formatInr(r.total_inr)} and this UTR before confirming.
-                    </p>
+                  <td data-label="Actions">
                     <button
                       type="button"
                       className="btn btn-primary jeweller-purchases-verify-btn"
                       disabled={busyId != null}
                       onClick={() => void confirmUtr(r.id)}
                     >
-                      {busyId === r.id ? 'Confirming…' : 'Confirm payment & credit gold'}
+                      {busyId === r.id ? 'Approving…' : 'Approve'}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-ghost jeweller-purchases-verify-btn"
+                      style={{ marginTop: '0.35rem' }}
+                      disabled={busyId != null}
+                      onClick={async () => {
+                        setBusyId(r.id)
+                        setErr('')
+                        const out = await jewellerFractionalReject(r.id)
+                        if (!out.ok) setErr(out.detail)
+                        else await load()
+                        setBusyId(null)
+                      }}
+                    >
+                      Reject
                     </button>
                   </td>
                 </tr>

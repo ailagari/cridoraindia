@@ -73,6 +73,8 @@ export function CustomerGoldLoanPanel() {
   }
 
   function repaymentStatusHint(st: string): string {
+    if (st === 'pending_payment') return 'pay via UPI, then submit SMS or UTR'
+    if (st === 'pending_review') return 'UPI payment awaiting jeweller review'
     if (st === 'pending_jeweller') return 'awaiting jeweller to accept'
     if (st === 'accepted_awaiting_otp') return 'pay cash at counter, then share OTP'
     return st.replace(/_/g, ' ')
@@ -214,7 +216,7 @@ export function CustomerGoldLoanPanel() {
     void refreshVaultRates()
   }
 
-  const onRepay = async (loan: GoldLoanActiveDTO, payFull: boolean) => {
+  const onRepay = async (loan: GoldLoanActiveDTO, payFull: boolean, paymentMethod: 'cash' | 'upi' = 'cash') => {
     const amount = payFull ? loan.principal_outstanding_inr : (repayDraft[loan.id] ?? '').trim()
     if (!amount || Number.parseFloat(amount) <= 0) {
       setActionErr('Enter a valid repayment amount.')
@@ -222,7 +224,7 @@ export function CustomerGoldLoanPanel() {
     }
     setBusyRepayId(loan.id)
     setActionErr('')
-    const out = await postGoldLoanRepay(loan.id, amount)
+    const out = await postGoldLoanRepay(loan.id, amount, paymentMethod)
     setBusyRepayId(null)
     if (!out.ok) {
       setActionErr(out.detail)
@@ -572,7 +574,16 @@ export function CustomerGoldLoanPanel() {
                     disabled={busyRepayId === loan.id}
                     onClick={() => void onRepay(loan, true)}
                   >
-                    Submit full
+                    Repay cash
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-ghost"
+                    style={{ fontSize: '0.72rem' }}
+                    disabled={busyRepayId === loan.id}
+                    onClick={() => void onRepay(loan, true, 'upi')}
+                  >
+                    Repay via UPI
                   </button>
                 </div>
               )}

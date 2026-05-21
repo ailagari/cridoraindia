@@ -200,6 +200,7 @@ export async function fetchGoldLoanAccounts(): Promise<GoldLoanAccountsDTO | nul
 export async function postGoldLoanRepay(
   loanId: number,
   amountInr: string,
+  paymentMethod: 'cash' | 'upi' = 'cash',
 ): Promise<
   | {
       ok: true
@@ -212,7 +213,7 @@ export async function postGoldLoanRepay(
 > {
   const res = await authFetch(`/api/v1/gold/loans/${loanId}/repay/`, {
     method: 'POST',
-    jsonBody: { amount_inr: amountInr },
+    jsonBody: { amount_inr: amountInr, payment_method: paymentMethod },
   })
   const j = (await res.json().catch(() => ({}))) as {
     detail?: string

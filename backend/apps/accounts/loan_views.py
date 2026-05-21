@@ -18,6 +18,7 @@ from .loan_service import (
     customer_vault_loan_rates,
     jeweller_accept_loan,
     jeweller_accept_loan_repayment,
+    jeweller_approve_loan_repayment_upi,
     jeweller_complete_loan_repayment_with_otp,
     jeweller_complete_loan_with_otp,
     jeweller_open_loan_repayments,
@@ -234,7 +235,10 @@ class GoldLoanRepayView(APIView):
             amount = Decimal(str(raw))
         except (InvalidOperation, TypeError):
             return Response({"detail": "amount_inr required."}, status=status.HTTP_400_BAD_REQUEST)
-        req, otp_plain, err = customer_initiate_loan_repayment(user, pk, amount)
+        pay_method = str(request.data.get("payment_method") or "cash").strip().lower()
+        req, otp_plain, err = customer_initiate_loan_repayment(
+            user, pk, amount, payment_method=pay_method
+        )
         if err or req is None:
             return Response({"detail": err or "Repayment failed."}, status=status.HTTP_400_BAD_REQUEST)
         from .models import GoldLoanRepaymentRequest
@@ -243,17 +247,20 @@ class GoldLoanRepayView(APIView):
             GoldLoanRepaymentRequest.objects.select_related("loan__jeweller", "settlement_otp")
             .get(pk=req.pk)
         )
-        otp_row = getattr(req, "settlement_otp", None)
-        expires_iso = otp_row.expires_at.isoformat() if otp_row else ""
-        body: dict = {
-            "detail": (
+        body: dict = {"repayment": _serialize_repayment_request(req)}
+        if req.payment_method == GoldLoanRepaymentRequest.PAY_UPI:
+            body["detail"] = (
+                "Repayment started. Pay via UPI, then submit SMS or UTR for confirmation."
+            )
+        else:
+            otp_row = getattr(req, "settlement_otp", None)
+            expires_iso = otp_row.expires_at.isoformat() if otp_row else ""
+            body["detail"] = (
                 "Repayment submitted. Pay cash at the counter, then share your OTP with the jeweller."
-            ),
-            "repayment": _serialize_repayment_request(req),
-        }
-        if otp_plain:
-            body["otp_code"] = otp_plain
-            body["otp_expires_at"] = expires_iso
+            )
+            if otp_plain:
+                body["otp_code"] = otp_plain
+                body["otp_expires_at"] = expires_iso
         return Response(body, status=status.HTTP_201_CREATED)
 
 
@@ -447,6 +454,25 @@ class JewellerLoanRepaymentRejectView(APIView):
         if not ok:
             return Response({"detail": err}, status=status.HTTP_400_BAD_REQUEST)
         return Response({"detail": "Repayment request rejected."})
+
+
+class JewellerLoanRepaymentApproveUpiView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk: int):
+        user = request.user
+        if user.user_type != User.JEWELLER:
+            return Response({"detail": "Jewellers only."}, status=status.HTTP_403_FORBIDDEN)
+        req, loan_payload, err = jeweller_approve_loan_repayment_upi(user, pk)
+        if err or req is None:
+            return Response({"detail": err or "Could not approve."}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {
+                "detail": "UPI repayment approved.",
+                "repayment": _serialize_repayment_request(req),
+                "loan": loan_payload,
+            }
+        )
 
 
 class JewellerLoanRepaymentCompleteView(APIView):

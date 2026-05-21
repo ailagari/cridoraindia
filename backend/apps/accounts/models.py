@@ -403,16 +403,24 @@ class FractionalGoldPurchase(models.Model):
     """Customer buys fractional gold from a jeweller; counter sales need jeweller verification before credit."""
 
     PENDING_PAYMENT = "pending_payment"
+    SIGNAL_RECEIVED = "signal_received"
     AWAITING_COUNTER = "awaiting_counter"
     AWAITING_UTR_VERIFY = "awaiting_utr_verify"
+    PENDING_REVIEW = "pending_review"
+    NEEDS_MANUAL_VERIFICATION = "needs_manual_verification"
     COMPLETED = "completed"
+    REJECTED = "rejected"
     CANCELLED = "cancelled"
 
     STATUS_CHOICES = [
         (PENDING_PAYMENT, "Pending payment"),
+        (SIGNAL_RECEIVED, "Payment signal received"),
         (AWAITING_COUNTER, "Awaiting counter confirmation"),
         (AWAITING_UTR_VERIFY, "Awaiting UTR verification"),
+        (PENDING_REVIEW, "Pending jeweller review"),
+        (NEEDS_MANUAL_VERIFICATION, "Needs manual verification"),
         (COMPLETED, "Completed"),
+        (REJECTED, "Rejected"),
         (CANCELLED, "Cancelled"),
     ]
 
@@ -464,14 +472,147 @@ class FractionalGoldPurchase(models.Model):
         help_text="Customer-submitted UPI reference number.",
     )
     utr_submitted_at = models.DateTimeField(null=True, blank=True)
+    reconciliation_score = models.PositiveSmallIntegerField(null=True, blank=True)
+    reconciliation_flags = models.JSONField(default=dict, blank=True)
+    reconciled_at = models.DateTimeField(null=True, blank=True)
+    confirmed_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="fractional_purchases_confirmed",
+    )
+    best_payment_signal = models.ForeignKey(
+        "PaymentSignal",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+    )
+    payment_signal_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ["-created_at"]
 
+    @property
+    def order_reference(self) -> str:
+        return f"CR-{self.pk}"
+
     def __str__(self):
         return f"FractionalGoldPurchase({self.customer_id}, {self.grams}g, {self.status})"
+
+
+class PaymentSignal(models.Model):
+    """Inbound payment evidence for UPI reconciliation."""
+
+    SOURCE_UPI_INTENT = "upi_intent"
+    SOURCE_USER_INPUT = "user_input"
+    SOURCE_SMS_PARSE = "sms_parse"
+    SOURCE_JEWELLER_CONFIRMATION = "jeweller_confirmation"
+
+    SOURCE_CHOICES = [
+        (SOURCE_UPI_INTENT, "UPI intent metadata"),
+        (SOURCE_USER_INPUT, "User input"),
+        (SOURCE_SMS_PARSE, "SMS parse"),
+        (SOURCE_JEWELLER_CONFIRMATION, "Jeweller confirmation"),
+    ]
+
+    fractional_purchase = models.ForeignKey(
+        FractionalGoldPurchase,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="payment_signals",
+    )
+    loan_repayment = models.ForeignKey(
+        "GoldLoanRepaymentRequest",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="payment_signals",
+    )
+    order_id_hint = models.CharField(
+        max_length=32,
+        blank=True,
+        help_text="Unmatched SMS hint, e.g. CR-42 or LRP-7.",
+    )
+    amount_inr = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True)
+    timestamp = models.DateTimeField()
+    upi_vpa = models.CharField(max_length=128, blank=True)
+    utr = models.CharField(max_length=32, blank=True)
+    sms_reference = models.TextField(blank=True)
+    source = models.CharField(max_length=32, choices=SOURCE_CHOICES)
+    parsed_payload = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+
+class PlatformSettlementBatch(models.Model):
+    """Aggregated platform fee settlement period per jeweller."""
+
+    jeweller = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="platform_settlement_batches",
+        limit_choices_to={"user_type": User.JEWELLER},
+    )
+    period_label = models.CharField(max_length=64)
+    net_payable_inr = models.DecimalField(max_digits=18, decimal_places=2)
+    settled_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+
+class PlatformCommercialLedgerEntry(models.Model):
+    """Cridora platform spread/fee owed by jeweller (separate from operational gram ledger)."""
+
+    KIND_SPREAD_FEE = "spread_fee"
+
+    KIND_CHOICES = [(KIND_SPREAD_FEE, "Spread fee")]
+
+    STATUS_PENDING_SETTLEMENT = "pending_settlement"
+    STATUS_SETTLED = "settled"
+
+    STATUS_CHOICES = [
+        (STATUS_PENDING_SETTLEMENT, "Pending settlement"),
+        (STATUS_SETTLED, "Settled"),
+    ]
+
+    jeweller = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="platform_commercial_entries",
+        limit_choices_to={"user_type": User.JEWELLER},
+    )
+    fractional_purchase = models.ForeignKey(
+        FractionalGoldPurchase,
+        on_delete=models.CASCADE,
+        related_name="platform_commercial_entries",
+    )
+    amount_inr = models.DecimalField(max_digits=14, decimal_places=2)
+    kind = models.CharField(max_length=32, choices=KIND_CHOICES, default=KIND_SPREAD_FEE)
+    status = models.CharField(
+        max_length=32,
+        choices=STATUS_CHOICES,
+        default=STATUS_PENDING_SETTLEMENT,
+    )
+    settlement_batch = models.ForeignKey(
+        PlatformSettlementBatch,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="entries",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
 
 
 class GoldSellbackRequest(models.Model):
@@ -705,21 +846,33 @@ class GoldLoanRepayment(models.Model):
 
 
 class GoldLoanRepaymentRequest(models.Model):
-    """Customer-initiated cash repayment awaiting jeweller OTP confirmation."""
+    """Customer-initiated repayment (cash OTP or UPI reconciliation)."""
 
+    STATUS_PENDING_PAYMENT = "pending_payment"
+    STATUS_SIGNAL_RECEIVED = "signal_received"
     STATUS_PENDING_JEWELLER = "pending_jeweller"
+    STATUS_PENDING_REVIEW = "pending_review"
+    STATUS_NEEDS_MANUAL_VERIFICATION = "needs_manual_verification"
     STATUS_REJECTED = "rejected"
     STATUS_ACCEPTED_AWAITING_OTP = "accepted_awaiting_otp"
     STATUS_COMPLETED = "completed"
     STATUS_CANCELLED = "cancelled"
 
     STATUS_CHOICES = [
+        (STATUS_PENDING_PAYMENT, "Pending UPI payment"),
+        (STATUS_SIGNAL_RECEIVED, "Payment signal received"),
         (STATUS_PENDING_JEWELLER, "Pending jeweller"),
+        (STATUS_PENDING_REVIEW, "Pending jeweller review"),
+        (STATUS_NEEDS_MANUAL_VERIFICATION, "Needs manual verification"),
         (STATUS_REJECTED, "Rejected"),
         (STATUS_ACCEPTED_AWAITING_OTP, "Accepted awaiting OTP"),
         (STATUS_COMPLETED, "Completed"),
         (STATUS_CANCELLED, "Cancelled"),
     ]
+
+    PAY_CASH = "cash"
+    PAY_UPI = "upi"
+    PAYMENT_CHOICES = [(PAY_CASH, "Cash"), (PAY_UPI, "UPI")]
 
     loan = models.ForeignKey(
         GoldLoanRequest,
@@ -727,16 +880,48 @@ class GoldLoanRepaymentRequest(models.Model):
         related_name="repayment_requests",
     )
     amount_inr = models.DecimalField(max_digits=16, decimal_places=2)
+    payment_method = models.CharField(
+        max_length=16,
+        choices=PAYMENT_CHOICES,
+        default=PAY_CASH,
+    )
     status = models.CharField(
         max_length=32,
         choices=STATUS_CHOICES,
         default=STATUS_PENDING_JEWELLER,
     )
+    payee_upi_vpa = models.CharField(max_length=128, blank=True)
+    payment_note = models.CharField(max_length=128, blank=True)
+    payment_expires_at = models.DateTimeField(null=True, blank=True)
+    upi_utr = models.CharField(max_length=32, blank=True)
+    utr_submitted_at = models.DateTimeField(null=True, blank=True)
+    reconciliation_score = models.PositiveSmallIntegerField(null=True, blank=True)
+    reconciliation_flags = models.JSONField(default=dict, blank=True)
+    reconciled_at = models.DateTimeField(null=True, blank=True)
+    confirmed_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="loan_repayments_confirmed",
+    )
+    best_payment_signal = models.ForeignKey(
+        PaymentSignal,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+    )
+    payment_signal_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ["-updated_at", "-created_at"]
+
+    @property
+    def order_reference(self) -> str:
+        return f"LRP-{self.pk}"
 
     def __str__(self):
         return f"GoldLoanRepaymentRequest(loan={self.loan_id}, ₹{self.amount_inr})"

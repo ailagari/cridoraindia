@@ -40,6 +40,7 @@ def _ser_purchase(p: FractionalGoldPurchase) -> dict:
     row = {
         "id": p.id,
         "reference": f"FR-{p.id}",
+        "order_reference": p.order_reference,
         "jeweller": _ser_jeweller_brief(p.jeweller),
         "metal_rate_inr_per_gram": str(p.metal_rate_inr_per_gram),
         "grams": str(p.grams),
@@ -65,6 +66,8 @@ def _ser_purchase(p: FractionalGoldPurchase) -> dict:
         row["utr_submitted_at"] = (
             p.utr_submitted_at.isoformat() if p.utr_submitted_at else None
         )
+        row["reconciliation_score"] = p.reconciliation_score
+        row["reconciliation_flags"] = p.reconciliation_flags or {}
     return row
 
 
@@ -231,6 +234,11 @@ class FractionalOrdersView(APIView):
             )
             p.payment_note = payment_note_for(p.id)
             p.save(update_fields=["payment_note", "updated_at"])
+            from apps.accounts.services.payment_reconciliation.signals import (
+                capture_upi_intent_signal,
+            )
+
+            capture_upi_intent_signal(p)
             return Response(_ser_purchase(p), status=status.HTTP_201_CREATED)
 
         p = FractionalGoldPurchase.objects.create(
@@ -301,33 +309,17 @@ class FractionalCounterOtpPolicyView(APIView):
 
 
 class FractionalOrderConfirmUpiView(APIView):
-    """Legacy UPI self-confirm — disabled for new orders; retained for migration hooks."""
+    """Legacy UPI self-confirm — disabled; use reconciliation flow."""
 
     permission_classes = [IsAuthenticated]
 
     def post(self, request, pk: int):
-        if request.user.user_type != User.CUSTOMER:
-            return Response(
-                {"detail": "Customers only."},
-                status=status.HTTP_403_FORBIDDEN,
-            )
-        try:
-            with transaction.atomic():
-                purchase = FractionalGoldPurchase.objects.select_for_update().get(
-                    pk=pk,
-                    customer=request.user,
-                    payment_method=FractionalGoldPurchase.PAY_UPI,
-                    status=FractionalGoldPurchase.PENDING_PAYMENT,
-                )
-                apply_fractional_purchase_credit_and_liabilities(purchase)
-        except FractionalGoldPurchase.DoesNotExist:
-            return Response(
-                {
-                    "detail": "Order not found or not awaiting UPI payment confirmation.",
-                },
-                status=status.HTTP_404_NOT_FOUND,
-            )
-        return Response(_ser_purchase(purchase))
+        return Response(
+            {
+                "detail": "Self-confirm is disabled. Pay via UPI and submit UTR or payment SMS.",
+            },
+            status=status.HTTP_410_GONE,
+        )
 
 
 class JewellerFractionalPendingView(APIView):

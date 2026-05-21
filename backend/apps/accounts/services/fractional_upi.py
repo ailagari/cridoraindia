@@ -52,8 +52,12 @@ def payment_reference(purchase_id: int) -> str:
     return f"FR-{purchase_id}"
 
 
+def order_reference_cr(purchase_id: int) -> str:
+    return f"CR-{purchase_id}"
+
+
 def payment_note_for(purchase_id: int) -> str:
-    return f"Cridora {payment_reference(purchase_id)}"
+    return f"Cridora {order_reference_cr(purchase_id)}"
 
 
 def build_upi_pay_uri(
@@ -62,9 +66,11 @@ def build_upi_pay_uri(
     payee_name: str,
     amount_inr: Decimal,
     purchase_id: int,
+    transaction_ref: str | None = None,
+    payment_note: str | None = None,
 ) -> str:
-    ref = payment_reference(purchase_id)
-    note = payment_note_for(purchase_id)
+    ref = transaction_ref or payment_reference(purchase_id)
+    note = payment_note or payment_note_for(purchase_id)
     amount = format(amount_inr.quantize(Decimal("0.01")), "f")
     query = (
         f"pa={quote(vpa)}"
@@ -77,6 +83,25 @@ def build_upi_pay_uri(
     return f"upi://pay?{query}"
 
 
+def build_loan_repayment_upi_uri(
+    *,
+    vpa: str,
+    payee_name: str,
+    amount_inr: Decimal,
+    repayment_id: int,
+) -> str:
+    ref = f"LRP-{repayment_id}"
+    note = f"Cridora {ref}"
+    return build_upi_pay_uri(
+        vpa=vpa,
+        payee_name=payee_name,
+        amount_inr=amount_inr,
+        purchase_id=repayment_id,
+        transaction_ref=ref,
+        payment_note=note,
+    )
+
+
 def default_payment_expires_at():
     return timezone.now() + timedelta(minutes=PAYMENT_EXPIRY_MINUTES)
 
@@ -87,13 +112,27 @@ def is_payment_expired(purchase: FractionalGoldPurchase) -> bool:
     return timezone.now() > purchase.payment_expires_at
 
 
-def utr_already_used(utr: str, *, exclude_purchase_id: int | None = None) -> bool:
+def utr_already_used(
+    utr: str,
+    *,
+    exclude_purchase_id: int | None = None,
+    exclude_repayment_id: int | None = None,
+) -> bool:
+    from ..models import GoldLoanRepaymentRequest
+
     qs = FractionalGoldPurchase.objects.filter(upi_utr=utr).exclude(
         status=FractionalGoldPurchase.CANCELLED
     )
     if exclude_purchase_id is not None:
         qs = qs.exclude(pk=exclude_purchase_id)
-    return qs.exists()
+    if qs.exists():
+        return True
+    lr_qs = GoldLoanRepaymentRequest.objects.filter(upi_utr=utr).exclude(
+        status=GoldLoanRepaymentRequest.STATUS_CANCELLED
+    )
+    if exclude_repayment_id is not None:
+        lr_qs = lr_qs.exclude(pk=exclude_repayment_id)
+    return lr_qs.exists()
 
 
 def payment_payload_for(purchase: FractionalGoldPurchase) -> dict:
@@ -101,6 +140,7 @@ def payment_payload_for(purchase: FractionalGoldPurchase) -> dict:
     payee = jeweller_upi_payee_name(purchase.jeweller)
     return {
         "reference": payment_reference(purchase.id),
+        "order_reference": order_reference_cr(purchase.id),
         "payee_vpa": vpa,
         "payee_name": payee,
         "amount_inr": str(purchase.total_inr),
@@ -121,7 +161,10 @@ def payment_payload_for(purchase: FractionalGoldPurchase) -> dict:
 def cancel_upi_order(purchase: FractionalGoldPurchase) -> tuple[bool, str]:
     if purchase.payment_method != FractionalGoldPurchase.PAY_UPI:
         return False, "This order is not an online UPI purchase."
-    if purchase.status != FractionalGoldPurchase.PENDING_PAYMENT:
+    if purchase.status not in (
+        FractionalGoldPurchase.PENDING_PAYMENT,
+        FractionalGoldPurchase.SIGNAL_RECEIVED,
+    ):
         return False, "Only unpaid orders can be cancelled."
     purchase.status = FractionalGoldPurchase.CANCELLED
     purchase.save(update_fields=["status", "updated_at"])
@@ -131,22 +174,32 @@ def cancel_upi_order(purchase: FractionalGoldPurchase) -> tuple[bool, str]:
 def submit_utr(purchase: FractionalGoldPurchase, raw_utr: str) -> tuple[bool, str]:
     if purchase.payment_method != FractionalGoldPurchase.PAY_UPI:
         return False, "This order is not an online UPI purchase."
-    if purchase.status != FractionalGoldPurchase.PENDING_PAYMENT:
+    if purchase.status not in (
+        FractionalGoldPurchase.PENDING_PAYMENT,
+        FractionalGoldPurchase.SIGNAL_RECEIVED,
+        FractionalGoldPurchase.PENDING_REVIEW,
+        FractionalGoldPurchase.NEEDS_MANUAL_VERIFICATION,
+    ):
         return False, "Order is not awaiting payment."
     if is_payment_expired(purchase):
         return False, "Payment window expired. Place a new order."
-    utr = normalize_utr(raw_utr)
-    if not utr:
-        return False, "Enter a valid UPI reference (8–20 letters or digits)."
-    if utr_already_used(utr, exclude_purchase_id=purchase.pk):
+    utr = normalize_utr(raw_utr) if (raw_utr or "").strip() else None
+    if utr and utr_already_used(utr, exclude_purchase_id=purchase.pk):
         return False, "This UPI reference is already linked to another order."
-    purchase.upi_utr = utr
-    purchase.utr_submitted_at = timezone.now()
-    purchase.status = FractionalGoldPurchase.AWAITING_UTR_VERIFY
-    purchase.save(
-        update_fields=["upi_utr", "utr_submitted_at", "status", "updated_at"]
+    from apps.accounts.services.payment_reconciliation.signals import (
+        capture_user_input_signal,
     )
-    return True, "UTR submitted. Waiting for jeweller verification."
+    from apps.accounts.services.payment_reconciliation.engine import run_reconciliation
+
+    capture_user_input_signal(purchase, utr=utr or "")
+    run_reconciliation(purchase)
+    if purchase.status == FractionalGoldPurchase.COMPLETED:
+        return True, "Payment confirmed. Gold credited to your vault."
+    if purchase.status == FractionalGoldPurchase.PENDING_REVIEW:
+        return True, "Payment submitted. Awaiting jeweller review."
+    if purchase.status == FractionalGoldPurchase.NEEDS_MANUAL_VERIFICATION:
+        return True, "Payment submitted. Jeweller will verify manually."
+    return True, "Payment signal received."
 
 
 def confirm_utr_for_jeweller(purchase: FractionalGoldPurchase, jeweller) -> tuple[bool, str]:
