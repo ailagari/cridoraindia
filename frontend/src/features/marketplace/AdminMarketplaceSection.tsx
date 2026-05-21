@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
+import { AdminFractionalMarkupPanel } from '@/features/admin/AdminFractionalMarkupPanel'
 import { authFetch } from '@/lib/api'
 import { LIVE_ADMIN_TICKER_POLL_MS } from '@/lib/liveDeskIntervals'
 import { useLivePoll } from '@/lib/useLivePoll'
@@ -452,13 +453,19 @@ export function AdminGoldTickerPanel() {
   }
 
   return (
-    <section className="card admin-ticker-panel" style={{ padding: 0, borderRadius: 18, overflow: 'hidden' }}>
+    <>
+      <div style={{ marginBottom: '1.25rem' }}>
+        <AdminFractionalMarkupPanel />
+      </div>
+
+      <section className="card admin-ticker-panel" style={{ padding: 0, borderRadius: 18, overflow: 'hidden' }}>
       <header className="admin-ticker-panel__head">
         <h2 className="dash-coming__title" style={{ marginTop: 0 }}>
           Ticker &amp; fees
         </h2>
         <p className="dash-coming__text" style={{ marginBottom: 0, fontSize: '0.82rem', maxWidth: '52rem' }}>
           Configure live metal rates, alerts, and <strong>all platform fees and storefront disclosures</strong> here.{' '}
+          <strong>Fractional investment markup</strong> (above) applies on top of jeweller board rates for vault purchases.{' '}
           <strong>Live:</strong> markup on international raw spot, then deduction — jewellers and customers see the published
           live market column. <strong>Manual:</strong> fixed 22K/24K gold only (no row rules). Push alerts are configured under{' '}
           <strong>Pushes &amp; alerts</strong>.
@@ -814,6 +821,7 @@ export function AdminGoldTickerPanel() {
       ) : null}
       </div>
     </section>
+    </>
   )
 }
 

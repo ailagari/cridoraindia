@@ -492,7 +492,12 @@ export function AdminDashboardPage() {
                 },
                 {
                   label: 'Update gold ticker',
-                  description: 'Rates and platform controls',
+                  description: 'Rates and platform fees',
+                  onClick: () => setSection('plat_gold'),
+                },
+                {
+                  label: 'Fractional markup',
+                  description: 'Platform markup on fractional gold buys',
                   onClick: () => setSection('plat_gold'),
                 },
               ]}

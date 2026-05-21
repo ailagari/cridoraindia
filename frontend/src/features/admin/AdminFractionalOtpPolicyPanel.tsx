@@ -1,15 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import { authFetch } from '@/lib/api'
-
-type PolicyState = {
-  otpSeconds: number
-  markupPercent: string
-}
+import { AdminFractionalMarkupPanel } from '@/features/admin/AdminFractionalMarkupPanel'
 
 export function AdminFractionalOtpPolicyPanel() {
-  const [policy, setPolicy] = useState<PolicyState | null>(null)
+  const [otpSeconds, setOtpSeconds] = useState<number | null>(null)
   const [otpDraft, setOtpDraft] = useState('')
-  const [markupDraft, setMarkupDraft] = useState('')
   const [loadErr, setLoadErr] = useState('')
   const [saveErr, setSaveErr] = useState('')
   const [busy, setBusy] = useState(false)
@@ -19,24 +14,21 @@ export function AdminFractionalOtpPolicyPanel() {
     const res = await authFetch('/api/v1/admin/fractional-counter-otp-policy/')
     const data = (await res.json().catch(() => ({}))) as {
       fractional_counter_otp_ttl_seconds?: number
-      fractional_markup_percent?: string
       detail?: string
     }
     if (!res.ok) {
-      setPolicy(null)
-      setLoadErr(data.detail != null ? String(data.detail) : 'Could not load fractional policy.')
+      setOtpSeconds(null)
+      setLoadErr(data.detail != null ? String(data.detail) : 'Could not load fractional OTP policy.')
       return
     }
     const s = data.fractional_counter_otp_ttl_seconds
-    const markup = data.fractional_markup_percent
-    if (typeof s !== 'number' || !Number.isFinite(s) || typeof markup !== 'string') {
+    if (typeof s !== 'number' || !Number.isFinite(s)) {
       setLoadErr('Unexpected response.')
-      setPolicy(null)
+      setOtpSeconds(null)
       return
     }
-    setPolicy({ otpSeconds: s, markupPercent: markup })
+    setOtpSeconds(s)
     setOtpDraft(String(s))
-    setMarkupDraft(markup)
   }, [])
 
   useEffect(() => {
@@ -50,23 +42,14 @@ export function AdminFractionalOtpPolicyPanel() {
       setSaveErr('Enter a whole number of seconds for OTP TTL.')
       return
     }
-    const markupNum = Number.parseFloat(markupDraft.trim())
-    if (!Number.isFinite(markupNum)) {
-      setSaveErr('Enter a valid markup percentage.')
-      return
-    }
     setBusy(true)
     try {
       const res = await authFetch('/api/v1/admin/fractional-counter-otp-policy/', {
         method: 'PATCH',
-        jsonBody: {
-          fractional_counter_otp_ttl_seconds: n,
-          fractional_markup_percent: markupDraft.trim(),
-        },
+        jsonBody: { fractional_counter_otp_ttl_seconds: n },
       })
       const data = (await res.json().catch(() => ({}))) as {
         fractional_counter_otp_ttl_seconds?: number
-        fractional_markup_percent?: string
         detail?: string
       }
       if (!res.ok) {
@@ -74,50 +57,26 @@ export function AdminFractionalOtpPolicyPanel() {
         return
       }
       const s = data.fractional_counter_otp_ttl_seconds
-      const markup = data.fractional_markup_percent
-      if (typeof s === 'number' && Number.isFinite(s) && typeof markup === 'string') {
-        setPolicy({ otpSeconds: s, markupPercent: markup })
+      if (typeof s === 'number' && Number.isFinite(s)) {
+        setOtpSeconds(s)
         setOtpDraft(String(s))
-        setMarkupDraft(markup)
       }
     } finally {
       setBusy(false)
     }
   }
 
-  const mins = policy != null ? (policy.otpSeconds / 60).toFixed(2) : null
+  const mins = otpSeconds != null ? (otpSeconds / 60).toFixed(2) : null
 
   return (
     <div className="dash-panel-max">
       <h2 className="dash-table-title">Fractional investment policy</h2>
 
-      <div className="card" style={{ maxWidth: 480, padding: '1.25rem', marginBottom: '1.25rem' }}>
-        <h3 style={{ margin: '0 0 0.75rem', fontSize: '1rem' }}>Platform markup</h3>
-        <p style={{ margin: '0 0 1rem', fontSize: '0.88rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
-          Added on top of each jeweller&apos;s board rate when customers quote or buy fractional gold.
-          Allowed range: <strong>0%</strong> through <strong>100%</strong>.
-        </p>
-
-        {policy != null ? (
-          <p style={{ margin: '0 0 0.75rem', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
-            Current markup: <strong className="tabular">{policy.markupPercent}%</strong>
-          </p>
-        ) : null}
-
-        <div className="field">
-          <label htmlFor="admin-fractional-markup">Markup (%)</label>
-          <input
-            id="admin-fractional-markup"
-            type="text"
-            inputMode="decimal"
-            value={markupDraft}
-            onChange={(e) => setMarkupDraft(e.target.value)}
-            disabled={busy || policy == null}
-          />
-        </div>
+      <div style={{ marginBottom: '1.25rem' }}>
+        <AdminFractionalMarkupPanel />
       </div>
 
-      <div className="card" style={{ maxWidth: 480, padding: '1.25rem' }}>
+      <div className="card" style={{ maxWidth: 560, padding: '1.25rem' }}>
         <h3 style={{ margin: '0 0 0.75rem', fontSize: '1rem' }}>Counter OTP validity</h3>
         <p style={{ margin: '0 0 1rem', fontSize: '0.88rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
           Customers see a live countdown on their verification code. When it hits zero they must generate a new OTP.
@@ -126,9 +85,9 @@ export function AdminFractionalOtpPolicyPanel() {
 
         {loadErr ? <p className="form-error">{loadErr}</p> : null}
 
-        {policy != null ? (
+        {otpSeconds != null ? (
           <p style={{ margin: '0 0 0.75rem', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
-            Current TTL: <strong className="tabular">{policy.otpSeconds}</strong> seconds (~{mins} min).
+            Current TTL: <strong className="tabular">{otpSeconds}</strong> seconds (~{mins} min).
           </p>
         ) : null}
 
@@ -140,14 +99,14 @@ export function AdminFractionalOtpPolicyPanel() {
             inputMode="numeric"
             value={otpDraft}
             onChange={(e) => setOtpDraft(e.target.value)}
-            disabled={busy || policy == null}
+            disabled={busy || otpSeconds == null}
           />
         </div>
 
         {saveErr ? <p className="form-error">{saveErr}</p> : null}
 
-        <button type="button" className="btn btn-primary" disabled={busy || policy == null} onClick={() => void save()}>
-          Save policy
+        <button type="button" className="btn btn-primary" disabled={busy || otpSeconds == null} onClick={() => void save()}>
+          Save OTP policy
         </button>
       </div>
     </div>
