@@ -24,6 +24,12 @@ def jeweller_metal_rate_inr_per_gram(jeweller: User) -> Decimal:
     return reference_metal_rate_inr_per_gram_for_jeweller(profile, cridora_base)
 
 
+def platform_metal_rate_inr_per_gram() -> Decimal:
+    """Cridora 22K reference from admin ticker & fees (not jeweller board spread)."""
+    base, _ = resolve_cridora_base_22k_inr()
+    return base.quantize(Decimal("0.01"))
+
+
 def apply_fractional_platform_markup(base_rate: Decimal) -> Decimal:
     markup = fractional_markup_percent()
     if markup <= 0:
@@ -32,8 +38,9 @@ def apply_fractional_platform_markup(base_rate: Decimal) -> Decimal:
     return (base_rate * factor).quantize(Decimal("0.01"))
 
 
-def fractional_metal_rate_inr_per_gram(jeweller: User) -> Decimal:
-    return apply_fractional_platform_markup(jeweller_metal_rate_inr_per_gram(jeweller))
+def fractional_metal_rate_inr_per_gram(_jeweller: User | None = None) -> Decimal:
+    """Customer fractional buy rate: platform ticker reference + admin markup."""
+    return apply_fractional_platform_markup(platform_metal_rate_inr_per_gram())
 
 
 def breakdown_from_grams(grams: Decimal, rate: Decimal) -> dict[str, Decimal]:

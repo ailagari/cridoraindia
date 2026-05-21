@@ -2,10 +2,10 @@ import { authFetch } from '@/lib/api'
 
 export type FractionalQuoteDTO = {
   jeweller: { id: number; business_name: string; city: string }
-  base_metal_rate_inr_per_gram?: string
-  fractional_markup_percent?: string
   metal_rate_inr_per_gram: string
-  jeweller_metal_rate_last_updated_at: string
+  metal_rate_last_updated_at: string
+  /** @deprecated use metal_rate_last_updated_at */
+  jeweller_metal_rate_last_updated_at?: string
   grams: string
   gold_value_inr_pre_gst: string
   gst_percent: string

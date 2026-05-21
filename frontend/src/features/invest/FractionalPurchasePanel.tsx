@@ -126,7 +126,7 @@ export function FractionalPurchasePanel() {
   useLivePoll(refreshOrders, LIVE_BALANCE_POLL_MS, !busy)
   useLivePoll(refreshWalletHint, LIVE_BALANCE_POLL_MS, !busy)
 
-  const runQuote = async () => {
+  const runQuote = useCallback(async () => {
     setQuoteErr('')
     setQuote(null)
     if (jewellerId === '') {
@@ -155,7 +155,26 @@ export function FractionalPurchasePanel() {
     } finally {
       setBusy(false)
     }
-  }
+  }, [gramsInput, inrInput, inputMode, jewellerId])
+
+  const refreshLiveQuote = useCallback(async () => {
+    if (busy || jewellerId === '' || quote == null) return
+    const out =
+      inputMode === 'by_grams'
+        ? await fractionalQuote({
+            jeweller_id: jewellerId,
+            mode: 'by_grams',
+            grams: gramsInput.trim(),
+          })
+        : await fractionalQuote({
+            jeweller_id: jewellerId,
+            mode: 'by_total_inr',
+            total_inr: inrInput.trim(),
+          })
+    if (out.ok) setQuote(out.data)
+  }, [busy, gramsInput, inrInput, inputMode, jewellerId, quote])
+
+  useLivePoll(refreshLiveQuote, LIVE_BALANCE_POLL_MS, !busy && quote != null && jewellerId !== '')
 
   const submitOrder = async () => {
     setOrderMsg('')
@@ -224,7 +243,7 @@ export function FractionalPurchasePanel() {
       <div className="page-header page-header--compact">
         <div className="page-header__text">
           <h1 className="page-header__title">Buy gold</h1>
-          <p className="page-header__sub">At jeweller's live rate · UPI or counter</p>
+          <p className="page-header__sub">At Cridora live rate · UPI or counter</p>
         </div>
         {otpPolicySeconds != null ? (
           <span className="badge badge--neutral" title="Counter OTP validity">
@@ -301,15 +320,11 @@ export function FractionalPurchasePanel() {
               <div className="fractional-buy-quote-stack">
                 <p className="fractional-buy-quote-row" style={{ color: 'var(--text-muted)' }}>
                   Rate/g <strong className="tabular">₹{formatInr(quote.metal_rate_inr_per_gram)}</strong>
-                  {quote.fractional_markup_percent &&
-                  Number.parseFloat(quote.fractional_markup_percent) > 0 &&
-                  quote.base_metal_rate_inr_per_gram ? (
-                    <span style={{ fontSize: 'var(--ts-caption)', marginLeft: 6 }}>
-                      (board ₹{formatInr(quote.base_metal_rate_inr_per_gram)} + {quote.fractional_markup_percent}% platform)
-                    </span>
-                  ) : null}
                   <span style={{ fontSize: 'var(--ts-caption)', marginLeft: 6 }}>
-                    · updated {formatJewellerMetalRateAsOf(quote.jeweller_metal_rate_last_updated_at) ?? '—'}
+                    · updated{' '}
+                    {formatJewellerMetalRateAsOf(
+                      quote.metal_rate_last_updated_at ?? quote.jeweller_metal_rate_last_updated_at,
+                    ) ?? '—'}
                   </span>
                 </p>
                 <p className="fractional-buy-quote-row" style={{ color: 'var(--text-muted)' }}>

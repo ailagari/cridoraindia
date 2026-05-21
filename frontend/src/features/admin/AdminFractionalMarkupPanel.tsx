@@ -68,7 +68,8 @@ export function AdminFractionalMarkupPanel({ compact = false }: AdminFractionalM
         Fractional investment markup
       </h3>
       <p style={{ margin: '0 0 1rem', fontSize: '0.88rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
-        Added on top of each jeweller&apos;s board rate when customers quote or buy fractional gold.
+        Applied on the Cridora ticker reference rate (Ticker &amp; fees) for fractional vault purchases. Customers see one
+        live rate — this markup is included silently, not shown as a separate spread.
         Allowed range: <strong>0%</strong> through <strong>100%</strong>.
       </p>
 

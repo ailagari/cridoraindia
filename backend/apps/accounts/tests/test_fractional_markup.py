@@ -1,4 +1,4 @@
-"""Fractional purchase pricing with platform markup."""
+"""Fractional purchase pricing with platform ticker + admin markup."""
 
 from decimal import Decimal
 
@@ -9,16 +9,32 @@ from rest_framework.test import APITestCase
 from apps.accounts.fractional_service import (
     apply_fractional_platform_markup,
     fractional_metal_rate_inr_per_gram,
-    jeweller_metal_rate_inr_per_gram,
+    platform_metal_rate_inr_per_gram,
 )
 from apps.accounts.models import PlatformOperationalSettings
 from apps.accounts.services.platform_operational import set_fractional_markup_percent
-from apps.marketplace.models import JewellerPricingProfile, jeweller_profile_for
+from apps.marketplace.models import JewellerPricingProfile, get_or_create_ticker, jeweller_profile_for
 
 User = get_user_model()
 
 
+def _seed_platform_ticker_22k(rate: str) -> None:
+    ticker = get_or_create_ticker()
+    ticker.manual_ticker_enabled = True
+    ticker.ticker_manual_22k_inr_per_gram = Decimal(rate)
+    ticker.save(
+        update_fields=[
+            "manual_ticker_enabled",
+            "ticker_manual_22k_inr_per_gram",
+            "updated_at",
+        ]
+    )
+
+
 class FractionalMarkupServiceTests(TestCase):
+    def setUp(self):
+        _seed_platform_ticker_22k("7000.00")
+
     def test_apply_fractional_platform_markup_zero(self):
         self.assertEqual(
             apply_fractional_platform_markup(Decimal("7000.00")),
@@ -33,9 +49,30 @@ class FractionalMarkupServiceTests(TestCase):
             Decimal("7175.00"),
         )
 
+    def test_fractional_rate_uses_platform_ticker_not_jeweller_board(self):
+        PlatformOperationalSettings.load()
+        set_fractional_markup_percent("5")
+        jeweller = User.objects.create_user(
+            "board_j@test.com",
+            "pass",
+            user_type=User.JEWELLER,
+            kyc_status=User.KYC_VERIFIED,
+            jeweller_code="boardj",
+            gold_handle_local="boardjv",
+        )
+        profile = jeweller_profile_for(jeweller)
+        profile.gold_rate_source = JewellerPricingProfile.GOLD_RATE_MANUAL
+        profile.manual_gold_rate_inr_per_gram = Decimal("9000.00")
+        profile.default_gold_markup_percent = Decimal("10")
+        profile.save()
+
+        self.assertEqual(platform_metal_rate_inr_per_gram(), Decimal("7000.00"))
+        self.assertEqual(fractional_metal_rate_inr_per_gram(), Decimal("7350.00"))
+
 
 class FractionalMarkupApiTests(APITestCase):
     def setUp(self):
+        _seed_platform_ticker_22k("7000.00")
         PlatformOperationalSettings.load()
         set_fractional_markup_percent("5")
 
@@ -50,7 +87,7 @@ class FractionalMarkupApiTests(APITestCase):
         )
         profile = jeweller_profile_for(self.jeweller)
         profile.gold_rate_source = JewellerPricingProfile.GOLD_RATE_MANUAL
-        profile.manual_gold_rate_inr_per_gram = Decimal("7000.00")
+        profile.manual_gold_rate_inr_per_gram = Decimal("9000.00")
         profile.save()
 
         self.customer = User.objects.create_user(
@@ -62,16 +99,9 @@ class FractionalMarkupApiTests(APITestCase):
             default_jeweller=self.jeweller,
         )
 
-    def test_fractional_rate_includes_platform_markup(self):
-        base = jeweller_metal_rate_inr_per_gram(self.jeweller)
-        rate = fractional_metal_rate_inr_per_gram(self.jeweller)
-        expected = (base * Decimal("1.05")).quantize(Decimal("0.01"))
-        self.assertEqual(rate, expected)
-
-    def test_quote_uses_marked_up_rate(self):
+    def test_quote_uses_platform_ticker_with_markup(self):
         self.client.force_authenticate(self.customer)
-        base = jeweller_metal_rate_inr_per_gram(self.jeweller)
-        marked = (base * Decimal("1.05")).quantize(Decimal("0.01"))
+        marked = Decimal("7350.00")
         res = self.client.post(
             "/api/v1/fractional/quote/",
             {
@@ -82,9 +112,10 @@ class FractionalMarkupApiTests(APITestCase):
             format="json",
         )
         self.assertEqual(res.status_code, 200, res.data)
-        self.assertEqual(res.data["base_metal_rate_inr_per_gram"], str(base))
-        self.assertEqual(res.data["fractional_markup_percent"], "5.000")
         self.assertEqual(res.data["metal_rate_inr_per_gram"], str(marked))
+        self.assertNotIn("base_metal_rate_inr_per_gram", res.data)
+        self.assertNotIn("fractional_markup_percent", res.data)
+        self.assertIn("metal_rate_last_updated_at", res.data)
         self.assertEqual(res.data["gold_value_inr_pre_gst"], str(marked))
         gst = (marked * Decimal("0.03")).quantize(Decimal("0.01"))
         self.assertEqual(res.data["total_inr"], str((marked + gst).quantize(Decimal("0.01"))))
