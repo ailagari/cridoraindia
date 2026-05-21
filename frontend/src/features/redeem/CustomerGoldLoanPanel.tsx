@@ -20,6 +20,7 @@ import {
 } from '@/lib/goldLoanApi'
 import { LIVE_BALANCE_POLL_MS } from '@/lib/liveDeskIntervals'
 import { useLivePoll } from '@/lib/useLivePoll'
+import { fetchPlatformFeatures, isFeatureEnabled } from '@/lib/platformFeatures'
 
 function parseG(s: string): number {
   const n = Number.parseFloat(s)
@@ -65,6 +66,12 @@ export function CustomerGoldLoanPanel() {
   } | null>(null)
   const [busyRepayRegen, setBusyRepayRegen] = useState(false)
   const compareSeq = useRef(0)
+  const [featureFlags, setFeatureFlags] = useState<Record<string, boolean> | null>(null)
+  const loanRepaymentUpiEnabled = isFeatureEnabled(featureFlags, 'loan_repayment_upi')
+
+  useEffect(() => {
+    void fetchPlatformFeatures().then((p) => setFeatureFlags(p?.flags ?? null))
+  }, [])
 
   function loanStatusHint(st: string): string {
     if (st === 'pending_jeweller') return 'awaiting jeweller'
@@ -576,15 +583,17 @@ export function CustomerGoldLoanPanel() {
                   >
                     Repay cash
                   </button>
-                  <button
-                    type="button"
-                    className="btn btn-ghost"
-                    style={{ fontSize: '0.72rem' }}
-                    disabled={busyRepayId === loan.id}
-                    onClick={() => void onRepay(loan, true, 'upi')}
-                  >
-                    Repay via UPI
-                  </button>
+                  {loanRepaymentUpiEnabled ? (
+                    <button
+                      type="button"
+                      className="btn btn-ghost"
+                      style={{ fontSize: '0.72rem' }}
+                      disabled={busyRepayId === loan.id}
+                      onClick={() => void onRepay(loan, true, 'upi')}
+                    >
+                      Repay via UPI
+                    </button>
+                  ) : null}
                 </div>
               )}
             </div>

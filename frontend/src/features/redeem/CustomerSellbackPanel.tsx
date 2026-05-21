@@ -14,6 +14,7 @@ import { DashSegmentPair } from '@/components/DashSegmentPair'
 import { SellbackUpiConfirmStep } from '@/features/redeem/SellbackUpiConfirmStep'
 import { LIVE_BALANCE_POLL_MS } from '@/lib/liveDeskIntervals'
 import { useLivePoll } from '@/lib/useLivePoll'
+import { fetchPlatformFeatures, isFeatureEnabled } from '@/lib/platformFeatures'
 
 function parseG(s: string): number {
   const n = Number.parseFloat(s)
@@ -71,6 +72,9 @@ export function CustomerSellbackPanel() {
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'upi'>('cash')
   const [payoutUpiVpa, setPayoutUpiVpa] = useState('')
   const [busyUpi, setBusyUpi] = useState(false)
+  const [featureFlags, setFeatureFlags] = useState<Record<string, boolean> | null>(null)
+
+  const sellbackUpiEnabled = isFeatureEnabled(featureFlags, 'sellback_upi')
 
   const refreshWallet = useCallback(async () => {
     setLoadErr('')
@@ -89,10 +93,21 @@ export function CustomerSellbackPanel() {
   }, [])
 
   useEffect(() => {
+    void fetchPlatformFeatures().then((p) => setFeatureFlags(p?.flags ?? null))
+  }, [])
+
+  useEffect(() => {
+    if (!sellbackUpiEnabled && paymentMethod === 'upi') {
+      setPaymentMethod('cash')
+    }
+  }, [sellbackUpiEnabled, paymentMethod])
+
+  useEffect(() => {
+    if (!sellbackUpiEnabled) return
     void fetchCustomerPayoutUpiProfile().then((out) => {
       if (out.ok && out.data.payout_upi_vpa) setPayoutUpiVpa(out.data.payout_upi_vpa)
     })
-  }, [])
+  }, [sellbackUpiEnabled])
 
   useEffect(() => {
     void refreshWallet()
@@ -279,9 +294,12 @@ export function CustomerSellbackPanel() {
     <div className="dash-panel-max pf-scope">
       <h2 className="dash-panel-title">Cash sellback</h2>
       <p className="dash-panel-lead">
-        Sell vault gold back to your <strong>custodian jeweller</strong> at their buyback ₹/g. Choose{' '}
-        <strong>cash at counter</strong> (OTP settlement) or <strong>UPI payout</strong> (jeweller pays your UPI ID,
-        you confirm receipt).
+        Sell vault gold back to your <strong>custodian jeweller</strong> at their buyback ₹/g.{' '}
+        <strong>Cash at counter</strong> uses OTP settlement — share the code only after you receive cash at the
+        showroom.
+        {sellbackUpiEnabled
+          ? ' You can also choose UPI payout (jeweller pays your UPI ID; you confirm receipt).'
+          : null}
       </p>
 
       {loadErr ? <p className="form-error">{loadErr}</p> : null}
@@ -332,7 +350,8 @@ export function CustomerSellbackPanel() {
               </p>
             </div>
           ) : null}
-          {upiOutstanding.map((o) => (
+          {sellbackUpiEnabled
+            ? upiOutstanding.map((o) => (
             <SellbackUpiConfirmStep
               key={o.id}
               row={o}
@@ -344,7 +363,8 @@ export function CustomerSellbackPanel() {
               }}
               onSuccess={(msg) => setSuccessMsg(msg)}
             />
-          ))}
+              ))
+            : null}
           {outstanding.length > 0 ? (
             <ul style={{ margin: 0, paddingLeft: '1.1rem', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
               {outstanding.map((o) => (
@@ -422,18 +442,20 @@ export function CustomerSellbackPanel() {
             </button>
           </div>
 
-          <fieldset style={{ border: 'none', padding: 0, margin: '1rem 0 0' }}>
-            <legend className="fractional-buy-legend">Payout method</legend>
-            <DashSegmentPair
-              items={[...PAYOUT_METHODS]}
-              value={paymentMethod}
-              onChange={(id) => setPaymentMethod(id as 'cash' | 'upi')}
-              ariaLabel="Payout method"
-              className="fractional-buy-payment-segments"
-            />
-          </fieldset>
+          {sellbackUpiEnabled ? (
+            <fieldset style={{ border: 'none', padding: 0, margin: '1rem 0 0' }}>
+              <legend className="fractional-buy-legend">Payout method</legend>
+              <DashSegmentPair
+                items={[...PAYOUT_METHODS]}
+                value={paymentMethod}
+                onChange={(id) => setPaymentMethod(id as 'cash' | 'upi')}
+                ariaLabel="Payout method"
+                className="fractional-buy-payment-segments"
+              />
+            </fieldset>
+          ) : null}
 
-          {paymentMethod === 'upi' ? (
+          {sellbackUpiEnabled && paymentMethod === 'upi' ? (
             <div className="field" style={{ marginTop: '0.75rem' }}>
               <label htmlFor="sellback-payout-upi">Your UPI ID (receive payout)</label>
               <input

@@ -18,6 +18,7 @@ from .fractional_service import (
     validate_minimums,
 )
 from .models import FractionalCounterOtp, FractionalGoldPurchase
+from .platform_features import require_feature_enabled
 from .services.fractional_upi import (
     default_payment_expires_at,
     jeweller_upi_vpa,
@@ -182,13 +183,21 @@ class FractionalOrdersView(APIView):
                 {"detail": "payment_method must be counter or upi."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        if pay == FractionalGoldPurchase.PAY_UPI and not jeweller_upi_vpa(jeweller):
-            return Response(
-                {
-                    "detail": "This jeweller has not configured online UPI yet. Use counter or choose another jeweller.",
-                },
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        if pay == FractionalGoldPurchase.PAY_UPI:
+            blocked = require_feature_enabled("fractional_upi_reconciliation")
+            if blocked is not None:
+                return blocked
+            if not jeweller_upi_vpa(jeweller):
+                return Response(
+                    {
+                        "detail": "This jeweller has not configured online UPI yet. Use counter or choose another jeweller.",
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+        elif pay == FractionalGoldPurchase.PAY_COUNTER:
+            blocked = require_feature_enabled("fractional_counter")
+            if blocked is not None:
+                return blocked
         mode = (request.data.get("mode") or "").strip().lower()
         rate = fractional_metal_rate_inr_per_gram()
         try:
@@ -268,6 +277,9 @@ class FractionalCounterOtpIssueView(APIView):
                 {"detail": "Customers only."},
                 status=status.HTTP_403_FORBIDDEN,
             )
+        blocked = require_feature_enabled("fractional_counter")
+        if blocked is not None:
+            return blocked
         try:
             with transaction.atomic():
                 purchase = FractionalGoldPurchase.objects.select_for_update().get(

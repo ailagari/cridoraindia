@@ -10,6 +10,7 @@ from rest_framework.views import APIView
 from apps.marketplace.models import jeweller_profile_for
 
 from .fractional_reconciliation_views import JewellerFractionalApproveView
+from .platform_features import FeatureGatedViewMixin
 from .fractional_views import _ser_purchase
 from .models import FractionalGoldPurchase
 from .services.fractional_upi import (
@@ -24,7 +25,8 @@ from .services.fractional_upi import (
 User = get_user_model()
 
 
-class FractionalOrderPaymentView(APIView):
+class FractionalOrderPaymentView(FeatureGatedViewMixin, APIView):
+    feature_key = "fractional_upi_reconciliation"
     """Payment instructions for a pending UPI fractional order."""
 
     permission_classes = [IsAuthenticated]
@@ -50,7 +52,8 @@ class FractionalOrderPaymentView(APIView):
         return Response(payload)
 
 
-class FractionalOrderSubmitUtrView(APIView):
+class FractionalOrderSubmitUtrView(FeatureGatedViewMixin, APIView):
+    feature_key = "fractional_upi_reconciliation"
     """Customer submits UPI reference after paying the jeweller."""
 
     permission_classes = [IsAuthenticated]
@@ -85,7 +88,8 @@ class FractionalOrderSubmitUtrView(APIView):
         return Response(_ser_purchase(purchase))
 
 
-class FractionalOrderCancelUpiView(APIView):
+class FractionalOrderCancelUpiView(FeatureGatedViewMixin, APIView):
+    feature_key = "fractional_upi_reconciliation"
     """Customer cancels an unpaid UPI fractional order."""
 
     permission_classes = [IsAuthenticated]
@@ -117,7 +121,8 @@ class FractionalOrderCancelUpiView(APIView):
         return Response(_ser_purchase(purchase))
 
 
-class JewellerFractionalPendingUpiView(APIView):
+class JewellerFractionalPendingUpiView(FeatureGatedViewMixin, APIView):
+    feature_key = "fractional_upi_reconciliation"
     permission_classes = [IsAuthenticated]
 
     def get(self, request):

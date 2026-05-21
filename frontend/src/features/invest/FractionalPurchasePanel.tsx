@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { fetchVerifiedJewellers, type JewellerStorefrontDTO } from '@/lib/marketplaceApi'
 import {
@@ -18,6 +18,7 @@ import { LIVE_BALANCE_POLL_MS } from '@/lib/liveDeskIntervals'
 import { useLivePoll } from '@/lib/useLivePoll'
 import { formatJewellerMetalRateAsOf } from '@/features/marketplace/productPricing'
 import { Badge, Button, Card, CardHeader, Input, Select } from '@/components/ui'
+import { fetchPlatformFeatures, isFeatureEnabled } from '@/lib/platformFeatures'
 
 function formatInr(s: string): string {
   const n = Number.parseFloat(s)
@@ -52,8 +53,30 @@ export function FractionalPurchasePanel() {
   const [paymentMethod, setPaymentMethod] = useState<'upi' | 'counter'>('upi')
   const [successToast, setSuccessToast] = useState('')
   const [activeUpiOrder, setActiveUpiOrder] = useState<FractionalPurchaseDTO | null>(null)
+  const [featureFlags, setFeatureFlags] = useState<Record<string, boolean> | null>(null)
+
+  const fractionalUpiEnabled = isFeatureEnabled(featureFlags, 'fractional_upi_reconciliation')
+  const fractionalCounterEnabled = isFeatureEnabled(featureFlags, 'fractional_counter')
+  const paymentMethods = useMemo(() => {
+    return PAYMENT_METHODS.filter((m) => {
+      if (m.id === 'upi') return fractionalUpiEnabled
+      if (m.id === 'counter') return fractionalCounterEnabled
+      return true
+    })
+  }, [fractionalUpiEnabled, fractionalCounterEnabled])
 
   const otpCountdown = useCounterOtpCountdown(otpReveal?.expiresAt ?? null)
+
+  useEffect(() => {
+    void fetchPlatformFeatures().then((p) => setFeatureFlags(p?.flags ?? null))
+  }, [])
+
+  useEffect(() => {
+    if (paymentMethods.length === 0) return
+    if (!paymentMethods.some((m) => m.id === paymentMethod)) {
+      setPaymentMethod(paymentMethods[0].id as 'upi' | 'counter')
+    }
+  }, [paymentMethods, paymentMethod])
 
   useEffect(() => {
     if (!successToast) return
@@ -340,19 +363,23 @@ export function FractionalPurchasePanel() {
             </Card>
           ) : null}
 
-          <fieldset style={{ border: 'none', padding: 0, margin: 0 }}>
-            <legend className="fractional-buy-legend">Payment method</legend>
-            <DashSegmentPair
-              items={[...PAYMENT_METHODS]}
-              value={paymentMethod}
-              onChange={(id) => setPaymentMethod(id as 'upi' | 'counter')}
-              ariaLabel="Payment method"
-              className="fractional-buy-payment-segments"
-            />
-          </fieldset>
+          {paymentMethods.length > 0 ? (
+            <fieldset style={{ border: 'none', padding: 0, margin: 0 }}>
+              <legend className="fractional-buy-legend">Payment method</legend>
+              <DashSegmentPair
+                items={paymentMethods}
+                value={paymentMethod}
+                onChange={(id) => setPaymentMethod(id as 'upi' | 'counter')}
+                ariaLabel="Payment method"
+                className="fractional-buy-payment-segments"
+              />
+            </fieldset>
+          ) : null}
 
           <p style={{ margin: 0, fontSize: 'var(--ts-caption)', color: 'var(--text-faint)', lineHeight: 1.4 }}>
-            {paymentMethod === 'upi' ? 'Pay via GPay / PhonePe · paste UTR after payment' : 'Pay at showroom · show OTP to jeweller'}
+            {paymentMethod === 'upi'
+              ? 'Pay via GPay / PhonePe · paste UTR after payment'
+              : 'Pay at showroom · show OTP to jeweller'}
           </p>
 
           <Input label="Reference note" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Receipt id" />

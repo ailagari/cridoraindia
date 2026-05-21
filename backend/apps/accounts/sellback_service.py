@@ -127,6 +127,13 @@ def create_pending_sellback_with_otp(
         GoldSellbackRequest.PAY_UPI,
     ) else GoldSellbackRequest.PAY_CASH
 
+    from .platform_features import is_feature_enabled
+
+    if method == GoldSellbackRequest.PAY_UPI and not is_feature_enabled("sellback_upi"):
+        return None, "UPI sellback is not available.", None
+    if method == GoldSellbackRequest.PAY_CASH and not is_feature_enabled("sellback_cash"):
+        return None, "Cash sellback is not available.", None
+
     payout_vpa = ""
     if method == GoldSellbackRequest.PAY_UPI:
         normalized = normalize_upi_vpa(payout_upi_vpa)

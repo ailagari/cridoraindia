@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { DashboardLayout } from '@/components/DashboardLayout'
 import { CustomerJewellersBrowsePanel } from '@/features/marketplace/CustomerJewellersBrowsePanel'
@@ -25,6 +25,11 @@ import {
   CUSTOMER_NAV_GROUPS,
   normalizeCustomerSection,
 } from '@/lib/mobileNav/customerNav'
+import {
+  fetchPlatformFeatures,
+  filterCustomerNav,
+  type PlatformFeaturesPayload,
+} from '@/lib/platformFeatures'
 
 function customerTitle(section: string): string {
   const row = CUSTOMER_NAV_GROUPS.flatMap((g) => g.items).find((i) => i.sectionKey === section)
@@ -39,12 +44,22 @@ export function CustomerDashboardPage() {
   const { refreshProfile } = useAuth()
   const [params, setParams] = useSearchParams()
   const rawSection = params.get('section')
+  const [features, setFeatures] = useState<PlatformFeaturesPayload | null>(null)
 
   useEffect(() => {
     void refreshProfile()
   }, [refreshProfile])
 
+  useEffect(() => {
+    void fetchPlatformFeatures().then(setFeatures)
+  }, [])
+
   useLivePoll(refreshProfile, LIVE_PROFILE_POLL_MS, true)
+
+  const navGroups = useMemo(
+    () => filterCustomerNav(CUSTOMER_NAV_GROUPS, features?.customer_sections),
+    [features],
+  )
 
   const normalized = normalizeCustomerSection(rawSection)
   const active = normalized ?? CUSTOMER_DEFAULT_SECTION
@@ -91,12 +106,19 @@ export function CustomerDashboardPage() {
     }
   }, [rawSection, setParams])
 
+  useEffect(() => {
+    if (!features?.customer_sections) return
+    if (features.customer_sections[active] === false) {
+      setSection(CUSTOMER_DEFAULT_SECTION)
+    }
+  }, [features, active, setSection])
+
   const head = useMemo(() => customerTitle(active), [active])
 
   return (
     <DashboardLayout
       role="customer"
-      navGroups={CUSTOMER_NAV_GROUPS}
+      navGroups={navGroups}
       activeSection={active}
       onSectionChange={setSection}
       title={head}

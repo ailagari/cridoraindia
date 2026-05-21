@@ -1267,6 +1267,11 @@ class PlatformOperationalSettings(models.Model):
         validators=[MinValueValidator(Decimal("0")), MaxValueValidator(Decimal("100"))],
         help_text="Platform markup on fractional purchase metal rate (0–100%).",
     )
+    feature_flags = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Admin overrides for platform feature rollout (key -> bool).",
+    )
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:

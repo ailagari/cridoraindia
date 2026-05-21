@@ -8,6 +8,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import GoldSellbackRequest
+from .platform_features import FeatureGatedViewMixin
 from .sellback_service import customer_confirm_sellback_utr
 from .sellback_views import _serialize_customer_outstanding, _serialize_sellback_jeweller
 from .services.sellback_upi import (
@@ -20,7 +21,8 @@ from .services.sellback_upi import (
 User = get_user_model()
 
 
-class CustomerPayoutUpiProfileView(APIView):
+class CustomerPayoutUpiProfileView(FeatureGatedViewMixin, APIView):
+    feature_key = "sellback_upi"
     """Customer configures UPI VPA for sellback payouts."""
 
     permission_classes = [IsAuthenticated]
@@ -61,7 +63,8 @@ class CustomerPayoutUpiProfileView(APIView):
         return Response({"payout_upi_vpa": vpa, "configured": True})
 
 
-class JewellerSellbackPayoutView(APIView):
+class JewellerSellbackPayoutView(FeatureGatedViewMixin, APIView):
+    feature_key = "sellback_upi"
     """Payout instructions for an accepted UPI sellback."""
 
     permission_classes = [IsAuthenticated]
@@ -81,7 +84,8 @@ class JewellerSellbackPayoutView(APIView):
         return Response(payload)
 
 
-class JewellerSellbackSubmitUtrView(APIView):
+class JewellerSellbackSubmitUtrView(FeatureGatedViewMixin, APIView):
+    feature_key = "sellback_upi"
     """Jeweller submits UPI reference after paying the customer."""
 
     permission_classes = [IsAuthenticated]
@@ -107,7 +111,8 @@ class JewellerSellbackSubmitUtrView(APIView):
         return Response(_serialize_sellback_jeweller(row))
 
 
-class CustomerSellbackConfirmUtrView(APIView):
+class CustomerSellbackConfirmUtrView(FeatureGatedViewMixin, APIView):
+    feature_key = "sellback_upi"
     """Customer confirms UTR after receiving UPI payout."""
 
     permission_classes = [IsAuthenticated]
@@ -129,7 +134,8 @@ class CustomerSellbackConfirmUtrView(APIView):
         )
 
 
-class CustomerSellbackCancelUpiView(APIView):
+class CustomerSellbackCancelUpiView(FeatureGatedViewMixin, APIView):
+    feature_key = "sellback_upi"
     """Customer cancels a pending UPI sellback."""
 
     permission_classes = [IsAuthenticated]

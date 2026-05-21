@@ -618,6 +618,10 @@ def customer_initiate_loan_repayment(
     if pay not in (GoldLoanRepaymentRequest.PAY_CASH, GoldLoanRepaymentRequest.PAY_UPI):
         return None, None, "payment_method must be cash or upi."
     if pay == GoldLoanRepaymentRequest.PAY_UPI:
+        from apps.accounts.platform_features import is_feature_enabled
+
+        if not is_feature_enabled("loan_repayment_upi"):
+            return None, None, "Loan repayment via UPI is not available."
         from apps.accounts.services.fractional_upi import (
             default_payment_expires_at,
             jeweller_upi_vpa,

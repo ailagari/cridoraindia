@@ -8,6 +8,7 @@ import { useLivePoll } from '@/lib/useLivePoll'
 import { AdminPortfolioPanel } from '@/features/portfolio/AdminPortfolioPanel'
 import { AdminPersonalHoldingsPanel } from '@/features/portfolio/AdminPersonalHoldingsPanel'
 import { AdminFractionalOtpPolicyPanel } from '@/features/admin/AdminFractionalOtpPolicyPanel'
+import { AdminFeatureRolloutPanel } from '@/features/admin/AdminFeatureRolloutPanel'
 import { ChangePasswordPanel } from '@/features/auth/ChangePasswordPanel'
 import { AdminFestivalBroadcastPanel } from '@/features/admin/AdminFestivalBroadcastPanel'
 import { AdminGoldTickerPanel, AdminMarketplaceCatalogSetupPanel } from '@/features/marketplace/AdminMarketplaceSection'
@@ -697,17 +698,9 @@ export function AdminDashboardPage() {
 
         {active === 'plat_festival' ? <AdminFestivalBroadcastPanel /> : null}
 
-        {active === 'plat_control' ? (
-          <>
-            <AdminFractionalOtpPolicyPanel />
-            <div className="dash-coming dash-coming--ledger" style={{ marginTop: '1.5rem', maxWidth: 560 }}>
-              <h2 className="dash-coming__title">Other controls</h2>
-              <p className="dash-coming__text">
-                Emergency liquidity oversight, fee templates, and integration posture — Django admin remains authoritative until exposed here.
-              </p>
-            </div>
-          </>
-        ) : null}
+        {active === 'plat_control' ? <AdminFractionalOtpPolicyPanel /> : null}
+
+        {active === 'plat_features' ? <AdminFeatureRolloutPanel /> : null}
 
         {active === 'plat_security' ? (
           <ChangePasswordPanel />

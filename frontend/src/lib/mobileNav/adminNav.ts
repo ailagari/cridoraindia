@@ -49,6 +49,7 @@ export const ADMIN_NAV_GROUPS: DashboardNavGroup[] = [
       { sectionKey: 'plat_festival', label: 'Pushes & alerts' },
       { sectionKey: 'plat_gold', label: 'Ticker & fees' },
       { sectionKey: 'plat_control', label: 'Fractional policy' },
+      { sectionKey: 'plat_features', label: 'Feature rollout' },
       { sectionKey: 'plat_security', label: 'Password & security' },
       { sectionKey: 'plat_account', label: 'Account settings' },
     ],

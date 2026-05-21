@@ -16,6 +16,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .loan_service import _serialize_repayment_request
+from .platform_features import FeatureGatedViewMixin
 from .models import GoldLoanRepaymentRequest
 from .services.fractional_upi import (
     build_loan_repayment_upi_uri,
@@ -55,7 +56,8 @@ def _is_loan_payment_expired(req: GoldLoanRepaymentRequest) -> bool:
     return timezone.now() > req.payment_expires_at
 
 
-class LoanRepaymentPaymentView(APIView):
+class LoanRepaymentPaymentView(FeatureGatedViewMixin, APIView):
+    feature_key = "loan_repayment_upi"
     permission_classes = [IsAuthenticated]
 
     def get(self, request, pk: int):
@@ -94,7 +96,8 @@ class LoanRepaymentPaymentView(APIView):
         return Response(payload)
 
 
-class LoanRepaymentSubmitUtrView(APIView):
+class LoanRepaymentSubmitUtrView(FeatureGatedViewMixin, APIView):
+    feature_key = "loan_repayment_upi"
     permission_classes = [IsAuthenticated]
 
     def post(self, request, pk: int):
@@ -138,7 +141,8 @@ class LoanRepaymentSubmitUtrView(APIView):
         return Response(body)
 
 
-class LoanRepaymentPaymentAckView(APIView):
+class LoanRepaymentPaymentAckView(FeatureGatedViewMixin, APIView):
+    feature_key = "loan_repayment_upi"
     permission_classes = [IsAuthenticated]
 
     def post(self, request, pk: int):
@@ -165,7 +169,8 @@ class LoanRepaymentPaymentAckView(APIView):
         return Response(body)
 
 
-class LoanRepaymentPaymentSmsView(APIView):
+class LoanRepaymentPaymentSmsView(FeatureGatedViewMixin, APIView):
+    feature_key = "loan_repayment_upi"
     permission_classes = [IsAuthenticated]
 
     def post(self, request, pk: int):

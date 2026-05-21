@@ -14,6 +14,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .fractional_views import _ser_purchase
+from .platform_features import FeatureGatedViewMixin
 from .models import FractionalGoldPurchase
 from .services.fractional_upi import is_payment_expired
 from .services.payment_reconciliation.confirm import confirm_fractional_purchase
@@ -58,7 +59,8 @@ def _enrich_purchase_row(p: FractionalGoldPurchase) -> dict:
     return row
 
 
-class FractionalOrderPaymentAckView(APIView):
+class FractionalOrderPaymentAckView(FeatureGatedViewMixin, APIView):
+    feature_key = "fractional_upi_reconciliation"
     """Customer acknowledges payment without UTR."""
 
     permission_classes = [IsAuthenticated]
@@ -99,7 +101,8 @@ class FractionalOrderPaymentAckView(APIView):
         return Response(payload)
 
 
-class FractionalOrderPaymentSmsView(APIView):
+class FractionalOrderPaymentSmsView(FeatureGatedViewMixin, APIView):
+    feature_key = "fractional_upi_reconciliation"
     """Ingest bank SMS text (Android listener or paste)."""
 
     permission_classes = [IsAuthenticated]
@@ -163,7 +166,8 @@ class FractionalOrderPaymentSmsView(APIView):
         return Response(payload)
 
 
-class JewellerFractionalPendingReconciliationView(APIView):
+class JewellerFractionalPendingReconciliationView(FeatureGatedViewMixin, APIView):
+    feature_key = "fractional_upi_reconciliation"
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -209,7 +213,8 @@ class JewellerFractionalPendingReconciliationView(APIView):
         )
 
 
-class JewellerFractionalBulkApproveView(APIView):
+class JewellerFractionalBulkApproveView(FeatureGatedViewMixin, APIView):
+    feature_key = "fractional_upi_reconciliation"
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
@@ -252,7 +257,8 @@ class JewellerFractionalBulkApproveView(APIView):
         return Response({"approved": approved})
 
 
-class JewellerFractionalApproveView(APIView):
+class JewellerFractionalApproveView(FeatureGatedViewMixin, APIView):
+    feature_key = "fractional_upi_reconciliation"
     permission_classes = [IsAuthenticated]
 
     def post(self, request, pk: int):
@@ -295,7 +301,8 @@ class JewellerFractionalApproveView(APIView):
         return Response(_ser_purchase(purchase))
 
 
-class JewellerFractionalRejectView(APIView):
+class JewellerFractionalRejectView(FeatureGatedViewMixin, APIView):
+    feature_key = "fractional_upi_reconciliation"
     permission_classes = [IsAuthenticated]
 
     def post(self, request, pk: int):

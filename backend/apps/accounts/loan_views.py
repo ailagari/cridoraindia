@@ -7,6 +7,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .gold_identity import parse_grams
+from .platform_features import require_feature_enabled
 from .loan_service import (
     _serialize_loan_account,
     _serialize_repayment_request,
@@ -236,6 +237,10 @@ class GoldLoanRepayView(APIView):
         except (InvalidOperation, TypeError):
             return Response({"detail": "amount_inr required."}, status=status.HTTP_400_BAD_REQUEST)
         pay_method = str(request.data.get("payment_method") or "cash").strip().lower()
+        if pay_method == "upi":
+            blocked = require_feature_enabled("loan_repayment_upi")
+            if blocked is not None:
+                return blocked
         req, otp_plain, err = customer_initiate_loan_repayment(
             user, pk, amount, payment_method=pay_method
         )
@@ -460,6 +465,9 @@ class JewellerLoanRepaymentApproveUpiView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, pk: int):
+        blocked = require_feature_enabled("loan_repayment_upi")
+        if blocked is not None:
+            return blocked
         user = request.user
         if user.user_type != User.JEWELLER:
             return Response({"detail": "Jewellers only."}, status=status.HTTP_403_FORBIDDEN)

@@ -27,6 +27,7 @@ from .views_gold import (
     JewellerCustodyVaultsView,
     JewellerCustomerVaultLedgerView,
 )
+from .platform_features_views import AdminFeatureRolloutView, PlatformFeaturesView
 from .views_admin import (
     AdminCustomerKYCActionView,
     AdminDocumentRequestReuploadView,
@@ -395,6 +396,8 @@ urlpatterns = [
         "admin/fractional-counter-otp-policy/",
         AdminFractionalCounterOtpPolicyView.as_view(),
     ),
+    path("admin/feature-rollout/", AdminFeatureRolloutView.as_view()),
+    path("platform/features/", PlatformFeaturesView.as_view()),
     path("admin/notifications/", AdminNotificationsListView.as_view()),
     path("admin/notifications/mark-read/", AdminNotificationsMarkReadView.as_view()),
     path(

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { DashboardLayout } from '@/components/DashboardLayout'
 import { JewellerBusinessProfilePanel } from '@/features/jeweller/JewellerBusinessProfilePanel'
@@ -24,6 +24,12 @@ import {
   JEWELLER_NAV_GROUPS,
   normalizeJewellerSection,
 } from '@/lib/mobileNav/jewellerNav'
+import {
+  fetchPlatformFeatures,
+  filterJewellerNav,
+  isFeatureEnabled,
+  type PlatformFeaturesPayload,
+} from '@/lib/platformFeatures'
 
 function jewellerTitle(section: string): string {
   const hub = JEWELLER_NAV_GROUPS.find((g) => g.items.some((i) => i.sectionKey === section))
@@ -37,12 +43,24 @@ export function JewellerDashboardPage() {
   const { refreshProfile } = useAuth()
   const [params, setParams] = useSearchParams()
   const rawSection = params.get('section')
+  const [features, setFeatures] = useState<PlatformFeaturesPayload | null>(null)
 
   useEffect(() => {
     void refreshProfile()
   }, [refreshProfile])
 
+  useEffect(() => {
+    void fetchPlatformFeatures().then(setFeatures)
+  }, [])
+
   useLivePoll(refreshProfile, LIVE_PROFILE_POLL_MS, true)
+
+  const navGroups = useMemo(
+    () => filterJewellerNav(JEWELLER_NAV_GROUPS, features?.jeweller_sections),
+    [features],
+  )
+
+  const flags = features?.flags
 
   const normalized = normalizeJewellerSection(rawSection)
   const active = normalized ?? JEWELLER_DEFAULT_SECTION
@@ -59,12 +77,19 @@ export function JewellerDashboardPage() {
     else if (!n) setParams({}, { replace: true })
   }, [rawSection, setParams])
 
+  useEffect(() => {
+    if (!features?.jeweller_sections) return
+    if (features.jeweller_sections[active] === false) {
+      setSection(JEWELLER_DEFAULT_SECTION)
+    }
+  }, [features, active, setSection])
+
   const head = useMemo(() => jewellerTitle(active), [active])
 
   return (
     <DashboardLayout
       role="jeweller"
-      navGroups={JEWELLER_NAV_GROUPS}
+      navGroups={navGroups}
       activeSection={active}
       onSectionChange={setSection}
       title={head}
@@ -99,9 +124,11 @@ export function JewellerDashboardPage() {
       ) : null}
       {active === 'txn_ops' ? (
         <>
-          <JewellerSellbacksPanel />
-          <JewellerCrossRedemptionInboxPanel />
-          <JewellerOrnamentRedemptionsPanel />
+          {isFeatureEnabled(flags, 'sellback_cash') || isFeatureEnabled(flags, 'sellback_upi') ? (
+            <JewellerSellbacksPanel />
+          ) : null}
+          {isFeatureEnabled(flags, 'cross_redemption') ? <JewellerCrossRedemptionInboxPanel /> : null}
+          {isFeatureEnabled(flags, 'marketplace_redemption') ? <JewellerOrnamentRedemptionsPanel /> : null}
         </>
       ) : null}
       {active === 'txn_transfers' ? <GoldTransferPanel roleLabel="jeweller" /> : null}
