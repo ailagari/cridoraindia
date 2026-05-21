@@ -17,7 +17,11 @@ type PublicLocaleContextValue = {
 const PublicLocaleContext = createContext<PublicLocaleContextValue | null>(null)
 
 export function PublicLocaleProvider({ children }: { children: ReactNode }) {
-  const [locale, setLocaleState] = useState<PublicLocale>(() => readStoredPublicLocale())
+  const [locale, setLocaleState] = useState<PublicLocale>(() => {
+    const initial = readStoredPublicLocale()
+    applyDocumentLocale(initial)
+    return initial
+  })
 
   const setLocale = useCallback((next: PublicLocale) => {
     setLocaleState(next)

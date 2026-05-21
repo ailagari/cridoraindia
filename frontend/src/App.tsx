@@ -32,6 +32,7 @@ import { isNativePlatform } from '@/lib/capacitorPlatform'
 import '@/styles/index.css'
 import '@/styles/tokens.css'
 import '@/styles/ds.css'
+import '@/styles/malayalam-locale.css'
 
 const useHashRouter =
   import.meta.env.VITE_CAPACITOR_BUILD === 'true' || isNativePlatform()

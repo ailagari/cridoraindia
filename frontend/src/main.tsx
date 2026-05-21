@@ -2,7 +2,10 @@ import { StrictMode, type ReactNode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from '@/App'
 import { PwaUpdateBar } from '@/components/PwaUpdateBar'
+import { applyDocumentLocale, readStoredPublicLocale } from '@/i18n/engine'
 import '@/lib/pwaRegister'
+
+applyDocumentLocale(readStoredPublicLocale())
 
 function showBootError(message: string): void {
   const root = document.getElementById('root')
