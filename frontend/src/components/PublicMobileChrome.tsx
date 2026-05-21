@@ -1,41 +1,42 @@
 import { NavLink, useLocation } from 'react-router-dom'
 import { NotificationBell } from '@/components/NotificationBell'
 import { PublicTabIcon } from '@/components/PublicTabIcon'
+import { usePublicLocale } from '@/i18n/PublicLocaleProvider'
 
-function topForPath(pathname: string): { to: string; label: string }[] {
+function topForPath(pathname: string, t: (key: string) => string): { to: string; label: string }[] {
   if (pathname === '/') {
     return [
-      { to: '/', label: 'Overview' },
-      { to: '/how-it-works', label: 'Flow' },
-      { to: '/waitlist', label: 'Waitlist' },
+      { to: '/', label: t('mobile.overview') },
+      { to: '/how-it-works', label: t('mobile.flow') },
+      { to: '/waitlist', label: t('nav.waitlist') },
     ]
   }
   if (pathname.startsWith('/discover') || pathname.startsWith('/why-cridora') || pathname.startsWith('/features')) {
     return [
-      { to: '/discover', label: 'Hub' },
-      { to: '/why-cridora', label: 'Why' },
-      { to: '/features', label: 'Features' },
+      { to: '/discover', label: t('mobile.hub') },
+      { to: '/why-cridora', label: t('mobile.why') },
+      { to: '/features', label: t('mobile.features') },
     ]
   }
   if (pathname.startsWith('/shop') || pathname.startsWith('/jewellers') || pathname.startsWith('/marketplace')) {
     return [
-      { to: '/shop', label: 'Hub' },
-      { to: '/jewellers', label: 'Jewellers' },
-      { to: '/marketplace', label: 'Products' },
+      { to: '/shop', label: t('mobile.hub') },
+      { to: '/jewellers', label: t('nav.jewellers') },
+      { to: '/marketplace', label: t('nav.products') },
     ]
   }
   if (pathname.startsWith('/join') || pathname.startsWith('/signup') || pathname.startsWith('/jeweller/apply')) {
     return [
-      { to: '/join', label: 'Hub' },
-      { to: '/signup', label: 'Saver' },
-      { to: '/jeweller/apply', label: 'Jeweller' },
+      { to: '/join', label: t('mobile.hub') },
+      { to: '/signup', label: t('mobile.saver') },
+      { to: '/jeweller/apply', label: t('mobile.jeweller') },
     ]
   }
   if (pathname.startsWith('/how-it-works')) {
     return [
-      { to: '/how-it-works', label: 'Flow' },
-      { to: '/jewellers', label: 'Network' },
-      { to: '/waitlist', label: 'Waitlist' },
+      { to: '/how-it-works', label: t('mobile.flow') },
+      { to: '/jewellers', label: t('mobile.network') },
+      { to: '/waitlist', label: t('nav.waitlist') },
     ]
   }
   return []
@@ -43,7 +44,8 @@ function topForPath(pathname: string): { to: string; label: string }[] {
 
 export function PublicMobileChrome() {
   const { pathname } = useLocation()
-  const pills = topForPath(pathname)
+  const { t } = usePublicLocale()
+  const pills = topForPath(pathname, (key) => t(key as Parameters<typeof t>[0]))
 
   const isShopPath =
     pathname.startsWith('/shop') ||
@@ -86,7 +88,7 @@ export function PublicMobileChrome() {
               <span className="mobile-tab-ico">
                 <PublicTabIcon tab="home" active={isActive} />
               </span>
-              <span className="mobile-tab-label">Home</span>
+              <span className="mobile-tab-label">{t('mobile.home')}</span>
             </>
           )}
         </NavLink>
@@ -101,7 +103,7 @@ export function PublicMobileChrome() {
               <span className="mobile-tab-ico">
                 <PublicTabIcon tab="discover" active={discoverActive || isActive} />
               </span>
-              <span className="mobile-tab-label">Discover</span>
+              <span className="mobile-tab-label">{t('mobile.discover')}</span>
             </>
           )}
         </NavLink>
@@ -116,7 +118,7 @@ export function PublicMobileChrome() {
               <span className="mobile-tab-ico">
                 <PublicTabIcon tab="shop" active={isShopPath || isActive} />
               </span>
-              <span className="mobile-tab-label">Shop</span>
+              <span className="mobile-tab-label">{t('mobile.shop')}</span>
             </>
           )}
         </NavLink>
@@ -131,7 +133,7 @@ export function PublicMobileChrome() {
               <span className="mobile-tab-ico">
                 <PublicTabIcon tab="how" active={isActive} />
               </span>
-              <span className="mobile-tab-label">How</span>
+              <span className="mobile-tab-label">{t('mobile.how')}</span>
             </>
           )}
         </NavLink>
@@ -146,7 +148,7 @@ export function PublicMobileChrome() {
               <span className="mobile-tab-ico">
                 <PublicTabIcon tab="join" active={isJoinPath || isActive} />
               </span>
-              <span className="mobile-tab-label">Join</span>
+              <span className="mobile-tab-label">{t('mobile.join')}</span>
             </>
           )}
         </NavLink>
@@ -158,7 +160,7 @@ export function PublicMobileChrome() {
 export function PublicHeaderActions() {
   return (
     <div className="public-header-actions">
-      <NotificationBell compact />
+      <NotificationBell compact localeScope="public" />
     </div>
   )
 }

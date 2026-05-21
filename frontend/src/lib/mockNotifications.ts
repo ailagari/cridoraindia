@@ -1,3 +1,6 @@
+import type { MessageKey } from '@/i18n/messages/en'
+import { translate, readStoredPublicLocale } from '@/i18n/engine'
+
 export type AppNotification = {
   id: string
   title: string
@@ -5,44 +8,46 @@ export type AppNotification = {
   time: string
   read: boolean
   kind: 'transaction' | 'kyc' | 'alert' | 'promo'
-  /** In-app navigation when supported (admin feed). */
   link_path?: string
 }
 
-export const MOCK_NOTIFICATIONS: AppNotification[] = [
-  {
-    id: 'n1',
-    title: 'Ledger credit',
-    body: 'Fractional gold credited after UPI settlement · ref #CRD-9F2A',
-    time: 'Just now',
-    read: false,
-    kind: 'transaction',
-  },
-  {
-    id: 'n2',
-    title: 'KYC checkpoint',
-    body: 'Proof of address may be required if admin requests a re-upload.',
-    time: 'Yesterday',
-    read: false,
-    kind: 'kyc',
-  },
-  {
-    id: 'n3',
-    title: 'Spot price band',
-    body: 'Gold ₹/g moved within your alert range (illustrative demo data).',
-    time: 'May 10',
-    read: true,
-    kind: 'alert',
-  },
-  {
-    id: 'n4',
-    title: 'GoldNest window',
-    body: 'Early bird waivers on selected schemes — review before month end.',
-    time: 'May 8',
-    read: true,
-    kind: 'promo',
-  },
-]
+function baseMockRows(locale = readStoredPublicLocale()): AppNotification[] {
+  const t = (key: MessageKey) => translate(locale, key)
+  return [
+    {
+      id: 'n1',
+      title: t('notifications.mock.ledgerTitle'),
+      body: t('notifications.mock.ledgerBody'),
+      time: t('notifications.justNow'),
+      read: false,
+      kind: 'transaction',
+    },
+    {
+      id: 'n2',
+      title: t('notifications.mock.kycTitle'),
+      body: t('notifications.mock.kycBody'),
+      time: t('notifications.mock.yesterday'),
+      read: false,
+      kind: 'kyc',
+    },
+    {
+      id: 'n3',
+      title: t('notifications.mock.spotTitle'),
+      body: t('notifications.mock.spotBody'),
+      time: 'May 10',
+      read: true,
+      kind: 'alert',
+    },
+    {
+      id: 'n4',
+      title: t('notifications.mock.promoTitle'),
+      body: t('notifications.mock.promoBody'),
+      time: 'May 8',
+      read: true,
+      kind: 'promo',
+    },
+  ]
+}
 
 const GUEST_READ_KEY = 'cridora_mock_notification_read_ids_v1:guest'
 
@@ -62,21 +67,22 @@ function loadReadIdSet(key: string): Set<string> {
   }
 }
 
-function mergeMockWithReadIds(readIds: Set<string>): AppNotification[] {
-  return MOCK_NOTIFICATIONS.map((n) => ({
+function mergeMockWithReadIds(readIds: Set<string>, locale = readStoredPublicLocale()): AppNotification[] {
+  return baseMockRows(locale).map((n) => ({
     ...n,
     read: n.read || readIds.has(n.id),
   }))
 }
 
-/** Public / guest bell — restore read state from localStorage. */
-export function hydrateMockNotificationsForGuest(): AppNotification[] {
-  return mergeMockWithReadIds(loadReadIdSet(GUEST_READ_KEY))
+export function hydrateMockNotificationsForGuest(locale?: ReturnType<typeof readStoredPublicLocale>): AppNotification[] {
+  return mergeMockWithReadIds(loadReadIdSet(GUEST_READ_KEY), locale)
 }
 
-/** Merge demo rows with “mark read” choices persisted for this signed-in account (sample bell feed). */
-export function hydrateMockNotificationsForAccount(accountId: number): AppNotification[] {
-  return mergeMockWithReadIds(loadReadIdSet(readIdsStorageKey(accountId)))
+export function hydrateMockNotificationsForAccount(
+  accountId: number,
+  locale?: ReturnType<typeof readStoredPublicLocale>,
+): AppNotification[] {
+  return mergeMockWithReadIds(loadReadIdSet(readIdsStorageKey(accountId)), locale)
 }
 
 function persistReadIds(key: string, ids: string[]): void {
@@ -89,19 +95,19 @@ function persistReadIds(key: string, ids: string[]): void {
   }
 }
 
-/** Persist read ids for guest or signed-in preview feed. */
 export function persistMockNotificationReadIds(accountId: number | null, ids: string[]): void {
   const key = accountId == null ? GUEST_READ_KEY : readIdsStorageKey(accountId)
   persistReadIds(key, ids)
 }
 
-/** Persist that every demo notification id is read for this account or guest. */
 export function persistAllMockNotificationsRead(accountId: number | null): void {
   try {
-    const ids = MOCK_NOTIFICATIONS.map((n) => n.id)
+    const ids = baseMockRows().map((n) => n.id)
     const key = accountId == null ? GUEST_READ_KEY : readIdsStorageKey(accountId)
     localStorage.setItem(key, JSON.stringify(ids))
   } catch {
     /* quota / private mode */
   }
 }
+
+export const MOCK_NOTIFICATION_IDS = ['n1', 'n2', 'n3', 'n4']

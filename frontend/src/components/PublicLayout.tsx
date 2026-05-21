@@ -6,27 +6,30 @@ import { GoldTickerStrip } from '@/components/GoldTickerStrip'
 import { PublicMobileSegmentBar } from '@/components/PublicMobileSegmentBar'
 import { useAuth, type AuthUser } from '@/context/AuthContext'
 import { crossRedemptionMasterDisclaimer } from '@/features/crossRedemption/legalCopy'
+import { LanguageSwitcher, PublicLocaleProvider, usePublicLocale } from '@/i18n/PublicLocaleProvider'
 import { dashboardLandingPath } from '@/lib/routes'
-
-const primaryNav = [
-  { to: '/', label: 'Home' },
-  { to: '/how-it-works', label: 'How it works' },
-  { to: '/jewellers', label: 'Jewellers' },
-  { to: '/marketplace', label: 'Products' },
-  { to: '/waitlist', label: 'Waitlist' },
-] as const
 
 function publicDisplayName(user: AuthUser): string {
   const name = [user.first_name, user.last_name].filter(Boolean).join(' ').trim()
   return name || user.email
 }
 
-export function PublicLayout() {
+function PublicLayoutInner() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
+  const { t } = usePublicLocale()
+
+  const primaryNav = [
+    { to: '/', label: t('nav.home') },
+    { to: '/how-it-works', label: t('nav.howItWorks') },
+    { to: '/jewellers', label: t('nav.jewellers') },
+    { to: '/marketplace', label: t('nav.products') },
+    { to: '/waitlist', label: t('nav.waitlist') },
+  ] as const
 
   const dashboardHref = user ? dashboardLandingPath(user) : '/'
-  const mobileTitle = user ? publicDisplayName(user) : 'Guest'
+  const guestLabel = t('nav.guest')
+  const mobileTitle = user ? publicDisplayName(user) : guestLabel
 
   return (
     <div className="app-shell">
@@ -45,11 +48,12 @@ export function PublicLayout() {
             </nav>
             <span
               className="public-mobile-username"
-              title={mobileTitle !== 'Guest' ? mobileTitle : undefined}
+              title={mobileTitle !== guestLabel ? mobileTitle : undefined}
             >
               {mobileTitle}
             </span>
             <div className="public-header-end">
+              <LanguageSwitcher />
               <div className="public-mobile-actions">
                 <PublicHeaderActions />
                 <PublicMobileUserMenu />
@@ -61,7 +65,7 @@ export function PublicLayout() {
                 {user ? (
                   <>
                     <NavLink to={dashboardHref} className="nav-link">
-                      Dashboard
+                      {t('nav.dashboard')}
                     </NavLink>
                     <button
                       type="button"
@@ -72,19 +76,19 @@ export function PublicLayout() {
                         navigate('/')
                       }}
                     >
-                      Log out
+                      {t('nav.logOut')}
                     </button>
                   </>
                 ) : (
                   <>
                     <NavLink to="/login" className="nav-link">
-                      Login
+                      {t('nav.login')}
                     </NavLink>
                     <NavLink to="/signup" className="nav-link">
-                      Sign up
+                      {t('nav.signUp')}
                     </NavLink>
                     <NavLink to="/jeweller/apply" className="nav-link">
-                      Apply as jeweller
+                      {t('nav.applyJeweller')}
                     </NavLink>
                   </>
                 )}
@@ -111,23 +115,30 @@ export function PublicLayout() {
       >
         <div className="container">
           <p style={{ margin: '0 0 1rem', color: 'var(--text-muted)', maxWidth: '56ch', lineHeight: 1.55 }}>
-            Cridora connects verified jewellers and savers for India-first gold vaults, marketplace discovery, and supervised
-            redemption.
+            {t('footer.blurb')}
           </p>
           <p style={{ margin: '0 0 1rem', color: 'var(--text-faint)', maxWidth: '72ch', fontSize: '0.78rem' }}>
             {crossRedemptionMasterDisclaimer}
           </p>
           <div className="nav-links" style={{ gap: '0.75rem 1.25rem' }}>
-            <Link to="/why-cridora">Why Cridora</Link>
-            <Link to="/features">Features</Link>
-            <Link to="/how-it-works">How it works</Link>
-            <Link to="/investors">Investors</Link>
-            <Link to="/jewellers">Jewellers</Link>
-            <Link to="/marketplace">Products</Link>
-            <Link to="/waitlist">Waitlist</Link>
+            <Link to="/why-cridora">{t('footer.whyCridora')}</Link>
+            <Link to="/features">{t('footer.features')}</Link>
+            <Link to="/how-it-works">{t('nav.howItWorks')}</Link>
+            <Link to="/investors">{t('footer.investors')}</Link>
+            <Link to="/jewellers">{t('nav.jewellers')}</Link>
+            <Link to="/marketplace">{t('nav.products')}</Link>
+            <Link to="/waitlist">{t('nav.waitlist')}</Link>
           </div>
         </div>
       </footer>
     </div>
+  )
+}
+
+export function PublicLayout() {
+  return (
+    <PublicLocaleProvider>
+      <PublicLayoutInner />
+    </PublicLocaleProvider>
   )
 }

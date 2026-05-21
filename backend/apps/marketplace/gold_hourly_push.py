@@ -9,9 +9,12 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.accounts.push_payload import build_push_payload
-from apps.accounts.webpush_service import push_delivery_configured, send_push_broadcast
+from apps.accounts.webpush_service import push_delivery_configured, send_push_broadcast_localized
 
-from .gold_push_copy import format_gold_price_move_body
+from .gold_push_copy import (
+    format_gold_price_move_body,
+    gold_hourly_push_title,
+)
 from .models import GoldTickerConfig, get_or_create_ticker
 from .spot_prices import resolve_cridora_base_22k_inr
 
@@ -82,14 +85,23 @@ def run_hourly_gold_price_push_digest(*, force: bool = False) -> dict:
             result["current_inr"] = str(current)
             result["delta_inr"] = str(delta)
             return result
-        n = send_push_broadcast(
-            build_push_payload(
-                title=title,
-                body=body,
-                url=link,
-                tag="cridora-gold-hourly",
-                image_url=image_url or None,
-            )
+        n = send_push_broadcast_localized(
+            {
+                "en": build_push_payload(
+                    title=(title if title else gold_hourly_push_title("en")),
+                    body=format_gold_price_move_body(baseline=baseline, current=current, locale="en"),
+                    url=link,
+                    tag="cridora-gold-hourly",
+                    image_url=image_url or None,
+                ),
+                "ml": build_push_payload(
+                    title=gold_hourly_push_title("ml"),
+                    body=format_gold_price_move_body(baseline=baseline, current=current, locale="ml"),
+                    url=link,
+                    tag="cridora-gold-hourly",
+                    image_url=image_url or None,
+                ),
+            }
         )
         result["sent"] = True
         result["subscriptions_notified"] = n

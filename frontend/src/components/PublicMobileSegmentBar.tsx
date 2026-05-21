@@ -1,4 +1,5 @@
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import { usePublicLocale } from '@/i18n/PublicLocaleProvider'
 
 function isDiscoverPath(pathname: string): boolean {
   return pathname === '/discover' || pathname === '/why-cridora'
@@ -12,6 +13,7 @@ export function PublicMobileSegmentBar() {
   const { pathname, hash } = useLocation()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
+  const { t } = usePublicLocale()
 
   const discover = isDiscoverPath(pathname)
   const shop = isShopPath(pathname)
@@ -29,7 +31,10 @@ export function PublicMobileSegmentBar() {
   const shopProducts = pathname.startsWith('/marketplace')
 
   return (
-    <div className="public-mobile-segment-bar" aria-label={discover ? 'Discover audience' : 'Shop destination'}>
+    <div
+      className="public-mobile-segment-bar"
+      aria-label={discover ? t('mobile.discoverAudience') : t('mobile.shopDestination')}
+    >
       <div className="container public-mobile-segment-bar__inner">
         {discover ? (
           <div className="public-mobile-segment-bar__pair" role="tablist">
@@ -46,7 +51,7 @@ export function PublicMobileSegmentBar() {
                 }
               }}
             >
-              Users
+              {t('mobile.users')}
             </button>
             <button
               type="button"
@@ -61,7 +66,7 @@ export function PublicMobileSegmentBar() {
                 }
               }}
             >
-              Jewellers
+              {t('nav.jewellers')}
             </button>
           </div>
         ) : (
@@ -73,7 +78,7 @@ export function PublicMobileSegmentBar() {
               className={`public-mobile-segment-btn${shopJewellers ? ' public-mobile-segment-btn--active' : ''}`}
               onClick={() => navigate('/jewellers')}
             >
-              Jewellers
+              {t('nav.jewellers')}
             </button>
             <button
               type="button"
@@ -82,7 +87,7 @@ export function PublicMobileSegmentBar() {
               className={`public-mobile-segment-btn${shopProducts ? ' public-mobile-segment-btn--active' : ''}`}
               onClick={() => navigate('/marketplace')}
             >
-              Products
+              {t('nav.products')}
             </button>
           </div>
         )}

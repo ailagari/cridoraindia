@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { authFetch } from '@/lib/api'
+import { useOptionalPublicLocale } from '@/i18n/PublicLocaleProvider'
+import type { MessageKey } from '@/i18n/messages/en'
 import { LIVE_PRICE_POLL_MS } from '@/lib/liveDeskIntervals'
 import {
   fetchGoldTicker,
@@ -25,18 +27,21 @@ function numFromGold(block: Record<string, number> | undefined, key: string): nu
 }
 
 /** User-facing footnote for published ladder (no international wording). */
-function liveMarketBasisNote(src: string | undefined): string {
+function liveMarketBasisNote(
+  src: string | undefined,
+  t: (key: MessageKey) => string,
+): string {
   switch (src) {
     case 'manual_ticker':
-      return 'Admin-set board rate'
+      return t('ticker.basis.manual')
     case 'live_spot':
     case 'stale_spot_cache':
     case 'db_snapshot':
-      return 'Published platform rate'
+      return t('ticker.basis.published')
     case 'admin_fallback':
-      return 'Platform fallback rate'
+      return t('ticker.basis.fallback')
     default:
-      return src ? src.replace(/_/g, ' ') : 'Live market'
+      return src ? src.replace(/_/g, ' ') : t('ticker.basis.live')
   }
 }
 
@@ -67,6 +72,7 @@ async function fetchAdminSpotPrices(): Promise<SpotPricesPayload | null> {
 }
 
 export function GoldTickerStrip({ variant = 'public' }: Props) {
+  const { t } = useOptionalPublicLocale()
   const [spot, setSpot] = useState<SpotPricesPayload | null>(null)
   const [adminFallback, setAdminFallback] = useState<GoldTickerPayload | null>(null)
 
@@ -110,7 +116,7 @@ export function GoldTickerStrip({ variant = 'public' }: Props) {
   }
 
   const basisSrc = spot?.cridora_base_source ?? adminFallback?.cridora_base_source
-  const footPublic = liveMarketBasisNote(basisSrc)
+  const footPublic = liveMarketBasisNote(basisSrc, t)
   const footAdmin = adminPublishedBasisNote(basisSrc)
 
   const intlHint =
@@ -223,7 +229,7 @@ export function GoldTickerStrip({ variant = 'public' }: Props) {
               fontSize: '0.62rem',
             }}
           >
-            Live market
+            {t('ticker.liveMarket')}
           </span>
           <span style={{ color: 'var(--text-muted)' }}>
             <span style={{ fontWeight: 600 }}>22K 916</span>{' '}
@@ -251,7 +257,7 @@ export function GoldTickerStrip({ variant = 'public' }: Props) {
             maxWidth: 420,
           }}
         >
-          India-facing indicative ₹/g · {footPublic} · ~{pollLabel}
+          {t('ticker.indiaFacing', { interval: pollLabel })} · {footPublic}
         </span>
       </div>
     </div>

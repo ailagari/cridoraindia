@@ -61,6 +61,7 @@ def admin_notify_on_pending_kyc_document(sender, instance, **kwargs):
                 "body": body,
                 "url": link,
                 "tag": tag,
+                "id": f"admin-{notif.pk}",
             }
         )
 

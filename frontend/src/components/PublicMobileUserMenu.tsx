@@ -2,12 +2,14 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { UserAvatar } from '@/components/UserAvatar'
 import { useAuth } from '@/context/AuthContext'
+import { usePublicLocale } from '@/i18n/PublicLocaleProvider'
 import { dashboardLandingPath } from '@/lib/routes'
 import { userAvatarFallback, userAvatarImageFit, userAvatarImageUrl } from '@/lib/userAvatar'
 
 export function PublicMobileUserMenu() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
+  const { t } = usePublicLocale()
   const [open, setOpen] = useState(false)
   const wrapRef = useRef<HTMLDivElement>(null)
 
@@ -37,7 +39,7 @@ export function PublicMobileUserMenu() {
         className="public-mobile-user-menu__trigger"
         aria-expanded={open}
         aria-haspopup="true"
-        aria-label={open ? 'Close account menu' : 'Open account menu'}
+        aria-label={open ? t('mobile.closeAccountMenu') : t('mobile.openAccountMenu')}
         onClick={() => setOpen((v) => !v)}
       >
         <UserAvatar
@@ -50,7 +52,7 @@ export function PublicMobileUserMenu() {
       {open ? (
         <div className="public-mobile-user-menu__panel" role="menu">
           <Link to="/" role="menuitem" className="public-mobile-user-menu__item" onClick={() => setOpen(false)}>
-            Public site
+            {t('mobile.publicSite')}
           </Link>
           {user ? (
             <Link
@@ -59,11 +61,11 @@ export function PublicMobileUserMenu() {
               className="public-mobile-user-menu__item"
               onClick={() => setOpen(false)}
             >
-              Dashboard
+              {t('nav.dashboard')}
             </Link>
           ) : (
             <Link to="/login" role="menuitem" className="public-mobile-user-menu__item" onClick={() => setOpen(false)}>
-              Log in
+              {t('mobile.logIn')}
             </Link>
           )}
           {user ? (
@@ -77,7 +79,7 @@ export function PublicMobileUserMenu() {
                 navigate('/')
               }}
             >
-              Log out
+              {t('nav.logOut')}
             </button>
           ) : null}
         </div>

@@ -1,3 +1,5 @@
+import { readStoredPublicLocale } from '@/i18n/engine'
+
 const rawBase = import.meta.env.VITE_API_BASE_URL ?? ''
 
 export function getApiBaseUrl(): string {
@@ -32,13 +34,21 @@ export function clearTokens(): void {
 
 type Json = Record<string, unknown>
 
+function withLocaleHeaders(headers: Headers): Headers {
+  const h = new Headers(headers)
+  const locale = readStoredPublicLocale()
+  h.set('Accept-Language', locale === 'ml' ? 'ml,en;q=0.9' : 'en,ml;q=0.8')
+  h.set('X-Cridora-Locale', locale)
+  return h
+}
+
 /** Public / unauthenticated JSON requests */
 export async function apiFetch(
   path: string,
   init: RequestInit & { jsonBody?: Json } = {},
 ): Promise<Response> {
   const { jsonBody, headers, ...rest } = init
-  const h = new Headers(headers)
+  const h = withLocaleHeaders(new Headers(headers))
   const body =
     jsonBody !== undefined ? JSON.stringify(jsonBody) : rest.body ?? undefined
   if (jsonBody !== undefined && !h.has('Content-Type')) {
@@ -77,7 +87,7 @@ export async function authFetch(
     jsonBody !== undefined ? JSON.stringify(jsonBody) : rest.body ?? undefined
 
   const makeHeaders = (access: string) => {
-    const h = new Headers(hdr)
+    const h = withLocaleHeaders(new Headers(hdr))
     if (jsonBody !== undefined && !h.has('Content-Type')) {
       h.set('Content-Type', 'application/json')
     }

@@ -45,6 +45,7 @@ def send_fcm_payload(token: str, payload: dict[str, Any]) -> None:
     body = str(payload.get("body") or "Open Cridora for details.")
     url = str(payload.get("url") or "/")
     tag = str(payload.get("tag") or "cridora-default")
+    stable_id = str(payload.get("id") or tag)
     image = str(payload.get("image") or "").strip() or None
     android_notification = messaging.AndroidNotification(
         channel_id="cridora-alerts",
@@ -55,7 +56,7 @@ def send_fcm_payload(token: str, payload: dict[str, Any]) -> None:
     message = messaging.Message(
         token=token,
         notification=messaging.Notification(title=title, body=body, image=image),
-        data={"url": url, "tag": tag, **({"image": image} if image else {})},
+        data={"url": url, "tag": tag, "id": stable_id, **({"image": image} if image else {})},
         android=messaging.AndroidConfig(
             priority="high",
             notification=android_notification,
@@ -89,12 +90,22 @@ def send_fcm_to_user(user, payload: dict[str, Any]) -> int:
 
 
 def send_fcm_broadcast(payload: dict[str, Any]) -> int:
-    if not fcm_configured():
+    from .locale_utils import DEFAULT_PUBLIC_LOCALE
+
+    return send_fcm_broadcast_localized({DEFAULT_PUBLIC_LOCALE: payload})
+
+
+def send_fcm_broadcast_localized(payloads_by_locale: dict[str, dict[str, Any]]) -> int:
+    if not fcm_configured() or not payloads_by_locale:
         return 0
     from .models import NativePushToken
+    from .locale_utils import DEFAULT_PUBLIC_LOCALE, normalize_preferred_locale
 
+    default_payload = payloads_by_locale.get(DEFAULT_PUBLIC_LOCALE) or next(iter(payloads_by_locale.values()))
     n = 0
     for row in NativePushToken.objects.all().iterator(chunk_size=200):
+        loc = normalize_preferred_locale(row.preferred_locale)
+        payload = payloads_by_locale.get(loc) or default_payload
         try:
             send_fcm_payload(row.token, payload)
             n += 1

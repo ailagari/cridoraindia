@@ -6675,6 +6675,33 @@ select.input {
   margin-left: auto;
 }
 
+.public-lang-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0.15rem;
+  border-radius: 999px;
+  border: 1px solid var(--border-soft);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.public-lang-switch__btn {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 0.28rem 0.45rem;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.public-lang-switch__btn--active {
+  background: var(--gold-dim, rgba(212, 175, 55, 0.18));
+  color: var(--gold-light, #e8c872);
+}
+
 .public-mobile-actions {
   display: none;
 }

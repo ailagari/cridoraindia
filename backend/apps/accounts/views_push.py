@@ -6,11 +6,17 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import WebPushSubscription, NativePushToken
+from .locale_utils import normalize_preferred_locale
 from .services.admin_access import user_is_platform_admin
 from .webpush_service import send_push_to_user, webpush_configured
 from . import fcm_service
 
 User = get_user_model()
+
+
+def _preferred_locale_from_request(request) -> str:
+    raw = request.data.get("preferred_locale") or request.headers.get("X-Cridora-Locale")
+    return normalize_preferred_locale(raw)
 
 
 def _require_admin(request):
@@ -52,6 +58,7 @@ class WebPushSubscribeView(APIView):
             )
         ua = (request.META.get("HTTP_USER_AGENT") or "")[:512]
         owner = request.user if request.user.is_authenticated else None
+        preferred_locale = _preferred_locale_from_request(request)
         WebPushSubscription.objects.update_or_create(
             endpoint=str(endpoint),
             defaults={
@@ -59,6 +66,7 @@ class WebPushSubscribeView(APIView):
                 "p256dh": str(p256dh),
                 "auth": str(auth),
                 "user_agent": ua,
+                "preferred_locale": preferred_locale,
             },
         )
         return Response({"ok": True}, status=status.HTTP_200_OK)
@@ -126,12 +134,14 @@ class NativePushSubscribeView(APIView):
             return Response({"detail": "Unsupported platform."}, status=status.HTTP_400_BAD_REQUEST)
         ua = (request.META.get("HTTP_USER_AGENT") or "")[:512]
         owner = request.user if request.user.is_authenticated else None
+        preferred_locale = _preferred_locale_from_request(request)
         NativePushToken.objects.update_or_create(
             token=token,
             defaults={
                 "user": owner,
                 "platform": platform,
                 "user_agent": ua,
+                "preferred_locale": preferred_locale,
             },
         )
         return Response({"ok": True}, status=status.HTTP_200_OK)

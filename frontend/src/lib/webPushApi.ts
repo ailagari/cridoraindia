@@ -1,4 +1,5 @@
 import { apiFetch, authFetch, getStoredAccess } from '@/lib/api'
+import { readStoredPublicLocale } from '@/i18n/engine'
 import {
   claimNativePushForLoggedInUser,
   getNativePushActive,
@@ -8,10 +9,11 @@ import {
 } from '@/lib/nativeNotifications'
 
 async function postPushSubscribe(jsonBody: Record<string, unknown>): Promise<Response> {
+  const body = { ...jsonBody, preferred_locale: readStoredPublicLocale() }
   if (getStoredAccess()) {
-    return authFetch('/api/v1/push/subscribe/', { method: 'POST', jsonBody })
+    return authFetch('/api/v1/push/subscribe/', { method: 'POST', jsonBody: body })
   }
-  return apiFetch('/api/v1/push/subscribe/', { method: 'POST', jsonBody })
+  return apiFetch('/api/v1/push/subscribe/', { method: 'POST', jsonBody: body })
 }
 
 async function postPushUnsubscribe(endpoint: string): Promise<Response> {
@@ -40,7 +42,12 @@ export type WebPushServerStatus = {
 
 export async function fetchWebPushServerStatus(): Promise<WebPushServerStatus> {
   if (nativePushNotificationsSupported()) {
-    return { configured: true, publicKey: null }
+    const res = await apiFetch('/api/v1/push/native-status/', { cache: 'no-store' })
+    const data = (await res.json().catch(() => ({}))) as { configured?: boolean }
+    if (!res.ok) {
+      return { configured: false, publicKey: null }
+    }
+    return { configured: Boolean(data.configured), publicKey: null }
   }
   const res = await apiFetch('/api/v1/push/vapid-public-key/', { cache: 'no-store' })
   const data = (await res.json().catch(() => ({}))) as {

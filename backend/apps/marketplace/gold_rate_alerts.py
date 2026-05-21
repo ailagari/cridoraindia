@@ -8,9 +8,12 @@ from django.core.cache import cache
 from django.db import transaction
 
 from apps.accounts.push_payload import build_push_payload
-from apps.accounts.webpush_service import push_delivery_configured, send_push_broadcast
+from apps.accounts.webpush_service import push_delivery_configured, send_push_broadcast_localized
 
-from .gold_push_copy import format_gold_price_move_body
+from .gold_push_copy import (
+    format_gold_price_move_body,
+    gold_rate_alert_title,
+)
 from .models import GoldTickerConfig, get_or_create_ticker
 from .spot_prices import resolve_cridora_base_22k_inr
 
@@ -78,15 +81,17 @@ def maybe_notify_gold_rate_move(*, force: bool = False) -> dict:
         )
 
     if body:
-        n = send_push_broadcast(
-            build_push_payload(
-                title=title,
-                body=body,
+        payloads = {}
+        for loc in ("en", "ml"):
+            title_loc = (title if loc == "en" else gold_rate_alert_title(loc)).strip() or gold_rate_alert_title(loc)
+            payloads[loc] = build_push_payload(
+                title=title_loc,
+                body=format_gold_price_move_body(baseline=baseline, current=current, locale=loc),
                 url=link,
                 tag="cridora-gold-rate",
                 image_url=image_url or None,
             )
-        )
+        n = send_push_broadcast_localized(payloads)
         result["sent"] = True
         result["subscriptions_notified"] = n
         result["delta_inr"] = str(delta)

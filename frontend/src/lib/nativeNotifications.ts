@@ -2,15 +2,17 @@ import { Capacitor } from '@capacitor/core'
 import { LocalNotifications } from '@capacitor/local-notifications'
 import { PushNotifications } from '@capacitor/push-notifications'
 import { authFetch, apiFetch, getStoredAccess } from '@/lib/api'
+import { readStoredPublicLocale } from '@/i18n/engine'
 import { isNativeAndroid } from '@/lib/capacitorPlatform'
 import type { AppNotification } from '@/lib/mockNotifications'
 
 const CHANNEL_ID = 'cridora-alerts'
 const CHANNEL_NAME = 'Cridora alerts'
 const TRAY_NOTIFIED_KEY = 'cridora_tray_notified_ids_v1'
+const TRAY_NOTIFIED_MAX = 200
 
 /** Use FCM when the native plugin exists unless explicitly disabled at build time. */
-function isFcmEnabled(): boolean {
+export function isNativeFcmEnabled(): boolean {
   if (!isNativeAndroid() || !Capacitor.isPluginAvailable('PushNotifications')) return false
   return import.meta.env.VITE_FCM_ENABLED !== 'false'
 }
@@ -19,15 +21,17 @@ let bridgeReady = false
 let pushListenersAttached = false
 let navigateHandler: ((path: string) => void) | null = null
 let lastFcmToken: string | null = null
+let tokenWaiters: Array<(token: string) => void> = []
 const notifiedIds = loadNotifiedIds()
 
 function loadNotifiedIds(): Set<string> {
   try {
-    const raw = sessionStorage.getItem(TRAY_NOTIFIED_KEY)
+    const raw = localStorage.getItem(TRAY_NOTIFIED_KEY)
     if (!raw) return new Set()
     const parsed = JSON.parse(raw) as unknown
     if (!Array.isArray(parsed)) return new Set()
-    return new Set(parsed.filter((x): x is string => typeof x === 'string'))
+    const ids = parsed.filter((x): x is string => typeof x === 'string')
+    return new Set(ids.slice(-TRAY_NOTIFIED_MAX))
   } catch {
     return new Set()
   }
@@ -35,7 +39,8 @@ function loadNotifiedIds(): Set<string> {
 
 function persistNotifiedIds(): void {
   try {
-    sessionStorage.setItem(TRAY_NOTIFIED_KEY, JSON.stringify([...notifiedIds]))
+    const ids = [...notifiedIds].slice(-TRAY_NOTIFIED_MAX)
+    localStorage.setItem(TRAY_NOTIFIED_KEY, JSON.stringify(ids))
   } catch {
     /* private mode / quota */
   }
@@ -62,6 +67,16 @@ async function ensureAndroidChannel(): Promise<void> {
   })
 }
 
+async function pushPermissionGranted(): Promise<boolean> {
+  if (!isNativeFcmEnabled()) return false
+  try {
+    const status = await PushNotifications.checkPermissions()
+    return status.receive === 'granted'
+  } catch {
+    return false
+  }
+}
+
 async function localPermissionGranted(): Promise<boolean> {
   if (!isNativeAndroid()) return false
   try {
@@ -83,7 +98,7 @@ async function requestLocalPermission(): Promise<boolean> {
 }
 
 async function requestPushPermission(): Promise<boolean> {
-  if (!isFcmEnabled()) return false
+  if (!isNativeFcmEnabled()) return false
   try {
     const status = await PushNotifications.requestPermissions()
     return status.receive === 'granted'
@@ -93,7 +108,7 @@ async function requestPushPermission(): Promise<boolean> {
 }
 
 async function postNativeSubscribe(token: string): Promise<void> {
-  const jsonBody = { token, platform: 'android' }
+  const jsonBody = { token, platform: 'android', preferred_locale: readStoredPublicLocale() }
   const res = getStoredAccess()
     ? await authFetch('/api/v1/push/native-subscribe/', { method: 'POST', jsonBody })
     : await apiFetch('/api/v1/push/native-subscribe/', { method: 'POST', jsonBody })
@@ -103,38 +118,66 @@ async function postNativeSubscribe(token: string): Promise<void> {
   }
 }
 
+function resolveFcmListenerToken(): void {
+  for (const waiter of tokenWaiters) {
+    if (lastFcmToken) waiter(lastFcmToken)
+  }
+  tokenWaiters = []
+}
+
+function waitForFcmToken(timeoutMs = 12_000): Promise<string | null> {
+  if (lastFcmToken) return Promise.resolve(lastFcmToken)
+  return new Promise((resolve) => {
+    const timer = window.setTimeout(() => {
+      tokenWaiters = tokenWaiters.filter((w) => w !== onToken)
+      resolve(lastFcmToken)
+    }, timeoutMs)
+    const onToken = (token: string) => {
+      window.clearTimeout(timer)
+      resolve(token)
+    }
+    tokenWaiters.push(onToken)
+  })
+}
+
 async function registerFcmToken(): Promise<void> {
-  if (!isFcmEnabled()) return
+  if (!isNativeFcmEnabled()) return
   await PushNotifications.register()
 }
 
 async function ensureFcmRegistered(): Promise<void> {
-  if (!isFcmEnabled()) return
-  if (!(await localPermissionGranted())) return
-  await requestPushPermission()
-  try {
-    await registerFcmToken()
-  } catch {
-    /* google-services.json missing or FCM misconfigured */
+  if (!isNativeFcmEnabled()) return
+  if (!(await pushPermissionGranted())) return
+  await registerFcmToken()
+  const token = await waitForFcmToken()
+  if (token) {
+    await postNativeSubscribe(token).catch(() => {
+      /* retried on login via claimNativePushForLoggedInUser */
+    })
   }
 }
 
 function attachPushListeners(): void {
-  if (!isFcmEnabled() || pushListenersAttached) return
+  if (!isNativeFcmEnabled() || pushListenersAttached) return
   pushListenersAttached = true
 
   PushNotifications.addListener('registration', (token) => {
     lastFcmToken = token.value
+    resolveFcmListenerToken()
     void postNativeSubscribe(token.value).catch(() => {
       /* retry on next login via claimNativePushForLoggedInUser */
     })
   })
 
   PushNotifications.addListener('registrationError', () => {
-    /* FCM misconfigured */
+    resolveFcmListenerToken()
   })
 
   PushNotifications.addListener('pushNotificationReceived', (notification) => {
+    const tag =
+      typeof notification.data?.tag === 'string' ? notification.data.tag : 'cridora-default'
+    const stableId =
+      typeof notification.data?.id === 'string' ? notification.data.id : tag
     const title = notification.title ?? 'Cridora'
     const body = notification.body ?? 'Open Cridora for details.'
     const url =
@@ -142,7 +185,7 @@ function attachPushListeners(): void {
     const image =
       typeof notification.data?.image === 'string' ? notification.data.image : undefined
     void showTrayNotification({
-      id: `push-${Date.now()}`,
+      id: stableId,
       title,
       body,
       link_path: url,
@@ -179,9 +222,11 @@ export async function initNativeNotificationBridge(): Promise<void> {
   try {
     await ensureAndroidChannel()
     attachLocalTapListener()
-    if (isFcmEnabled()) {
+    if (isNativeFcmEnabled()) {
       attachPushListeners()
-      void ensureFcmRegistered()
+      if (await pushPermissionGranted()) {
+        void ensureFcmRegistered()
+      }
     }
   } catch {
     bridgeReady = false
@@ -193,28 +238,66 @@ export async function registerNativePushSubscription(): Promise<void> {
     throw new Error('Native push is only available in the Android app.')
   }
   await initNativeNotificationBridge()
+
+  if (isNativeFcmEnabled()) {
+    const pushOk = await requestPushPermission()
+    if (!pushOk) {
+      throw new Error('Push permission was not granted.')
+    }
+    await registerFcmToken()
+    const token = await waitForFcmToken()
+    if (!token) {
+      throw new Error(
+        'Could not register this device for server push. Rebuild the app with google-services.json or try again.',
+      )
+    }
+    await postNativeSubscribe(token)
+    await requestLocalPermission()
+    return
+  }
+
   const localOk = await requestLocalPermission()
   if (!localOk) {
     throw new Error('Notification permission was not granted.')
   }
-  await ensureFcmRegistered()
 }
 
 export async function getNativePushActive(): Promise<boolean> {
   if (!isNativeAndroid()) return false
+  if (isNativeFcmEnabled()) {
+    return pushPermissionGranted()
+  }
   return localPermissionGranted()
 }
 
 export async function claimNativePushForLoggedInUser(): Promise<void> {
   if (!isNativeAndroid() || !getStoredAccess()) return
-  if (!(await localPermissionGranted())) return
   await initNativeNotificationBridge()
-  if (lastFcmToken) {
-    await postNativeSubscribe(lastFcmToken).catch(() => {
-      /* FCM may re-fire registration after ensureFcmRegistered */
-    })
+  if (isNativeFcmEnabled()) {
+    if (!(await pushPermissionGranted())) return
+    if (lastFcmToken) {
+      await postNativeSubscribe(lastFcmToken).catch(() => {
+        /* token may refresh via registration listener */
+      })
+      return
+    }
+    await ensureFcmRegistered()
+    return
   }
-  await ensureFcmRegistered()
+  if (!(await localPermissionGranted())) return
+}
+
+/** Mark feed ids as already shown (avoids duplicate local tray on first poll). */
+export function seedTrayNotifiedIds(ids: string[]): void {
+  if (!isNativeAndroid() || ids.length === 0) return
+  let changed = false
+  for (const id of ids) {
+    if (!notifiedIds.has(id)) {
+      notifiedIds.add(id)
+      changed = true
+    }
+  }
+  if (changed) persistNotifiedIds()
 }
 
 export async function showTrayNotification(item: {
@@ -259,8 +342,12 @@ export async function showTrayNotification(item: {
   }
 }
 
+/**
+ * Local tray fallback when FCM is unavailable (no google-services).
+ * When FCM is enabled, server push handles background/killed delivery.
+ */
 export function notifyBellFeedUpdates(prev: AppNotification[], next: AppNotification[]): void {
-  if (!isNativeAndroid()) return
+  if (!isNativeAndroid() || isNativeFcmEnabled()) return
   const prevIds = new Set(prev.map((x) => x.id))
   const freshUnread = next.filter((x) => !x.read && !prevIds.has(x.id))
   for (const item of freshUnread) {
@@ -275,10 +362,10 @@ export function notifyBellFeedUpdates(prev: AppNotification[], next: AppNotifica
 
 export function nativePushSetupHint(): string | null {
   if (!isNativeAndroid()) return null
-  if (isFcmEnabled()) {
-    return 'Tap Enable in the bell to allow tray alerts and register for server pushes (FCM).'
+  if (isNativeFcmEnabled()) {
+    return 'Tap Enable to allow push alerts — gold rate broadcasts and account updates arrive even when the app is closed.'
   }
-  return 'Tap Enable in the bell to allow tray alerts. Add google-services.json and rebuild for server pushes.'
+  return 'Tap Enable for tray alerts. Add google-services.json and rebuild for server pushes when the app is closed.'
 }
 
 export function nativePushNotificationsSupported(): boolean {

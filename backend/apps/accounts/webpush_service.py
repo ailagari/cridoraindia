@@ -7,6 +7,7 @@ from django.db.models import Q
 from pywebpush import WebPushException, webpush
 
 from .models import WebPushSubscription
+from .locale_utils import DEFAULT_PUBLIC_LOCALE, normalize_preferred_locale
 from . import fcm_service
 
 logger = logging.getLogger(__name__)
@@ -81,9 +82,19 @@ def send_push_broadcast(payload: dict[str, Any]) -> int:
     Use for public market gold-rate alerts, hourly price digests, and admin festival announcements.
     Not for OTP, deposits, loans, or portfolio-specific activity — use ``send_push_to_user`` instead.
     """
+    return send_push_broadcast_localized({DEFAULT_PUBLIC_LOCALE: payload})
+
+
+def send_push_broadcast_localized(payloads_by_locale: dict[str, dict[str, Any]]) -> int:
+    """Broadcast locale-specific payloads (public gold alerts). Falls back to English."""
+    if not payloads_by_locale:
+        return 0
+    default_payload = payloads_by_locale.get(DEFAULT_PUBLIC_LOCALE) or next(iter(payloads_by_locale.values()))
     n = 0
     if webpush_configured():
         for sub in WebPushSubscription.objects.all().iterator(chunk_size=200):
+            loc = normalize_preferred_locale(sub.preferred_locale)
+            payload = payloads_by_locale.get(loc) or default_payload
             try:
                 send_push_payload(sub, payload)
                 n += 1
@@ -106,7 +117,7 @@ def send_push_broadcast(payload: dict[str, Any]) -> int:
                     (sub.endpoint[:64] + "…") if len(sub.endpoint) > 64 else sub.endpoint,
                     exc,
                 )
-    n += fcm_service.send_fcm_broadcast(payload)
+    n += fcm_service.send_fcm_broadcast_localized(payloads_by_locale)
     return n
 
 

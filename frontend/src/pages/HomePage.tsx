@@ -1,300 +1,374 @@
-import { type CSSProperties } from 'react'
-import { Link } from 'react-router-dom'
-import { HeroArabesqueBackground } from '@/components/HeroArabesqueBackground'
-import { useAuth } from '@/context/AuthContext'
-import { dashboardLandingPath } from '@/lib/routes'
-import { IMAGES } from '@/content/images'
-
-const POSITIONING_LINE =
-  'A live gold utility and redemption ecosystem — not stock, ETFs, or simple digital gold.'
-
-const TAGLINE = 'Live gold savings, portfolio & redemption network'
-
-const HERO_POINTS = [
-  'Accumulate gold across verified jewellers with clear vault IDs.',
-  'See grams and live value without drowning in feature lists.',
-  'Redeem or transfer with policies visible before you confirm.',
-] as const
-
-const EXPLORE = [
-  {
-    title: 'How it works',
-    blurb: 'Four calm steps from jeweller choice to redemption.',
-    to: '/how-it-works',
-    primary: true,
-    cta: 'View flow',
-  },
-  {
-    title: 'Why Cridora',
-    blurb: 'Positioning for savers and partners—when you want the full narrative.',
-    to: '/why-cridora',
-    primary: false,
-    cta: 'Read more',
-  },
-  {
-    title: 'Jewellers',
-    blurb: 'Compare verified storefronts, rates, and trust signals.',
-    to: '/jewellers',
-    primary: false,
-    cta: 'Browse network',
-  },
-  {
-    title: 'Products',
-    blurb: 'BIS 916 ornaments with transparent pricing inputs.',
-    to: '/marketplace',
-    primary: false,
-    cta: 'Browse showcase',
-  },
-] as const
-
-function sd(index: number): CSSProperties {
-  return { ['--reveal-delay' as string]: `${index * 0.06}s` }
-}
-
-export function HomePage() {
-  const { user } = useAuth()
-  const primaryHref = user ? dashboardLandingPath(user) : '/signup'
-  const primaryLabel = user ? 'Dashboard' : 'Open account'
-
-  let r = 0
-  const d = () => r++
-  return (
-    <>
-      <section className="home-hero">
-        <HeroArabesqueBackground />
-        <div className="container home-hero__content">
-          <div className="grid-2">
-            <div>
-              <span className={`pill cridora-reveal`} style={sd(d())}>
-                {TAGLINE}
-              </span>
-              <h1
-                className="cridora-reveal"
-                style={{
-                  fontSize: 'clamp(2.25rem, 5vw, 3.25rem)',
-                  lineHeight: 1.12,
-                  margin: '1rem 0',
-                  ...sd(d()),
-                }}
-              >
-                Buy gold · Track gold ·{' '}
-                <span style={{ color: 'var(--gold-light)' }}>Use &amp; redeem gold</span> in the Cridora network
-              </h1>
-              <ul
-                className="cridora-reveal"
-                style={{
-                  listStyle: 'none',
-                  padding: 0,
-                  margin: 0,
-                  display: 'grid',
-                  gap: '0.65rem',
-                  maxWidth: 'min(46ch, 100%)',
-                  fontSize: '1.05rem',
-                  ...sd(d()),
-                }}
-              >
-                {HERO_POINTS.map((text, idx) => (
-                  <li
-                    key={idx}
-                    className="card"
-                    style={{
-                      margin: 0,
-                      display: 'flex',
-                      gap: '0.6rem',
-                      alignItems: 'flex-start',
-                      padding: '0.8rem 1rem',
-                      lineHeight: 1.55,
-                      borderRadius: 'calc(var(--radius) - 2px)',
-                    }}
-                  >
-                    <span aria-hidden style={{ color: 'var(--gold-light)', flexShrink: 0, marginTop: '0.12em' }}>
-                      •
-                    </span>
-                    <span style={{ color: 'var(--text-muted)' }}>{text}</span>
-                  </li>
-                ))}
-              </ul>
-              <div
-                className="cridora-reveal"
-                style={{
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  gap: '0.75rem',
-                  marginTop: '1.75rem',
-                  ...sd(d()),
-                }}
-              >
-                <Link to={primaryHref} className="btn btn-primary">
-                  {primaryLabel}
-                </Link>
-                <Link to="/how-it-works" className="btn btn-ghost">
-                  How it works
-                </Link>
-                <Link to="/waitlist" className="btn btn-ghost">
-                  Waitlist
-                </Link>
-              </div>
-            </div>
-            <div
-              className="cridora-reveal cridora-card-motion media-frame media-frame--hero"
-              style={{
-                position: 'relative',
-                ...sd(d()),
-              }}
-            >
-              <img
-                src={IMAGES.heroGold}
-                alt="Refined gold and precious metals"
-                width={1400}
-                height={933}
-                className="media-fill"
-                sizes="(max-width: 879px) 100vw, 50vw"
-              />
-              <div
-                style={{
-                  position: 'absolute',
-                  inset: 0,
-                  background:
-                    'linear-gradient(135deg, var(--veil-35) 0%, var(--navy-55) 100%)',
-                  pointerEvents: 'none',
-                }}
-              />
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <div className="container" style={{ paddingBottom: '1.5rem' }}>
-        <blockquote
-          className="card cridora-quote cridora-card-motion"
-          style={{
-            margin: 0,
-            padding: '1.15rem 1.35rem',
-            borderRadius: 18,
-            fontSize: 'clamp(0.98rem, 1.9vw, 1.2rem)',
-            fontWeight: 600,
-            fontStyle: 'italic',
-            letterSpacing: '-0.015em',
-            lineHeight: 1.45,
-            color: 'var(--text)',
-            border: '1px solid var(--border-soft)',
-            background: 'linear-gradient(120deg, var(--veil-40) 0%, var(--navy-55) 100%)',
-          }}
-        >
-          “{POSITIONING_LINE}”
-        </blockquote>
-      </div>
-
-      <section className="section-band">
-        <div className="container grid-2">
-          <div className="media-frame media-frame--section-split">
-            <img
-              src={IMAGES.heroJewellery}
-              alt="Fine jewellery craftsmanship"
-              width={1100}
-              height={733}
-              className="media-fill"
-              sizes="(max-width: 879px) 100vw, 45vw"
-            />
-          </div>
-          <div>
-            <h2 style={{ fontSize: '1.85rem', marginTop: 0 }}>
-              Redemption network, portfolio utility, jeweller trust
-            </h2>
-            <ul
-              style={{
-                color: 'var(--text-muted)',
-                paddingLeft: '1.1rem',
-                display: 'grid',
-                gap: '0.65rem',
-              }}
-            >
-              <li>
-                <strong style={{ color: 'var(--text)' }}>Vault-aware ledger</strong> — fractional gold, deposits, and schemes stay
-                separated per jeweller relationship.
-              </li>
-              <li>
-                <strong style={{ color: 'var(--text)' }}>Portfolio clarity</strong> — grams, indicative value, and eligibility without redundant dashboards.
-              </li>
-              <li>
-                <strong style={{ color: 'var(--text)' }}>Governed marketplace</strong> — KYC, KYB, and listing review before anything is public.
-              </li>
-            </ul>
-            <p style={{ marginTop: '1.25rem', display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
-              <Link to="/how-it-works" className="btn btn-ghost">
-                How it works
-              </Link>
-              <Link to="/investors" className="btn btn-ghost">
-                Investors
-              </Link>
-            </p>
-            <div className="media-frame media-frame--trust-strip">
-              <img
-                src={IMAGES.trustCollage}
-                alt="Gold bars motif"
-                width={900}
-                height={600}
-                className="media-fill"
-                sizes="(max-width: 879px) 100vw, 45vw"
-              />
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="container" style={{ padding: '3rem 0 4rem' }}>
-        <h2 className="cridora-reveal" style={{ textAlign: 'center', marginBottom: '0.5rem', ...sd(d()) }}>
-          Explore the network
-        </h2>
-        <p
-          className="cridora-reveal"
-          style={{
-            textAlign: 'center',
-            color: 'var(--text-muted)',
-            marginBottom: '2rem',
-            maxWidth: '56ch',
-            marginInline: 'auto',
-            ...sd(d()),
-          }}
-        >
-          Start small, compare jewellers, and treat gold as infrastructure—not noise. India-first, BIS 916 focus. Deeper story on{' '}
-          <Link to="/why-cridora">Why Cridora</Link>.
-        </p>
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-            gap: '1rem',
-          }}
-        >
-          {EXPLORE.map((item) => (
-            <div
-              key={item.to}
-              className="card cridora-card-motion cridora-reveal"
-              style={{
-                ...sd(d()),
-                borderRadius: 20,
-                padding: '1.25rem 1.35rem',
-                minHeight: 200,
-                display: 'flex',
-                flexDirection: 'column',
-              }}
-            >
-              <h3 style={{ marginTop: 0, fontSize: '1.08rem' }}>{item.title}</h3>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.92rem', flex: 1, lineHeight: 1.5 }}>
-                {item.blurb}
-              </p>
-              <Link
-                to={item.to}
-                className={item.primary ? 'btn btn-primary' : 'btn btn-ghost'}
-                style={{ marginTop: '1rem', alignSelf: 'flex-start' }}
-              >
-                {item.cta}
-              </Link>
-            </div>
-          ))}
-        </div>
-      </section>
-    </>
-  )
-}
+import { type CSSProperties } from 'react'
+import { Link } from 'react-router-dom'
+import { HeroArabesqueBackground } from '@/components/HeroArabesqueBackground'
+import { useAuth } from '@/context/AuthContext'
+import { usePublicLocale } from '@/i18n/PublicLocaleProvider'
+import type { MessageKey } from '@/i18n/messages/en'
+import { dashboardLandingPath } from '@/lib/routes'
+import { IMAGES } from '@/content/images'
+
+const HOW_STEPS: { titleKey: MessageKey; bodyKey: MessageKey }[] = [
+  { titleKey: 'home.howStep1Title', bodyKey: 'home.howStep1Body' },
+  { titleKey: 'home.howStep2Title', bodyKey: 'home.howStep2Body' },
+  { titleKey: 'home.howStep3Title', bodyKey: 'home.howStep3Body' },
+  { titleKey: 'home.howStep4Title', bodyKey: 'home.howStep4Body' },
+]
+
+const BEHAVIOUR_CARDS: { titleKey: MessageKey; bodyKey: MessageKey }[] = [
+  { titleKey: 'home.behaviour1Title', bodyKey: 'home.behaviour1Body' },
+  { titleKey: 'home.behaviour2Title', bodyKey: 'home.behaviour2Body' },
+  { titleKey: 'home.behaviour3Title', bodyKey: 'home.behaviour3Body' },
+  { titleKey: 'home.behaviour4Title', bodyKey: 'home.behaviour4Body' },
+  { titleKey: 'home.behaviour5Title', bodyKey: 'home.behaviour5Body' },
+]
+
+const TRUST_POINTS: MessageKey[] = [
+  'home.trustPoint1',
+  'home.trustPoint2',
+  'home.trustPoint3',
+  'home.trustPoint4',
+  'home.trustPoint5',
+  'home.trustPoint6',
+]
+
+const JEWELLER_FEATURES: MessageKey[] = [
+  'home.forJewellersFeature1',
+  'home.forJewellersFeature2',
+  'home.forJewellersFeature3',
+  'home.forJewellersFeature4',
+  'home.forJewellersFeature5',
+  'home.forJewellersFeature6',
+  'home.forJewellersFeature7',
+]
+
+function sd(index: number): CSSProperties {
+  return { ['--reveal-delay' as string]: `${index * 0.06}s` }
+}
+
+export function HomePage() {
+  const { user } = useAuth()
+  const { t } = usePublicLocale()
+  const startSavingHref = user ? dashboardLandingPath(user) : '/signup'
+
+  const heroPoints: MessageKey[] = [
+    'home.heroPoint1',
+    'home.heroPoint2',
+    'home.heroPoint3',
+    'home.heroPoint4',
+    'home.heroPoint5',
+  ]
+
+  let r = 0
+  const d = () => r++
+
+  return (
+    <>
+      <section className="home-hero">
+        <HeroArabesqueBackground />
+        <div className="container home-hero__content">
+          <div className="grid-2">
+            <div>
+              <span className="pill cridora-reveal" style={sd(d())}>
+                {t('home.tagline')}
+              </span>
+              <h1
+                className="cridora-reveal"
+                style={{
+                  fontSize: 'clamp(2rem, 4.5vw, 3rem)',
+                  lineHeight: 1.15,
+                  margin: '1rem 0',
+                  ...sd(d()),
+                }}
+              >
+                {t('home.heroTitle')}
+              </h1>
+              <p
+                className="cridora-reveal"
+                style={{
+                  margin: '0 0 1.25rem',
+                  maxWidth: 'min(48ch, 100%)',
+                  fontSize: '1.05rem',
+                  lineHeight: 1.6,
+                  color: 'var(--text-muted)',
+                  ...sd(d()),
+                }}
+              >
+                {t('home.heroSubheadline')}
+              </p>
+              <ul
+                className="cridora-reveal"
+                style={{
+                  listStyle: 'none',
+                  padding: 0,
+                  margin: 0,
+                  display: 'grid',
+                  gap: '0.55rem',
+                  maxWidth: 'min(46ch, 100%)',
+                  fontSize: '0.95rem',
+                  ...sd(d()),
+                }}
+              >
+                {heroPoints.map((key) => (
+                  <li
+                    key={key}
+                    style={{
+                      display: 'flex',
+                      gap: '0.55rem',
+                      alignItems: 'flex-start',
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    <span aria-hidden style={{ color: 'var(--gold-light)', flexShrink: 0 }}>
+                      •
+                    </span>
+                    <span style={{ color: 'var(--text-muted)' }}>{t(key)}</span>
+                  </li>
+                ))}
+              </ul>
+              <div
+                className="cridora-reveal"
+                style={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: '0.75rem',
+                  marginTop: '1.75rem',
+                  ...sd(d()),
+                }}
+              >
+                <Link to={startSavingHref} className="btn btn-primary">
+                  {t('home.ctaStartSaving')}
+                </Link>
+                <Link to="/jewellers" className="btn btn-ghost">
+                  {t('home.ctaExploreJewellers')}
+                </Link>
+                <Link to="/jeweller/apply" className="btn btn-ghost">
+                  {t('home.ctaApplyJeweller')}
+                </Link>
+              </div>
+            </div>
+            <div
+              className="cridora-reveal cridora-card-motion media-frame media-frame--hero"
+              style={{ position: 'relative', ...sd(d()) }}
+            >
+              <img
+                src={IMAGES.heroGold}
+                alt="Refined gold and precious metals"
+                width={1400}
+                height={933}
+                className="media-fill"
+                sizes="(max-width: 879px) 100vw, 50vw"
+              />
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  background: 'linear-gradient(135deg, var(--veil-35) 0%, var(--navy-55) 100%)',
+                  pointerEvents: 'none',
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div className="container" style={{ paddingBottom: '1.5rem' }}>
+        <blockquote
+          className="card cridora-quote cridora-card-motion"
+          style={{
+            margin: 0,
+            padding: '1.15rem 1.35rem',
+            borderRadius: 18,
+            fontSize: 'clamp(0.98rem, 1.9vw, 1.2rem)',
+            fontWeight: 600,
+            fontStyle: 'italic',
+            letterSpacing: '-0.015em',
+            lineHeight: 1.45,
+            color: 'var(--text)',
+            border: '1px solid var(--border-soft)',
+            background: 'linear-gradient(120deg, var(--veil-40) 0%, var(--navy-55) 100%)',
+          }}
+        >
+          “{t('home.positioning')}”
+        </blockquote>
+      </div>
+
+      <section className="section-band">
+        <div className="container grid-2">
+          <div className="media-frame media-frame--section-split">
+            <img
+              src={IMAGES.heroJewellery}
+              alt="Fine jewellery craftsmanship"
+              width={1100}
+              height={733}
+              className="media-fill"
+              sizes="(max-width: 879px) 100vw, 45vw"
+            />
+          </div>
+          <div>
+            <h2 className="cridora-section-title" style={{ marginTop: 0 }}>
+              {t('home.whyExistsTitle')}
+            </h2>
+            <p style={{ color: 'var(--text-muted)', lineHeight: 1.6 }}>{t('home.whyExistsIntro1')}</p>
+            <p style={{ color: 'var(--text-muted)', lineHeight: 1.6 }}>{t('home.whyExistsIntro2')}</p>
+            <p style={{ marginTop: '1.25rem', marginBottom: '0.5rem', fontWeight: 600 }}>
+              {t('home.whyExistsCustomersHeading')}
+            </p>
+            <ul style={{ color: 'var(--text-muted)', paddingLeft: '1.1rem', display: 'grid', gap: '0.4rem' }}>
+              {(['home.whyExistsCustomer1', 'home.whyExistsCustomer2', 'home.whyExistsCustomer3', 'home.whyExistsCustomer4', 'home.whyExistsCustomer5'] as const).map((key) => (
+                <li key={key}>{t(key)}</li>
+              ))}
+            </ul>
+            <p style={{ marginTop: '1.25rem', marginBottom: '0.5rem', fontWeight: 600 }}>
+              {t('home.whyExistsJewellersHeading')}
+            </p>
+            <ul style={{ color: 'var(--text-muted)', paddingLeft: '1.1rem', display: 'grid', gap: '0.4rem' }}>
+              {(['home.whyExistsJeweller1', 'home.whyExistsJeweller2', 'home.whyExistsJeweller3', 'home.whyExistsJeweller4'] as const).map((key) => (
+                <li key={key}>{t(key)}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section className="container" style={{ padding: '3rem 0' }}>
+        <h2 className="cridora-section-title cridora-reveal" style={{ textAlign: 'center', ...sd(d()) }}>
+          {t('home.howTitle')}
+        </h2>
+        <ol
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+            gap: '1rem',
+            marginTop: '1.5rem',
+            padding: 0,
+            listStyle: 'none',
+          }}
+        >
+          {HOW_STEPS.map((step, idx) => (
+            <li
+              key={step.titleKey}
+              className="card cridora-card-motion cridora-reveal"
+              style={{ padding: '1.25rem', borderRadius: 18, ...sd(d()) }}
+            >
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: 28,
+                  height: 28,
+                  borderRadius: 8,
+                  background: 'var(--gold-soft)',
+                  color: 'var(--gold-light)',
+                  fontSize: '0.72rem',
+                  fontWeight: 800,
+                  marginBottom: '0.65rem',
+                }}
+              >
+                {idx + 1}
+              </span>
+              <h3 style={{ margin: 0, fontSize: '1rem' }}>{t(step.titleKey)}</h3>
+              <p style={{ margin: '0.5rem 0 0', color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: 1.55 }}>
+                {t(step.bodyKey)}
+              </p>
+            </li>
+          ))}
+        </ol>
+        <p style={{ textAlign: 'center', marginTop: '1.5rem' }}>
+          <Link to="/how-it-works" className="btn btn-ghost">
+            {t('nav.howItWorks')}
+          </Link>
+        </p>
+      </section>
+
+      <section className="section-band">
+        <div className="container">
+          <h2 className="cridora-section-title" style={{ textAlign: 'center', marginTop: 0 }}>
+            {t('home.behaviourTitle')}
+          </h2>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+              gap: '1rem',
+              marginTop: '1.5rem',
+            }}
+          >
+            {BEHAVIOUR_CARDS.map((card) => (
+              <div key={card.titleKey} className="card" style={{ padding: '1.2rem', borderRadius: 18 }}>
+                <h3 style={{ margin: 0, fontSize: '1rem', color: 'var(--gold-light)' }}>{t(card.titleKey)}</h3>
+                <p style={{ margin: '0.5rem 0 0', color: 'var(--text-muted)', fontSize: '0.88rem', lineHeight: 1.55 }}>
+                  {t(card.bodyKey)}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="container" style={{ padding: '3rem 0' }}>
+        <h2 className="cridora-section-title" style={{ textAlign: 'center', marginTop: 0 }}>
+          {t('home.trustTitle')}
+        </h2>
+        <ul
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+            gap: '0.75rem',
+            marginTop: '1.5rem',
+            padding: 0,
+            listStyle: 'none',
+          }}
+        >
+          {TRUST_POINTS.map((key) => (
+            <li key={key} className="card" style={{ padding: '1rem 1.15rem', borderRadius: 14, margin: 0 }}>
+              <span style={{ color: 'var(--text-muted)', fontSize: '0.92rem' }}>{t(key)}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section className="section-band">
+        <div className="container grid-2">
+          <div>
+            <h2 className="cridora-section-title" style={{ marginTop: 0 }}>
+              {t('home.forJewellersTitle')}
+            </h2>
+            <p style={{ color: 'var(--text-muted)', lineHeight: 1.6 }}>{t('home.forJewellersBody')}</p>
+            <ul style={{ color: 'var(--text-muted)', paddingLeft: '1.1rem', display: 'grid', gap: '0.45rem' }}>
+              {JEWELLER_FEATURES.map((key) => (
+                <li key={key}>{t(key)}</li>
+              ))}
+            </ul>
+            <Link to="/jeweller/apply" className="btn btn-primary" style={{ marginTop: '1.25rem' }}>
+              {t('home.ctaApplyJeweller')}
+            </Link>
+          </div>
+          <div className="media-frame media-frame--trust-strip">
+            <img
+              src={IMAGES.trustCollage}
+              alt="Gold bars motif"
+              width={900}
+              height={600}
+              className="media-fill"
+              sizes="(max-width: 879px) 100vw, 45vw"
+            />
+          </div>
+        </div>
+      </section>
+
+      <section className="container" style={{ padding: '3rem 0 4rem', textAlign: 'center' }}>
+        <h2 className="cridora-section-title">{t('home.closingTitle')}</h2>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', justifyContent: 'center', marginTop: '1.25rem' }}>
+          <Link to="/waitlist" className="btn btn-primary">
+            {t('home.closingCtaWaitlist')}
+          </Link>
+          <Link to="/jewellers" className="btn btn-ghost">
+            {t('home.closingCtaExplore')}
+          </Link>
+        </div>
+      </section>
+    </>
+  )
+}
+

@@ -42,6 +42,16 @@ import {
   MarketplaceCartReview,
 } from '@/features/marketplace/MarketplaceCartViews'
 import { useMarketplaceCart } from '@/features/marketplace/useMarketplaceCart'
+import { usePublicLocale } from '@/i18n/PublicLocaleProvider'
+import type { MessageKey } from '@/i18n/messages/en'
+
+const PRODUCT_CARDS: { titleKey: MessageKey; bodyKey: MessageKey }[] = [
+  { titleKey: 'products.card1Title', bodyKey: 'products.card1Body' },
+  { titleKey: 'products.card2Title', bodyKey: 'products.card2Body' },
+  { titleKey: 'products.card3Title', bodyKey: 'products.card3Body' },
+  { titleKey: 'products.card4Title', bodyKey: 'products.card4Body' },
+  { titleKey: 'products.card5Title', bodyKey: 'products.card5Body' },
+]
 
 function checkoutRedemptionCopy(p: MarketplaceProductDTO, cridoraFee: number): string {
   if (p.is_x_redeem && cridoraFee > 0) {
@@ -635,6 +645,7 @@ function cmpJewellerName(a: string, b: string): number {
 }
 
 export function ProductMarketplacePage() {
+  const { t } = usePublicLocale()
   const [searchParams, setSearchParams] = useSearchParams()
   const jewellerParam = searchParams.get('jeweller')
   const jewellerFilterId =
@@ -925,25 +936,23 @@ export function ProductMarketplacePage() {
           }}
         />
         <div className="container" style={{ position: 'relative', zIndex: 1 }}>
-          <span className="pill">BIS 916 · Verified jewellers</span>
+          <span className="pill">{t('products.pill')}</span>
           <h1
             style={{
               fontSize: 'clamp(1.75rem, 4vw, 2.75rem)',
               margin: '0.75rem 0',
-              textTransform: 'uppercase',
-              fontStyle: 'italic',
-              letterSpacing: '-0.03em',
+              letterSpacing: '-0.02em',
+              lineHeight: 1.15,
             }}
           >
-            Product <span style={{ color: 'var(--gold-light)' }}>marketplace</span>
+            {t('products.heroTitle')}
           </h1>
-          <p style={{ color: 'var(--text-muted)', maxWidth: '42rem', margin: 0, fontSize: '1rem' }}>
-            Browse by name, gold weight, and final price (incl. taxes). Open a piece for metal rate, GST, making charges,
-            stones, vault estimate, and sellback notes.{' '}
+          <p style={{ color: 'var(--text-muted)', maxWidth: '46rem', margin: 0, fontSize: '1rem', lineHeight: 1.55 }}>
+            {t('products.heroLead')}{' '}
             <Link to="/jewellers" style={{ color: 'var(--gold-light)' }}>
-              Compare jewellers
-            </Link>{' '}
-            for sellback and lock-in.
+              {t('home.ctaExploreJewellers')}
+            </Link>
+            .
           </p>
           {loadError ? (
             <p className="form-error" style={{ marginTop: '1rem' }}>
@@ -954,6 +963,31 @@ export function ProductMarketplacePage() {
       </section>
 
       <div className="container" style={{ marginTop: '-2.75rem', position: 'relative', zIndex: 2 }}>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+            gap: '0.75rem',
+            marginBottom: '1.25rem',
+          }}
+        >
+          {PRODUCT_CARDS.map((card) => (
+            <div key={card.titleKey} className="card" style={{ padding: '1rem', borderRadius: 16 }}>
+              <h2 style={{ margin: 0, fontSize: '0.92rem', color: 'var(--gold-light)' }}>{t(card.titleKey)}</h2>
+              <p style={{ margin: '0.4rem 0 0', fontSize: '0.82rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
+                {t(card.bodyKey)}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        <div className="card" style={{ padding: '1.15rem 1.25rem', borderRadius: 18, marginBottom: '1.25rem' }}>
+          <h2 style={{ margin: '0 0 0.5rem', fontSize: '1rem' }}>{t('products.philosophyTitle')}</h2>
+          <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: 1.55 }}>
+            {t('products.philosophyBody')}
+          </p>
+        </div>
+
         <div
           className="card"
           style={{
@@ -1259,34 +1293,18 @@ export function ProductMarketplacePage() {
           className="card"
           style={{
             marginTop: '2.5rem',
-            maxWidth: 420,
-            marginLeft: 'auto',
-            fontSize: '0.78rem',
+            maxWidth: 520,
+            fontSize: '0.85rem',
             color: 'var(--text-muted)',
+            lineHeight: 1.55,
           }}
         >
-          <p
-            style={{
-              margin: '0 0 0.35rem',
-              fontWeight: 800,
-              fontSize: '0.65rem',
-              textTransform: 'uppercase',
-              letterSpacing: '0.1em',
-              color: 'var(--text-faint)',
-            }}
-          >
-            Operational note
-          </p>
-          <p style={{ margin: 0 }}>
-            Pricing pulls from `/api/v1/marketplace/products/` for KYB-verified jewellers (no separate product approval queue).
-            Categories and hallmark masters are edited in Django admin; each listing carries purity and stock from the jeweller
-            catalogue. Sellback lines are storefront disclosures; settlement follows vault ledger and showroom agreements.
-          </p>
+          <p style={{ margin: 0 }}>{t('products.transparencyNote')}</p>
         </aside>
 
         <p style={{ marginTop: '2rem' }}>
           <Link to="/signup" className="btn btn-primary">
-            Get started as a customer
+            {t('home.ctaStartSaving')}
           </Link>
         </p>
       </div>

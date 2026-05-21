@@ -1702,6 +1702,7 @@ class WebPushSubscription(models.Model):
     p256dh = models.CharField(max_length=255)
     auth = models.CharField(max_length=255)
     user_agent = models.CharField(max_length=512, blank=True, default="")
+    preferred_locale = models.CharField(max_length=8, blank=True, default="en")
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -1731,6 +1732,7 @@ class NativePushToken(models.Model):
     platform = models.CharField(max_length=16, choices=PLATFORM_CHOICES)
     token = models.TextField(unique=True)
     user_agent = models.CharField(max_length=512, blank=True, default="")
+    preferred_locale = models.CharField(max_length=8, blank=True, default="en")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

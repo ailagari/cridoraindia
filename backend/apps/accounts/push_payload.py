@@ -29,12 +29,14 @@ def build_push_payload(
     url: str,
     tag: str,
     image_url: str | None = None,
+    notification_id: str | None = None,
 ) -> dict:
     payload: dict = {
         "title": title,
         "body": body,
         "url": url,
         "tag": tag,
+        "id": notification_id or tag,
     }
     image = resolve_push_image_url(image_url)
     if image:
