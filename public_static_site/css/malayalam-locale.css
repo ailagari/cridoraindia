@@ -1,0 +1,294 @@
+/* Malayalam locale — Noto Sans Malayalam with relaxed public-page typography */
+
+html[lang='ml'] {
+  --font: 'Noto Sans Malayalam', 'Noto Sans', sans-serif;
+  --ml-body-lh: 1.72;
+  --ml-heading-lh: 1.4;
+  --ml-section-pad-y: 3.5rem;
+}
+
+html[lang='ml'] body {
+  font-family: var(--font);
+  letter-spacing: 0.01em;
+  line-height: var(--ml-body-lh);
+}
+
+/*
+ * Site chrome (header, footer, mobile nav) — font swap only.
+ * Keep English layout metrics so switching locale does not shift the bar.
+ */
+html[lang='ml'] .public-sticky-stack,
+html[lang='ml'] .public-bottom-nav,
+html[lang='ml'] .public-hub-tabs,
+html[lang='ml'] .public-mobile-segment-bar,
+html[lang='ml'] .public-footer {
+  letter-spacing: inherit;
+  line-height: inherit;
+}
+
+html[lang='ml'] .public-sticky-stack .nav-link,
+html[lang='ml'] .public-hub-pill,
+html[lang='ml'] .public-mobile-segment-btn,
+html[lang='ml'] .public-bottom-item {
+  text-transform: uppercase;
+  line-height: 1.2;
+}
+
+html[lang='ml'] .public-sticky-stack .nav-link {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  padding: 0.2rem 0;
+}
+
+html[lang='ml'] .public-sticky-stack .btn.btn-ghost {
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  padding: 0.45rem 0.85rem;
+  min-height: 2.75rem;
+}
+
+html[lang='ml'] .public-hub-pill {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  padding: 0.35rem 0.82rem;
+}
+
+html[lang='ml'] .public-mobile-segment-btn {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  min-height: 2.65rem;
+  padding: 0.5rem 0.75rem;
+}
+
+html[lang='ml'] .public-bottom-item {
+  font-size: 0.52rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+html[lang='ml'] .public-lang-switch__btn {
+  font-family: var(--font);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 0.28rem 0.45rem;
+}
+
+html[lang='ml'] .public-mobile-username {
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  line-height: 1.2;
+}
+
+html[lang='ml'] .public-mobile-user-menu__item {
+  letter-spacing: 0.02em;
+  line-height: 1.45;
+}
+
+/* Page content — relaxed Malayalam typography (not chrome) */
+html[lang='ml'] .public-main .btn,
+html[lang='ml'] .public-main .pill,
+html[lang='ml'] .public-main .enterprise-public__eyebrow {
+  text-transform: none;
+  letter-spacing: 0.02em;
+}
+
+html[lang='ml'] .public-main .btn {
+  font-size: 0.84rem;
+  font-weight: 600;
+  line-height: 1.45;
+  padding: 0.78rem 1.35rem;
+  min-height: 3rem;
+}
+
+html[lang='ml'] .public-main .pill {
+  font-size: 0.78rem;
+  line-height: 1.5;
+  padding: 0.4rem 0.9rem;
+}
+
+/* Page rhythm */
+html[lang='ml'] .page {
+  padding: 3.25rem 0 4.75rem;
+}
+
+html[lang='ml'] .section-band {
+  padding: var(--ml-section-pad-y) 0;
+}
+
+html[lang='ml'] .home-hero {
+  padding: 3.85rem 0 2.75rem;
+}
+
+/* Headings */
+html[lang='ml'] .h1-page {
+  font-size: clamp(1.62rem, 3.8vw, 2.3rem);
+  line-height: var(--ml-heading-lh);
+  letter-spacing: 0;
+}
+
+html[lang='ml'] .lead,
+html[lang='ml'] .enterprise-public__lead {
+  font-size: 1rem;
+  line-height: 1.75;
+  max-width: 62ch;
+  margin-top: 1rem;
+}
+
+html[lang='ml'] .lead-tight {
+  max-width: 60ch;
+}
+
+html[lang='ml'] .cridora-section-title {
+  font-size: clamp(1.12rem, 2.3vw, 1.48rem);
+  line-height: var(--ml-heading-lh);
+  letter-spacing: 0;
+  margin-bottom: 1.15rem;
+  padding-bottom: 0.85rem;
+}
+
+html[lang='ml'] .enterprise-public__title {
+  font-size: clamp(1.52rem, 3.5vw, 2.05rem);
+  line-height: var(--ml-heading-lh);
+  letter-spacing: 0;
+}
+
+html[lang='ml'] .enterprise-public__eyebrow {
+  font-size: 0.72rem;
+  line-height: 1.45;
+  margin-bottom: 0.85rem;
+}
+
+html[lang='ml'] .enterprise-public__steps {
+  gap: 2.15rem;
+}
+
+html[lang='ml'] .enterprise-public__steps li h2 {
+  font-size: 1rem;
+  line-height: 1.48;
+  margin-bottom: 0.55rem;
+}
+
+html[lang='ml'] .enterprise-public__steps li p {
+  font-size: 0.95rem;
+  line-height: 1.75;
+  max-width: 58ch;
+}
+
+/* Public main — override inline sizes, add breathing room */
+html[lang='ml'] .public-main h1 {
+  line-height: var(--ml-heading-lh) !important;
+  letter-spacing: 0 !important;
+}
+
+html[lang='ml'] .public-main h2,
+html[lang='ml'] .public-main h3 {
+  line-height: 1.45;
+  letter-spacing: 0;
+}
+
+html[lang='ml'] .public-main p,
+html[lang='ml'] .public-main li {
+  line-height: var(--ml-body-lh);
+}
+
+html[lang='ml'] .public-main .card {
+  padding: 1.35rem 1.45rem;
+}
+
+html[lang='ml'] .public-main .card h3 {
+  font-size: 0.98rem;
+  margin-bottom: 0.55rem;
+}
+
+html[lang='ml'] .public-main .card p {
+  font-size: 0.9rem;
+}
+
+html[lang='ml'] .public-main section ul,
+html[lang='ml'] .public-main section ol,
+html[lang='ml'] .public-main .card ul,
+html[lang='ml'] .public-main .card ol {
+  gap: 0.55rem;
+}
+
+html[lang='ml'] .public-main section + section {
+  margin-top: 0.35rem;
+}
+
+/* Home hero (inline styles in HomePage) */
+html[lang='ml'] .home-hero h1 {
+  font-size: clamp(1.62rem, 3.8vw, 2.5rem) !important;
+  line-height: var(--ml-heading-lh) !important;
+  letter-spacing: 0 !important;
+}
+
+html[lang='ml'] .home-hero p {
+  font-size: 0.98rem !important;
+  line-height: 1.75 !important;
+  max-width: min(50ch, 100%) !important;
+}
+
+html[lang='ml'] .home-hero ul {
+  gap: 0.75rem !important;
+}
+
+html[lang='ml'] .home-hero li {
+  line-height: 1.68 !important;
+}
+
+html[lang='ml'] .home-hero li span {
+  font-size: 0.9rem !important;
+}
+
+html[lang='ml'] .cridora-quote {
+  font-size: clamp(0.92rem, 1.7vw, 1.1rem) !important;
+  line-height: 1.68 !important;
+  padding: 1.25rem 1.45rem !important;
+}
+
+html[lang='ml'] .grid-2 {
+  gap: 2rem;
+}
+
+/* Auth forms */
+html[lang='ml'] .ds-form label,
+html[lang='ml'] .form-footnote {
+  line-height: 1.65;
+}
+
+html[lang='ml'] .public-footer p {
+  line-height: 1.72;
+  max-width: 42rem;
+}
+
+@media (max-width: 879px) {
+  html[lang='ml'] .h1-page {
+    font-size: clamp(1.38rem, 5.2vw, 2rem);
+    line-height: 1.42;
+  }
+
+  html[lang='ml'] .lead,
+  html[lang='ml'] .enterprise-public__lead {
+    font-size: 0.95rem;
+    line-height: 1.72;
+  }
+
+  html[lang='ml'] .home-hero {
+    padding: 3rem 0 2.25rem;
+  }
+
+  html[lang='ml'] .home-hero h1 {
+    font-size: clamp(1.42rem, 5.2vw, 2.05rem) !important;
+  }
+
+  html[lang='ml'] .public-main .card {
+    padding: 1.2rem 1.25rem;
+  }
+}

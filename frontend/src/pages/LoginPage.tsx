@@ -3,6 +3,8 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
 import { usePublicLocale } from '@/i18n/PublicLocaleProvider'
 import { dashboardLandingPath } from '@/lib/routes'
+import { getApiBaseUrl, isNativeApiMisconfigured, nativeApiConfigError } from '@/lib/api'
+import { isNativePlatform } from '@/lib/capacitorPlatform'
 import { AuthShell } from '@/layouts/auth-shell'
 import { Button, Card, Feedback, Heading, Input, Text } from '@/components/ui'
 
@@ -62,8 +64,14 @@ export function LoginPage() {
             onChange={(e) => setPassword(e.target.value)}
             required
           />
+          {isNativeApiMisconfigured() ? <Feedback>{nativeApiConfigError()}</Feedback> : null}
           {error ? <Feedback>{error}</Feedback> : null}
-          <Button type="submit" variant="primary" block loading={busy}>
+          {isNativePlatform() && getApiBaseUrl() ? (
+            <Text tone="faint" size="micro" style={{ display: 'block', marginTop: 'var(--sp-2)' }}>
+              API: {getApiBaseUrl()}
+            </Text>
+          ) : null}
+          <Button type="submit" variant="primary" block loading={busy} disabled={isNativeApiMisconfigured()}>
             {t('auth.signIn')}
           </Button>
         </form>

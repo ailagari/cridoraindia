@@ -32,6 +32,16 @@ export default defineConfig(({ mode }) => {
   const productionEnv = mode === 'capacitor' ? loadEnv('production', process.cwd(), '') : {}
   const env = mode === 'capacitor' ? { ...productionEnv, ...modeEnv } : modeEnv
   const isCapacitorBuild = env.VITE_CAPACITOR_BUILD === 'true'
+  const liveWebView = env.VITE_CAPACITOR_LIVE_WEBVIEW === 'true'
+  const apiBase = (env.VITE_API_BASE_URL ?? '').trim()
+
+  if (mode === 'capacitor' && isCapacitorBuild && !liveWebView && !apiBase) {
+    throw new Error(
+      'VITE_API_BASE_URL is required for Android APK builds. ' +
+        'Set it in frontend/.env.production.local (use the same backend URL as the browser), ' +
+        'then run: npm run android:apk:debug',
+    )
+  }
 
   const viteEnvDefines =
     mode === 'capacitor'

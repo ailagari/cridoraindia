@@ -1,0 +1,152 @@
+/* Premium logo glow — aligned with Cridora logo showcase (self + backside pulse, 4s) */
+
+.native-app-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  display: grid;
+  place-items: center;
+  background: #000814;
+  transition: opacity 0.45s ease, visibility 0.45s ease;
+}
+
+.native-app-splash--exit {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.native-app-splash__inner {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.35rem;
+}
+
+.native-app-splash__logo-stage {
+  position: relative;
+  width: 11rem;
+  height: 11rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.native-app-splash__backside-glow {
+  position: absolute;
+  top: -25%;
+  left: -25%;
+  width: 150%;
+  height: 150%;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(224, 188, 120, 0.45) 0%,
+    rgba(166, 122, 40, 0.15) 50%,
+    rgba(0, 0, 0, 0) 70%
+  );
+  filter: blur(24px);
+  pointer-events: none;
+  z-index: 0;
+  animation: native-app-splash-backside-glow 4s ease-in-out infinite;
+}
+
+.native-app-splash__logo-glow {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: native-app-splash-self-glow 4s ease-in-out infinite;
+}
+
+.native-app-splash__logo-glow .cridora-logo__mark {
+  filter: none;
+}
+
+.native-app-splash__wordmark {
+  position: relative;
+  z-index: 1;
+  font-family: var(--font, Inter, system-ui, sans-serif);
+  font-weight: 700;
+  font-size: 1.65rem;
+  letter-spacing: -0.03em;
+  color: #e8e8e8;
+  line-height: 1.1;
+  text-align: center;
+  margin: 0;
+}
+
+.native-app-splash__wordmark span {
+  color: #d4a85c;
+}
+
+@keyframes native-app-splash-self-glow {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.15))
+      drop-shadow(0 0 8px rgba(212, 168, 92, 0.2))
+      drop-shadow(0 0 18px rgba(166, 122, 40, 0.1));
+  }
+  50% {
+    filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.4))
+      drop-shadow(0 0 20px rgba(212, 168, 92, 0.35))
+      drop-shadow(0 0 35px rgba(166, 122, 40, 0.2));
+  }
+}
+
+@keyframes native-app-splash-backside-glow {
+  0%,
+  100% {
+    opacity: 0.25;
+    transform: scale(0.95);
+  }
+  50% {
+    opacity: 0.55;
+    transform: scale(1.15);
+  }
+}
+
+/* Inline HTML boot splash (Capacitor index.html) — same motion */
+#cridora-boot-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  display: grid;
+  place-items: center;
+  background: #000814;
+}
+
+#cridora-boot-splash .native-app-splash__logo-stage {
+  position: relative;
+  width: 11rem;
+  height: 11rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .native-app-splash__backside-glow,
+  .native-app-splash__logo-glow,
+  #cridora-boot-splash .native-app-splash__backside-glow,
+  #cridora-boot-splash .native-app-splash__logo-glow {
+    animation: none;
+  }
+
+  .native-app-splash__logo-glow,
+  #cridora-boot-splash .native-app-splash__logo-glow {
+    filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.35))
+      drop-shadow(0 0 20px rgba(212, 168, 92, 0.35))
+      drop-shadow(0 0 35px rgba(166, 122, 40, 0.2));
+  }
+
+  .native-app-splash__backside-glow,
+  #cridora-boot-splash .native-app-splash__backside-glow {
+    opacity: 0.4;
+    transform: scale(1);
+  }
+}

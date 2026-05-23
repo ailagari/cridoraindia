@@ -1,4 +1,5 @@
 import { readStoredPublicLocale } from '@/i18n/engine'
+import { isNativePlatform } from '@/lib/capacitorPlatform'
 
 const rawBase = import.meta.env.VITE_API_BASE_URL ?? ''
 
@@ -6,11 +7,43 @@ export function getApiBaseUrl(): string {
   return rawBase.replace(/\/$/, '')
 }
 
+export function isNativeApiMisconfigured(): boolean {
+  return isNativePlatform() && !getApiBaseUrl()
+}
+
+export function nativeApiConfigError(): string {
+  return (
+    'This app build has no API server configured. Rebuild the APK with VITE_API_BASE_URL ' +
+    'in frontend/.env.production.local (same backend URL you use in the browser), then run npm run android:apk:debug.'
+  )
+}
+
 export function apiUrl(path: string): string {
   if (path.startsWith('http')) return path
-  const base = rawBase.replace(/\/$/, '')
+  const base = getApiBaseUrl()
   const p = path.startsWith('/') ? path : `/${path}`
   return base ? `${base}${p}` : p
+}
+
+function assertApiReachable(): void {
+  if (isNativeApiMisconfigured()) {
+    throw new Error(nativeApiConfigError())
+  }
+}
+
+export function formatFetchError(err: unknown): string {
+  if (err instanceof TypeError) {
+    const msg = err.message.toLowerCase()
+    if (msg.includes('fetch') || msg.includes('network') || msg.includes('failed')) {
+      const base = getApiBaseUrl()
+      if (base) {
+        return `Cannot reach the server (${base}). Check mobile data/Wi‑Fi and try again.`
+      }
+      return nativeApiConfigError()
+    }
+  }
+  if (err instanceof Error && err.message) return err.message
+  return 'Network request failed.'
 }
 
 export function getStoredAccess(): string | null {
@@ -47,6 +80,7 @@ export async function apiFetch(
   path: string,
   init: RequestInit & { jsonBody?: Json } = {},
 ): Promise<Response> {
+  assertApiReachable()
   const { jsonBody, headers, ...rest } = init
   const h = withLocaleHeaders(new Headers(headers))
   const body =
@@ -54,7 +88,11 @@ export async function apiFetch(
   if (jsonBody !== undefined && !h.has('Content-Type')) {
     h.set('Content-Type', 'application/json')
   }
-  return fetch(apiUrl(path), { ...rest, body, headers: h })
+  try {
+    return await fetch(apiUrl(path), { ...rest, body, headers: h })
+  } catch (err) {
+    throw new Error(formatFetchError(err))
+  }
 }
 
 async function refreshTokens(): Promise<string | null> {
@@ -95,12 +133,19 @@ export async function authFetch(
     return h
   }
 
-  const run = (access: string) =>
-    fetch(apiUrl(path), {
-      ...rest,
-      body,
-      headers: makeHeaders(access),
-    })
+  assertApiReachable()
+
+  const run = async (access: string) => {
+    try {
+      return await fetch(apiUrl(path), {
+        ...rest,
+        body,
+        headers: makeHeaders(access),
+      })
+    } catch (err) {
+      throw new Error(formatFetchError(err))
+    }
+  }
 
   let access = getStoredAccess()
   if (!access) {

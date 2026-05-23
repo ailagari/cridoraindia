@@ -188,13 +188,23 @@ SIMPLE_JWT = {
     "BLACKLIST_AFTER_ROTATION": True,
 }
 
-CORS_ALLOWED_ORIGINS = [
-    o.strip()
-    for o in os.environ.get(
-        "CORS_ALLOWED_ORIGINS", "http://127.0.0.1:5173,http://localhost:5173,https://localhost,capacitor://localhost"
-    ).split(",")
-    if o.strip()
-]
+_CAPACITOR_ORIGINS = (
+    "http://127.0.0.1:5173",
+    "http://localhost:5173",
+    "https://localhost",
+    "http://localhost",
+    "capacitor://localhost",
+)
+CORS_ALLOWED_ORIGINS = list(
+    dict.fromkeys(
+        [
+            o.strip()
+            for o in os.environ.get("CORS_ALLOWED_ORIGINS", ",".join(_CAPACITOR_ORIGINS)).split(",")
+            if o.strip()
+        ]
+        + list(_CAPACITOR_ORIGINS)
+    )
+)
 CORS_ALLOW_CREDENTIALS = True
 
 CSRF_TRUSTED_ORIGINS = [

@@ -1,0 +1,98 @@
+/* ─── Cridora DS — Token Layer ────────────────────────────────────────────────
+   Extends the :root in index.css with tokens that don't exist there yet.
+   Import order: index.css → tokens.css → ds.css
+   ─────────────────────────────────────────────────────────────────────────── */
+:root {
+  /* Spacing (4 px grid) */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-8: 32px;
+  --sp-10: 40px;
+  --sp-12: 48px;
+  --sp-16: 64px;
+
+  /* Type sizes */
+  --ts-display: 28px;
+  --ts-h1: 22px;
+  --ts-h2: 17px;
+  --ts-h3: 14px;
+  --ts-body: 14px;
+  --ts-sm: 13px;
+  --ts-caption: 12px;
+  --ts-micro: 11px;
+
+  /* Control heights */
+  --h-xs: 28px;
+  --h-sm: 32px;
+  --h-md: 44px; /* = --control-height */
+  --h-lg: 52px;
+
+  /* Radii shortcuts */
+  --r-xs: 4px;
+  --r-sm: 6px;
+  --r-md: var(--control-radius); /* 10px */
+  --r-lg: var(--radius);         /* 12px */
+  --r-xl: 16px;
+  --r-2xl: 20px;
+  --r-full: 9999px;
+
+  /* Animation durations */
+  --dur-instant: 80ms;
+  --dur-fast: 150ms;
+  --dur-normal: 220ms;
+  --dur-slow: 320ms;
+
+  /* Status colors missing from :root */
+  --warning: #f59e0b;
+  --info: #3b82f6;
+  --warning-soft: rgba(245, 158, 11, 0.12);
+  --info-soft: rgba(59, 130, 246, 0.12);
+  --warning-ring: rgba(245, 158, 11, 0.25);
+  --info-ring: rgba(59, 130, 246, 0.25);
+  --success-soft: rgba(31, 169, 113, 0.12);
+  --danger-soft: rgba(217, 83, 79, 0.12);
+
+  /* Icon sizes */
+  --ico-nav: 22px;
+  --ico-sidebar: 18px;
+  --ico-btn: 16px;
+  --ico-sm: 14px;
+  --ico-feature: 24px;
+
+  /* Density defaults — override per shell class */
+  --dens-row: var(--h-md);
+  --dens-cell-pad: 0 16px;
+  --dens-card: 16px 20px;
+  --dens-gap: 12px;
+  --dens-ts: var(--ts-sm);
+
+  /* Z-index stack */
+  --z-base: 0;
+  --z-sticky: 50;
+  --z-topbar: 100;
+  --z-overlay: 200;
+  --z-modal: 300;
+  --z-toast: 400;
+}
+
+/* ── Density modifiers ───────────────────────────────────────── */
+.density-compact {
+  --dens-row: var(--h-xs);
+  --dens-cell-pad: 0 12px;
+  --dens-card: 12px 14px;
+  --dens-gap: 8px;
+  --dens-ts: var(--ts-caption);
+}
+
+.density-relaxed {
+  --dens-row: var(--h-lg);
+  --dens-cell-pad: 0 20px;
+  --dens-card: 20px 24px;
+  --dens-gap: 16px;
+  --dens-ts: var(--ts-body);
+}
+
