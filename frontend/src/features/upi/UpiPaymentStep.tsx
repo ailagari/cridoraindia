@@ -5,8 +5,7 @@ import { UpiPayMethodNotice } from '@/components/UpiPayMethodNotice'
 import { UpiOnHoldNotice } from '@/features/upi/UpiOnHoldNotice'
 import {
   fetchUpiPayment,
-  submitUpiProof,
-  submitUpiUtr,
+  submitUpiPaymentProof,
   UPI_ON_HOLD,
   UPI_PENDING_REVIEW,
   UPI_PROOF_REJECTED,
@@ -50,7 +49,6 @@ export function UpiPaymentStep({
   const [utrInput, setUtrInput] = useState('')
   const [screenshotFile, setScreenshotFile] = useState<File | null>(null)
   const [qrSrc, setQrSrc] = useState('')
-  const [showPaidForm, setShowPaidForm] = useState(false)
 
   const refresh = useCallback(async () => {
     setLoadErr('')
@@ -84,6 +82,7 @@ export function UpiPaymentStep({
 
   const utrHint = useMemo(() => utrValidationHint(utrInput), [utrInput])
   const utrReady = isValidUtr(utrInput)
+  const canSubmitProof = utrReady || Boolean(screenshotFile)
 
   if (state?.is_on_hold || state?.status === UPI_ON_HOLD) {
     return <UpiOnHoldNotice kind={kind} />
@@ -112,37 +111,22 @@ export function UpiPaymentStep({
 
   const canSubmit = state?.can_submit_proof ?? false
 
-  const handleUtrSubmit = async () => {
-    if (!utrReady) {
+  const handleSubmit = async () => {
+    if (!canSubmitProof) {
+      setActionErr('Enter a UTR number or upload a payment screenshot.')
+      return
+    }
+    if (utrInput.trim() && !utrReady && !screenshotFile) {
       setActionErr(utrHint ?? 'Enter a valid UTR number.')
       return
     }
     setActionErr('')
     setBusy(true)
     try {
-      const out = await submitUpiUtr(kind, paymentId, utrInput)
-      if (!out.ok) {
-        setActionErr(out.detail)
-        onError?.(out.detail)
-        return
-      }
-      setState(out.data)
-      onSubmitted?.()
-      onSuccess?.('Payment proof submitted for review.')
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  const handleScreenshotSubmit = async () => {
-    if (!screenshotFile) {
-      setActionErr('Upload a payment screenshot.')
-      return
-    }
-    setActionErr('')
-    setBusy(true)
-    try {
-      const out = await submitUpiProof(kind, paymentId, screenshotFile, utrInput)
+      const out = await submitUpiPaymentProof(kind, paymentId, {
+        utr: utrInput,
+        file: screenshotFile,
+      })
       if (!out.ok) {
         setActionErr(out.detail)
         onError?.(out.detail)
@@ -150,9 +134,8 @@ export function UpiPaymentStep({
       }
       setState(out.data)
       setScreenshotFile(null)
-      setShowPaidForm(false)
       onSubmitted?.()
-      onSuccess?.('Payment screenshot submitted for review.')
+      onSuccess?.('Payment proof submitted for review.')
     } finally {
       setBusy(false)
     }
@@ -179,7 +162,7 @@ export function UpiPaymentStep({
             to <strong>{state.payee_name}</strong>
           </>
         ) : null}
-        . After paying, submit UTR for fast-track review or upload a screenshot via I&apos;ve paid.
+        . After paying, submit your UTR number and/or payment screenshot.
       </p>
 
       {loadErr ? <p className="form-error">{loadErr}</p> : null}
@@ -217,64 +200,49 @@ export function UpiPaymentStep({
             </button>
           ) : null}
 
-          <Input
-            label="UTR number"
-            value={utrInput}
-            onChange={(e) => {
-              setActionErr('')
-              setUtrInput(e.target.value)
-            }}
-            placeholder="12-digit UTR from GPay / PhonePe receipt"
-            autoComplete="off"
-            inputMode="text"
-            autoCapitalize="characters"
-            spellCheck={false}
-            error={utrHint ?? undefined}
-            mono
-          />
-          <button
-            type="button"
-            className="btn btn-primary btn--block"
-            disabled={busy || !utrReady}
-            onClick={() => void handleUtrSubmit()}
-          >
-            Instant approval
-          </button>
-
-          {!showPaidForm ? (
+          <div className="fractional-upi-pay__proof-options">
+            <Input
+              label="UTR number (optional if screenshot added)"
+              value={utrInput}
+              onChange={(e) => {
+                setActionErr('')
+                setUtrInput(e.target.value)
+              }}
+              placeholder="12-digit UTR from GPay / PhonePe receipt"
+              autoComplete="off"
+              inputMode="text"
+              autoCapitalize="characters"
+              spellCheck={false}
+              error={utrHint ?? undefined}
+              mono
+            />
+            <label className="form-label" htmlFor={`upi-screenshot-${paymentId}`}>
+              Payment screenshot (optional if UTR added)
+            </label>
+            <input
+              id={`upi-screenshot-${paymentId}`}
+              type="file"
+              accept="image/*"
+              disabled={busy}
+              onChange={(e) => {
+                setActionErr('')
+                setScreenshotFile(e.target.files?.[0] ?? null)
+              }}
+            />
+            {screenshotFile ? (
+              <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                Selected: {screenshotFile.name}
+              </p>
+            ) : null}
             <button
               type="button"
-              className="btn btn-secondary btn--block"
-              disabled={busy}
-              onClick={() => setShowPaidForm(true)}
+              className="btn btn-primary btn--block"
+              disabled={busy || !canSubmitProof}
+              onClick={() => void handleSubmit()}
             >
-              I&apos;ve paid
+              Submit payment proof
             </button>
-          ) : (
-            <div className="fractional-upi-pay__paid-form">
-              <label className="form-label" htmlFor="upi-screenshot">
-                Payment screenshot
-              </label>
-              <input
-                id="upi-screenshot"
-                type="file"
-                accept="image/*"
-                disabled={busy}
-                onChange={(e) => {
-                  setActionErr('')
-                  setScreenshotFile(e.target.files?.[0] ?? null)
-                }}
-              />
-              <button
-                type="button"
-                className="btn btn-primary btn--block"
-                disabled={busy || !screenshotFile}
-                onClick={() => void handleScreenshotSubmit()}
-              >
-                Submit screenshot
-              </button>
-            </div>
-          )}
+          </div>
 
           {actionErr ? <p className="form-error">{actionErr}</p> : null}
         </>

@@ -18,6 +18,7 @@ from apps.accounts.models import (
     CridoraPayBill,
     FractionalGoldPurchase,
     GoldDepositIntake,
+    GoldLoanRepaymentRequest,
     GoldLoanRequest,
     GoldSellbackRequest,
     PlatformCommercialLedgerEntry,
@@ -58,6 +59,28 @@ CP_CANCELLED = (
     CridoraPayBill.STATUS_EXPIRED,
 )
 
+CP_JEWELLER_PENDING = (
+    CridoraPayBill.STATUS_AWAITING_CUSTOMER,
+    CridoraPayBill.STATUS_UPI_PENDING,
+    CridoraPayBill.STATUS_VAULT_OTP_PENDING,
+    CridoraPayBill.STATUS_CASH_PENDING,
+    CridoraPayBill.STATUS_PENDING_REVIEW,
+)
+
+LOAN_REPAYMENT_PENDING = (
+    GoldLoanRepaymentRequest.STATUS_PENDING_JEWELLER,
+    GoldLoanRepaymentRequest.STATUS_ACCEPTED_AWAITING_OTP,
+    GoldLoanRepaymentRequest.STATUS_PENDING_REVIEW,
+    GoldLoanRepaymentRequest.STATUS_NEEDS_MANUAL_VERIFICATION,
+)
+LOAN_REPAYMENT_COMPLETED = (GoldLoanRepaymentRequest.STATUS_COMPLETED,)
+LOAN_REPAYMENT_CANCELLED = (
+    GoldLoanRepaymentRequest.STATUS_REJECTED,
+    GoldLoanRepaymentRequest.STATUS_CANCELLED,
+    GoldLoanRepaymentRequest.STATUS_ON_HOLD,
+    GoldLoanRepaymentRequest.STATUS_PROOF_REJECTED,
+)
+
 
 TRANSACTION_TYPE_LABELS = {
     "fractional": "Fractional gold",
@@ -66,6 +89,7 @@ TRANSACTION_TYPE_LABELS = {
     "cridorapay": "CridoraPay bill",
     "sellback": "Sellback",
     "loan_fee": "Loan processing fee",
+    "loan_repayment": "Loan repayment",
 }
 
 METHOD_LABELS = {
@@ -285,7 +309,7 @@ def _map_cridorapay(b: CridoraPayBill) -> dict[str, Any]:
         amount_inr=str(b.total_inr),
         grams=str(b.weight_grams),
         payment_method=_cp_payment_method(b),
-        otp_utr="—",
+        otp_utr=b.upi_utr or "—",
         status_raw=b.status,
         status_label=b.get_status_display(),
         platform_fee_inr="0",
@@ -390,6 +414,58 @@ def _map_sellback(s: GoldSellbackRequest) -> dict[str, Any]:
     )
 
 
+def _loan_repayment_actions(r: GoldLoanRepaymentRequest) -> list[str]:
+    if r.status == GoldLoanRepaymentRequest.STATUS_PENDING_JEWELLER:
+        return ["accept_loan_repayment", "reject_loan_repayment"]
+    if r.status == GoldLoanRepaymentRequest.STATUS_ACCEPTED_AWAITING_OTP:
+        return ["complete_loan_repayment_otp"]
+    if r.status in (
+        GoldLoanRepaymentRequest.STATUS_PENDING_REVIEW,
+        GoldLoanRepaymentRequest.STATUS_NEEDS_MANUAL_VERIFICATION,
+    ):
+        return ["confirm_upi", "reject_upi"]
+    return []
+
+
+def _map_loan_repayment(r: GoldLoanRepaymentRequest) -> dict[str, Any]:
+    completed_at = None
+    if r.status == GoldLoanRepaymentRequest.STATUS_COMPLETED:
+        completed_at = r.updated_at.isoformat()
+    otp_expires = None
+    try:
+        otp_expires = r.settlement_otp.expires_at.isoformat()
+    except Exception:
+        pass
+    return _build_row(
+        source_model="gold_loan_repayment_request",
+        source_id=r.pk,
+        reference=f"LRP-{r.pk}",
+        transaction_type="loan_repayment",
+        customer=r.loan.customer,
+        amount_inr=str(r.amount_inr),
+        grams="0",
+        payment_method=r.payment_method or "—",
+        otp_utr=r.upi_utr or "—",
+        status_raw=r.status,
+        status_label=r.get_status_display(),
+        platform_fee_inr="0",
+        created_at=r.created_at.isoformat(),
+        completed_at=completed_at,
+        detail={
+            "loan_reference": f"LN-{r.loan_id}",
+            "payment_note": r.payment_note or "",
+            "otp_expires_at": otp_expires,
+            "upi_utr": r.upi_utr or "",
+            "proof_file_url": r.upi_proof_file.url if r.upi_proof_file else "",
+            "upi_rejection_count": r.upi_rejection_count,
+            "upi_last_rejection_remark": r.upi_last_rejection_remark or "",
+            "upi_fraud_reported": r.upi_fraud_reported,
+            "reconciliation_score": r.reconciliation_score,
+        },
+        actions=_loan_repayment_actions(r),
+    )
+
+
 def _loan_actions(l: GoldLoanRequest) -> list[str]:
     if l.status == GoldLoanRequest.STATUS_PENDING_JEWELLER:
         return ["accept_loan", "reject_loan"]
@@ -432,10 +508,11 @@ def _status_filter(bucket: str) -> tuple[Any, ...]:
         return (
             JEWELLER_PENDING_STATUSES,
             (GoldDepositIntake.AWAITING_CUSTOMER_OTP,),
-            CP_OPEN,
+            CP_JEWELLER_PENDING,
             (),
             SELLBACK_PENDING,
             LOAN_PENDING,
+            LOAN_REPAYMENT_PENDING,
         )
     if bucket == BUCKET_COMPLETED:
         return (
@@ -445,6 +522,7 @@ def _status_filter(bucket: str) -> tuple[Any, ...]:
             ("ornament_all",),
             SELLBACK_COMPLETED,
             LOAN_COMPLETED,
+            LOAN_REPAYMENT_COMPLETED,
         )
     return (
         JEWELLER_CANCELLED_STATUSES,
@@ -453,6 +531,7 @@ def _status_filter(bucket: str) -> tuple[Any, ...]:
         (),
         SELLBACK_CANCELLED,
         LOAN_CANCELLED,
+        LOAN_REPAYMENT_CANCELLED,
     )
 
 
@@ -468,6 +547,7 @@ def _fetch_rows_for_bucket(
         orn_st,
         sb_st,
         loan_st,
+        loan_repay_st,
     ) = _status_filter(bucket)
 
     rows: list[dict[str, Any]] = []
@@ -520,6 +600,17 @@ def _fetch_rows_for_bucket(
     )
     for l in loan_qs:
         rows.append(_map_loan(l))
+
+    lr_qs = (
+        GoldLoanRepaymentRequest.objects.filter(
+            loan__jeweller=jeweller,
+            status__in=loan_repay_st,
+        )
+        .select_related("loan__customer", "settlement_otp")
+        .order_by("-created_at")[:150]
+    )
+    for r in lr_qs:
+        rows.append(_map_loan_repayment(r))
 
     return rows
 

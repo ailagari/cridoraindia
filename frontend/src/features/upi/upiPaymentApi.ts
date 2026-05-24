@@ -1,4 +1,5 @@
 import { apiUrl, authFetch, authUpload, extractApiDetail } from '@/lib/api'
+import { isValidUtr, utrValidationHint } from '@/lib/utrNormalize'
 
 export type UpiPaymentKind =
   | 'fractional'
@@ -79,6 +80,28 @@ export async function fetchUpiPayment(
   }
 }
 
+export async function submitUpiPaymentProof(
+  kind: UpiPaymentKind,
+  id: number,
+  opts: { utr?: string; file?: File | null },
+): Promise<ApiResult<UpiPaymentState>> {
+  const utr = (opts.utr ?? '').trim()
+  const file = opts.file ?? null
+  const hasUtr = utr.length > 0
+  const hasFile = Boolean(file)
+
+  if (!hasUtr && !hasFile) {
+    return { ok: false, detail: 'Enter a UTR number or upload a payment screenshot.' }
+  }
+  if (hasUtr && !isValidUtr(utr) && !hasFile) {
+    return { ok: false, detail: utrValidationHint(utr) ?? 'Enter a valid UTR number.' }
+  }
+  if (hasFile) {
+    return submitUpiProof(kind, id, file!, hasUtr && isValidUtr(utr) ? utr : undefined)
+  }
+  return submitUpiUtr(kind, id, utr)
+}
+
 export async function submitUpiUtr(
   kind: UpiPaymentKind,
   id: number,
@@ -87,7 +110,7 @@ export async function submitUpiUtr(
   try {
     const res = await authFetch(`/api/v1/upi/${kind}/${id}/submit-utr/`, {
       method: 'POST',
-      body: JSON.stringify({ utr }),
+      jsonBody: { utr },
     })
     return parseJson(res, 'Could not submit UTR.')
   } catch (e) {
@@ -132,7 +155,7 @@ export async function rejectUpiPayment(
   try {
     const res = await authFetch(`/api/v1/upi/${kind}/${id}/reject/`, {
       method: 'POST',
-      body: JSON.stringify({ remark, confirm: true }),
+      jsonBody: { remark, confirm: true },
     })
     return parseJson(res, 'Could not reject payment.')
   } catch (e) {
@@ -148,7 +171,7 @@ export async function reportUpiFraud(
   try {
     const res = await authFetch(`/api/v1/upi/${kind}/${id}/report-fraud/`, {
       method: 'POST',
-      body: JSON.stringify({ note }),
+      jsonBody: { note },
     })
     return parseJson(res, 'Could not report fraud.')
   } catch (e) {

@@ -9313,6 +9313,46 @@ select.input {
   border: 1px solid var(--border-soft);
 }
 
+.upi-proof-table-cell {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.upi-proof-review--compact .upi-proof-review__actions {
+  margin-top: 0;
+}
+
+.fractional-upi-pay__proof-options {
+  display: grid;
+  gap: 0.65rem;
+  margin-top: 0.85rem;
+}
+
+.fractional-upi-pay__proof-option {
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.85rem;
+  border-radius: 12px;
+  border: 1px solid var(--border-soft);
+  background: rgba(0, 8, 20, 0.2);
+}
+
+.fractional-upi-pay__proof-option-title {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.fractional-upi-pay__proof-or {
+  margin: 0;
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--text-faint);
+}
+
 .fractional-upi-pay__paid-form {
   display: grid;
   gap: 0.45rem;

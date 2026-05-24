@@ -2,6 +2,7 @@ import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
 import { DashSegmentPair } from '@/components/DashSegmentPair'
 import { useCounterOtpCountdown } from '@/features/invest/useCounterOtpCountdown'
 import { UpiProofReviewActions } from '@/features/upi/UpiProofReviewActions'
+import { UpiProofTableCell } from '@/features/upi/UpiProofTableCell'
 import type { UpiPaymentKind } from '@/features/upi/upiPaymentApi'
 import {
   jewellerFractionalVerify,
@@ -15,6 +16,9 @@ import {
   postJewellerLoanAccept,
   postJewellerLoanComplete,
   postJewellerLoanReject,
+  postJewellerLoanRepaymentAccept,
+  postJewellerLoanRepaymentComplete,
+  postJewellerLoanRepaymentReject,
 } from '@/lib/goldLoanApi'
 import {
   postJewellerSellbackAccept,
@@ -44,6 +48,7 @@ const TYPE_OPTIONS = [
   { value: 'cridorapay', label: 'CridoraPay' },
   { value: 'sellback', label: 'Sellback' },
   { value: 'loan_fee', label: 'Loan fee' },
+  { value: 'loan_repayment', label: 'Loan repayment' },
 ]
 
 const METHOD_OPTIONS = [
@@ -62,6 +67,7 @@ const TYPE_LABEL: Record<string, string> = {
   cridorapay: 'CridoraPay bill',
   sellback: 'Sellback',
   loan_fee: 'Loan processing fee',
+  loan_repayment: 'Loan repayment',
 }
 
 function typeLabel(row: UnifiedDeskRow): string {
@@ -103,12 +109,19 @@ const COMPLETE_ACTIONS = new Set([
   'verify_vault_otp',
   'complete_sellback_otp',
   'complete_loan_otp',
+  'complete_loan_repayment_otp',
   'confirm_upi',
   'accept_sellback',
   'accept_loan',
+  'accept_loan_repayment',
 ])
 
-const CANCEL_ACTIONS = new Set(['reject_upi', 'reject_sellback', 'reject_loan'])
+const CANCEL_ACTIONS = new Set([
+  'reject_upi',
+  'reject_sellback',
+  'reject_loan',
+  'reject_loan_repayment',
+])
 
 function nextTabAfterAction(row: UnifiedDeskRow, current: DeskTab): DeskTab | null {
   if (current !== 'pending') return null
@@ -137,7 +150,20 @@ function upiReviewKind(row: UnifiedDeskRow): UpiPaymentKind | null {
   if (!row.actions.includes('confirm_upi')) return null
   if (row.transaction_type === 'fractional') return 'fractional'
   if (row.transaction_type === 'cridorapay') return 'cridorapay'
+  if (row.transaction_type === 'loan_repayment') return 'loan_repayment'
   return null
+}
+
+function rowProofUtr(row: UnifiedDeskRow): string {
+  const detailUtr = row.detail.upi_utr as string | undefined
+  if (detailUtr) return detailUtr
+  if (row.otp_utr && row.otp_utr !== '—') return row.otp_utr
+  return ''
+}
+
+function rowProofFileUrl(row: UnifiedDeskRow): string | undefined {
+  const url = row.detail.proof_file_url as string | undefined
+  return url || undefined
 }
 
 export function JewellerUnifiedPurchaseDesk() {
@@ -258,6 +284,11 @@ export function JewellerUnifiedPurchaseDesk() {
         const out = await postJewellerLoanComplete(row.source_id, otp)
         return out.ok ? { ok: true } : { ok: false, detail: out.detail }
       })
+    } else if (row.source_model === 'gold_loan_repayment_request') {
+      await runAction(row, async () => {
+        const out = await postJewellerLoanRepaymentComplete(row.source_id, otp)
+        return out.ok ? { ok: true } : { ok: false, detail: out.detail }
+      })
     }
   }
 
@@ -274,12 +305,13 @@ export function JewellerUnifiedPurchaseDesk() {
           paymentId={row.source_id}
           reference={row.reference}
           amountInr={row.amount_inr}
-          upiUtr={(row.detail.upi_utr as string | undefined) || row.otp_utr}
-          proofFileUrl={row.detail.proof_file_url as string | undefined}
+          upiUtr={rowProofUtr(row)}
+          proofFileUrl={rowProofFileUrl(row)}
           rejectionCount={row.detail.upi_rejection_count as number | undefined}
           lastRemark={row.detail.upi_last_rejection_remark as string | undefined}
           fraudReported={Boolean(row.detail.upi_fraud_reported)}
           busy={busyKey != null}
+          compact
           onBusyChange={(v) => setBusyKey(v ? row.id : null)}
           onDone={async () => {
             setVerifiedReceipt({
@@ -294,7 +326,14 @@ export function JewellerUnifiedPurchaseDesk() {
       )
     }
 
-    if (row.actions.includes('verify_otp') || row.actions.includes('verify_deposit_otp') || row.actions.includes('verify_vault_otp') || row.actions.includes('complete_sellback_otp') || row.actions.includes('complete_loan_otp')) {
+    if (
+      row.actions.includes('verify_otp') ||
+      row.actions.includes('verify_deposit_otp') ||
+      row.actions.includes('verify_vault_otp') ||
+      row.actions.includes('complete_sellback_otp') ||
+      row.actions.includes('complete_loan_otp') ||
+      row.actions.includes('complete_loan_repayment_otp')
+    ) {
       return (
         <div className="jeweller-purchases-otp-stack">
           <input
@@ -383,6 +422,36 @@ export function JewellerUnifiedPurchaseDesk() {
             }
           >
             Reject loan
+          </button>
+        ) : null}
+        {row.actions.includes('accept_loan_repayment') ? (
+          <button
+            type="button"
+            className="btn btn-primary jeweller-purchases-verify-btn"
+            disabled={busyKey != null}
+            onClick={() =>
+              void runAction(row, async () => {
+                const out = await postJewellerLoanRepaymentAccept(row.source_id)
+                return out.ok ? { ok: true } : { ok: false, detail: out.detail }
+              })
+            }
+          >
+            Accept repayment
+          </button>
+        ) : null}
+        {row.actions.includes('reject_loan_repayment') ? (
+          <button
+            type="button"
+            className="btn btn-ghost jeweller-purchases-verify-btn"
+            disabled={busyKey != null}
+            onClick={() =>
+              void runAction(row, async () => {
+                const out = await postJewellerLoanRepaymentReject(row.source_id)
+                return out.ok ? { ok: true } : { ok: false, detail: out.detail }
+              })
+            }
+          >
+            Reject repayment
           </button>
         ) : null}
         {row.actions.includes('mark_cash_paid') ? (
@@ -507,7 +576,7 @@ export function JewellerUnifiedPurchaseDesk() {
                 <th scope="col">Type</th>
                 <th scope="col">Amount</th>
                 <th scope="col">Method</th>
-                <th scope="col">OTP / UTR</th>
+                <th scope="col">Payment proof</th>
                 <th scope="col">Status</th>
                 <th scope="col">Platform fee</th>
                 {tab === 'pending' ? <th scope="col">Actions</th> : null}
@@ -519,10 +588,8 @@ export function JewellerUnifiedPurchaseDesk() {
                 const orderRef = (row.detail.order_reference as string | undefined) || ''
                 const metalRate = row.detail.metal_rate_inr_per_gram as string | undefined
                 const reconScore = row.detail.reconciliation_score as number | undefined
-                const utr =
-                  row.otp_utr && row.otp_utr !== '—'
-                    ? row.otp_utr
-                    : (row.detail.upi_utr as string | undefined) || ''
+                const proofUtr = rowProofUtr(row)
+                const proofFileUrl = rowProofFileUrl(row)
                 return (
                   <Fragment key={row.id}>
                     <tr className={isOpen ? 'jeweller-unified-desk-row--open' : undefined}>
@@ -565,12 +632,8 @@ export function JewellerUnifiedPurchaseDesk() {
                         </div>
                       </td>
                       <td data-label="Method">{methodLabel(row)}</td>
-                      <td data-label="OTP / UTR">
-                        {utr ? (
-                          <strong className="tabular fractional-upi-utr-display">{utr}</strong>
-                        ) : (
-                          '—'
-                        )}
+                      <td data-label="Payment proof">
+                        <UpiProofTableCell utr={proofUtr} proofFileUrl={proofFileUrl} />
                         {reconScore != null ? (
                           <span className="jeweller-unified-recon-score">{reconScore}% match</span>
                         ) : null}

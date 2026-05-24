@@ -19,6 +19,7 @@ type Props = {
   lastRemark?: string
   fraudReported?: boolean
   busy?: boolean
+  compact?: boolean
   onBusyChange?: (v: boolean) => void
   onDone?: (message: string) => void
   onError?: (message: string) => void
@@ -35,6 +36,7 @@ export function UpiProofReviewActions({
   lastRemark,
   fraudReported,
   busy = false,
+  compact = false,
   onBusyChange,
   onDone,
   onError,
@@ -93,33 +95,37 @@ export function UpiProofReviewActions({
     })
 
   return (
-    <div className="upi-proof-review">
-      <p className="upi-proof-review__meta">
-        {reference ? <strong>{reference}</strong> : null}
-        {amountInr ? (
-          <>
-            {' '}
-            · ₹{amountInr}
-          </>
-        ) : null}
-        {rejectionCount ? (
-          <span style={{ color: 'var(--text-muted)' }}> · rejection {rejectionCount}/2</span>
-        ) : null}
-      </p>
-      {upiUtr ? (
-        <p style={{ margin: '0.25rem 0', fontSize: '0.85rem' }}>
-          UTR: <span className="tabular">{upiUtr}</span>
-        </p>
-      ) : null}
-      {lastRemark ? (
-        <p style={{ margin: '0.25rem 0', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-          Last remark: {lastRemark}
-        </p>
-      ) : null}
-      {imgUrl ? (
-        <a href={imgUrl} target="_blank" rel="noopener noreferrer" className="upi-proof-review__thumb">
-          <img src={imgUrl} alt="Payment proof" width={120} height={120} />
-        </a>
+    <div className={`upi-proof-review${compact ? ' upi-proof-review--compact' : ''}`}>
+      {!compact ? (
+        <>
+          <p className="upi-proof-review__meta">
+            {reference ? <strong>{reference}</strong> : null}
+            {amountInr ? (
+              <>
+                {' '}
+                · ₹{amountInr}
+              </>
+            ) : null}
+            {rejectionCount ? (
+              <span style={{ color: 'var(--text-muted)' }}> · rejection {rejectionCount}/2</span>
+            ) : null}
+          </p>
+          {upiUtr ? (
+            <p style={{ margin: '0.25rem 0', fontSize: '0.85rem' }}>
+              UTR: <span className="tabular">{upiUtr}</span>
+            </p>
+          ) : null}
+          {lastRemark ? (
+            <p style={{ margin: '0.25rem 0', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+              Last remark: {lastRemark}
+            </p>
+          ) : null}
+          {imgUrl ? (
+            <a href={imgUrl} target="_blank" rel="noopener noreferrer" className="upi-proof-review__thumb">
+              <img src={imgUrl} alt="Payment proof" width={120} height={120} />
+            </a>
+          ) : null}
+        </>
       ) : null}
       <div className="upi-proof-review__actions">
         <button type="button" className="btn btn-primary" disabled={busy} onClick={onApprove}>
