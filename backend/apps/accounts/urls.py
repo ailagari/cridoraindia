@@ -16,6 +16,7 @@ from .views import (
     PasswordChangeView,
     ProfilePhotoView,
 )
+from .views_jeweller_desk import JewellerUnifiedDeskTransactionsView
 from .views_jeweller_portfolio import JewellerPortfolioLedgerView
 from .views_gold import (
     DefaultJewellerView,
@@ -28,6 +29,16 @@ from .views_gold import (
     JewellerCustomerVaultLedgerView,
 )
 from .platform_features_views import AdminFeatureRolloutView, PlatformFeaturesView
+from .views_admin_treasury import (
+    AdminTreasuryLedgerView,
+    AdminTreasuryPaymentConfirmView,
+    AdminTreasuryPaymentRejectView,
+    AdminTreasuryPaymentsView,
+    AdminTreasuryReportExportView,
+    AdminTreasurySettlementSummaryView,
+    JewellerTreasuryPaymentsView,
+    JewellerTreasurySummaryView,
+)
 from .views_admin import (
     AdminCustomerKYCActionView,
     AdminDocumentRequestReuploadView,
@@ -326,6 +337,7 @@ urlpatterns = [
         "fractional/orders/<int:pk>/cancel-upi/",
         FractionalOrderCancelUpiView.as_view(),
     ),
+    path("jeweller/desk/transactions/", JewellerUnifiedDeskTransactionsView.as_view()),
     path("jeweller/fractional/pending/", JewellerFractionalPendingView.as_view()),
     path("jeweller/fractional/orders/", JewellerFractionalOrdersListView.as_view()),
     path("jeweller/fractional/pending-upi/", JewellerFractionalPendingUpiView.as_view()),
@@ -393,6 +405,20 @@ urlpatterns = [
     path("kyc/bank/", BankAccountUpsertView.as_view()),
     path("kyc/documents/", KYDocumentListView.as_view()),
     path("kyc/documents/upload/", KYDocumentUploadView.as_view()),
+    path("admin/treasury/ledger/", AdminTreasuryLedgerView.as_view()),
+    path("admin/treasury/settlement/summary/", AdminTreasurySettlementSummaryView.as_view()),
+    path("admin/treasury/payments/", AdminTreasuryPaymentsView.as_view()),
+    path(
+        "admin/treasury/payments/<int:pk>/confirm/",
+        AdminTreasuryPaymentConfirmView.as_view(),
+    ),
+    path(
+        "admin/treasury/payments/<int:pk>/reject/",
+        AdminTreasuryPaymentRejectView.as_view(),
+    ),
+    path("admin/treasury/export/", AdminTreasuryReportExportView.as_view()),
+    path("jeweller/treasury/summary/", JewellerTreasurySummaryView.as_view()),
+    path("jeweller/treasury/payments/", JewellerTreasuryPaymentsView.as_view()),
     path("admin/overview/", AdminOverviewView.as_view()),
     path(
         "admin/fractional-counter-otp-policy/",

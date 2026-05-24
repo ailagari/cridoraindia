@@ -12,6 +12,7 @@ import { AdminFeatureRolloutPanel } from '@/features/admin/AdminFeatureRolloutPa
 import { ChangePasswordPanel } from '@/features/auth/ChangePasswordPanel'
 import { AdminFestivalBroadcastPanel } from '@/features/admin/AdminFestivalBroadcastPanel'
 import { AdminGoldTickerPanel, AdminMarketplaceCatalogSetupPanel } from '@/features/marketplace/AdminMarketplaceSection'
+import { AdminTreasuryPanel } from '@/features/treasury/AdminTreasuryPanel'
 import { DashboardActions } from '@/components/ui'
 
 import { ADMIN_DEFAULT_SECTION, ADMIN_NAV_GROUPS, normalizeAdminSection } from '@/lib/mobileNav/adminNav'
@@ -764,14 +765,11 @@ export function AdminDashboardPage() {
           />
         ) : null}
 
-        {active === 'fin_hub' ? (
-          <div className="dash-coming dash-coming--payments">
-            <h2 className="dash-coming__title">Settlements</h2>
-            <p className="dash-coming__text">
-              INR flows, gram ledger reconciliation, and payout batches — surfaced here when treasury APIs connect.
-            </p>
-          </div>
-        ) : null}
+        {active === 'fin_hub' ? <AdminTreasuryPanel mode="ledger" /> : null}
+
+        {active === 'fin_settlement' ? <AdminTreasuryPanel mode="settlement" /> : null}
+
+        {active === 'fin_payments' ? <AdminTreasuryPanel mode="payments" /> : null}
 
         {active === 'plat_gold' ? <AdminGoldTickerPanel /> : null}
 

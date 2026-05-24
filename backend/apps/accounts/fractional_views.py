@@ -10,6 +10,7 @@ from rest_framework.views import APIView
 
 from .fractional_completion import apply_fractional_purchase_credit_and_liabilities
 from .fractional_counter_otp import issue_counter_otp, verify_counter_otp
+from .platform_commercial_service import record_spread_fee_on_fractional_confirm
 from .fractional_service import (
     GST_PERCENT,
     breakdown_from_grams,
@@ -389,6 +390,7 @@ class JewellerFractionalVerifyView(APIView):
                         status=status.HTTP_400_BAD_REQUEST,
                     )
                 apply_fractional_purchase_credit_and_liabilities(purchase)
+                record_spread_fee_on_fractional_confirm(purchase)
         except FractionalGoldPurchase.DoesNotExist:
             return Response(
                 {"detail": "Pending counter order not found."},

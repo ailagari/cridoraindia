@@ -1,0 +1,248 @@
+import { Fragment, useCallback, useEffect, useState } from 'react'
+import { DashSegmentPair } from '@/components/DashSegmentPair'
+import {
+  adminTreasuryLedger,
+  adminTreasurySettlementSummary,
+  treasuryExportUrl,
+  type SettlementSummary,
+  type TreasuryLedgerRow,
+} from '@/lib/adminTreasuryApi'
+import { LIVE_BALANCE_POLL_MS } from '@/lib/liveDeskIntervals'
+import { useLivePoll } from '@/lib/useLivePoll'
+import { AdminSettlementPaymentsPanel } from '@/features/treasury/AdminSettlementPaymentsPanel'
+
+const TABS = [
+  { id: 'ledger', label: 'Ledger' },
+  { id: 'settlement', label: 'Settlement' },
+] as const
+
+type Tab = (typeof TABS)[number]['id']
+
+function formatInr(s: string): string {
+  const n = Number.parseFloat(s)
+  if (!Number.isFinite(n)) return s
+  return n.toLocaleString('en-IN', { maximumFractionDigits: 2 })
+}
+
+export function AdminTreasuryPanel({ mode }: { mode: 'ledger' | 'settlement' | 'payments' }) {
+  if (mode === 'payments') {
+    return <AdminSettlementPaymentsPanel />
+  }
+
+  const [tab, setTab] = useState<Tab>(mode === 'settlement' ? 'settlement' : 'ledger')
+  const [ledger, setLedger] = useState<TreasuryLedgerRow[]>([])
+  const [summary, setSummary] = useState<SettlementSummary | null>(null)
+  const [err, setErr] = useState('')
+  const [expanded, setExpanded] = useState<Set<string>>(() => new Set())
+
+  const loadLedger = useCallback(async () => {
+    const out = await adminTreasuryLedger({ limit: 100 })
+    if (!out.ok) {
+      setErr(out.detail)
+      setLedger([])
+      return
+    }
+    setLedger(out.results)
+  }, [])
+
+  const loadSummary = useCallback(async () => {
+    const out = await adminTreasurySettlementSummary()
+    if (!out.ok) {
+      setErr(out.detail)
+      setSummary(null)
+      return
+    }
+    setSummary(out.data)
+  }, [])
+
+  const load = useCallback(async () => {
+    setErr('')
+    if (tab === 'ledger') await loadLedger()
+    else await loadSummary()
+  }, [tab, loadLedger, loadSummary])
+
+  useEffect(() => {
+    void load()
+  }, [load])
+
+  useLivePoll(load, LIVE_BALANCE_POLL_MS, false)
+
+  const exportCsv = (groupBy: string) => {
+    window.open(treasuryExportUrl(groupBy), '_blank', 'noopener,noreferrer')
+  }
+
+  return (
+    <div className="dash-panel-max">
+      <p className="dash-panel-lead">Platform treasury — ledger, live settlement balances, and fee revenue.</p>
+
+      <DashSegmentPair
+        items={[...TABS]}
+        value={tab}
+        onChange={(id) => setTab(id as Tab)}
+        ariaLabel="Treasury section"
+      />
+
+      <div style={{ margin: '1rem 0', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+        <button type="button" className="btn btn-ghost" onClick={() => void load()}>
+          Refresh
+        </button>
+        {tab === 'ledger' ? (
+          <>
+            <button type="button" className="btn btn-ghost" onClick={() => exportCsv('jeweller')}>
+              Export by jeweller
+            </button>
+            <button type="button" className="btn btn-ghost" onClick={() => exportCsv('day')}>
+              Export by day
+            </button>
+          </>
+        ) : (
+          <button type="button" className="btn btn-ghost" onClick={() => exportCsv('feature')}>
+            Export by feature
+          </button>
+        )}
+      </div>
+
+      {err ? (
+        <p className="form-error" role="alert">
+          {err}
+        </p>
+      ) : null}
+
+      {tab === 'settlement' && summary ? (
+        <div style={{ display: 'grid', gap: '1.25rem' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem' }}>
+            <div className="dash-stat-card">
+              <span className="dash-stat-card__label">Revenue today</span>
+              <strong className="tabular">₹{formatInr(summary.platform_revenue_today_inr)}</strong>
+            </div>
+            <div className="dash-stat-card">
+              <span className="dash-stat-card__label">Revenue MTD</span>
+              <strong className="tabular">₹{formatInr(summary.platform_revenue_mtd_inr)}</strong>
+            </div>
+          </div>
+
+          <section>
+            <h3 style={{ marginBottom: '0.5rem' }}>Jewellers owe platform</h3>
+            <table className="jeweller-purchases-table">
+              <thead>
+                <tr>
+                  <th>Jeweller</th>
+                  <th>Pending INR</th>
+                  <th>Period</th>
+                </tr>
+              </thead>
+              <tbody>
+                {summary.jewellers_owe_platform_inr.length === 0 ? (
+                  <tr>
+                    <td colSpan={3}>No pending platform fees.</td>
+                  </tr>
+                ) : (
+                  summary.jewellers_owe_platform_inr.map((r) => (
+                    <tr key={r.jeweller_id}>
+                      <td>{r.name}</td>
+                      <td className="tabular">₹{formatInr(r.pending_inr)}</td>
+                      <td>{r.period}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </section>
+
+          <section>
+            <h3 style={{ marginBottom: '0.5rem' }}>Cross-jeweller net</h3>
+            <table className="jeweller-purchases-table">
+              <thead>
+                <tr>
+                  <th>From</th>
+                  <th>To</th>
+                  <th>Pending INR</th>
+                  <th>Grams</th>
+                </tr>
+              </thead>
+              <tbody>
+                {summary.cross_jeweller_net.length === 0 ? (
+                  <tr>
+                    <td colSpan={4}>No open cross-jeweller obligations.</td>
+                  </tr>
+                ) : (
+                  summary.cross_jeweller_net.map((r) => (
+                    <tr key={`${r.from_jeweller_id}-${r.to_jeweller_id}`}>
+                      <td>{r.from_jeweller}</td>
+                      <td>{r.to_jeweller}</td>
+                      <td className="tabular">₹{formatInr(r.pending_inr)}</td>
+                      <td>{r.grams}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </section>
+        </div>
+      ) : null}
+
+      {tab === 'ledger' ? (
+        <div className="jeweller-purchases-wrap">
+          <table className="jeweller-purchases-table">
+            <thead>
+              <tr>
+                <th />
+                <th>When</th>
+                <th>Feature</th>
+                <th>Reference</th>
+                <th>Customer</th>
+                <th>Jeweller</th>
+                <th>Amount</th>
+                <th>Platform fee</th>
+                <th>Settlement</th>
+              </tr>
+            </thead>
+            <tbody>
+              {ledger.length === 0 ? (
+                <tr>
+                  <td colSpan={9}>No ledger entries.</td>
+                </tr>
+              ) : (
+                ledger.map((row) => {
+                  const key = `${row.reference}-${row.when}`
+                  const open = expanded.has(key)
+                  return (
+                    <Fragment key={key}>
+                      <tr>
+                        <td>
+                          <button type="button" className="btn btn-ghost" onClick={() => setExpanded((s) => {
+                            const n = new Set(s)
+                            if (n.has(key)) n.delete(key)
+                            else n.add(key)
+                            return n
+                          })}>
+                            {open ? '−' : '+'}
+                          </button>
+                        </td>
+                        <td>{row.when.slice(0, 16).replace('T', ' ')}</td>
+                        <td>{row.feature}</td>
+                        <td>{row.reference}</td>
+                        <td>{row.customer || '—'}</td>
+                        <td>{row.jeweller}</td>
+                        <td className="tabular">₹{formatInr(row.amount_inr)}</td>
+                        <td className="tabular">₹{formatInr(row.platform_revenue_inr)}</td>
+                        <td>{row.settlement_status}</td>
+                      </tr>
+                      {open ? (
+                        <tr key={`${key}-d`}>
+                          <td colSpan={9}>
+                            <pre style={{ margin: 0, fontSize: '0.78rem' }}>{JSON.stringify(row.detail, null, 2)}</pre>
+                          </td>
+                        </tr>
+                      ) : null}
+                    </Fragment>
+                  )
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
+    </div>
+  )
+}

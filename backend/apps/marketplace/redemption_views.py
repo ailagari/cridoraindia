@@ -467,6 +467,10 @@ class VaultRedemptionConfirmView(APIView):
 
                 record_ornament_sale_revenue(redemption)
 
+                from apps.accounts.platform_commercial_service import record_cross_platform_fee_on_redemption
+
+                record_cross_platform_fee_on_redemption(redemption)
+
                 MarketplaceProduct.objects.filter(pk=locked.pk).update(
                     stock_quantity=F("stock_quantity") - 1
                 )

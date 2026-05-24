@@ -38,7 +38,11 @@ export const ADMIN_NAV_GROUPS: DashboardNavGroup[] = [
     label: 'Treasury',
     shortLabel: 'Treasury',
     icon: 'coins',
-    items: [{ sectionKey: 'fin_hub', label: 'Settlements' }],
+    items: [
+      { sectionKey: 'fin_hub', label: 'Ledger' },
+      { sectionKey: 'fin_settlement', label: 'Settlement' },
+      { sectionKey: 'fin_payments', label: 'Payments' },
+    ],
   },
   {
     id: 'control',

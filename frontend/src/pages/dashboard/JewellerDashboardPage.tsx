@@ -9,12 +9,13 @@ import { GoldTransferPanel } from '@/features/gold/GoldTransferPanel'
 import { JewellerMarketplacePanel } from '@/features/marketplace/JewellerMarketplacePanel'
 import { JewellerRatesSchemesPanel } from '@/features/marketplace/JewellerRatesSchemesPanel'
 import { JewellerGoldDepositPanel } from '@/features/invest/JewellerGoldDepositPanel'
-import { JewellerFractionalPurchaseDesk } from '@/features/invest/JewellerFractionalPurchaseDesk'
+import { JewellerUnifiedPurchaseDesk } from '@/features/invest/JewellerUnifiedPurchaseDesk'
 import { JewellerCridoraPayPanel } from '@/features/cridorapay/JewellerCridoraPayPanel'
 import { JewellerCrossRedemptionInboxPanel } from '@/features/crossRedemption/JewellerCrossRedemptionInboxPanel'
 import { JewellerSellbacksPanel } from '@/features/redeem/JewellerSellbacksPanel'
 import { JewellerLoanDashboardPanel } from '@/features/loans/JewellerLoanDashboardPanel'
 import { JewellerOrnamentRedemptionsPanel } from '@/features/marketplace/JewellerOrnamentRedemptionsPanel'
+import { JewellerSettlementsPanel } from '@/features/treasury/JewellerSettlementsPanel'
 import { ChangePasswordPanel } from '@/features/auth/ChangePasswordPanel'
 import { useAuth } from '@/context/AuthContext'
 import { LIVE_PROFILE_POLL_MS } from '@/lib/liveDeskIntervals'
@@ -114,7 +115,7 @@ export function JewellerDashboardPage() {
       ) : null}
       {active === 'txn_purchases' ? (
         <div className="dash-panel-max">
-          <JewellerFractionalPurchaseDesk />
+          <JewellerUnifiedPurchaseDesk />
         </div>
       ) : null}
       {active === 'txn_loans' ? (
@@ -130,6 +131,11 @@ export function JewellerDashboardPage() {
           {isFeatureEnabled(flags, 'cross_redemption') ? <JewellerCrossRedemptionInboxPanel /> : null}
           {isFeatureEnabled(flags, 'marketplace_redemption') ? <JewellerOrnamentRedemptionsPanel /> : null}
         </>
+      ) : null}
+      {active === 'fin_settlements' ? (
+        <div className="dash-panel-max">
+          <JewellerSettlementsPanel />
+        </div>
       ) : null}
       {active === 'txn_transfers' ? <GoldTransferPanel roleLabel="jeweller" /> : null}
       {active === 'prof_kyb' ? (

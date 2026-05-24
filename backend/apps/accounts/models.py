@@ -573,8 +573,12 @@ class PlatformCommercialLedgerEntry(models.Model):
     """Cridora platform spread/fee owed by jeweller (separate from operational gram ledger)."""
 
     KIND_SPREAD_FEE = "spread_fee"
+    KIND_CROSS_PLATFORM_FEE = "cross_platform_fee"
 
-    KIND_CHOICES = [(KIND_SPREAD_FEE, "Spread fee")]
+    KIND_CHOICES = [
+        (KIND_SPREAD_FEE, "Spread fee"),
+        (KIND_CROSS_PLATFORM_FEE, "Cross-platform fee"),
+    ]
 
     STATUS_PENDING_SETTLEMENT = "pending_settlement"
     STATUS_SETTLED = "settled"
@@ -594,6 +598,15 @@ class PlatformCommercialLedgerEntry(models.Model):
         FractionalGoldPurchase,
         on_delete=models.CASCADE,
         related_name="platform_commercial_entries",
+        null=True,
+        blank=True,
+    )
+    vault_product_redemption = models.ForeignKey(
+        "VaultProductRedemption",
+        on_delete=models.CASCADE,
+        related_name="platform_commercial_entries",
+        null=True,
+        blank=True,
     )
     amount_inr = models.DecimalField(max_digits=14, decimal_places=2)
     kind = models.CharField(max_length=32, choices=KIND_CHOICES, default=KIND_SPREAD_FEE)
@@ -609,6 +622,72 @@ class PlatformCommercialLedgerEntry(models.Model):
         blank=True,
         related_name="entries",
     )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+
+class PlatformSettlementPayment(models.Model):
+    """Manual settlement payment with receipt upload (jeweller↔platform)."""
+
+    DIR_JEWELLER_TO_PLATFORM = "jeweller_to_platform"
+    DIR_PLATFORM_TO_JEWELLER = "platform_to_jeweller"
+    DIRECTION_CHOICES = [
+        (DIR_JEWELLER_TO_PLATFORM, "Jeweller to platform"),
+        (DIR_PLATFORM_TO_JEWELLER, "Platform to jeweller"),
+    ]
+
+    STATUS_PENDING_PROOF = "pending_proof"
+    STATUS_SUBMITTED = "submitted"
+    STATUS_CONFIRMED = "confirmed"
+    STATUS_REJECTED = "rejected"
+    STATUS_CHOICES = [
+        (STATUS_PENDING_PROOF, "Pending proof"),
+        (STATUS_SUBMITTED, "Submitted"),
+        (STATUS_CONFIRMED, "Confirmed"),
+        (STATUS_REJECTED, "Rejected"),
+    ]
+
+    direction = models.CharField(max_length=32, choices=DIRECTION_CHOICES)
+    jeweller = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="platform_settlement_payments",
+        limit_choices_to={"user_type": User.JEWELLER},
+    )
+    settlement_batch = models.ForeignKey(
+        PlatformSettlementBatch,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="payments",
+    )
+    amount_inr = models.DecimalField(max_digits=18, decimal_places=2)
+    status = models.CharField(
+        max_length=32,
+        choices=STATUS_CHOICES,
+        default=STATUS_PENDING_PROOF,
+    )
+    paid_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="platform_settlement_payments_paid",
+    )
+    receipt_file = models.FileField(upload_to="settlement_receipts/%Y/%m/", blank=True)
+    reference_note = models.CharField(max_length=256, blank=True)
+    utr = models.CharField(max_length=64, blank=True)
+    confirmed_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="platform_settlement_payments_confirmed",
+    )
+    confirmed_at = models.DateTimeField(null=True, blank=True)
+    rejection_reason = models.CharField(max_length=512, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
