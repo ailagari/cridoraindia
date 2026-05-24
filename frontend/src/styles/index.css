@@ -9326,6 +9326,42 @@ select.input {
   background: rgba(239, 68, 68, 0.08);
 }
 
+.upi-on-hold-notice__title {
+  color: var(--danger);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  font-size: 0.92rem;
+}
+
+.customer-orders-table-wrap {
+  margin-top: 0.35rem;
+}
+
+.customer-orders-detail {
+  padding: 0.85rem 0.25rem 0.35rem;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.customer-orders-detail-row td {
+  background: var(--veil);
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.customer-orders-rejection-history {
+  padding: 0.65rem 0.75rem;
+  border-radius: 10px;
+  border: 1px solid var(--border-soft);
+  background: rgba(239, 68, 68, 0.04);
+}
+
+.customer-orders-status-card {
+  padding: 0.75rem 0.85rem;
+  border-radius: 10px;
+  border: 1px solid var(--border-soft);
+  background: var(--veil);
+}
+
 .upi-proof-review--compact .upi-proof-review__actions {
   margin-top: 0;
 }

@@ -209,9 +209,12 @@ export const UPI_PENDING_REVIEW = 'pending_review'
 export const UPI_PROOF_REJECTED = 'proof_rejected'
 export const UPI_ON_HOLD = 'on_hold'
 
-export function onHoldMessage(kind: UpiPaymentKind): string {
-  if (kind === 'sellback') {
-    return 'This payout is on hold after two rejected proofs. Visit the customer in person to resolve.'
+export function onHoldMessage(kind: UpiPaymentKind, contactName?: string): string {
+  if (contactName?.trim()) {
+    return `On HOLD: Contact: ${contactName.trim().toUpperCase()}`
   }
-  return 'This payment is on hold after two rejected proofs. Visit your jeweller in person to resolve.'
+  if (kind === 'sellback') {
+    return 'On HOLD: Contact: CUSTOMER'
+  }
+  return 'On HOLD: Contact: JEWELLER'
 }

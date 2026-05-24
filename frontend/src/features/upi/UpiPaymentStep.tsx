@@ -97,7 +97,7 @@ export function UpiPaymentStep({
   }, [state?.status, state?.rejection_count, state?.last_rejection_remark])
 
   if (state?.is_on_hold || state?.status === UPI_ON_HOLD) {
-    return <UpiOnHoldNotice kind={kind} />
+    return <UpiOnHoldNotice kind={kind} contactName={state?.payee_name} />
   }
 
   if (state?.status === UPI_PENDING_REVIEW || state?.is_completed) {

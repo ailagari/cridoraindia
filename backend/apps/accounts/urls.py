@@ -27,6 +27,7 @@ from .upi_manual_payment_views import (
     UpiSubmitUtrView,
 )
 from .views_jeweller_desk import JewellerUnifiedDeskTransactionsView
+from .views_jeweller_on_hold import JewellerOnHoldPaymentsView
 from .views_jeweller_portfolio import JewellerPortfolioLedgerView
 from .views_gold import (
     DefaultJewellerView,
@@ -348,6 +349,7 @@ urlpatterns = [
         FractionalOrderCancelUpiView.as_view(),
     ),
     path("jeweller/desk/transactions/", JewellerUnifiedDeskTransactionsView.as_view()),
+    path("jeweller/desk/on-hold/", JewellerOnHoldPaymentsView.as_view()),
     path("jeweller/fractional/pending/", JewellerFractionalPendingView.as_view()),
     path("jeweller/fractional/orders/", JewellerFractionalOrdersListView.as_view()),
     path("jeweller/fractional/pending-upi/", JewellerFractionalPendingUpiView.as_view()),

@@ -13,6 +13,7 @@ import {
 import { DashSegmentPair } from '@/components/DashSegmentPair'
 import { UpiPaymentStep } from '@/features/upi/UpiPaymentStep'
 import { FractionalJewellerPicker } from '@/features/invest/FractionalJewellerPicker'
+import { CustomerFractionalOrdersTable } from '@/features/invest/CustomerFractionalOrdersTable'
 import {
   knownFractionalJewellerIds,
   parseJewellerIdFromUrl,
@@ -24,7 +25,7 @@ import { fetchGoldWallet, type GoldWalletDTO } from '@/lib/goldTransferApi'
 import { LIVE_BALANCE_POLL_MS } from '@/lib/liveDeskIntervals'
 import { useLivePoll } from '@/lib/useLivePoll'
 import { formatJewellerMetalRateAsOf } from '@/features/marketplace/productPricing'
-import { Badge, Button, Card, CardHeader, Input } from '@/components/ui'
+import { Button, Card, CardHeader, Input } from '@/components/ui'
 import { fetchPlatformFeatures, isFeatureEnabled } from '@/lib/platformFeatures'
 
 function formatInr(s: string): string {
@@ -45,6 +46,7 @@ const INFLIGHT_UPI_STATUSES = new Set([
   'needs_manual_verification',
   'awaiting_utr_verify',
   'proof_rejected',
+  'on_hold',
 ])
 
 export function FractionalPurchasePanel() {
@@ -532,106 +534,21 @@ export function FractionalPurchasePanel() {
         </div>
       </Card>
 
-      <Card style={{ maxWidth: 640 }}>
+      <Card style={{ maxWidth: 960 }}>
         <CardHeader title="Orders" />
         {orders.length === 0 ? (
           <p style={{ color: 'var(--text-faint)', margin: 0, fontSize: 'var(--ts-sm)' }}>No orders yet.</p>
         ) : (
-          <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: '0.75rem' }}>
-            {orders.map((o) => (
-              <li
-                key={o.id}
-                className="fractional-order-li"
-                style={{
-                  padding: '0.85rem 1rem',
-                  borderRadius: 12,
-                  border: '1px solid var(--border-soft)',
-                  background: 'var(--veil)',
-                  fontSize: '0.82rem',
-                }}
-              >
-                <div className="fractional-order-li-head">
-                  <strong>{o.reference}</strong>
-                  <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>{o.jeweller.business_name}</span>
-                </div>
-                <p className="fractional-order-li-meta">
-                  <span className="tabular">{o.grams} g</span>
-                  <span aria-hidden="true"> · </span>
-                  <span className="tabular">₹{formatInr(o.total_inr)}</span>
-                  <span aria-hidden="true"> · </span>
-                  <span>{o.payment_method}</span>
-                </p>
-                <p className="fractional-order-li-meta" style={{ margin: '0 0 0.5rem' }}>
-                  <Badge tone={o.status === 'completed' ? 'success' : o.status === 'cancelled' ? 'danger' : o.status === 'awaiting_counter' || o.status === 'awaiting_utr_verify' ? 'gold' : 'warning'}>
-                    {o.status.replace(/_/g, ' ')}
-                  </Badge>
-                </p>
-                {o.status === 'awaiting_counter' ? (
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    block
-                    style={{ marginTop: '0.25rem' }}
-                    disabled={busy || (otpReveal?.orderId === o.id && !otpCountdown.expired)}
-                    onClick={() => void issueOtp(o.id)}
-                  >
-                    {otpReveal?.orderId === o.id && otpCountdown.expired
-                      ? 'Generate new OTP'
-                      : otpReveal?.orderId === o.id && !otpCountdown.expired
-                        ? 'OTP active'
-                        : 'Generate OTP'}
-                  </Button>
-                ) : null}
-                {o.payment_method === 'upi' && o.status === 'proof_rejected' ? (
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    block
-                    style={{ marginTop: '0.25rem' }}
-                    disabled={busy}
-                    onClick={() => {
-                      setActiveUpiOrder(o)
-                      setLastOrder(o)
-                      setOrderMsg(`Resubmit proof for ${o.reference}.`)
-                    }}
-                  >
-                    Resubmit payment proof
-                  </Button>
-                ) : null}
-                {o.payment_method === 'upi' && o.status === 'pending_payment' ? (
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    block
-                    style={{ marginTop: '0.25rem' }}
-                    disabled={busy}
-                    onClick={() => {
-                      setActiveUpiOrder(o)
-                      setLastOrder(o)
-                      setOrderMsg(`Continue payment for ${o.reference}.`)
-                    }}
-                  >
-                    Continue UPI payment
-                  </Button>
-                ) : null}
-                {o.payment_method === 'upi' && o.status === 'awaiting_utr_verify' ? (
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    block
-                    style={{ marginTop: '0.25rem' }}
-                    disabled={busy}
-                    onClick={() => {
-                      setActiveUpiOrder(o)
-                      setLastOrder(o)
-                    }}
-                  >
-                    View UTR status
-                  </Button>
-                ) : null}
-              </li>
-            ))}
-          </ul>
+          <CustomerFractionalOrdersTable
+            orders={orders}
+            busy={busy}
+            setBusy={setBusy}
+            otpRevealOrderId={otpReveal?.orderId ?? null}
+            otpCountdownExpired={otpCountdown.expired}
+            onIssueOtp={(id) => void issueOtp(id)}
+            onRefreshOrders={refreshOrders}
+            onSuccess={(msg) => setSuccessToast(msg)}
+          />
         )}
       </Card>
 

@@ -20,16 +20,20 @@ from apps.accounts.services.upi_manual_payment.registry import (
 User = get_user_model()
 
 
+def _reviewable_statuses(spec) -> tuple[str, ...]:
+    return (spec.pending_review_status, spec.on_hold_status)
+
+
 def approve_payment(kind: str, entity: Any, user: User) -> tuple[dict | None, str | None]:
     spec = get_spec(kind)
     if not user_can_reviewer(user, kind, entity):
         return None, "Not allowed to approve this payment."
-    if entity.status != spec.pending_review_status:
+    if entity.status not in _reviewable_statuses(spec):
         return None, "Payment is not awaiting review."
 
     with transaction.atomic():
         locked = spec.model.objects.select_for_update().get(pk=entity.pk)
-        if locked.status != spec.pending_review_status:
+        if locked.status not in _reviewable_statuses(spec):
             return None, "Payment is not awaiting review."
         complete_fn = get_completion_fn(kind)
         ok, detail = complete_fn(locked, user)

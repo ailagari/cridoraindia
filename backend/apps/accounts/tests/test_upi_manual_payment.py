@@ -104,3 +104,14 @@ class UpiManualPaymentTests(TestCase):
         self.purchase.refresh_from_db()
         self.assertEqual(self.purchase.status, FractionalGoldPurchase.PENDING_REVIEW)
         self.assertEqual(self.purchase.upi_utr, "NEWUTR123456789")
+
+    def test_jeweller_approve_from_on_hold_completes(self):
+        self.purchase.status = FractionalGoldPurchase.ON_HOLD
+        self.purchase.upi_utr = "ABC123456789"
+        self.purchase.upi_rejection_count = 2
+        self.purchase.save()
+        self.client.force_authenticate(user=self.jeweller)
+        res = self.client.post(f"/api/v1/upi/fractional/{self.purchase.pk}/approve/")
+        self.assertEqual(res.status_code, 200, res.data)
+        self.purchase.refresh_from_db()
+        self.assertEqual(self.purchase.status, FractionalGoldPurchase.COMPLETED)

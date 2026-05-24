@@ -54,7 +54,7 @@ def serialize_upi_state(kind: str, entity: Any) -> dict:
         or "",
         "fraud_reported": bool(getattr(entity, "upi_fraud_reported", False)),
         "can_submit_proof": status in spec.payer_submit_statuses,
-        "can_review": status == spec.pending_review_status,
+        "can_review": status in (spec.pending_review_status, spec.on_hold_status),
         "is_on_hold": status == spec.on_hold_status,
         "is_completed": status == spec.completed_status,
     }

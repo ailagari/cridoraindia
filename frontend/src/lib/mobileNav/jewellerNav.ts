@@ -32,6 +32,7 @@ export const JEWELLER_NAV_GROUPS: DashboardNavGroup[] = [
     icon: 'coins',
     items: [
       { sectionKey: 'txn_purchases', label: 'Purchase' },
+      { sectionKey: 'txn_on_hold', label: 'On hold' },
       { sectionKey: 'txn_cridorapay', label: 'CridoraPay' },
       { sectionKey: 'txn_deposits', label: 'Deposit' },
       { sectionKey: 'txn_ops', label: 'Redemption' },
@@ -75,6 +76,7 @@ export const JEWELLER_LEGACY_SECTION: Record<string, string> = {
   txn_redemptions: 'txn_ops',
   txn_gold_deposit: 'txn_deposits',
   txn_cridorapay: 'txn_cridorapay',
+  txn_on_hold: 'txn_on_hold',
   txn_loans: 'txn_loans',
   txn_settlements: 'fin_settlements',
   prof_payouts: 'prof_more',
