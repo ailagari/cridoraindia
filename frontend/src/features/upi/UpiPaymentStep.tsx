@@ -15,6 +15,8 @@ import {
 import { usePublicLayoutMax767 } from '@/hooks/usePublicLayoutMax767'
 import { openUpiPayUri } from '@/lib/openUpiPayUri'
 import { isValidUtr, utrValidationHint } from '@/lib/utrNormalize'
+import { LIVE_BALANCE_POLL_MS } from '@/lib/liveDeskIntervals'
+import { useLivePoll } from '@/lib/useLivePoll'
 
 type Props = {
   kind: UpiPaymentKind
@@ -65,6 +67,8 @@ export function UpiPaymentStep({
     void refresh()
   }, [refresh])
 
+  useLivePoll(refresh, LIVE_BALANCE_POLL_MS, !busy && state?.status === UPI_PENDING_REVIEW)
+
   useEffect(() => {
     const uri = state?.upi_uri ?? ''
     if (!uri) {
@@ -83,6 +87,14 @@ export function UpiPaymentStep({
   const utrHint = useMemo(() => utrValidationHint(utrInput), [utrInput])
   const utrReady = isValidUtr(utrInput)
   const canSubmitProof = utrReady || Boolean(screenshotFile)
+  const isResubmit = state?.status === UPI_PROOF_REJECTED
+
+  useEffect(() => {
+    if (state?.status !== UPI_PROOF_REJECTED) return
+    setUtrInput('')
+    setScreenshotFile(null)
+    setActionErr('')
+  }, [state?.status, state?.rejection_count, state?.last_rejection_remark])
 
   if (state?.is_on_hold || state?.status === UPI_ON_HOLD) {
     return <UpiOnHoldNotice kind={kind} />
@@ -135,7 +147,7 @@ export function UpiPaymentStep({
       setState(out.data)
       setScreenshotFile(null)
       onSubmitted?.()
-      onSuccess?.('Payment proof submitted for review.')
+      onSuccess?.(isResubmit ? 'Payment proof resubmitted for review.' : 'Payment proof submitted for review.')
     } finally {
       setBusy(false)
     }
@@ -148,31 +160,60 @@ export function UpiPaymentStep({
 
   return (
     <div className="fractional-upi-pay card">
-      <p className="fractional-upi-pay__title">Pay with UPI</p>
-      {state?.status === UPI_PROOF_REJECTED && state.last_rejection_remark ? (
-        <p className="form-error" style={{ marginBottom: '0.75rem' }}>
-          Rejected: {state.last_rejection_remark}. Re-upload proof below.
-        </p>
+      <p className="fractional-upi-pay__title">{isResubmit ? 'Resubmit payment proof' : 'Pay with UPI'}</p>
+      {isResubmit ? (
+        <div className="upi-proof-rejected-notice" role="alert">
+          <p style={{ margin: 0, fontSize: '0.88rem', lineHeight: 1.5 }}>
+            Your payment proof was rejected
+            {state?.last_rejection_remark ? (
+              <>
+                : <strong>{state.last_rejection_remark}</strong>
+              </>
+            ) : (
+              '.'
+            )}
+          </p>
+          {state?.rejection_count ? (
+            <p style={{ margin: '0.35rem 0 0', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+              Rejection {state.rejection_count}/2 — a second rejection puts this payment on hold.
+            </p>
+          ) : null}
+          <p style={{ margin: '0.5rem 0 0', fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
+            Add a new UTR and/or payment screenshot below, then resubmit for review.
+          </p>
+        </div>
       ) : null}
-      <p className="fractional-upi-pay__lead">
-        Pay <strong className="tabular">₹{formatInr(state?.amount_inr)}</strong>
-        {state?.payee_name ? (
-          <>
-            {' '}
-            to <strong>{state.payee_name}</strong>
-          </>
-        ) : null}
-        . After paying, submit your UTR number and/or payment screenshot.
-      </p>
+      {!isResubmit ? (
+        <p className="fractional-upi-pay__lead">
+          Pay <strong className="tabular">₹{formatInr(state?.amount_inr)}</strong>
+          {state?.payee_name ? (
+            <>
+              {' '}
+              to <strong>{state.payee_name}</strong>
+            </>
+          ) : null}
+          . After paying, submit your UTR number and/or payment screenshot.
+        </p>
+      ) : (
+        <p className="fractional-upi-pay__lead">
+          Amount <strong className="tabular">₹{formatInr(state?.amount_inr)}</strong>
+          {state?.reference ? (
+            <>
+              {' '}
+              · <strong>{state.reference}</strong>
+            </>
+          ) : null}
+        </p>
+      )}
 
       {loadErr ? <p className="form-error">{loadErr}</p> : null}
       {state?.expired ? <p className="form-error">This payment window expired.</p> : null}
 
       {state && !state.expired ? (
         <>
-          <UpiPayMethodNotice compact={narrow} />
+          {!isResubmit ? <UpiPayMethodNotice compact={narrow} /> : null}
 
-          {state.payee_vpa ? (
+          {!isResubmit && state.payee_vpa ? (
             <div className="fractional-upi-pay__payee">
               <span className="fractional-upi-pay__label">Pay to UPI ID</span>
               <p className="fractional-upi-pay__vpa tabular">{state.payee_vpa}</p>
@@ -182,14 +223,14 @@ export function UpiPaymentStep({
             </div>
           ) : null}
 
-          {qrSrc ? (
+          {!isResubmit && qrSrc ? (
             <>
               <p className="fractional-upi-pay__qr-caption">Scan with your UPI app to pay.</p>
               <img src={qrSrc} alt="" width={180} height={180} className="fractional-upi-pay__qr" />
             </>
           ) : null}
 
-          {narrow && state.upi_uri ? (
+          {!isResubmit && narrow && state.upi_uri ? (
             <button
               type="button"
               className="btn btn-primary btn--block"
@@ -240,7 +281,7 @@ export function UpiPaymentStep({
               disabled={busy || !canSubmitProof}
               onClick={() => void handleSubmit()}
             >
-              Submit payment proof
+              {isResubmit ? 'Resubmit payment proof' : 'Submit payment proof'}
             </button>
           </div>
 

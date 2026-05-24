@@ -472,10 +472,7 @@ export function FractionalPurchasePanel() {
               paymentId={activeUpiOrder.id}
               busy={busy}
               setBusy={setBusy}
-              onSubmitted={() => {
-                setActiveUpiOrder(null)
-                setLastOrder(null)
-              }}
+              onSubmitted={() => void refreshOrders()}
               onSuccess={(msg) => setSuccessToast(msg)}
               onError={(msg) => setOrderMsg(msg)}
             />
@@ -583,6 +580,22 @@ export function FractionalPurchasePanel() {
                       : otpReveal?.orderId === o.id && !otpCountdown.expired
                         ? 'OTP active'
                         : 'Generate OTP'}
+                  </Button>
+                ) : null}
+                {o.payment_method === 'upi' && o.status === 'proof_rejected' ? (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    block
+                    style={{ marginTop: '0.25rem' }}
+                    disabled={busy}
+                    onClick={() => {
+                      setActiveUpiOrder(o)
+                      setLastOrder(o)
+                      setOrderMsg(`Resubmit proof for ${o.reference}.`)
+                    }}
+                  >
+                    Resubmit payment proof
                   </Button>
                 ) : null}
                 {o.payment_method === 'upi' && o.status === 'pending_payment' ? (

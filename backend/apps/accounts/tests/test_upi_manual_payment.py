@@ -87,3 +87,20 @@ class UpiManualPaymentTests(TestCase):
                 self.purchase.status = FractionalGoldPurchase.PENDING_REVIEW
                 self.purchase.save()
         self.assertEqual(self.purchase.status, FractionalGoldPurchase.ON_HOLD)
+
+    def test_resubmit_after_reject_goes_pending_review(self):
+        self.purchase.status = FractionalGoldPurchase.PROOF_REJECTED
+        self.purchase.upi_utr = "OLDUTR123456"
+        self.purchase.upi_rejection_count = 1
+        self.purchase.upi_last_rejection_remark = "Screenshot unclear"
+        self.purchase.save()
+        self.client.force_authenticate(user=self.customer)
+        res = self.client.post(
+            f"/api/v1/upi/fractional/{self.purchase.pk}/submit-utr/",
+            {"utr": "NEWUTR123456789"},
+            format="json",
+        )
+        self.assertEqual(res.status_code, 200, res.data)
+        self.purchase.refresh_from_db()
+        self.assertEqual(self.purchase.status, FractionalGoldPurchase.PENDING_REVIEW)
+        self.assertEqual(self.purchase.upi_utr, "NEWUTR123456789")
