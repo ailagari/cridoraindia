@@ -1,4 +1,4 @@
-import { authFetch, extractApiDetail } from '@/lib/api'
+import { authFetch, extractApiDetail, parseApiResponse } from '@/lib/api'
 
 export type FractionalQuoteDTO = {
   jeweller: { id: number; business_name: string; city: string }
@@ -133,15 +133,18 @@ export async function fractionalSubmitUtr(
 export async function fractionalPaymentAck(
   orderId: number,
 ): Promise<{ ok: true; data: FractionalPurchaseDTO } | { ok: false; detail: string }> {
+  if (!Number.isFinite(orderId) || orderId <= 0) {
+    return { ok: false, detail: 'Invalid order. Refresh the page and try again.' }
+  }
   const res = await authFetch(`/api/v1/fractional/orders/${orderId}/payment-ack/`, {
     method: 'POST',
     jsonBody: {},
   })
-  const data = (await res.json().catch(() => ({}))) as FractionalPurchaseDTO & { detail?: string }
-  if (!res.ok) {
-    return { ok: false, detail: extractApiDetail(data, 'Could not acknowledge payment') }
+  const parsed = await parseApiResponse<FractionalPurchaseDTO>(res, 'Could not acknowledge payment')
+  if (!parsed.ok) {
+    return parsed
   }
-  return { ok: true, data: data as FractionalPurchaseDTO }
+  return { ok: true, data: parsed.data }
 }
 
 export async function fractionalSubmitPaymentSms(
@@ -262,11 +265,11 @@ export async function jewellerFractionalVerify(
     method: 'POST',
     jsonBody: { otp: otp.trim() },
   })
-  const data = (await res.json().catch(() => ({}))) as FractionalPurchaseDTO & { detail?: string }
-  if (!res.ok) {
-    return { ok: false, detail: data.detail != null ? String(data.detail) : 'Verify failed' }
+  const parsed = await parseApiResponse<FractionalPurchaseDTO>(res, 'Verify failed')
+  if (!parsed.ok) {
+    return parsed
   }
-  return { ok: true, data: data as FractionalPurchaseDTO }
+  return { ok: true, data: parsed.data }
 }
 
 export type JewellerReconciliationQueue = {

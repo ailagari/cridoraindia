@@ -1,12 +1,13 @@
 """Model A fractional UPI: jeweller VPA, customer UTR paste, jeweller confirm."""
 
 from decimal import Decimal
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from rest_framework.test import APITestCase
 
-from apps.accounts.models import FractionalGoldPurchase
+from apps.accounts.models import FractionalGoldPurchase, WebPushSubscription
 from apps.accounts.services.fractional_upi import (
     build_upi_pay_uri,
     normalize_utr,
@@ -290,6 +291,75 @@ class FractionalUpiApiTests(APITestCase):
             ack.data["status"],
             ("pending_review", "completed", "needs_manual_verification", "signal_received"),
         )
+
+    def test_payment_ack_survives_web_push_misconfiguration(self):
+        order_id = self._create_upi_order()
+        WebPushSubscription.objects.create(
+            user=self.customer,
+            endpoint="https://push.example.test/subscription/1",
+            p256dh="test-p256dh",
+            auth="test-auth",
+        )
+        with patch(
+            "apps.accounts.webpush_service.webpush_configured",
+            return_value=True,
+        ), patch(
+            "apps.accounts.webpush_service.send_push_payload",
+            side_effect=ValueError("invalid VAPID private key"),
+        ):
+            ack = self.client.post(
+                f"/api/v1/fractional/orders/{order_id}/payment-ack/",
+                {},
+                format="json",
+            )
+        self.assertEqual(ack.status_code, 200, ack.data)
+        self.assertIn(
+            ack.data["status"],
+            ("pending_review", "completed", "needs_manual_verification", "signal_received"),
+        )
+
+    def test_counter_verify_survives_web_push_misconfiguration(self):
+        self.client.force_authenticate(self.customer)
+        create = self.client.post(
+            "/api/v1/fractional/orders/",
+            {
+                "jeweller_id": self.jeweller.id,
+                "payment_method": "counter",
+                "mode": "by_total_inr",
+                "total_inr": "5000",
+            },
+            format="json",
+        )
+        self.assertEqual(create.status_code, 201, create.data)
+        order_id = create.data["id"]
+        otp_res = self.client.post(
+            f"/api/v1/fractional/orders/{order_id}/counter-otp/",
+            {},
+            format="json",
+        )
+        self.assertEqual(otp_res.status_code, 200, otp_res.data)
+        otp = otp_res.data["otp"]
+        WebPushSubscription.objects.create(
+            user=self.customer,
+            endpoint="https://push.example.test/subscription/counter-1",
+            p256dh="test-p256dh",
+            auth="test-auth",
+        )
+        self.client.force_authenticate(self.jeweller)
+        with patch(
+            "apps.accounts.webpush_service.webpush_configured",
+            return_value=True,
+        ), patch(
+            "apps.accounts.webpush_service.send_push_payload",
+            side_effect=ValueError("invalid VAPID private key"),
+        ):
+            verify = self.client.post(
+                f"/api/v1/jeweller/fractional/orders/{order_id}/verify/",
+                {"otp": otp},
+                format="json",
+            )
+        self.assertEqual(verify.status_code, 200, verify.data)
+        self.assertEqual(verify.data["status"], "completed")
 
     def test_jeweller_orders_desk_lists_acknowledged_order(self):
         order_id = self._create_upi_order()

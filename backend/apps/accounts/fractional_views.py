@@ -396,4 +396,9 @@ class JewellerFractionalVerifyView(APIView):
                 {"detail": "Pending counter order not found."},
                 status=status.HTTP_404_NOT_FOUND,
             )
+        except Exception:
+            return Response(
+                {"detail": "Could not verify OTP. Try again in a moment."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
         return Response(_ser_purchase(purchase))

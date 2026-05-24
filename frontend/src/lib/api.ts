@@ -98,9 +98,55 @@ type Json = Record<string, unknown>
 function withLocaleHeaders(headers: Headers): Headers {
   const h = new Headers(headers)
   const locale = readStoredPublicLocale()
+  if (!h.has('Accept')) {
+    h.set('Accept', 'application/json')
+  }
   h.set('Accept-Language', locale === 'ml' ? 'ml,en;q=0.9' : 'en,ml;q=0.8')
   h.set('X-Cridora-Locale', locale)
   return h
+}
+
+/** Read JSON API body; surface HTTP status when the server returns HTML or an empty body. */
+export async function parseApiResponse<T>(
+  res: Response,
+  fallback: string,
+): Promise<{ ok: true; data: T } | { ok: false; detail: string }> {
+  const text = await res.text()
+  let body: unknown = null
+  if (text.trim()) {
+    try {
+      body = JSON.parse(text) as unknown
+    } catch {
+      body = null
+    }
+  }
+  if (res.ok) {
+    return { ok: true, data: (body ?? {}) as T }
+  }
+  if (body && typeof body === 'object') {
+    const detail = extractApiDetail(body, '')
+    if (detail) {
+      return { ok: false, detail }
+    }
+  }
+  if (res.status === 401) {
+    return { ok: false, detail: 'Session expired. Sign in again and retry.' }
+  }
+  const html = text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')
+  if (html) {
+    if (res.status === 502 || res.status === 503 || res.status === 504) {
+      return { ok: false, detail: 'Server is temporarily unavailable. Wait a moment and try again.' }
+    }
+    return {
+      ok: false,
+      detail:
+        'Could not reach the API server. If you are developing locally, start the Django backend on port 8000.',
+    }
+  }
+  if (res.status >= 500) {
+    return { ok: false, detail: `Server error (${res.status}). Try again in a moment.` }
+  }
+  return { ok: false, detail: `${fallback} (HTTP ${res.status}).` }
 }
 
 /** Public / unauthenticated JSON requests */

@@ -167,6 +167,11 @@ class FractionalOrderPaymentAckView(FractionalUpiInflightBypassMixin, APIView):
                 {"detail": "UPI order not found."},
                 status=status.HTTP_404_NOT_FOUND,
             )
+        except Exception:
+            return Response(
+                {"detail": "Could not acknowledge payment. Try again in a moment."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
         purchase.refresh_from_db()
         payload = _ser_purchase(purchase)
         payload["order_reference"] = purchase.order_reference

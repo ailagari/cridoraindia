@@ -64,6 +64,13 @@ def send_push_to_user(user, payload: dict[str, Any]) -> int:
                         status,
                         exc,
                     )
+            except Exception as exc:
+                logger.warning(
+                    "Web Push delivery unexpected error for user_id=%s endpoint_prefix=%s error=%s",
+                    sub.user_id,
+                    (sub.endpoint[:64] + "…") if len(sub.endpoint) > 64 else sub.endpoint,
+                    exc,
+                )
     n += fcm_service.send_fcm_to_user(user, payload)
     return n
 
