@@ -11,7 +11,7 @@ import {
   type SellbackQuoteDTO,
 } from '@/lib/goldTransferApi'
 import { DashSegmentPair } from '@/components/DashSegmentPair'
-import { SellbackUpiConfirmStep } from '@/features/redeem/SellbackUpiConfirmStep'
+import { UpiProofReviewActions } from '@/features/upi/UpiProofReviewActions'
 import { LIVE_BALANCE_POLL_MS } from '@/lib/liveDeskIntervals'
 import { useLivePoll } from '@/lib/useLivePoll'
 import { fetchPlatformFeatures, isFeatureEnabled } from '@/lib/platformFeatures'
@@ -44,7 +44,11 @@ function statusHint(st: string, paymentMethod?: string): string {
       ? 'Jeweller accepted — awaiting UPI payout to your account.'
       : 'Jeweller accepted — receive cash at the showroom, then share your OTP when they call you.'
   }
-  if (st === 'awaiting_utr_verify') return 'Confirm the UPI payout below once funds arrive.'
+  if (st === 'awaiting_utr_verify' || st === 'pending_review') {
+    return 'Review jeweller payout proof below (UTR / screenshot).'
+  }
+  if (st === 'proof_rejected') return 'Jeweller must re-upload payout proof.'
+  if (st === 'on_hold') return 'On hold — visit jeweller in person.'
   return st
 }
 
@@ -288,7 +292,11 @@ export function CustomerSellbackPanel() {
         (o.status === 'pending_jeweller' || o.status === 'accepted_awaiting_otp'),
     )
 
-  const upiOutstanding = outstanding.filter((o) => o.payment_method === 'upi' && o.status !== 'completed' && o.status !== 'cancelled')
+  const upiReviewRows = outstanding.filter(
+    (o) =>
+      o.payment_method === 'upi' &&
+      (o.status === 'pending_review' || o.status === 'awaiting_utr_verify'),
+  )
 
   return (
     <div className="dash-panel-max pf-scope">
@@ -304,7 +312,7 @@ export function CustomerSellbackPanel() {
 
       {loadErr ? <p className="form-error">{loadErr}</p> : null}
 
-      {(outstanding.length > 0 || showOtpBlock || upiOutstanding.length > 0) && (
+      {(outstanding.length > 0 || showOtpBlock || upiReviewRows.length > 0) && (
         <div
           className="card"
           style={{
@@ -351,18 +359,23 @@ export function CustomerSellbackPanel() {
             </div>
           ) : null}
           {sellbackUpiEnabled
-            ? upiOutstanding.map((o) => (
-            <SellbackUpiConfirmStep
-              key={o.id}
-              row={o}
-              busy={busyUpi}
-              setBusy={setBusyUpi}
-              onUpdated={async () => {
-                await refreshOutstanding()
-                await refreshWallet()
-              }}
-              onSuccess={(msg) => setSuccessMsg(msg)}
-            />
+            ? upiReviewRows.map((o) => (
+                <UpiProofReviewActions
+                  key={o.id}
+                  kind="sellback"
+                  paymentId={o.id}
+                  reference={o.reference}
+                  amountInr={o.cash_estimate_inr}
+                  upiUtr={o.upi_utr}
+                  busy={busyUpi}
+                  onBusyChange={setBusyUpi}
+                  onDone={async (msg) => {
+                    setSuccessMsg(msg)
+                    await refreshOutstanding()
+                    await refreshWallet()
+                  }}
+                  onError={(detail) => setLoadErr(detail)}
+                />
               ))
             : null}
           {outstanding.length > 0 ? (

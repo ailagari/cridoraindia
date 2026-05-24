@@ -42,6 +42,7 @@ export const ADMIN_NAV_GROUPS: DashboardNavGroup[] = [
       { sectionKey: 'fin_hub', label: 'Ledger' },
       { sectionKey: 'fin_settlement', label: 'Settlement' },
       { sectionKey: 'fin_payments', label: 'Payments' },
+      { sectionKey: 'fin_fraud_reports', label: 'Fraud reports' },
     ],
   },
   {

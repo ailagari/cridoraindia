@@ -103,19 +103,14 @@ def cancel_upi_sellback(row: GoldSellbackRequest) -> tuple[bool, str]:
 def submit_utr_for_jeweller(row: GoldSellbackRequest, raw_utr: str) -> tuple[bool, str]:
     if row.payment_method != GoldSellbackRequest.PAY_UPI:
         return False, "This is not a UPI sellback."
-    if row.status != GoldSellbackRequest.STATUS_ACCEPTED_AWAITING_OTP:
-        return False, "Accept the sellback before submitting UTR."
     if is_payout_expired(row):
         return False, "Payout window expired. Ask the customer to submit a new request."
-    utr = normalize_utr(raw_utr)
-    if not utr:
-        return False, "Enter a valid UPI reference (8–20 letters or digits)."
-    if utr_already_used(utr, exclude_sellback_id=row.pk):
-        return False, "This UPI reference is already linked to another sellback."
-    row.upi_utr = utr
-    row.utr_submitted_at = timezone.now()
-    row.status = GoldSellbackRequest.STATUS_AWAITING_UTR_VERIFY
-    row.save(update_fields=["upi_utr", "utr_submitted_at", "status", "updated_at"])
+    from apps.accounts.services.upi_manual_payment.registry import KIND_SELLBACK
+    from apps.accounts.services.upi_manual_payment.submit import submit_utr as manual_submit
+
+    out, err = manual_submit(KIND_SELLBACK, row, row.jeweller, raw_utr)
+    if err:
+        return False, err
     return True, "UTR submitted. Waiting for customer confirmation."
 
 
@@ -124,8 +119,11 @@ def confirm_utr_for_customer(row: GoldSellbackRequest, customer: User) -> tuple[
         return False, "Sellback not found."
     if row.payment_method != GoldSellbackRequest.PAY_UPI:
         return False, "Not a UPI sellback."
-    if row.status != GoldSellbackRequest.STATUS_AWAITING_UTR_VERIFY:
-        return False, "Sellback is not awaiting UTR confirmation."
-    if not row.upi_utr:
-        return False, "No UTR on this sellback."
+    if row.status not in (
+        GoldSellbackRequest.STATUS_AWAITING_UTR_VERIFY,
+        GoldSellbackRequest.STATUS_PENDING_REVIEW,
+    ):
+        return False, "Sellback is not awaiting confirmation."
+    if not row.upi_utr and not row.upi_proof_file:
+        return False, "No payment proof on this sellback."
     return True, "OK"

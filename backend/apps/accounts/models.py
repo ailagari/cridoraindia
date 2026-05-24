@@ -411,6 +411,8 @@ class FractionalGoldPurchase(models.Model):
     COMPLETED = "completed"
     REJECTED = "rejected"
     CANCELLED = "cancelled"
+    PROOF_REJECTED = "proof_rejected"
+    ON_HOLD = "on_hold"
 
     STATUS_CHOICES = [
         (PENDING_PAYMENT, "Pending payment"),
@@ -422,6 +424,8 @@ class FractionalGoldPurchase(models.Model):
         (COMPLETED, "Completed"),
         (REJECTED, "Rejected"),
         (CANCELLED, "Cancelled"),
+        (PROOF_REJECTED, "Proof rejected — reupload required"),
+        (ON_HOLD, "On hold — visit jeweller"),
     ]
 
     PAY_UPI = "upi"
@@ -490,6 +494,10 @@ class FractionalGoldPurchase(models.Model):
         related_name="+",
     )
     payment_signal_at = models.DateTimeField(null=True, blank=True)
+    upi_proof_file = models.FileField(upload_to="upi_proofs/%Y/%m/", blank=True)
+    upi_rejection_count = models.PositiveSmallIntegerField(default=0)
+    upi_last_rejection_remark = models.TextField(blank=True)
+    upi_fraud_reported = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -688,6 +696,9 @@ class PlatformSettlementPayment(models.Model):
     )
     confirmed_at = models.DateTimeField(null=True, blank=True)
     rejection_reason = models.CharField(max_length=512, blank=True)
+    upi_rejection_count = models.PositiveSmallIntegerField(default=0)
+    upi_last_rejection_remark = models.TextField(blank=True)
+    upi_fraud_reported = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -701,16 +712,22 @@ class GoldSellbackRequest(models.Model):
     STATUS_REJECTED = "rejected"
     STATUS_ACCEPTED_AWAITING_OTP = "accepted_awaiting_otp"
     STATUS_AWAITING_UTR_VERIFY = "awaiting_utr_verify"
+    STATUS_PENDING_REVIEW = "pending_review"
     STATUS_COMPLETED = "completed"
     STATUS_CANCELLED = "cancelled"
+    STATUS_PROOF_REJECTED = "proof_rejected"
+    STATUS_ON_HOLD = "on_hold"
 
     STATUS_CHOICES = [
         (STATUS_PENDING_JEWELLER, "Pending jeweller"),
         (STATUS_REJECTED, "Rejected"),
         (STATUS_ACCEPTED_AWAITING_OTP, "Accepted awaiting OTP"),
         (STATUS_AWAITING_UTR_VERIFY, "Awaiting UTR verification"),
+        (STATUS_PENDING_REVIEW, "Pending customer review"),
         (STATUS_COMPLETED, "Completed"),
         (STATUS_CANCELLED, "Cancelled"),
+        (STATUS_PROOF_REJECTED, "Proof rejected — reupload required"),
+        (STATUS_ON_HOLD, "On hold — visit customer"),
     ]
 
     PAY_CASH = "cash"
@@ -776,6 +793,10 @@ class GoldSellbackRequest(models.Model):
         help_text="Jeweller-submitted UPI reference after paying customer.",
     )
     utr_submitted_at = models.DateTimeField(null=True, blank=True)
+    upi_proof_file = models.FileField(upload_to="upi_proofs/%Y/%m/", blank=True)
+    upi_rejection_count = models.PositiveSmallIntegerField(default=0)
+    upi_last_rejection_remark = models.TextField(blank=True)
+    upi_fraud_reported = models.BooleanField(default=False)
     status = models.CharField(
         max_length=32,
         choices=STATUS_CHOICES,
@@ -936,6 +957,8 @@ class GoldLoanRepaymentRequest(models.Model):
     STATUS_ACCEPTED_AWAITING_OTP = "accepted_awaiting_otp"
     STATUS_COMPLETED = "completed"
     STATUS_CANCELLED = "cancelled"
+    STATUS_PROOF_REJECTED = "proof_rejected"
+    STATUS_ON_HOLD = "on_hold"
 
     STATUS_CHOICES = [
         (STATUS_PENDING_PAYMENT, "Pending UPI payment"),
@@ -947,6 +970,8 @@ class GoldLoanRepaymentRequest(models.Model):
         (STATUS_ACCEPTED_AWAITING_OTP, "Accepted awaiting OTP"),
         (STATUS_COMPLETED, "Completed"),
         (STATUS_CANCELLED, "Cancelled"),
+        (STATUS_PROOF_REJECTED, "Proof rejected — reupload required"),
+        (STATUS_ON_HOLD, "On hold — visit jeweller"),
     ]
 
     PAY_CASH = "cash"
@@ -992,6 +1017,10 @@ class GoldLoanRepaymentRequest(models.Model):
         related_name="+",
     )
     payment_signal_at = models.DateTimeField(null=True, blank=True)
+    upi_proof_file = models.FileField(upload_to="upi_proofs/%Y/%m/", blank=True)
+    upi_rejection_count = models.PositiveSmallIntegerField(default=0)
+    upi_last_rejection_remark = models.TextField(blank=True)
+    upi_fraud_reported = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -1239,15 +1268,21 @@ class CridoraPayBill(models.Model):
     STATUS_COMPLETED = "completed"
     STATUS_CANCELLED = "cancelled"
     STATUS_EXPIRED = "expired"
+    STATUS_PENDING_REVIEW = "pending_review"
+    STATUS_PROOF_REJECTED = "proof_rejected"
+    STATUS_ON_HOLD = "on_hold"
 
     STATUS_CHOICES = [
         (STATUS_AWAITING_CUSTOMER, "Awaiting customer"),
         (STATUS_UPI_PENDING, "UPI pending"),
         (STATUS_VAULT_OTP_PENDING, "Vault OTP pending"),
         (STATUS_CASH_PENDING, "Cash pending"),
+        (STATUS_PENDING_REVIEW, "Pending jeweller review"),
         (STATUS_COMPLETED, "Completed"),
         (STATUS_CANCELLED, "Cancelled"),
         (STATUS_EXPIRED, "Expired"),
+        (STATUS_PROOF_REJECTED, "Proof rejected — reupload required"),
+        (STATUS_ON_HOLD, "On hold — visit jeweller"),
     ]
 
     PAY_VAULT = "vault"
@@ -1288,6 +1323,12 @@ class CridoraPayBill(models.Model):
     vault_debited = models.BooleanField(default=False)
     payee_upi_vpa = models.CharField(max_length=128, blank=True, default="")
     payment_note = models.CharField(max_length=128, blank=True, default="")
+    upi_utr = models.CharField(max_length=32, blank=True, default="")
+    utr_submitted_at = models.DateTimeField(null=True, blank=True)
+    upi_proof_file = models.FileField(upload_to="upi_proofs/%Y/%m/", blank=True)
+    upi_rejection_count = models.PositiveSmallIntegerField(default=0)
+    upi_last_rejection_remark = models.TextField(blank=True)
+    upi_fraud_reported = models.BooleanField(default=False)
     purchase_invoice = models.FileField(upload_to="cridorapay_invoices/%Y/%m/", blank=True)
     purchase_invoice_filename = models.CharField(max_length=255, blank=True, default="")
     personal_holding = models.ForeignKey(
@@ -2356,3 +2397,90 @@ class PortfolioUserNotification(models.Model):
 
     def __str__(self):
         return f"PortfolioUserNotification({self.kind}, {self.user_id})"
+
+
+class UpiPaymentProofSubmission(models.Model):
+    """Audit trail for UTR / screenshot proof on any fiat UPI payment."""
+
+    PROOF_UTR = "utr"
+    PROOF_SCREENSHOT = "screenshot"
+    PROOF_CHOICES = [
+        (PROOF_UTR, "UTR"),
+        (PROOF_SCREENSHOT, "Screenshot"),
+    ]
+
+    content_type = models.ForeignKey(
+        "contenttypes.ContentType",
+        on_delete=models.CASCADE,
+    )
+    object_id = models.PositiveIntegerField()
+    proof_kind = models.CharField(max_length=16, choices=PROOF_CHOICES)
+    utr = models.CharField(max_length=32, blank=True)
+    proof_file = models.FileField(upload_to="upi_proofs/%Y/%m/", blank=True)
+    submitted_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="upi_proof_submissions",
+    )
+    submitted_at = models.DateTimeField(auto_now_add=True)
+    rejection_remark = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ["-submitted_at"]
+        indexes = [
+            models.Index(fields=["content_type", "object_id"]),
+        ]
+
+    def __str__(self):
+        return f"UpiPaymentProofSubmission({self.content_type_id}:{self.object_id}, {self.proof_kind})"
+
+
+class UpiFraudReport(models.Model):
+    """Jeweller/customer fraud reports surfaced in admin treasury."""
+
+    STATUS_OPEN = "open"
+    STATUS_REVIEWED = "reviewed"
+    STATUS_CHOICES = [
+        (STATUS_OPEN, "Open"),
+        (STATUS_REVIEWED, "Reviewed"),
+    ]
+
+    content_type = models.ForeignKey(
+        "contenttypes.ContentType",
+        on_delete=models.CASCADE,
+    )
+    object_id = models.PositiveIntegerField()
+    reported_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="upi_fraud_reports_filed",
+    )
+    note = models.TextField()
+    status = models.CharField(
+        max_length=16,
+        choices=STATUS_CHOICES,
+        default=STATUS_OPEN,
+    )
+    reviewed_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="upi_fraud_reports_reviewed",
+    )
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["content_type", "object_id"]),
+            models.Index(fields=["status", "-created_at"]),
+        ]
+
+    def __str__(self):
+        return f"UpiFraudReport({self.content_type_id}:{self.object_id}, {self.status})"

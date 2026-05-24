@@ -16,7 +16,7 @@ import { fetchFractionalCounterOtpPolicy } from '@/lib/fractionalPurchaseApi'
 import { useAuth } from '@/context/AuthContext'
 import { useCounterOtpCountdown } from '@/features/invest/useCounterOtpCountdown'
 import { LIVE_BALANCE_POLL_MS } from '@/lib/liveDeskIntervals'
-import { useLivePoll } from '@/lib/useLivePoll'
+import { UpiPaymentStep } from '@/features/upi/UpiPaymentStep'
 
 function formatInr(s: string): string {
   const n = Number.parseFloat(s)
@@ -298,23 +298,14 @@ export function CustomerCridoraPayPanel() {
                     </>
                   ) : null}
 
-                  {r.status === 'upi_pending' ? (
-                    <div style={{ fontSize: '0.88rem' }}>
-                      <p style={{ margin: '0 0 0.5rem' }}>
-                        Pay <strong className="tabular">₹{formatInr(r.cash_payable_inr || r.total_inr)}</strong> to:
-                      </p>
-                      <p className="tabular" style={{ fontWeight: 700 }}>
-                        {r.payee_upi_vpa || '—'}
-                      </p>
-                      {r.payment_note ? (
-                        <p style={{ margin: '0.35rem 0 0', color: 'var(--text-muted)' }}>
-                          Note: <strong>{r.payment_note}</strong>
-                        </p>
-                      ) : null}
-                      <p style={{ margin: '0.65rem 0 0', color: 'var(--text-muted)' }}>
-                        After paying, ask the jeweller to mark the bill paid in their dashboard.
-                      </p>
-                    </div>
+                  {r.status === 'upi_pending' || r.status === 'proof_rejected' ? (
+                    <UpiPaymentStep
+                      kind="cridorapay"
+                      paymentId={r.id}
+                      busy={busyId === r.id}
+                      setBusy={(v) => setBusyId(v ? r.id : null)}
+                      onSubmitted={() => void load()}
+                    />
                   ) : null}
 
                   {r.status === 'vault_otp_pending' ? (

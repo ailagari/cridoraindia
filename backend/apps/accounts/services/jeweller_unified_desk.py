@@ -32,10 +32,7 @@ BUCKET_COMPLETED = "completed"
 BUCKET_CANCELLED = "cancelled"
 
 FRACTIONAL_UPI_REVIEW = (
-    FractionalGoldPurchase.SIGNAL_RECEIVED,
     FractionalGoldPurchase.PENDING_REVIEW,
-    FractionalGoldPurchase.NEEDS_MANUAL_VERIFICATION,
-    FractionalGoldPurchase.AWAITING_UTR_VERIFY,
 )
 
 SELLBACK_PENDING = (
@@ -206,6 +203,11 @@ def _map_fractional(
             "reconciliation_flags": enriched.get("reconciliation_flags") or {},
             "otp_expires_at": enriched.get("otp_expires_at"),
             "payment_note": p.payment_note or "",
+            "upi_utr": p.upi_utr or "",
+            "proof_file_url": p.upi_proof_file.url if p.upi_proof_file else "",
+            "upi_rejection_count": p.upi_rejection_count,
+            "upi_last_rejection_remark": p.upi_last_rejection_remark or "",
+            "upi_fraud_reported": p.upi_fraud_reported,
         },
         actions=_fractional_actions(p),
     )
@@ -264,8 +266,8 @@ def _cp_payment_method(b: CridoraPayBill) -> str:
 def _cp_actions(b: CridoraPayBill) -> list[str]:
     if b.status == CridoraPayBill.STATUS_VAULT_OTP_PENDING:
         return ["verify_vault_otp"]
-    if b.status == CridoraPayBill.STATUS_UPI_PENDING:
-        return ["mark_upi_paid"]
+    if b.status == CridoraPayBill.STATUS_PENDING_REVIEW:
+        return ["confirm_upi", "reject_upi"]
     if b.status == CridoraPayBill.STATUS_CASH_PENDING:
         return ["mark_cash_paid"]
     if b.status in CP_OPEN:
@@ -298,6 +300,11 @@ def _map_cridorapay(b: CridoraPayBill) -> dict[str, Any]:
             "cash_payable_inr": str(b.cash_payable_inr),
             "payee_upi_vpa": b.payee_upi_vpa or "",
             "payment_note": b.payment_note or "",
+            "upi_utr": b.upi_utr or "",
+            "proof_file_url": b.upi_proof_file.url if b.upi_proof_file else "",
+            "upi_rejection_count": b.upi_rejection_count,
+            "upi_last_rejection_remark": b.upi_last_rejection_remark or "",
+            "upi_fraud_reported": b.upi_fraud_reported,
         },
         actions=_cp_actions(b),
     )

@@ -9297,6 +9297,26 @@ select.input {
 .fractional-upi-pay__actions {
   display: grid;
   gap: 0.45rem;
+  margin-bottom: 0.85rem;
+}
+
+.upi-proof-review__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.5rem;
+}
+
+.upi-proof-review__thumb img {
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--border-soft);
+}
+
+.fractional-upi-pay__paid-form {
+  display: grid;
+  gap: 0.45rem;
+  margin-top: 0.35rem;
 }
 
 .fractional-upi-pay__cancel {

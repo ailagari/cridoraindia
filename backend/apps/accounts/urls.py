@@ -16,6 +16,16 @@ from .views import (
     PasswordChangeView,
     ProfilePhotoView,
 )
+from .upi_manual_payment_views import (
+    AdminUpiFraudReportReviewView,
+    AdminUpiFraudReportsView,
+    UpiApproveView,
+    UpiPaymentDetailView,
+    UpiRejectView,
+    UpiReportFraudView,
+    UpiSubmitProofView,
+    UpiSubmitUtrView,
+)
 from .views_jeweller_desk import JewellerUnifiedDeskTransactionsView
 from .views_jeweller_portfolio import JewellerPortfolioLedgerView
 from .views_gold import (
@@ -519,5 +529,16 @@ urlpatterns = [
     path(
         "admin/cross-redemption/<int:pk>/settlement-complete/",
         AdminCrossRedemptionSettlementCompleteView.as_view(),
+    ),
+    path("upi/<str:kind>/<int:pk>/payment/", UpiPaymentDetailView.as_view()),
+    path("upi/<str:kind>/<int:pk>/submit-utr/", UpiSubmitUtrView.as_view()),
+    path("upi/<str:kind>/<int:pk>/submit-proof/", UpiSubmitProofView.as_view()),
+    path("upi/<str:kind>/<int:pk>/approve/", UpiApproveView.as_view()),
+    path("upi/<str:kind>/<int:pk>/reject/", UpiRejectView.as_view()),
+    path("upi/<str:kind>/<int:pk>/report-fraud/", UpiReportFraudView.as_view()),
+    path("admin/treasury/fraud-reports/", AdminUpiFraudReportsView.as_view()),
+    path(
+        "admin/treasury/fraud-reports/<int:pk>/review/",
+        AdminUpiFraudReportReviewView.as_view(),
     ),
 ]

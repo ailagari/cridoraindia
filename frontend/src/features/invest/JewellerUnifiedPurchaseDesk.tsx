@@ -1,15 +1,13 @@
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
 import { DashSegmentPair } from '@/components/DashSegmentPair'
 import { useCounterOtpCountdown } from '@/features/invest/useCounterOtpCountdown'
+import { UpiProofReviewActions } from '@/features/upi/UpiProofReviewActions'
+import type { UpiPaymentKind } from '@/features/upi/upiPaymentApi'
 import {
-  jewellerFractionalApprove,
-  jewellerFractionalBulkApprove,
-  jewellerFractionalReject,
   jewellerFractionalVerify,
 } from '@/lib/fractionalPurchaseApi'
 import {
   jewellerCridoraPayMarkCashPaid,
-  jewellerCridoraPayMarkUpiPaid,
   jewellerCridoraPayVerifyVaultOtp,
 } from '@/lib/cridorapayApi'
 import { jewellerGoldDepositVerify } from '@/lib/goldDepositApi'
@@ -19,7 +17,6 @@ import {
   postJewellerLoanReject,
 } from '@/lib/goldLoanApi'
 import {
-  jewellerSubmitSellbackUtr,
   postJewellerSellbackAccept,
   postJewellerSellbackComplete,
   postJewellerSellbackReject,
@@ -136,6 +133,13 @@ type VerifiedReceipt = {
   customerLabel: string
 }
 
+function upiReviewKind(row: UnifiedDeskRow): UpiPaymentKind | null {
+  if (!row.actions.includes('confirm_upi')) return null
+  if (row.transaction_type === 'fractional') return 'fractional'
+  if (row.transaction_type === 'cridorapay') return 'cridorapay'
+  return null
+}
+
 export function JewellerUnifiedPurchaseDesk() {
   const [tab, setTab] = useState<DeskTab>('pending')
   const [typeFilter, setTypeFilter] = useState('')
@@ -146,7 +150,6 @@ export function JewellerUnifiedPurchaseDesk() {
   const [busyKey, setBusyKey] = useState<string | null>(null)
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set())
   const [otpByKey, setOtpByKey] = useState<Record<string, string>>({})
-  const [utrByKey, setUtrByKey] = useState<Record<string, string>>({})
   const [verifiedReceipt, setVerifiedReceipt] = useState<VerifiedReceipt | null>(null)
   const successRef = useRef<HTMLDivElement | null>(null)
 
@@ -185,19 +188,6 @@ export function JewellerUnifiedPurchaseDesk() {
     return () => window.clearTimeout(timer)
   }, [verifiedReceipt])
 
-  const highConfidenceFractional = useMemo(
-    () =>
-      rows.filter(
-        (r) =>
-          r.transaction_type === 'fractional' &&
-          r.payment_method === 'upi' &&
-          r.actions.includes('confirm_upi') &&
-          typeof r.detail.reconciliation_score === 'number' &&
-          (r.detail.reconciliation_score as number) >= 60,
-      ),
-    [rows],
-  )
-
   const toggleExpanded = (id: string) => {
     setExpanded((prev) => {
       const next = new Set(prev)
@@ -222,11 +212,6 @@ export function JewellerUnifiedPurchaseDesk() {
         customerLabel: row.customer.name || row.customer.email,
       })
       setOtpByKey((prev) => {
-        const next = { ...prev }
-        delete next[row.id]
-        return next
-      })
-      setUtrByKey((prev) => {
         const next = { ...prev }
         delete next[row.id]
         return next
@@ -276,33 +261,38 @@ export function JewellerUnifiedPurchaseDesk() {
     }
   }
 
-  const bulkApprove = async () => {
-    setBusyKey('bulk')
-    setErr('')
-    try {
-      const out = await jewellerFractionalBulkApprove(60)
-      if (!out.ok) {
-        setErr(out.detail)
-        return
-      }
-      if (out.approved > 0) {
-        setVerifiedReceipt({
-          reference: `${out.approved} order(s)`,
-          amount: '—',
-          customerLabel: 'Bulk approval',
-        })
-      }
-      await load()
-    } finally {
-      setBusyKey(null)
-    }
-  }
-
   const renderActions = (row: UnifiedDeskRow) => {
     if (tab !== 'pending' || row.actions.length === 0) return null
     const otp = otpByKey[row.id] ?? ''
-    const utr = utrByKey[row.id] ?? ''
     const busy = busyKey === row.id
+    const reviewKind = upiReviewKind(row)
+
+    if (reviewKind) {
+      return (
+        <UpiProofReviewActions
+          kind={reviewKind}
+          paymentId={row.source_id}
+          reference={row.reference}
+          amountInr={row.amount_inr}
+          upiUtr={(row.detail.upi_utr as string | undefined) || row.otp_utr}
+          proofFileUrl={row.detail.proof_file_url as string | undefined}
+          rejectionCount={row.detail.upi_rejection_count as number | undefined}
+          lastRemark={row.detail.upi_last_rejection_remark as string | undefined}
+          fraudReported={Boolean(row.detail.upi_fraud_reported)}
+          busy={busyKey != null}
+          onBusyChange={(v) => setBusyKey(v ? row.id : null)}
+          onDone={async () => {
+            setVerifiedReceipt({
+              reference: row.reference,
+              amount: row.amount_inr,
+              customerLabel: row.customer.name || row.customer.email,
+            })
+            await load()
+          }}
+          onError={(detail) => setErr(detail)}
+        />
+      )
+    }
 
     if (row.actions.includes('verify_otp') || row.actions.includes('verify_deposit_otp') || row.actions.includes('verify_vault_otp') || row.actions.includes('complete_sellback_otp') || row.actions.includes('complete_loan_otp')) {
       return (
@@ -335,36 +325,6 @@ export function JewellerUnifiedPurchaseDesk() {
 
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-        {row.actions.includes('confirm_upi') ? (
-          <button
-            type="button"
-            className="btn btn-primary jeweller-purchases-verify-btn"
-            disabled={busyKey != null}
-            onClick={() =>
-              void runAction(row, async () => {
-                const out = await jewellerFractionalApprove(row.source_id)
-                return out.ok ? { ok: true } : { ok: false, detail: out.detail }
-              })
-            }
-          >
-            Confirm payment
-          </button>
-        ) : null}
-        {row.actions.includes('reject_upi') ? (
-          <button
-            type="button"
-            className="btn btn-ghost jeweller-purchases-verify-btn"
-            disabled={busyKey != null}
-            onClick={() =>
-              void runAction(row, async () => {
-                const out = await jewellerFractionalReject(row.source_id)
-                return out.ok ? { ok: true } : { ok: false, detail: out.detail }
-              })
-            }
-          >
-            Reject
-          </button>
-        ) : null}
         {row.actions.includes('accept_sellback') ? (
           <button
             type="button"
@@ -425,21 +385,6 @@ export function JewellerUnifiedPurchaseDesk() {
             Reject loan
           </button>
         ) : null}
-        {row.actions.includes('mark_upi_paid') ? (
-          <button
-            type="button"
-            className="btn btn-primary jeweller-purchases-verify-btn"
-            disabled={busyKey != null}
-            onClick={() =>
-              void runAction(row, async () => {
-                const out = await jewellerCridoraPayMarkUpiPaid(row.source_id)
-                return out.ok ? { ok: true } : { ok: false, detail: out.detail }
-              })
-            }
-          >
-            Mark UPI paid
-          </button>
-        ) : null}
         {row.actions.includes('mark_cash_paid') ? (
           <button
             type="button"
@@ -454,31 +399,6 @@ export function JewellerUnifiedPurchaseDesk() {
           >
             Mark cash paid
           </button>
-        ) : null}
-        {row.actions.includes('submit_sellback_utr') ? (
-          <>
-            <input
-              type="text"
-              className="tabular"
-              value={utr}
-              onChange={(e) => setUtrByKey((m) => ({ ...m, [row.id]: e.target.value }))}
-              placeholder="UTR number"
-              aria-label={`UTR for ${row.reference}`}
-            />
-            <button
-              type="button"
-              className="btn btn-primary jeweller-purchases-verify-btn"
-              disabled={busyKey != null || utr.trim().length < 8}
-              onClick={() =>
-                void runAction(row, async () => {
-                  const out = await jewellerSubmitSellbackUtr(row.source_id, utr.trim())
-                  return out.ok ? { ok: true } : { ok: false, detail: out.detail }
-                })
-              }
-            >
-              Submit UTR
-            </button>
-          </>
         ) : null}
       </div>
     )
@@ -573,18 +493,6 @@ export function JewellerUnifiedPurchaseDesk() {
         <p className="form-error" style={{ marginBottom: '1rem' }} role="alert">
           {err}
         </p>
-      ) : null}
-
-      {tab === 'pending' && highConfidenceFractional.length > 0 ? (
-        <button
-          type="button"
-          className="btn btn-primary"
-          style={{ marginBottom: '1rem' }}
-          disabled={busyKey != null}
-          onClick={() => void bulkApprove()}
-        >
-          {busyKey === 'bulk' ? 'Approving…' : `Approve high-confidence UPI (${highConfidenceFractional.length})`}
-        </button>
       ) : null}
 
       {rows.length === 0 ? (

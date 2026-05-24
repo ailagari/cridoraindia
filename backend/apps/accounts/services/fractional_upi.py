@@ -183,37 +183,18 @@ def cancel_upi_order(purchase: FractionalGoldPurchase) -> tuple[bool, str]:
 def submit_utr(purchase: FractionalGoldPurchase, raw_utr: str) -> tuple[bool, str]:
     if purchase.payment_method != FractionalGoldPurchase.PAY_UPI:
         return False, "This order is not an online UPI purchase."
-    if purchase.status not in (
-        FractionalGoldPurchase.PENDING_PAYMENT,
-        FractionalGoldPurchase.SIGNAL_RECEIVED,
-        FractionalGoldPurchase.PENDING_REVIEW,
-        FractionalGoldPurchase.NEEDS_MANUAL_VERIFICATION,
-        FractionalGoldPurchase.AWAITING_UTR_VERIFY,
-    ):
-        return False, "Order is not awaiting payment."
     if is_payment_expired(purchase):
         return False, "Payment window expired. Place a new order."
-    raw_stripped = (raw_utr or "").strip()
-    utr_err = utr_validation_error(raw_stripped)
-    if utr_err:
-        return False, utr_err
-    utr = normalize_utr(raw_stripped) if raw_stripped else None
-    if utr and utr_already_used(utr, exclude_purchase_id=purchase.pk):
-        return False, "This UPI reference is already linked to another order."
-    from apps.accounts.services.payment_reconciliation.signals import (
-        capture_user_input_signal,
-    )
-    from apps.accounts.services.payment_reconciliation.engine import run_reconciliation
+    from apps.accounts.services.upi_manual_payment.registry import KIND_FRACTIONAL
+    from apps.accounts.services.upi_manual_payment.submit import submit_utr as manual_submit
 
-    capture_user_input_signal(purchase, utr=utr or "")
-    run_reconciliation(purchase)
-    if purchase.status == FractionalGoldPurchase.COMPLETED:
+    payer = purchase.customer
+    out, err = manual_submit(KIND_FRACTIONAL, purchase, payer, raw_utr)
+    if err:
+        return False, err
+    if out and out.get("is_completed"):
         return True, "Payment confirmed. Gold credited to your vault."
-    if purchase.status == FractionalGoldPurchase.PENDING_REVIEW:
-        return True, "Payment submitted. Awaiting jeweller review."
-    if purchase.status == FractionalGoldPurchase.NEEDS_MANUAL_VERIFICATION:
-        return True, "Payment submitted. Jeweller will verify manually."
-    return True, "Payment signal received."
+    return True, "Payment submitted. Awaiting jeweller review."
 
 
 def confirm_utr_for_jeweller(purchase: FractionalGoldPurchase, jeweller) -> tuple[bool, str]:

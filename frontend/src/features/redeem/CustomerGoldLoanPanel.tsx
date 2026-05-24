@@ -20,7 +20,7 @@ import {
 } from '@/lib/goldLoanApi'
 import { LIVE_BALANCE_POLL_MS } from '@/lib/liveDeskIntervals'
 import { useLivePoll } from '@/lib/useLivePoll'
-import { fetchPlatformFeatures, isFeatureEnabled } from '@/lib/platformFeatures'
+import { UpiPaymentStep } from '@/features/upi/UpiPaymentStep'
 
 function parseG(s: string): number {
   const n = Number.parseFloat(s)
@@ -80,7 +80,7 @@ export function CustomerGoldLoanPanel() {
   }
 
   function repaymentStatusHint(st: string): string {
-    if (st === 'pending_payment') return 'pay via UPI, then submit SMS or UTR'
+    if (st === 'pending_payment' || st === 'proof_rejected') return 'Pay via UPI and submit UTR or screenshot'
     if (st === 'pending_review') return 'UPI payment awaiting jeweller review'
     if (st === 'pending_jeweller') return 'awaiting jeweller to accept'
     if (st === 'accepted_awaiting_otp') return 'pay cash at counter, then share OTP'
@@ -651,6 +651,18 @@ export function CustomerGoldLoanPanel() {
               </p>
             </div>
           ) : null}
+          {pendingRepayments
+            .filter((r) => r.payment_method === 'upi' && (r.status === 'pending_payment' || r.status === 'proof_rejected'))
+            .map((r) => (
+              <UpiPaymentStep
+                key={`upi-${r.id}`}
+                kind="loan_repayment"
+                paymentId={r.id}
+                busy={busyRepayId === r.id}
+                setBusy={(v) => setBusyRepayId(v ? r.id : null)}
+                onSubmitted={() => void refreshAccounts()}
+              />
+            ))}
           {pendingRepayments.length > 0 ? (
             <ul style={{ margin: 0, paddingLeft: '1.1rem', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
               {pendingRepayments.map((r) => (

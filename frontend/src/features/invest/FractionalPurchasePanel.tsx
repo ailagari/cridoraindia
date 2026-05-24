@@ -11,7 +11,7 @@ import {
   type FractionalQuoteDTO,
 } from '@/lib/fractionalPurchaseApi'
 import { DashSegmentPair } from '@/components/DashSegmentPair'
-import { FractionalUpiPayStep } from '@/features/invest/FractionalUpiPayStep'
+import { UpiPaymentStep } from '@/features/upi/UpiPaymentStep'
 import { FractionalJewellerPicker } from '@/features/invest/FractionalJewellerPicker'
 import {
   knownFractionalJewellerIds,
@@ -44,6 +44,7 @@ const INFLIGHT_UPI_STATUSES = new Set([
   'pending_review',
   'needs_manual_verification',
   'awaiting_utr_verify',
+  'proof_rejected',
 ])
 
 export function FractionalPurchasePanel() {
@@ -466,21 +467,17 @@ export function FractionalPurchasePanel() {
           {orderMsg ? <p className="ds-feedback ds-feedback--success" role="status">{orderMsg}</p> : null}
 
           {activeUpiOrder && INFLIGHT_UPI_STATUSES.has(activeUpiOrder.status) ? (
-            <FractionalUpiPayStep
-              order={activeUpiOrder}
+            <UpiPaymentStep
+              kind="fractional"
+              paymentId={activeUpiOrder.id}
               busy={busy}
               setBusy={setBusy}
-              onUpdated={async () => {
-                await refreshOrders()
-                const w = await fetchGoldWallet()
-                if (w) setBalanceHint(w.balance_grams)
-              }}
-              onSuccess={(msg) => setSuccessToast(msg)}
-              onCancelled={() => {
+              onSubmitted={() => {
                 setActiveUpiOrder(null)
                 setLastOrder(null)
-                setOrderMsg('Order cancelled.')
               }}
+              onSuccess={(msg) => setSuccessToast(msg)}
+              onError={(msg) => setOrderMsg(msg)}
             />
           ) : null}
 

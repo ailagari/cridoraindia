@@ -6,7 +6,7 @@ import {
   postJewellerSellbackReject,
   type JewellerSellbackRowDTO,
 } from '@/lib/goldTransferApi'
-import { SellbackUpiPayoutStep } from '@/features/redeem/SellbackUpiPayoutStep'
+import { UpiPaymentStep } from '@/features/upi/UpiPaymentStep'
 import { LIVE_BALANCE_POLL_MS } from '@/lib/liveDeskIntervals'
 import { useLivePoll } from '@/lib/useLivePoll'
 
@@ -27,7 +27,9 @@ function statusLabel(st: string, paymentMethod?: string): string {
   if (st === 'accepted_awaiting_otp') {
     return paymentMethod === 'upi' ? 'Accepted · pay via UPI' : 'Accepted · enter OTP'
   }
-  if (st === 'awaiting_utr_verify') return 'UTR submitted · customer confirm'
+  if (st === 'awaiting_utr_verify' || st === 'pending_review') return 'UTR submitted · customer confirm'
+  if (st === 'proof_rejected') return 'Proof rejected · re-upload payout proof'
+  if (st === 'on_hold') return 'On hold · visit customer'
   if (st === 'completed') return 'Completed'
   if (st === 'rejected') return 'Rejected'
   if (st === 'cancelled') return 'Cancelled'
@@ -79,7 +81,9 @@ export function JewellerSellbacksPanel() {
   const upiPayoutRows = queue.filter(
     (r) =>
       r.payment_method === 'upi' &&
-      (r.status === 'accepted_awaiting_otp' || r.status === 'awaiting_utr_verify'),
+      (r.status === 'accepted_awaiting_otp' ||
+        r.status === 'proof_rejected' ||
+        r.status === 'awaiting_utr_verify'),
   )
 
   const onAccept = async (id: number) => {
@@ -242,16 +246,18 @@ export function JewellerSellbacksPanel() {
       ) : null}
 
       {upiPayoutRows.map((row) => (
-        <SellbackUpiPayoutStep
+        <UpiPaymentStep
           key={row.id}
-          row={row}
+          kind="sellback"
+          paymentId={row.id}
           busy={busyUpi}
           setBusy={setBusyUpi}
-          onUpdated={refresh}
+          onSubmitted={refresh}
           onSuccess={(msg) => {
             setSuccessMsg(msg)
             setLoadErr('')
           }}
+          onError={(detail) => setLoadErr(detail)}
         />
       ))}
 

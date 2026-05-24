@@ -133,115 +133,27 @@ class JewellerFractionalOrdersListView(APIView):
 
 
 class FractionalOrderPaymentAckView(FractionalUpiInflightBypassMixin, APIView):
-    """Customer acknowledges payment without UTR."""
+    """Deprecated — use submit-utr or submit-proof."""
 
     permission_classes = [IsAuthenticated]
 
     def post(self, request, pk: int):
-        if request.user.user_type != User.CUSTOMER:
-            return Response(
-                {"detail": "Customers only."},
-                status=status.HTTP_403_FORBIDDEN,
-            )
-        try:
-            with transaction.atomic():
-                purchase = FractionalGoldPurchase.objects.select_for_update().get(
-                    pk=pk,
-                    customer=request.user,
-                    payment_method=FractionalGoldPurchase.PAY_UPI,
-                )
-                if purchase.status not in RECONCILABLE_STATUSES:
-                    return Response(
-                        {"detail": "Order is not awaiting payment."},
-                        status=status.HTTP_400_BAD_REQUEST,
-                    )
-                if is_payment_expired(purchase):
-                    return Response(
-                        {"detail": "Payment window expired. Place a new order."},
-                        status=status.HTTP_400_BAD_REQUEST,
-                    )
-                capture_user_input_signal(purchase, utr="")
-                run_reconciliation(purchase)
-        except FractionalGoldPurchase.DoesNotExist:
-            return Response(
-                {"detail": "UPI order not found."},
-                status=status.HTTP_404_NOT_FOUND,
-            )
-        except Exception:
-            return Response(
-                {"detail": "Could not acknowledge payment. Try again in a moment."},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
-        purchase.refresh_from_db()
-        payload = _ser_purchase(purchase)
-        payload["order_reference"] = purchase.order_reference
-        payload["reconciliation_score"] = purchase.reconciliation_score
-        return Response(payload)
+        return Response(
+            {"detail": "Use submit-utr or submit-proof instead."},
+            status=status.HTTP_410_GONE,
+        )
 
 
 class FractionalOrderPaymentSmsView(FractionalUpiInflightBypassMixin, APIView):
-    """Ingest bank SMS text (Android listener or paste)."""
+    """Deprecated — manual jeweller review only."""
 
     permission_classes = [IsAuthenticated]
 
     def post(self, request, pk: int):
-        if request.user.user_type != User.CUSTOMER:
-            return Response(
-                {"detail": "Customers only."},
-                status=status.HTTP_403_FORBIDDEN,
-            )
-        data = request.data if isinstance(request.data, dict) else {}
-        sms_text = str(data.get("sms_text") or "").strip()
-        if not sms_text:
-            return Response(
-                {"detail": "sms_text is required."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        received_at = _parse_received_at(str(data.get("received_at") or ""))
-        try:
-            with transaction.atomic():
-                purchase = FractionalGoldPurchase.objects.select_for_update().get(
-                    pk=pk,
-                    customer=request.user,
-                    payment_method=FractionalGoldPurchase.PAY_UPI,
-                )
-                if purchase.status not in RECONCILABLE_STATUSES:
-                    return Response(
-                        {"detail": "Order is not awaiting payment."},
-                        status=status.HTTP_400_BAD_REQUEST,
-                    )
-                if is_payment_expired(purchase):
-                    return Response(
-                        {"detail": "Payment window expired. Place a new order."},
-                        status=status.HTTP_400_BAD_REQUEST,
-                    )
-                sig = capture_sms_signal(
-                    purchase, sms_text, received_at=received_at
-                )
-                if sig is None:
-                    return Response(
-                        {"detail": "Could not parse payment details from SMS."},
-                        status=status.HTTP_400_BAD_REQUEST,
-                    )
-                if sig.utr:
-                    from apps.accounts.services.fractional_upi import utr_already_used
-
-                    if utr_already_used(sig.utr, exclude_purchase_id=purchase.pk):
-                        return Response(
-                            {"detail": "This UPI reference is already linked to another order."},
-                            status=status.HTTP_400_BAD_REQUEST,
-                        )
-                run_reconciliation(purchase)
-        except FractionalGoldPurchase.DoesNotExist:
-            return Response(
-                {"detail": "UPI order not found."},
-                status=status.HTTP_404_NOT_FOUND,
-            )
-        purchase.refresh_from_db()
-        payload = _ser_purchase(purchase)
-        payload["order_reference"] = purchase.order_reference
-        payload["reconciliation_score"] = purchase.reconciliation_score
-        return Response(payload)
+        return Response(
+            {"detail": "SMS auto-match is disabled. Submit UTR or screenshot proof."},
+            status=status.HTTP_410_GONE,
+        )
 
 
 class JewellerFractionalPendingReconciliationView(FeatureGatedViewMixin, APIView):
@@ -356,9 +268,6 @@ class JewellerFractionalApproveView(FeatureGatedViewMixin, APIView):
                     return Response(_ser_purchase(purchase))
                 if purchase.status not in (
                     FractionalGoldPurchase.PENDING_REVIEW,
-                    FractionalGoldPurchase.NEEDS_MANUAL_VERIFICATION,
-                    FractionalGoldPurchase.AWAITING_UTR_VERIFY,
-                    FractionalGoldPurchase.SIGNAL_RECEIVED,
                 ):
                     return Response(
                         {"detail": "Order is not awaiting approval."},
