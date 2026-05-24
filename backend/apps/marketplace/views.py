@@ -77,6 +77,16 @@ class MarketplaceGoldTickerPublicView(APIView):
         except Exception:
             logger.exception("Gold rate alert check failed")
         ticker = get_or_create_ticker()
+        try:
+            from decimal import Decimal
+
+            from .gold_ticker_history import persist_ticker_final_price
+            from .spot_prices import resolve_cridora_base_22k_inr
+
+            base, src = resolve_cridora_base_22k_inr()
+            persist_ticker_final_price(base=base.quantize(Decimal("0.01")), source=src)
+        except Exception:
+            logger.exception("Gold ticker daily history update failed")
         return Response(GoldTickerPublicSerializer(ticker).data)
 
 

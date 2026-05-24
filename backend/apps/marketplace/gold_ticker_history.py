@@ -78,10 +78,15 @@ def maybe_record_gold_reference_history(*, base: Decimal, source: str) -> None:
         base_source=(source or "")[:64],
     )
     cache.set(_DEBOUNCE_CACHE_KEY, (now_ts, base_f), 3600)
-    try:
-        from .gold_rate_daily_snapshot import upsert_daily_from_sample
 
-        upsert_daily_from_sample(price=base_q, source=source)
+
+def persist_ticker_final_price(*, base: Decimal, source: str) -> None:
+    """Record intraday samples and daily OHLC from the resolved ticker final price."""
+    maybe_record_gold_reference_history(base=base, source=source)
+    try:
+        from .gold_rate_daily_snapshot import record_live_ticker_daily
+
+        record_live_ticker_daily(price=base, source=source)
     except Exception:
         pass
 
