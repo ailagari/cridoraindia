@@ -1,4 +1,4 @@
-import { jewellerFractionalPending } from '@/lib/fractionalPurchaseApi'
+import { jewellerFractionalOrdersDesk } from '@/lib/fractionalPurchaseApi'
 import { jewellerGoldDepositPending } from '@/lib/goldDepositApi'
 import {
   fetchGoldWallet,
@@ -40,11 +40,11 @@ export type JewellerPortfolioSnapshot = {
 }
 
 export async function fetchJewellerPortfolioSnapshot(): Promise<JewellerPortfolioSnapshot | null> {
-  const [wallet, custody, pendingFrac, pendingDeposits, ornaments, sellbacks, crossInbox] =
+  const [wallet, custody, purchaseDesk, pendingDeposits, ornaments, sellbacks, crossInbox] =
     await Promise.all([
       fetchGoldWallet(),
       fetchJewellerCustodyVaults(),
-      jewellerFractionalPending(),
+      jewellerFractionalOrdersDesk(),
       jewellerGoldDepositPending(),
       fetchJewellerOrnamentRedemptions(),
       fetchJewellerSellbacks(),
@@ -68,7 +68,9 @@ export async function fetchJewellerPortfolioSnapshot(): Promise<JewellerPortfoli
     depositValueInr += parseN(row.estimated_total_vault_value_inr)
   }
 
-  const investmentSalesInr = pendingFrac.reduce((s, r) => s + parseN(r.total_inr), 0)
+  const pendingPurchaseRows = purchaseDesk.ok ? purchaseDesk.data.pending : []
+  const pendingActionCount = purchaseDesk.ok ? purchaseDesk.data.summary.pending_action_count : 0
+  const investmentSalesInr = pendingPurchaseRows.reduce((s, r) => s + parseN(r.total_inr), 0)
   const ornamentRows = ornaments.ok ? ornaments.results : []
   const ornamentRevenueInr = ornamentRows.reduce((s, r) => s + parseN(r.final_invoice_inr), 0)
   const pendingSellbacks = (sellbacks?.results ?? []).filter(
@@ -102,11 +104,11 @@ export async function fetchJewellerPortfolioSnapshot(): Promise<JewellerPortfoli
     ornamentRevenueInr,
     depositValueInr: depositPendingInr > 0 ? depositPendingInr : depositValueInr,
     totalSalesInr: investmentSalesInr + ornamentRevenueInr,
-    pendingPurchases: pendingFrac.length,
+    pendingPurchases: pendingActionCount,
     pendingDeposits: pendingDeposits.length,
     pendingSellbacks,
     pendingCross,
-    pendingTotal: pendingFrac.length + pendingDeposits.length + pendingSellbacks + pendingCross,
+    pendingTotal: pendingActionCount + pendingDeposits.length + pendingSellbacks + pendingCross,
     recentCredits: wallet.recent_liability_credits ?? [],
     ledgerRevenueInr,
     loanOutstandingInr,

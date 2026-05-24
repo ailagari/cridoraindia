@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import QRCode from 'qrcode'
 import { UpiPayMethodNotice } from '@/components/UpiPayMethodNotice'
+import { Input } from '@/components/ui'
 import {
   fractionalCancelUpiOrder,
   fractionalFetchPayment,
   fractionalPaymentAck,
-  fractionalSubmitPaymentSms,
   fractionalSubmitUtr,
   type FractionalPaymentPayload,
   type FractionalPurchaseDTO,
@@ -13,12 +13,10 @@ import {
 import { usePublicLayoutMax767 } from '@/hooks/usePublicLayoutMax767'
 import { openUpiPayUri } from '@/lib/openUpiPayUri'
 import { isNativeAndroid } from '@/lib/capacitorPlatform'
-import {
-  isPaymentSmsBridgeAvailable,
-  requestPaymentSmsAccess,
-  startPaymentSmsListener,
-  type PaymentSmsListenStatus,
-} from '@/lib/paymentSmsListener'
+import { isPaymentSmsBridgeAvailable, startPaymentSmsListener } from '@/lib/paymentSmsListener'
+import { isValidUtr, utrValidationHint } from '@/lib/utrNormalize'
+import { LIVE_BALANCE_POLL_MS } from '@/lib/liveDeskIntervals'
+import { useLivePoll } from '@/lib/useLivePoll'
 
 type Props = {
   order: FractionalPurchaseDTO
@@ -42,60 +40,60 @@ const PENDING_REVIEW_STATUSES = new Set([
   'needs_manual_verification',
 ])
 
+const INFLIGHT_PAY_STATUSES = new Set(['pending_payment', 'signal_received'])
+
 export function FractionalUpiPayStep({ order, busy, setBusy, onUpdated, onSuccess, onCancelled }: Props) {
   const narrow = usePublicLayoutMax767()
+  const [viewOrder, setViewOrder] = useState(order)
   const [payment, setPayment] = useState<FractionalPaymentPayload | null>(null)
   const [loadErr, setLoadErr] = useState('')
   const [actionErr, setActionErr] = useState('')
   const [utrInput, setUtrInput] = useState('')
-  const [smsInput, setSmsInput] = useState('')
-  const [showSmsPaste, setShowSmsPaste] = useState(false)
   const [qrSrc, setQrSrc] = useState('')
-  const [copyMsg, setCopyMsg] = useState('')
-  const [smsListenStatus, setSmsListenStatus] = useState<PaymentSmsListenStatus>('unavailable')
+
+  useEffect(() => {
+    setViewOrder(order)
+  }, [order])
 
   const refreshPayment = useCallback(async () => {
     setLoadErr('')
-    const out = await fractionalFetchPayment(order.id)
+    const out = await fractionalFetchPayment(viewOrder.id)
     if (!out.ok) {
       setLoadErr(out.detail)
       setPayment(null)
-      return
+      return null
     }
     setPayment(out.data.payment)
-  }, [order.id])
+    const { payment: _p, ...orderRow } = out.data
+    setViewOrder((prev) => ({ ...prev, ...orderRow }))
+    return out.data
+  }, [viewOrder.id])
 
   useEffect(() => {
     void refreshPayment()
   }, [refreshPayment])
 
+  useLivePoll(() => void refreshPayment(), LIVE_BALANCE_POLL_MS, !busy && INFLIGHT_PAY_STATUSES.has(viewOrder.status))
+
   useEffect(() => {
-    if (order.status !== 'pending_payment' && order.status !== 'signal_received') {
-      setSmsListenStatus('unavailable')
-      return
-    }
-    if (!isNativeAndroid() || !isPaymentSmsBridgeAvailable()) {
-      setSmsListenStatus(isNativeAndroid() ? 'bridge_missing' : 'unavailable')
-      return
-    }
-    const handle = startPaymentSmsListener(
-      order.id,
-      async () => {
-        const out = await fractionalFetchPayment(order.id)
-        if (out.ok && out.data.status === 'completed') {
+    if (!INFLIGHT_PAY_STATUSES.has(viewOrder.status)) return
+    if (!isNativeAndroid() || !isPaymentSmsBridgeAvailable()) return
+    const handle = startPaymentSmsListener(viewOrder.id, async () => {
+      const out = await fractionalFetchPayment(viewOrder.id)
+      if (out.ok) {
+        setViewOrder(out.data)
+        if (out.data.status === 'completed') {
           onSuccess(
             `Order ${out.data.order_reference ?? out.data.reference} completed. ${out.data.grams} g credited.`,
           )
         }
-        await onUpdated()
-      },
-      setSmsListenStatus,
-    )
+      }
+      await onUpdated()
+    })
     return () => {
       handle?.stop()
-      setSmsListenStatus('unavailable')
     }
-  }, [order.id, order.status, onUpdated, onSuccess])
+  }, [viewOrder.id, viewOrder.status, onUpdated, onSuccess])
 
   useEffect(() => {
     const uri = payment?.upi_uri ?? ''
@@ -112,27 +110,8 @@ export function FractionalUpiPayStep({ order, busy, setBusy, onUpdated, onSucces
     }
   }, [payment?.upi_uri, narrow])
 
-  const copyText = async (text: string, label: string) => {
-    try {
-      await navigator.clipboard.writeText(text)
-      setCopyMsg(`${label} copied`)
-      window.setTimeout(() => setCopyMsg(''), 2000)
-    } catch {
-      setCopyMsg('Copy failed')
-      window.setTimeout(() => setCopyMsg(''), 2000)
-    }
-  }
-
-  const copyPaymentDetails = async () => {
-    if (!payment) return
-    const lines = [
-      `UPI ID: ${payment.payee_vpa}`,
-      `Amount: ₹${formatInr(payment.amount_inr)}`,
-      `Note: ${payment.payment_note}`,
-      `Ref: ${payment.order_reference ?? payment.reference}`,
-    ]
-    await copyText(lines.join('\n'), 'Payment details')
-  }
+  const utrHint = useMemo(() => utrValidationHint(utrInput), [utrInput])
+  const utrReady = isValidUtr(utrInput)
 
   const openUpiApp = () => {
     if (!payment?.upi_uri) return
@@ -140,6 +119,7 @@ export function FractionalUpiPayStep({ order, busy, setBusy, onUpdated, onSucces
   }
 
   const handleOrderUpdate = async (data: FractionalPurchaseDTO, fallbackMsg: string) => {
+    setViewOrder(data)
     await onUpdated()
     if (data.status === 'completed') {
       onSuccess(`Order ${data.order_reference ?? data.reference} completed. ${data.grams} g credited.`)
@@ -157,10 +137,14 @@ export function FractionalUpiPayStep({ order, busy, setBusy, onUpdated, onSucces
   }
 
   const submitUtr = async () => {
+    if (!utrReady) {
+      setActionErr(utrHint ?? 'Enter a valid UTR number.')
+      return
+    }
     setActionErr('')
     setBusy(true)
     try {
-      const out = await fractionalSubmitUtr(order.id, utrInput)
+      const out = await fractionalSubmitUtr(viewOrder.id, utrInput)
       if (!out.ok) {
         setActionErr(out.detail)
         return
@@ -171,26 +155,11 @@ export function FractionalUpiPayStep({ order, busy, setBusy, onUpdated, onSucces
     }
   }
 
-  const submitSms = async () => {
-    setActionErr('')
-    setBusy(true)
-    try {
-      const out = await fractionalSubmitPaymentSms(order.id, smsInput)
-      if (!out.ok) {
-        setActionErr(out.detail)
-        return
-      }
-      await handleOrderUpdate(out.data, 'SMS submitted.')
-    } finally {
-      setBusy(false)
-    }
-  }
-
   const paymentAck = async () => {
     setActionErr('')
     setBusy(true)
     try {
-      const out = await fractionalPaymentAck(order.id)
+      const out = await fractionalPaymentAck(viewOrder.id)
       if (!out.ok) {
         setActionErr(out.detail)
         return
@@ -205,7 +174,7 @@ export function FractionalUpiPayStep({ order, busy, setBusy, onUpdated, onSucces
     setActionErr('')
     setBusy(true)
     try {
-      const out = await fractionalCancelUpiOrder(order.id)
+      const out = await fractionalCancelUpiOrder(viewOrder.id)
       if (!out.ok) {
         setActionErr(out.detail)
         return
@@ -217,18 +186,18 @@ export function FractionalUpiPayStep({ order, busy, setBusy, onUpdated, onSucces
     }
   }
 
-  if (PENDING_REVIEW_STATUSES.has(order.status)) {
+  if (PENDING_REVIEW_STATUSES.has(viewOrder.status)) {
     return (
       <div className="fractional-upi-pay card" role="status">
         <p className="fractional-upi-pay__title">Payment received</p>
         <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
-          {order.order_reference ?? order.reference}: your payment is being matched
-          {order.reconciliation_score != null ? ` (score ${order.reconciliation_score}%)` : ''}. Gold credits
+          {viewOrder.order_reference ?? viewOrder.reference}: your payment is being matched
+          {viewOrder.reconciliation_score != null ? ` (score ${viewOrder.reconciliation_score}%)` : ''}. Gold credits
           automatically when confidence is high; otherwise your jeweller will confirm shortly.
-          {order.upi_utr ? (
+          {viewOrder.upi_utr ? (
             <>
               {' '}
-              UTR <strong className="tabular">{order.upi_utr}</strong>
+              UTR <strong className="tabular">{viewOrder.upi_utr}</strong>
             </>
           ) : null}
         </p>
@@ -236,21 +205,21 @@ export function FractionalUpiPayStep({ order, busy, setBusy, onUpdated, onSucces
     )
   }
 
-  if (order.status === 'completed') {
+  if (viewOrder.status === 'completed') {
     return (
       <div className="fractional-upi-pay card" role="status">
         <p className="fractional-upi-pay__title" style={{ color: 'var(--gold-light)' }}>
           Order completed
         </p>
         <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--text-muted)' }}>
-          {order.order_reference ?? order.reference} — <strong className="tabular">{order.grams} g</strong> credited to
-          your vault.
+          {viewOrder.order_reference ?? viewOrder.reference} — <strong className="tabular">{viewOrder.grams} g</strong>{' '}
+          credited to your vault.
         </p>
       </div>
     )
   }
 
-  if (order.status === 'rejected') {
+  if (viewOrder.status === 'rejected') {
     return (
       <div className="fractional-upi-pay card" role="status">
         <p className="fractional-upi-pay__title" style={{ color: 'var(--danger)' }}>
@@ -267,49 +236,10 @@ export function FractionalUpiPayStep({ order, busy, setBusy, onUpdated, onSucces
     <div className="fractional-upi-pay card">
       <p className="fractional-upi-pay__title">Pay with UPI</p>
       <p className="fractional-upi-pay__lead">
-        Pay <strong className="tabular">₹{formatInr(order.total_inr)}</strong> to{' '}
-        <strong>{order.jeweller.business_name}</strong>. UTR is optional — paste your bank SMS for faster
-        auto-confirmation.
+        Pay <strong className="tabular">₹{formatInr(viewOrder.total_inr)}</strong> to{' '}
+        <strong>{viewOrder.jeweller.business_name}</strong>. After paying, tap <strong>I&apos;ve paid</strong>. UTR is
+        optional but helps auto-match faster.
       </p>
-
-      {isNativeAndroid() && isPaymentSmsBridgeAvailable() ? (
-        <div
-          className="fractional-upi-pay__sms-listen"
-          style={{
-            marginBottom: '0.75rem',
-            padding: '0.65rem 0.75rem',
-            borderRadius: 10,
-            border: '1px solid var(--border-soft)',
-            background: 'var(--veil)',
-            fontSize: '0.82rem',
-          }}
-        >
-          {smsListenStatus === 'listening' ? (
-            <p style={{ margin: 0, color: 'var(--success)' }}>
-              Listening for your bank payment SMS on this device…
-            </p>
-          ) : smsListenStatus === 'ready' ? (
-            <>
-              <p style={{ margin: 0, color: 'var(--text-muted)', lineHeight: 1.45 }}>
-                Allow SMS access to auto-detect your payment confirmation (only while this screen is open).
-              </p>
-              <button
-                type="button"
-                className="btn btn-ghost btn--block"
-                style={{ marginTop: '0.5rem' }}
-                disabled={busy}
-                onClick={() => requestPaymentSmsAccess(order.id)}
-              >
-                Enable payment SMS detection
-              </button>
-            </>
-          ) : (
-            <p style={{ margin: 0, color: 'var(--text-muted)' }}>
-              Rebuild the Android app to enable automatic SMS detection, or paste your bank SMS below.
-            </p>
-          )}
-        </div>
-      ) : null}
 
       {loadErr ? <p className="form-error">{loadErr}</p> : null}
       {payment?.expired ? (
@@ -332,19 +262,10 @@ export function FractionalUpiPayStep({ order, busy, setBusy, onUpdated, onSucces
             <button type="button" className="btn btn-primary btn--block" disabled={busy} onClick={openUpiApp}>
               Open UPI app to pay
             </button>
-            <button type="button" className="btn btn-ghost btn--block" disabled={busy} onClick={() => void paymentAck()}>
+            <button type="button" className="btn btn-secondary btn--block" disabled={busy} onClick={() => void paymentAck()}>
               I&apos;ve paid
             </button>
-            <button
-              type="button"
-              className="btn btn-ghost btn--block"
-              disabled={busy}
-              onClick={() => void copyPaymentDetails()}
-            >
-              Copy payment details
-            </button>
           </div>
-          {copyMsg ? <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-muted)' }}>{copyMsg}</p> : null}
 
           {!narrow && qrSrc ? (
             <>
@@ -355,56 +276,29 @@ export function FractionalUpiPayStep({ order, busy, setBusy, onUpdated, onSucces
             </>
           ) : null}
 
-          <div className="field" style={{ marginTop: '0.75rem' }}>
-            <label htmlFor={`frac-utr-${order.id}`}>UTR number</label>
-            <input
-              id={`frac-utr-${order.id}`}
-              value={utrInput}
-              onChange={(e) => setUtrInput(e.target.value)}
-              placeholder="12-digit UTR from GPay / PhonePe receipt"
-              autoComplete="off"
-              inputMode="text"
-            />
-          </div>
+          <Input
+            label="UTR number (optional)"
+            value={utrInput}
+            onChange={(e) => {
+              setActionErr('')
+              setUtrInput(e.target.value)
+            }}
+            placeholder="12-digit UTR from GPay / PhonePe receipt"
+            autoComplete="off"
+            inputMode="text"
+            autoCapitalize="characters"
+            spellCheck={false}
+            error={utrHint ?? undefined}
+            mono
+          />
           <button
             type="button"
             className="btn btn-primary btn--block"
-            disabled={busy}
+            disabled={busy || !utrReady}
             onClick={() => void submitUtr()}
           >
-            {utrInput.trim() ? 'Submit UTR' : 'Continue without UTR'}
+            Submit UTR
           </button>
-
-          <button
-            type="button"
-            className="btn btn-ghost btn--block"
-            disabled={busy}
-            onClick={() => setShowSmsPaste((v) => !v)}
-          >
-            {showSmsPaste ? 'Hide SMS paste' : 'Paste bank payment SMS'}
-          </button>
-          {showSmsPaste ? (
-            <>
-              <div className="field">
-                <label htmlFor={`frac-sms-${order.id}`}>Bank SMS text</label>
-                <textarea
-                  id={`frac-sms-${order.id}`}
-                  rows={4}
-                  value={smsInput}
-                  onChange={(e) => setSmsInput(e.target.value)}
-                  placeholder="Paste the debit SMS from your bank"
-                />
-              </div>
-              <button
-                type="button"
-                className="btn btn-primary btn--block"
-                disabled={busy || smsInput.trim().length < 20}
-                onClick={() => void submitSms()}
-              >
-                Submit SMS for auto-match
-              </button>
-            </>
-          ) : null}
 
           <button
             type="button"

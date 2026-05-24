@@ -62,6 +62,7 @@ from .fractional_reconciliation_views import (
     FractionalOrderPaymentSmsView,
     JewellerFractionalApproveView,
     JewellerFractionalBulkApproveView,
+    JewellerFractionalOrdersListView,
     JewellerFractionalPendingReconciliationView,
     JewellerFractionalRejectView,
 )
@@ -326,6 +327,7 @@ urlpatterns = [
         FractionalOrderCancelUpiView.as_view(),
     ),
     path("jeweller/fractional/pending/", JewellerFractionalPendingView.as_view()),
+    path("jeweller/fractional/orders/", JewellerFractionalOrdersListView.as_view()),
     path("jeweller/fractional/pending-upi/", JewellerFractionalPendingUpiView.as_view()),
     path(
         "jeweller/fractional/pending-reconciliation/",

@@ -53,6 +53,22 @@ type RecentGoldDeposit = {
   created_at: string
 }
 
+type RecentFractionalOrder = {
+  id: number
+  reference: string
+  order_reference: string
+  status: string
+  payment_method: string
+  grams: string
+  total_inr: string
+  upi_utr: string
+  reconciliation_score: number | null
+  customer_email: string
+  customer_member_id: string
+  jeweller_business: string
+  created_at: string
+}
+
 type OverviewPayload = {
   stats: {
     total_users: number
@@ -65,6 +81,9 @@ type OverviewPayload = {
     customer_fractional_grams_total?: string
     jeweller_custodial_liability_grams_total?: string
     fractional_orders_pending_counter?: number
+    fractional_orders_pending_upi?: number
+    fractional_orders_pending_review?: number
+    fractional_orders_cancelled?: number
     fractional_orders_completed?: number
     gold_deposit_pending_otp?: number
     gold_deposit_completed?: number
@@ -76,6 +95,7 @@ type OverviewPayload = {
   transactions: unknown[]
   recent_users: QueueUser[]
   recent_gold_deposits?: RecentGoldDeposit[]
+  recent_fractional_orders?: RecentFractionalOrder[]
 }
 
 type DocInfo = {
@@ -547,9 +567,21 @@ export function AdminDashboardPage() {
                   <span className="admin-dash-stat__eyebrow">Counter pending</span>
                   <p className="admin-dash-stat__value">{data.stats.fractional_orders_pending_counter ?? 0}</p>
                 </div>
+                <div className="admin-dash-stat admin-dash-stat--amber">
+                  <span className="admin-dash-stat__eyebrow">UPI in flight</span>
+                  <p className="admin-dash-stat__value">{data.stats.fractional_orders_pending_upi ?? 0}</p>
+                </div>
+                <div className="admin-dash-stat admin-dash-stat--iris">
+                  <span className="admin-dash-stat__eyebrow">Awaiting jeweller review</span>
+                  <p className="admin-dash-stat__value">{data.stats.fractional_orders_pending_review ?? 0}</p>
+                </div>
                 <div className="admin-dash-stat admin-dash-stat--cyan">
                   <span className="admin-dash-stat__eyebrow">Fractional completed</span>
                   <p className="admin-dash-stat__value">{data.stats.fractional_orders_completed ?? 0}</p>
+                </div>
+                <div className="admin-dash-stat admin-dash-stat--rose">
+                  <span className="admin-dash-stat__eyebrow">Fractional cancelled</span>
+                  <p className="admin-dash-stat__value">{data.stats.fractional_orders_cancelled ?? 0}</p>
                 </div>
                 <div className="admin-dash-stat admin-dash-stat--amber">
                   <span className="admin-dash-stat__eyebrow">Deposit OTP pending</span>
@@ -593,6 +625,64 @@ export function AdminDashboardPage() {
                           </td>
                           <td>{d.jeweller_business}</td>
                           <td>{fmtDateTime(d.created_at)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </details>
+            ) : null}
+
+            {data.recent_fractional_orders && data.recent_fractional_orders.length > 0 ? (
+              <details className="dash-disclosure" open>
+                <summary>Recent fractional orders</summary>
+                <div className="dash-table-scroll card">
+                  <table className="admin-user-table">
+                    <thead>
+                      <tr>
+                        <th>Reference</th>
+                        <th>Status</th>
+                        <th>Method</th>
+                        <th>Amount</th>
+                        <th>UTR / Score</th>
+                        <th>Customer</th>
+                        <th>Jeweller</th>
+                        <th>Created</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.recent_fractional_orders.map((o) => (
+                        <tr key={o.id}>
+                          <td className="tabular">
+                            {o.reference}
+                            {o.order_reference ? (
+                              <span style={{ display: 'block', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                                {o.order_reference}
+                              </span>
+                            ) : null}
+                          </td>
+                          <td>{o.status.replace(/_/g, ' ')}</td>
+                          <td>{o.payment_method}</td>
+                          <td className="tabular">
+                            ₹{Number.parseFloat(o.total_inr).toLocaleString('en-IN')}
+                            <span style={{ display: 'block', fontSize: '0.78rem' }}>{o.grams} g</span>
+                          </td>
+                          <td>
+                            {o.upi_utr || '—'}
+                            {o.reconciliation_score != null ? (
+                              <span style={{ display: 'block', fontSize: '0.78rem' }}>{o.reconciliation_score}%</span>
+                            ) : null}
+                          </td>
+                          <td>
+                            {o.customer_email}
+                            {o.customer_member_id ? (
+                              <span style={{ display: 'block', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                                {o.customer_member_id}
+                              </span>
+                            ) : null}
+                          </td>
+                          <td>{o.jeweller_business}</td>
+                          <td>{fmtDateTime(o.created_at)}</td>
                         </tr>
                       ))}
                     </tbody>

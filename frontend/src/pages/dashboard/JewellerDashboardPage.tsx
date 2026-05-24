@@ -9,7 +9,7 @@ import { GoldTransferPanel } from '@/features/gold/GoldTransferPanel'
 import { JewellerMarketplacePanel } from '@/features/marketplace/JewellerMarketplacePanel'
 import { JewellerRatesSchemesPanel } from '@/features/marketplace/JewellerRatesSchemesPanel'
 import { JewellerGoldDepositPanel } from '@/features/invest/JewellerGoldDepositPanel'
-import { JewellerFractionalVerifyPanel } from '@/features/invest/JewellerFractionalVerifyPanel'
+import { JewellerFractionalPurchaseDesk } from '@/features/invest/JewellerFractionalPurchaseDesk'
 import { JewellerCridoraPayPanel } from '@/features/cridorapay/JewellerCridoraPayPanel'
 import { JewellerCrossRedemptionInboxPanel } from '@/features/crossRedemption/JewellerCrossRedemptionInboxPanel'
 import { JewellerSellbacksPanel } from '@/features/redeem/JewellerSellbacksPanel'
@@ -114,7 +114,7 @@ export function JewellerDashboardPage() {
       ) : null}
       {active === 'txn_purchases' ? (
         <div className="dash-panel-max">
-          <JewellerFractionalVerifyPanel />
+          <JewellerFractionalPurchaseDesk />
         </div>
       ) : null}
       {active === 'txn_loans' ? (

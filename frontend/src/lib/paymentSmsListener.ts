@@ -75,15 +75,12 @@ export function stopPaymentSmsListener(): void {
 export function startPaymentSmsListener(
   orderId: number,
   onMatched?: (detail: { orderId: number; smsText: string }) => void,
-  onStatus?: (status: PaymentSmsListenStatus) => void,
 ): SmsListenerHandle | null {
   if (!isNativeAndroid()) {
-    onStatus?.('unavailable')
     return null
   }
   const bridge = getBridge()
   if (!bridge) {
-    onStatus?.('bridge_missing')
     return null
   }
 
@@ -107,36 +104,16 @@ export function startPaymentSmsListener(
 
   window.addEventListener('cridora-payment-sms', handler as EventListener)
 
-  const hasPerm = paymentSmsHasPermission()
-  if (hasPerm) {
-    onStatus?.('listening')
-  } else {
-    onStatus?.('ready')
-  }
-
   try {
     bridge.start(orderId)
   } catch {
-    onStatus?.('bridge_missing')
     return null
   }
 
-  const permPoll = window.setInterval(() => {
-    if (stopped) {
-      window.clearInterval(permPoll)
-      return
-    }
-    if (paymentSmsHasPermission()) {
-      onStatus?.('listening')
-      window.clearInterval(permPoll)
-    }
-  }, 500)
-
   return {
-    status: hasPerm ? 'listening' : 'ready',
+    status: paymentSmsHasPermission() ? 'listening' : 'ready',
     stop: () => {
       stopped = true
-      window.clearInterval(permPoll)
       window.removeEventListener('cridora-payment-sms', handler as EventListener)
       stopPaymentSmsListener()
     },

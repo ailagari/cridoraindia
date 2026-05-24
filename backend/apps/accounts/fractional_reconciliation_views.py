@@ -16,7 +16,7 @@ from rest_framework.views import APIView
 from .fractional_views import _ser_purchase
 from .fractional_upi_view_mixins import FractionalUpiInflightBypassMixin
 from .platform_features import FeatureGatedViewMixin
-from .models import FractionalGoldPurchase
+from .models import FractionalCounterOtp, FractionalGoldPurchase
 from .services.fractional_upi import is_payment_expired
 from .services.payment_reconciliation.confirm import confirm_fractional_purchase
 from .services.payment_reconciliation.engine import run_reconciliation
@@ -58,6 +58,78 @@ def _enrich_purchase_row(p: FractionalGoldPurchase) -> dict:
         "cridora_member_id": p.customer.cridora_member_id or "",
     }
     return row
+
+
+def _enrich_jeweller_desk_row(p: FractionalGoldPurchase) -> dict:
+    row = _enrich_purchase_row(p)
+    if p.status == FractionalGoldPurchase.AWAITING_COUNTER:
+        try:
+            row["otp_expires_at"] = p.counter_otp.expires_at.isoformat()
+        except FractionalCounterOtp.DoesNotExist:
+            row["otp_expires_at"] = None
+    else:
+        row["otp_expires_at"] = None
+    return row
+
+
+JEWELLER_PENDING_STATUSES = (
+    FractionalGoldPurchase.AWAITING_COUNTER,
+    FractionalGoldPurchase.PENDING_PAYMENT,
+    FractionalGoldPurchase.SIGNAL_RECEIVED,
+    FractionalGoldPurchase.PENDING_REVIEW,
+    FractionalGoldPurchase.NEEDS_MANUAL_VERIFICATION,
+    FractionalGoldPurchase.AWAITING_UTR_VERIFY,
+)
+
+JEWELLER_APPROVED_STATUSES = (FractionalGoldPurchase.COMPLETED,)
+
+JEWELLER_CANCELLED_STATUSES = (
+    FractionalGoldPurchase.CANCELLED,
+    FractionalGoldPurchase.REJECTED,
+)
+
+
+class JewellerFractionalOrdersListView(APIView):
+    """Jeweller purchase desk: pending, approved, and cancelled fractional orders."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if request.user.user_type != User.JEWELLER:
+            return Response(
+                {"detail": "Jewellers only."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        base = FractionalGoldPurchase.objects.filter(jeweller=request.user).select_related(
+            "customer"
+        )
+        pending_filter = base.filter(status__in=JEWELLER_PENDING_STATUSES)
+        approved_filter = base.filter(status__in=JEWELLER_APPROVED_STATUSES)
+        cancelled_filter = base.filter(status__in=JEWELLER_CANCELLED_STATUSES)
+        pending_qs = pending_filter.order_by("-created_at")[:100]
+        approved_qs = approved_filter.order_by("-jeweller_verified_at", "-created_at")[:100]
+        cancelled_qs = cancelled_filter.order_by("-updated_at")[:100]
+        return Response(
+            {
+                "pending": [_enrich_jeweller_desk_row(p) for p in pending_qs],
+                "approved": [_enrich_jeweller_desk_row(p) for p in approved_qs],
+                "cancelled": [_enrich_jeweller_desk_row(p) for p in cancelled_qs],
+                "summary": {
+                    "pending_count": pending_filter.count(),
+                    "approved_count": approved_filter.count(),
+                    "cancelled_count": cancelled_filter.count(),
+                    "pending_action_count": base.filter(
+                        status__in=(
+                            FractionalGoldPurchase.AWAITING_COUNTER,
+                            FractionalGoldPurchase.SIGNAL_RECEIVED,
+                            FractionalGoldPurchase.PENDING_REVIEW,
+                            FractionalGoldPurchase.NEEDS_MANUAL_VERIFICATION,
+                            FractionalGoldPurchase.AWAITING_UTR_VERIFY,
+                        )
+                    ).count(),
+                },
+            }
+        )
 
 
 class FractionalOrderPaymentAckView(FractionalUpiInflightBypassMixin, APIView):

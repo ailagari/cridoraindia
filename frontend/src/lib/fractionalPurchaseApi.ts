@@ -139,7 +139,7 @@ export async function fractionalPaymentAck(
   })
   const data = (await res.json().catch(() => ({}))) as FractionalPurchaseDTO & { detail?: string }
   if (!res.ok) {
-    return { ok: false, detail: data.detail != null ? String(data.detail) : 'Could not acknowledge payment' }
+    return { ok: false, detail: extractApiDetail(data, 'Could not acknowledge payment') }
   }
   return { ok: true, data: data as FractionalPurchaseDTO }
 }
@@ -154,7 +154,7 @@ export async function fractionalSubmitPaymentSms(
   })
   const data = (await res.json().catch(() => ({}))) as FractionalPurchaseDTO & { detail?: string }
   if (!res.ok) {
-    return { ok: false, detail: data.detail != null ? String(data.detail) : 'Could not parse SMS' }
+    return { ok: false, detail: extractApiDetail(data, 'Could not parse SMS') }
   }
   return { ok: true, data: data as FractionalPurchaseDTO }
 }
@@ -210,6 +210,34 @@ export type JewellerFractionalPendingRow = FractionalPurchaseDTO & {
 
 export type JewellerFractionalPendingUpiRow = FractionalPurchaseDTO & {
   customer: { email: string; name: string; cridora_member_id: string }
+}
+
+export type JewellerFractionalDeskRow = FractionalPurchaseDTO & {
+  customer: { email: string; name: string; cridora_member_id: string }
+  otp_expires_at?: string | null
+}
+
+export type JewellerFractionalOrdersDesk = {
+  pending: JewellerFractionalDeskRow[]
+  approved: JewellerFractionalDeskRow[]
+  cancelled: JewellerFractionalDeskRow[]
+  summary: {
+    pending_count: number
+    approved_count: number
+    cancelled_count: number
+    pending_action_count: number
+  }
+}
+
+export async function jewellerFractionalOrdersDesk(): Promise<
+  { ok: true; data: JewellerFractionalOrdersDesk } | { ok: false; detail: string }
+> {
+  const res = await authFetch('/api/v1/jeweller/fractional/orders/')
+  const data = (await res.json().catch(() => ({}))) as JewellerFractionalOrdersDesk & { detail?: string }
+  if (!res.ok || !Array.isArray(data.pending)) {
+    return { ok: false, detail: extractApiDetail(data, 'Could not load purchase desk') }
+  }
+  return { ok: true, data: data as JewellerFractionalOrdersDesk }
 }
 
 export async function jewellerFractionalPending(): Promise<JewellerFractionalPendingRow[]> {

@@ -277,3 +277,64 @@ class FractionalUpiApiTests(APITestCase):
         self.assertEqual(res.status_code, 201)
         self.assertEqual(res.data["status"], "awaiting_counter")
         self.assertEqual(res.data["payment_method"], "counter")
+
+    def test_payment_ack_without_utr_enters_review_queue(self):
+        order_id = self._create_upi_order()
+        ack = self.client.post(
+            f"/api/v1/fractional/orders/{order_id}/payment-ack/",
+            {},
+            format="json",
+        )
+        self.assertEqual(ack.status_code, 200, ack.data)
+        self.assertIn(
+            ack.data["status"],
+            ("pending_review", "completed", "needs_manual_verification", "signal_received"),
+        )
+
+    def test_jeweller_orders_desk_lists_acknowledged_order(self):
+        order_id = self._create_upi_order()
+        FractionalGoldPurchase.objects.filter(pk=order_id).update(
+            created_at=timezone.now() - timezone.timedelta(hours=2)
+        )
+        self.client.post(
+            f"/api/v1/fractional/orders/{order_id}/payment-ack/",
+            {},
+            format="json",
+        )
+        self.client.force_authenticate(self.jeweller)
+        desk = self.client.get("/api/v1/jeweller/fractional/orders/")
+        self.assertEqual(desk.status_code, 200, desk.data)
+        pending_ids = [row["id"] for row in desk.data["pending"]]
+        self.assertIn(order_id, pending_ids)
+
+    def test_jeweller_approve_after_payment_ack_credits_gold(self):
+        order_id = self._create_upi_order()
+        FractionalGoldPurchase.objects.filter(pk=order_id).update(
+            created_at=timezone.now() - timezone.timedelta(hours=2)
+        )
+        self.client.post(
+            f"/api/v1/fractional/orders/{order_id}/payment-ack/",
+            {},
+            format="json",
+        )
+        before = customer_fractional_available(self.customer, self.jeweller)
+        self.client.force_authenticate(self.jeweller)
+        approve = self.client.post(
+            f"/api/v1/jeweller/fractional/orders/{order_id}/approve/",
+            {},
+            format="json",
+        )
+        self.assertEqual(approve.status_code, 200, approve.data)
+        self.assertEqual(approve.data["status"], "completed")
+        after = customer_fractional_available(self.customer, self.jeweller)
+        self.assertGreater(after, before)
+
+    def test_jeweller_cannot_approve_pending_payment_without_ack(self):
+        order_id = self._create_upi_order()
+        self.client.force_authenticate(self.jeweller)
+        res = self.client.post(
+            f"/api/v1/jeweller/fractional/orders/{order_id}/approve/",
+            {},
+            format="json",
+        )
+        self.assertEqual(res.status_code, 400)

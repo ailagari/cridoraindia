@@ -140,6 +140,30 @@ class AdminOverviewView(APIView):
         fractional_orders_pending_counter = FractionalGoldPurchase.objects.filter(
             status=FractionalGoldPurchase.AWAITING_COUNTER,
         ).count()
+        fractional_orders_pending_upi = FractionalGoldPurchase.objects.filter(
+            payment_method=FractionalGoldPurchase.PAY_UPI,
+            status__in=(
+                FractionalGoldPurchase.PENDING_PAYMENT,
+                FractionalGoldPurchase.SIGNAL_RECEIVED,
+                FractionalGoldPurchase.PENDING_REVIEW,
+                FractionalGoldPurchase.NEEDS_MANUAL_VERIFICATION,
+                FractionalGoldPurchase.AWAITING_UTR_VERIFY,
+            ),
+        ).count()
+        fractional_orders_pending_review = FractionalGoldPurchase.objects.filter(
+            status__in=(
+                FractionalGoldPurchase.PENDING_REVIEW,
+                FractionalGoldPurchase.NEEDS_MANUAL_VERIFICATION,
+                FractionalGoldPurchase.AWAITING_UTR_VERIFY,
+                FractionalGoldPurchase.SIGNAL_RECEIVED,
+            ),
+        ).count()
+        fractional_orders_cancelled = FractionalGoldPurchase.objects.filter(
+            status__in=(
+                FractionalGoldPurchase.CANCELLED,
+                FractionalGoldPurchase.REJECTED,
+            ),
+        ).count()
         fractional_orders_completed = FractionalGoldPurchase.objects.filter(
             status=FractionalGoldPurchase.COMPLETED,
         ).count()
@@ -165,6 +189,26 @@ class AdminOverviewView(APIView):
                 "-created_at"
             )[:12]
         ]
+        recent_fractional_orders = [
+            {
+                "id": p.id,
+                "reference": f"FR-{p.id}",
+                "order_reference": p.order_reference,
+                "status": p.status,
+                "payment_method": p.payment_method,
+                "grams": str(p.grams),
+                "total_inr": str(p.total_inr),
+                "upi_utr": p.upi_utr or "",
+                "reconciliation_score": p.reconciliation_score,
+                "customer_email": p.customer.email,
+                "customer_member_id": p.customer.cridora_member_id or "",
+                "jeweller_business": p.jeweller.business_name or p.jeweller.email or "",
+                "created_at": p.created_at.isoformat(),
+            }
+            for p in FractionalGoldPurchase.objects.select_related("customer", "jeweller").order_by(
+                "-created_at"
+            )[:20]
+        ]
 
         return Response(
             {
@@ -180,6 +224,9 @@ class AdminOverviewView(APIView):
                     "customer_fractional_grams_total": customer_fractional_grams_total,
                     "jeweller_custodial_liability_grams_total": jeweller_custodial_liability_grams_total,
                     "fractional_orders_pending_counter": fractional_orders_pending_counter,
+                    "fractional_orders_pending_upi": fractional_orders_pending_upi,
+                    "fractional_orders_pending_review": fractional_orders_pending_review,
+                    "fractional_orders_cancelled": fractional_orders_cancelled,
                     "fractional_orders_completed": fractional_orders_completed,
                     "gold_deposit_pending_otp": gold_deposit_pending_otp,
                     "gold_deposit_completed": gold_deposit_completed,
@@ -195,6 +242,7 @@ class AdminOverviewView(APIView):
                 "transactions": transactions,
                 "recent_users": recent_users,
                 "recent_gold_deposits": recent_gold_deposits,
+                "recent_fractional_orders": recent_fractional_orders,
             }
         )
 
