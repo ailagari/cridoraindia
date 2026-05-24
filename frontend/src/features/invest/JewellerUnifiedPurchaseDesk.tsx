@@ -93,11 +93,24 @@ function formatInr(s: string): string {
   return n.toLocaleString('en-IN', { maximumFractionDigits: 2 })
 }
 
-function formatWhen(iso: string | null | undefined): string {
-  if (!iso) return '—'
-  const t = Date.parse(iso)
-  if (!Number.isFinite(t)) return iso
-  return new Date(t).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })
+const COMPLETE_ACTIONS = new Set([
+  'verify_otp',
+  'verify_deposit_otp',
+  'verify_vault_otp',
+  'complete_sellback_otp',
+  'complete_loan_otp',
+  'confirm_upi',
+  'accept_sellback',
+  'accept_loan',
+])
+
+const CANCEL_ACTIONS = new Set(['reject_upi', 'reject_sellback', 'reject_loan'])
+
+function nextTabAfterAction(row: UnifiedDeskRow, current: DeskTab): DeskTab | null {
+  if (current !== 'pending') return null
+  if (row.actions.some((a) => COMPLETE_ACTIONS.has(a))) return 'completed'
+  if (row.actions.some((a) => CANCEL_ACTIONS.has(a))) return 'cancelled'
+  return null
 }
 
 function CustomerOtpExpiryHint({ expiresAt }: { expiresAt?: string | null }) {
@@ -195,7 +208,22 @@ export function JewellerUnifiedPurchaseDesk() {
         amount: row.amount_inr,
         customerLabel: row.customer.name || row.customer.email,
       })
-      await load()
+      setOtpByKey((prev) => {
+        const next = { ...prev }
+        delete next[row.id]
+        return next
+      })
+      setUtrByKey((prev) => {
+        const next = { ...prev }
+        delete next[row.id]
+        return next
+      })
+      const nextTab = nextTabAfterAction(row, tab)
+      if (nextTab) {
+        setTab(nextTab)
+      } else {
+        await load()
+      }
     } finally {
       setBusyKey(null)
     }

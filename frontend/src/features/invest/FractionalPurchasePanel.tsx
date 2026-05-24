@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { fetchVerifiedJewellers, type JewellerStorefrontDTO } from '@/lib/marketplaceApi'
 import {
@@ -12,12 +12,19 @@ import {
 } from '@/lib/fractionalPurchaseApi'
 import { DashSegmentPair } from '@/components/DashSegmentPair'
 import { FractionalUpiPayStep } from '@/features/invest/FractionalUpiPayStep'
+import { FractionalJewellerPicker } from '@/features/invest/FractionalJewellerPicker'
+import {
+  knownFractionalJewellerIds,
+  parseJewellerIdFromUrl,
+  preferredPaidFractionalJewellerId,
+  resolveKnownFractionalJewellers,
+} from '@/features/invest/fractionalJewellerSelect'
 import { useCounterOtpCountdown } from '@/features/invest/useCounterOtpCountdown'
-import { fetchGoldWallet } from '@/lib/goldTransferApi'
+import { fetchGoldWallet, type GoldWalletDTO } from '@/lib/goldTransferApi'
 import { LIVE_BALANCE_POLL_MS } from '@/lib/liveDeskIntervals'
 import { useLivePoll } from '@/lib/useLivePoll'
 import { formatJewellerMetalRateAsOf } from '@/features/marketplace/productPricing'
-import { Badge, Button, Card, CardHeader, Input, Select } from '@/components/ui'
+import { Badge, Button, Card, CardHeader, Input } from '@/components/ui'
 import { fetchPlatformFeatures, isFeatureEnabled } from '@/lib/platformFeatures'
 
 function formatInr(s: string): string {
@@ -44,6 +51,12 @@ export function FractionalPurchasePanel() {
   const jewellerFromUrl = params.get('jeweller_id')
 
   const [jewellers, setJewellers] = useState<JewellerStorefrontDTO[]>([])
+  const [wallet, setWallet] = useState<GoldWalletDTO | null>(null)
+  const [catalogLoaded, setCatalogLoaded] = useState(false)
+  const [walletLoaded, setWalletLoaded] = useState(false)
+  const [ordersLoaded, setOrdersLoaded] = useState(false)
+  const [jewellerInitDone, setJewellerInitDone] = useState(false)
+  const userPickedJewellerRef = useRef(false)
   const [jewellerId, setJewellerId] = useState<number | ''>('')
   const [inputMode, setInputMode] = useState<'by_total_inr' | 'by_grams'>('by_total_inr')
   const [inrInput, setInrInput] = useState('5000')
@@ -94,22 +107,59 @@ export function FractionalPurchasePanel() {
 
   const refreshOrders = useCallback(async () => {
     setOrders(await fractionalListOrders())
+    setOrdersLoaded(true)
   }, [])
 
   useEffect(() => {
     void fetchVerifiedJewellers().then((list) => {
-      const real = list.filter((j) => j.id > 0)
-      setJewellers(real)
-      setJewellerId((prev) => {
-        if (jewellerFromUrl) {
-          const id = Number.parseInt(jewellerFromUrl, 10)
-          if (Number.isFinite(id) && id > 0) return id
-        }
-        if (prev !== '') return prev
-        return real[0]?.id ?? ''
-      })
+      setJewellers(list.filter((j) => j.id > 0))
+      setCatalogLoaded(true)
     })
-  }, [jewellerFromUrl])
+    void fetchGoldWallet().then((w) => {
+      setWallet(w)
+      setWalletLoaded(true)
+      if (w) setBalanceHint(w.balance_grams)
+    })
+  }, [])
+
+  const knownJewellerIds = useMemo(() => knownFractionalJewellerIds(orders, wallet), [orders, wallet])
+  const knownJewellers = useMemo(
+    () => resolveKnownFractionalJewellers(jewellers, orders, knownJewellerIds),
+    [jewellers, orders, knownJewellerIds],
+  )
+  const defaultKnownJewellerId = useMemo(
+    () => preferredPaidFractionalJewellerId(orders, wallet, knownJewellerIds),
+    [orders, wallet, knownJewellerIds],
+  )
+
+  useEffect(() => {
+    if (!catalogLoaded || !walletLoaded || !ordersLoaded || jewellerInitDone) return
+    if (userPickedJewellerRef.current) {
+      setJewellerInitDone(true)
+      return
+    }
+    const urlId = parseJewellerIdFromUrl(jewellerFromUrl)
+    if (urlId != null && jewellers.some((j) => j.id === urlId)) {
+      setJewellerId(urlId)
+      setJewellerInitDone(true)
+      return
+    }
+    if (knownJewellerIds.length > 0) {
+      const preferred = preferredPaidFractionalJewellerId(orders, wallet, knownJewellerIds)
+      if (preferred != null) setJewellerId(preferred)
+    }
+    setJewellerInitDone(true)
+  }, [
+    catalogLoaded,
+    jewellerFromUrl,
+    jewellerInitDone,
+    jewellers,
+    knownJewellerIds,
+    orders,
+    ordersLoaded,
+    wallet,
+    walletLoaded,
+  ])
 
   const refreshWalletHint = useCallback(async () => {
     if (busy) return
@@ -135,10 +185,12 @@ export function FractionalPurchasePanel() {
   }, [orders, otpReveal?.orderId])
 
   useEffect(() => {
-    if (!lastOrder || lastOrder.payment_method !== 'upi') return
+    if (!lastOrder) return
     const row = orders.find((x) => x.id === lastOrder.id) ?? lastOrder
     if (row.status === 'completed' && lastOrder.status !== 'completed') {
       setSuccessToast(`${row.reference} completed — ${row.grams} g credited.`)
+      setOtpReveal(null)
+      void refreshWalletHint()
     }
     setLastOrder(row)
     if (row.payment_method === 'upi' && INFLIGHT_UPI_STATUSES.has(row.status)) {
@@ -146,7 +198,20 @@ export function FractionalPurchasePanel() {
     } else if (row.status === 'completed' || row.status === 'cancelled') {
       setActiveUpiOrder(null)
     }
-  }, [orders, lastOrder])
+  }, [lastOrder, orders, refreshWalletHint])
+
+  useEffect(() => {
+    const oid = otpReveal?.orderId
+    if (oid == null) return
+    const row = orders.find((x) => x.id === oid)
+    if (row?.status === 'completed') {
+      setOtpReveal(null)
+      if (lastOrder?.id !== oid) {
+        setSuccessToast(`${row.reference} completed — ${row.grams} g credited.`)
+      }
+      void refreshWalletHint()
+    }
+  }, [lastOrder?.id, orders, otpReveal?.orderId, refreshWalletHint])
 
   useEffect(() => {
     if (!activeUpiOrder) return
@@ -285,22 +350,18 @@ export function FractionalPurchasePanel() {
 
       <Card style={{ marginBottom: 'var(--sp-5)', maxWidth: 560 }}>
         <div className="ds-form">
-          <Select
-            label="Jeweller"
-            value={jewellerId === '' ? '' : String(jewellerId)}
-            onChange={(e) => {
-              const v = e.target.value
-              setJewellerId(v === '' ? '' : Number.parseInt(v, 10))
+          <FractionalJewellerPicker
+            allJewellers={jewellers}
+            knownJewellers={knownJewellers}
+            defaultKnownJewellerId={defaultKnownJewellerId}
+            jewellerId={jewellerId}
+            disabled={busy}
+            onJewellerChange={(id) => {
+              userPickedJewellerRef.current = true
+              setJewellerId(id)
               setQuote(null)
             }}
-          >
-            <option value="">Select verified jeweller</option>
-            {jewellers.map((j) => (
-              <option key={j.id} value={j.id}>
-                {j.business_name} · {j.city}
-              </option>
-            ))}
-          </Select>
+          />
 
           <fieldset style={{ border: 'none', padding: 0, margin: 0 }}>
             <legend className="fractional-buy-legend">Quote basis</legend>
