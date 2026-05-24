@@ -1,4 +1,4 @@
-import { authFetch } from '@/lib/api'
+import { authFetch, extractApiDetail } from '@/lib/api'
 
 export type FractionalQuoteDTO = {
   jeweller: { id: number; business_name: string; city: string }
@@ -125,7 +125,7 @@ export async function fractionalSubmitUtr(
   })
   const data = (await res.json().catch(() => ({}))) as FractionalPurchaseDTO & { detail?: string }
   if (!res.ok) {
-    return { ok: false, detail: data.detail != null ? String(data.detail) : 'Could not submit UTR' }
+    return { ok: false, detail: extractApiDetail(data, 'Could not submit UTR') }
   }
   return { ok: true, data: data as FractionalPurchaseDTO }
 }

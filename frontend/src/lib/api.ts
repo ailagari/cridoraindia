@@ -51,6 +51,29 @@ export function formatFetchError(err: unknown): string {
   return 'Network request failed.'
 }
 
+/** Parse DRF-style error bodies into a single user-facing message. */
+export function extractApiDetail(body: unknown, fallback: string): string {
+  if (!body || typeof body !== 'object') return fallback
+  const o = body as Record<string, unknown>
+  if (o.detail != null) {
+    if (typeof o.detail === 'string' && o.detail.trim()) return o.detail
+    if (Array.isArray(o.detail) && o.detail.length > 0) {
+      const first = o.detail[0]
+      if (typeof first === 'string' && first.trim()) return first
+    }
+  }
+  const nonField = o.non_field_errors
+  if (Array.isArray(nonField) && nonField.length > 0 && typeof nonField[0] === 'string') {
+    return nonField[0]
+  }
+  for (const val of Object.values(o)) {
+    if (Array.isArray(val) && val.length > 0 && typeof val[0] === 'string' && val[0].trim()) {
+      return val[0]
+    }
+  }
+  return fallback
+}
+
 export function getStoredAccess(): string | null {
   return localStorage.getItem('access_token')
 }

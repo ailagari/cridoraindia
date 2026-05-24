@@ -356,12 +356,12 @@ export function FractionalUpiPayStep({ order, busy, setBusy, onUpdated, onSucces
           ) : null}
 
           <div className="field" style={{ marginTop: '0.75rem' }}>
-            <label htmlFor={`frac-utr-${order.id}`}>UPI reference (optional)</label>
+            <label htmlFor={`frac-utr-${order.id}`}>UTR number</label>
             <input
               id={`frac-utr-${order.id}`}
               value={utrInput}
               onChange={(e) => setUtrInput(e.target.value)}
-              placeholder="From GPay / PhonePe receipt"
+              placeholder="12-digit UTR from GPay / PhonePe receipt"
               autoComplete="off"
               inputMode="text"
             />

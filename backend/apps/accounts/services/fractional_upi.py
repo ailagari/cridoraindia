@@ -27,12 +27,21 @@ def normalize_upi_vpa(raw: str) -> str | None:
 
 
 def normalize_utr(raw: str) -> str | None:
-    s = re.sub(r"\s+", "", (raw or "").strip()).upper()
+    s = re.sub(r"[^A-Za-z0-9]", "", (raw or "").strip()).upper()
     if len(s) < UTR_MIN_LEN or len(s) > UTR_MAX_LEN:
         return None
     if not re.fullmatch(r"[A-Z0-9]+", s):
         return None
     return s
+
+
+def utr_validation_error(raw: str) -> str | None:
+    """Return user-facing error when raw UTR text cannot be normalized."""
+    if not (raw or "").strip():
+        return None
+    if normalize_utr(raw):
+        return None
+    return "Enter a valid UTR number (8–20 letters or digits)."
 
 
 def jeweller_upi_vpa(jeweller) -> str | None:
@@ -179,11 +188,16 @@ def submit_utr(purchase: FractionalGoldPurchase, raw_utr: str) -> tuple[bool, st
         FractionalGoldPurchase.SIGNAL_RECEIVED,
         FractionalGoldPurchase.PENDING_REVIEW,
         FractionalGoldPurchase.NEEDS_MANUAL_VERIFICATION,
+        FractionalGoldPurchase.AWAITING_UTR_VERIFY,
     ):
         return False, "Order is not awaiting payment."
     if is_payment_expired(purchase):
         return False, "Payment window expired. Place a new order."
-    utr = normalize_utr(raw_utr) if (raw_utr or "").strip() else None
+    raw_stripped = (raw_utr or "").strip()
+    utr_err = utr_validation_error(raw_stripped)
+    if utr_err:
+        return False, utr_err
+    utr = normalize_utr(raw_stripped) if raw_stripped else None
     if utr and utr_already_used(utr, exclude_purchase_id=purchase.pk):
         return False, "This UPI reference is already linked to another order."
     from apps.accounts.services.payment_reconciliation.signals import (

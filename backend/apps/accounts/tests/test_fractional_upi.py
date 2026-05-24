@@ -22,6 +22,9 @@ class FractionalUpiServiceTests(APITestCase):
     def test_normalize_utr_strips_spaces(self):
         self.assertEqual(normalize_utr(" 1234 5678 9012 "), "123456789012")
 
+    def test_normalize_utr_strips_hyphens(self):
+        self.assertEqual(normalize_utr("1234-5678-9012"), "123456789012")
+
     def test_build_upi_pay_uri_includes_amount_and_ref(self):
         uri = build_upi_pay_uri(
             vpa="shop@okicici",

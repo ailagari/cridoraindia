@@ -14,6 +14,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .fractional_views import _ser_purchase
+from .fractional_upi_view_mixins import FractionalUpiInflightBypassMixin
 from .platform_features import FeatureGatedViewMixin
 from .models import FractionalGoldPurchase
 from .services.fractional_upi import is_payment_expired
@@ -59,8 +60,7 @@ def _enrich_purchase_row(p: FractionalGoldPurchase) -> dict:
     return row
 
 
-class FractionalOrderPaymentAckView(FeatureGatedViewMixin, APIView):
-    feature_key = "fractional_upi_reconciliation"
+class FractionalOrderPaymentAckView(FractionalUpiInflightBypassMixin, APIView):
     """Customer acknowledges payment without UTR."""
 
     permission_classes = [IsAuthenticated]
@@ -95,14 +95,14 @@ class FractionalOrderPaymentAckView(FeatureGatedViewMixin, APIView):
                 {"detail": "UPI order not found."},
                 status=status.HTTP_404_NOT_FOUND,
             )
+        purchase.refresh_from_db()
         payload = _ser_purchase(purchase)
         payload["order_reference"] = purchase.order_reference
         payload["reconciliation_score"] = purchase.reconciliation_score
         return Response(payload)
 
 
-class FractionalOrderPaymentSmsView(FeatureGatedViewMixin, APIView):
-    feature_key = "fractional_upi_reconciliation"
+class FractionalOrderPaymentSmsView(FractionalUpiInflightBypassMixin, APIView):
     """Ingest bank SMS text (Android listener or paste)."""
 
     permission_classes = [IsAuthenticated]
@@ -160,6 +160,7 @@ class FractionalOrderPaymentSmsView(FeatureGatedViewMixin, APIView):
                 {"detail": "UPI order not found."},
                 status=status.HTTP_404_NOT_FOUND,
             )
+        purchase.refresh_from_db()
         payload = _ser_purchase(purchase)
         payload["order_reference"] = purchase.order_reference
         payload["reconciliation_score"] = purchase.reconciliation_score

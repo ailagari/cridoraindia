@@ -10,6 +10,7 @@ from rest_framework.views import APIView
 from apps.marketplace.models import jeweller_profile_for
 
 from .fractional_reconciliation_views import JewellerFractionalApproveView
+from .fractional_upi_view_mixins import FractionalUpiInflightBypassMixin
 from .platform_features import FeatureGatedViewMixin
 from .fractional_views import _ser_purchase
 from .models import FractionalGoldPurchase
@@ -25,8 +26,7 @@ from .services.fractional_upi import (
 User = get_user_model()
 
 
-class FractionalOrderPaymentView(FeatureGatedViewMixin, APIView):
-    feature_key = "fractional_upi_reconciliation"
+class FractionalOrderPaymentView(FractionalUpiInflightBypassMixin, APIView):
     """Payment instructions for a pending UPI fractional order."""
 
     permission_classes = [IsAuthenticated]
@@ -52,9 +52,8 @@ class FractionalOrderPaymentView(FeatureGatedViewMixin, APIView):
         return Response(payload)
 
 
-class FractionalOrderSubmitUtrView(FeatureGatedViewMixin, APIView):
-    feature_key = "fractional_upi_reconciliation"
-    """Customer submits UPI reference after paying the jeweller."""
+class FractionalOrderSubmitUtrView(FractionalUpiInflightBypassMixin, APIView):
+    """Customer submits UTR number after paying the jeweller."""
 
     permission_classes = [IsAuthenticated]
 
@@ -85,11 +84,16 @@ class FractionalOrderSubmitUtrView(FeatureGatedViewMixin, APIView):
                 {"detail": "UPI order not found."},
                 status=status.HTTP_404_NOT_FOUND,
             )
+        except Exception:
+            return Response(
+                {"detail": "Could not submit UTR. Try again in a moment."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+        purchase.refresh_from_db()
         return Response(_ser_purchase(purchase))
 
 
-class FractionalOrderCancelUpiView(FeatureGatedViewMixin, APIView):
-    feature_key = "fractional_upi_reconciliation"
+class FractionalOrderCancelUpiView(FractionalUpiInflightBypassMixin, APIView):
     """Customer cancels an unpaid UPI fractional order."""
 
     permission_classes = [IsAuthenticated]

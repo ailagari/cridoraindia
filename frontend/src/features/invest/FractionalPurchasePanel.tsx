@@ -31,6 +31,14 @@ const PAYMENT_METHODS = [
   { id: 'counter', label: 'Pay at counter' },
 ] as const
 
+const INFLIGHT_UPI_STATUSES = new Set([
+  'pending_payment',
+  'signal_received',
+  'pending_review',
+  'needs_manual_verification',
+  'awaiting_utr_verify',
+])
+
 export function FractionalPurchasePanel() {
   const [params] = useSearchParams()
   const jewellerFromUrl = params.get('jeweller_id')
@@ -133,7 +141,7 @@ export function FractionalPurchasePanel() {
       setSuccessToast(`${row.reference} completed — ${row.grams} g credited.`)
     }
     setLastOrder(row)
-    if (row.payment_method === 'upi' && (row.status === 'pending_payment' || row.status === 'awaiting_utr_verify')) {
+    if (row.payment_method === 'upi' && INFLIGHT_UPI_STATUSES.has(row.status)) {
       setActiveUpiOrder(row)
     } else if (row.status === 'completed' || row.status === 'cancelled') {
       setActiveUpiOrder(null)
@@ -396,10 +404,7 @@ export function FractionalPurchasePanel() {
 
           {orderMsg ? <p className="ds-feedback ds-feedback--success" role="status">{orderMsg}</p> : null}
 
-          {activeUpiOrder &&
-          (activeUpiOrder.status === 'pending_payment' ||
-            activeUpiOrder.status === 'awaiting_utr_verify' ||
-            activeUpiOrder.status === 'completed') ? (
+          {activeUpiOrder && INFLIGHT_UPI_STATUSES.has(activeUpiOrder.status) ? (
             <FractionalUpiPayStep
               order={activeUpiOrder}
               busy={busy}
