@@ -8,6 +8,22 @@ import {
 } from '@/lib/marketplaceApi'
 import { PortfolioTrendChart } from './PortfolioCharts'
 
+type HistoryRange = '1d' | '1w' | '1m' | '1y'
+
+const RANGE_OPTIONS: { key: HistoryRange; label: string }[] = [
+  { key: '1d', label: '1D' },
+  { key: '1w', label: '1W' },
+  { key: '1m', label: '1M' },
+  { key: '1y', label: '1Y' },
+]
+
+const RANGE_LABELS: Record<HistoryRange, string> = {
+  '1d': '24H',
+  '1w': '7D',
+  '1m': '30D',
+  '1y': '1Y',
+}
+
 function fmtInr0(n: number): string {
   return n.toLocaleString('en-IN', { maximumFractionDigits: 0 })
 }
@@ -77,14 +93,15 @@ export function PortfolioLiveGoldPriceCard({
   masked: boolean
 }) {
   const fillId = useId().replace(/:/g, '')
+  const [historyRange, setHistoryRange] = useState<HistoryRange>('1d')
   const [history, setHistory] = useState<GoldTickerHistoryPayload | null>(null)
 
   const livePrice = useMemo(() => resolve22kPrice(spot, tickerFallback), [spot, tickerFallback])
 
   const refreshHistory = useCallback(async () => {
-    const h = await fetchGoldTickerHistory('1d')
+    const h = await fetchGoldTickerHistory(historyRange)
     setHistory(h)
-  }, [])
+  }, [historyRange])
 
   useEffect(() => {
     void refreshHistory()
@@ -99,8 +116,8 @@ export function PortfolioLiveGoldPriceCard({
 
   const series = useMemo(() => parseHistoryValues(history, livePrice), [history, livePrice])
 
-  const dayHigh = series.length > 0 ? Math.max(...series) : null
-  const dayLow = series.length > 0 ? Math.min(...series) : null
+  const periodHigh = series.length > 0 ? Math.max(...series) : null
+  const periodLow = series.length > 0 ? Math.min(...series) : null
 
   const changePct = useMemo(() => {
     if (livePrice == null || series.length < 2) return null
@@ -109,17 +126,42 @@ export function PortfolioLiveGoldPriceCard({
     return ((livePrice - base) / base) * 100
   }, [livePrice, series])
 
-  const disp = (s: string) => (masked ? maskInr(s) : s)
+  const todayChange = useMemo(() => {
+    if (history?.granularity !== 'daily') return null
+    const todayKey = new Date().toLocaleDateString('en-CA')
+    const todayPt = (history.points ?? []).find((p) => p.t.startsWith(todayKey))
+    if (!todayPt?.change_pct) return null
+    const n = Number.parseFloat(todayPt.change_pct)
+    return Number.isFinite(n) ? n : null
+  }, [history])
 
+  const disp = (s: string) => (masked ? maskInr(s) : s)
+  const rangeLabel = RANGE_LABELS[historyRange]
   const changeUp = changePct != null && changePct >= 0
+  const dailyUp = todayChange != null && todayChange >= 0
 
   return (
     <section className="pf-live-gold" aria-label="Live gold price">
       <header className="pf-live-gold__head">
         <h2 className="pf-live-gold__title">Live Gold Price</h2>
-        <Link to="/userdashboard?section=invest_fractional" className="pf-live-gold__invest">
-          Invest →
-        </Link>
+        <div className="pf-live-gold__head-actions">
+          <div className="pf-live-gold__ranges" role="group" aria-label="Chart range">
+            {RANGE_OPTIONS.map((opt) => (
+              <button
+                key={opt.key}
+                type="button"
+                className={`pf-live-gold__range${historyRange === opt.key ? ' pf-live-gold__range--active' : ''}`}
+                aria-pressed={historyRange === opt.key}
+                onClick={() => setHistoryRange(opt.key)}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+          <Link to="/userdashboard?section=invest_fractional" className="pf-live-gold__invest">
+            Invest →
+          </Link>
+        </div>
       </header>
 
       <div className="pf-live-gold__price-row">
@@ -132,11 +174,18 @@ export function PortfolioLiveGoldPriceCard({
             <span
               className={`pf-live-gold__change tabular ${changeUp ? 'pf-live-gold__change--up' : 'pf-live-gold__change--down'}`}
             >
-              {changeUp ? '▲' : '▼'} {Math.abs(changePct).toFixed(2)}%
+              {changeUp ? '▲' : '▼'} {Math.abs(changePct).toFixed(2)}% · {rangeLabel}
             </span>
           ) : (
-            <span className="pf-live-gold__change pf-live-gold__change--flat">24h —</span>
+            <span className="pf-live-gold__change pf-live-gold__change--flat">{rangeLabel} —</span>
           )}
+          {history?.granularity === 'daily' && todayChange != null ? (
+            <span
+              className={`pf-live-gold__change pf-live-gold__change--daily tabular ${dailyUp ? 'pf-live-gold__change--up' : 'pf-live-gold__change--down'}`}
+            >
+              Day {dailyUp ? '+' : ''}{todayChange.toFixed(2)}%
+            </span>
+          ) : null}
         </div>
       </div>
 
@@ -146,7 +195,7 @@ export function PortfolioLiveGoldPriceCard({
             values={series}
             stroke="var(--gold-light)"
             fillId={`pf-live-gold-fill-${fillId}`}
-            ariaLabel="22K gold reference price over the last 24 hours"
+            ariaLabel={`22K gold reference price over ${rangeLabel}`}
           />
         ) : (
           <div className="pf-live-gold__chart-empty" aria-hidden />
@@ -155,15 +204,15 @@ export function PortfolioLiveGoldPriceCard({
 
       <div className="pf-live-gold__stats">
         <div className="pf-live-gold__stat">
-          <span className="pf-live-gold__stat-label">24H High</span>
+          <span className="pf-live-gold__stat-label">{rangeLabel} High</span>
           <span className="pf-live-gold__stat-val pf-live-gold__stat-val--high tabular">
-            {dayHigh != null ? `₹${fmtInr0(dayHigh)}` : '—'}
+            {periodHigh != null ? `₹${fmtInr0(periodHigh)}` : '—'}
           </span>
         </div>
         <div className="pf-live-gold__stat">
-          <span className="pf-live-gold__stat-label">24H Low</span>
+          <span className="pf-live-gold__stat-label">{rangeLabel} Low</span>
           <span className="pf-live-gold__stat-val pf-live-gold__stat-val--low tabular">
-            {dayLow != null ? `₹${fmtInr0(dayLow)}` : '—'}
+            {periodLow != null ? `₹${fmtInr0(periodLow)}` : '—'}
           </span>
         </div>
         <div className="pf-live-gold__stat">

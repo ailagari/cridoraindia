@@ -5311,6 +5311,51 @@ select.input {
   margin-bottom: 0.65rem;
 }
 
+.pf-live-gold__head-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.pf-live-gold__ranges {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.15rem;
+  border-radius: 999px;
+  border: 1px solid rgba(51, 65, 85, 0.65);
+  background: rgba(15, 23, 42, 0.55);
+}
+
+.pf-live-gold__range {
+  border: 0;
+  background: transparent;
+  color: rgba(148, 163, 184, 0.95);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 0.22rem 0.48rem;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.pf-live-gold__range:hover {
+  color: var(--text);
+}
+
+.pf-live-gold__range--active {
+  background: rgba(212, 175, 55, 0.18);
+  color: var(--gold-light);
+}
+
+.pf-live-gold__change--daily {
+  font-size: 0.72rem;
+  opacity: 0.92;
+}
+
 .pf-live-gold__title {
   margin: 0;
   font-size: 0.92rem;

@@ -78,10 +78,21 @@ def maybe_record_gold_reference_history(*, base: Decimal, source: str) -> None:
         base_source=(source or "")[:64],
     )
     cache.set(_DEBOUNCE_CACHE_KEY, (now_ts, base_f), 3600)
+    try:
+        from .gold_rate_daily_snapshot import upsert_daily_from_sample
+
+        upsert_daily_from_sample(price=base_q, source=source)
+    except Exception:
+        pass
 
 
 def fetch_history_payload(*, range_key: str, max_points: int = 900) -> dict[str, Any]:
     rk = normalize_range_param(range_key)
+    if rk in {"1w", "1m", "6m", "1y"}:
+        from .gold_rate_daily_snapshot import fetch_daily_history_payload
+
+        return fetch_daily_history_payload(range_key=rk)
+
     window = RANGE_WINDOWS[rk]
     start = timezone.now() - window
 
@@ -106,6 +117,7 @@ def fetch_history_payload(*, range_key: str, max_points: int = 900) -> dict[str,
 
     return {
         "range": rk,
+        "granularity": "intraday",
         "window_hours": round(window.total_seconds() / 3600, 4),
         "note": "Cridora platform 22K ₹/g reference (after live or manual ticker settings). "
         "Points are recorded when the reference changes or periodically — not tick-level market data.",

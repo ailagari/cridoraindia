@@ -203,6 +203,28 @@ class GoldTickerReferenceHistory(models.Model):
         return f"{self.recorded_at.isoformat()} · ₹{self.inr_per_gram_22k}/g"
 
 
+class GoldRateDailySnapshot(models.Model):
+    """One row per calendar day — rolling 1-year 22K reference OHLC + daily change."""
+
+    snapshot_date = models.DateField(unique=True, db_index=True)
+    open_inr = models.DecimalField(max_digits=12, decimal_places=2)
+    high_inr = models.DecimalField(max_digits=12, decimal_places=2)
+    low_inr = models.DecimalField(max_digits=12, decimal_places=2)
+    close_inr = models.DecimalField(max_digits=12, decimal_places=2)
+    change_inr = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    change_pct = models.DecimalField(max_digits=8, decimal_places=4, null=True, blank=True)
+    base_source = models.CharField(max_length=64, blank=True, default="")
+    sample_count = models.PositiveIntegerField(default=0)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-snapshot_date"]
+        verbose_name_plural = "Gold rate daily snapshots"
+
+    def __str__(self) -> str:
+        return f"{self.snapshot_date.isoformat()} · ₹{self.close_inr}/g"
+
+
 class MetalPurity(models.Model):
     """Admin-managed hallmark / fineness options (Django admin). Jewellers enable subsets on their pricing profile."""
 

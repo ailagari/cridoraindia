@@ -166,11 +166,18 @@ export type GoldTickerHistoryPoint = {
   t: string
   v: string
   src?: string
+  open?: string
+  high?: string
+  low?: string
+  change_inr?: string
+  change_pct?: string
 }
 
 export type GoldTickerHistoryPayload = {
   range: string
+  granularity?: 'intraday' | 'daily'
   window_hours?: number
+  retention_days?: number
   note?: string
   points: GoldTickerHistoryPoint[]
   latest?: { t: string; v: string; source?: string }
