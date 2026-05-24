@@ -108,6 +108,7 @@ export type GoldLoanRepaymentPendingDTO = {
   loan_reference: string
   amount_inr: string
   status: string
+  payment_method?: string
   jeweller_id: string
   jeweller_label: string
   otp_expires_at?: string

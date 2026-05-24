@@ -16,6 +16,7 @@ import { fetchFractionalCounterOtpPolicy } from '@/lib/fractionalPurchaseApi'
 import { useAuth } from '@/context/AuthContext'
 import { useCounterOtpCountdown } from '@/features/invest/useCounterOtpCountdown'
 import { LIVE_BALANCE_POLL_MS } from '@/lib/liveDeskIntervals'
+import { useLivePoll } from '@/lib/useLivePoll'
 import { UpiPaymentStep } from '@/features/upi/UpiPaymentStep'
 
 function formatInr(s: string): string {
