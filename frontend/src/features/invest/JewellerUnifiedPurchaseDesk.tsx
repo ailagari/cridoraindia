@@ -93,6 +93,13 @@ function formatInr(s: string): string {
   return n.toLocaleString('en-IN', { maximumFractionDigits: 2 })
 }
 
+function formatWhen(iso: string | null | undefined): string {
+  if (!iso) return '—'
+  const t = Date.parse(iso)
+  if (Number.isNaN(t)) return iso
+  return new Date(t).toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' })
+}
+
 const COMPLETE_ACTIONS = new Set([
   'verify_otp',
   'verify_deposit_otp',
