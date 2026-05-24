@@ -2428,8 +2428,253 @@ select.input {
   margin-bottom: 0.65rem !important;
 }
 
+.fractional-jeweller-picker {
+  display: grid;
+  gap: var(--sp-4);
+}
+
+.fractional-jeweller-pay-hero {
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid var(--gold-line-30, rgba(212, 175, 55, 0.35));
+  background: linear-gradient(
+    135deg,
+    rgba(212, 175, 55, 0.14) 0%,
+    rgba(212, 175, 55, 0.04) 42%,
+    var(--veil) 100%
+  );
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.12);
+}
+
+.fractional-jeweller-pay-hero__glow {
+  position: absolute;
+  inset: -40% auto auto -20%;
+  width: 55%;
+  height: 120%;
+  background: radial-gradient(circle, rgba(212, 175, 55, 0.22), transparent 68%);
+  pointer-events: none;
+}
+
+.fractional-jeweller-pay-hero__inner {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: var(--sp-4);
+  align-items: start;
+  padding: var(--sp-4) var(--sp-4) var(--sp-4) var(--sp-3);
+}
+
+.fractional-jeweller-pay-hero__avatar {
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 0.95rem;
+  letter-spacing: 0.04em;
+  color: var(--gold-light, #f5d77a);
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid var(--gold-line-25, rgba(212, 175, 55, 0.25));
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.fractional-jeweller-pay-hero__logo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.fractional-jeweller-pay-hero__body {
+  min-width: 0;
+}
+
+.fractional-jeweller-pay-hero__eyebrow {
+  margin: 0 0 0.35rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--gold-light, #e8c96a);
+}
+
+.fractional-jeweller-pay-hero__name {
+  margin: 0 0 0.35rem;
+  font-size: clamp(1.15rem, 2.8vw, 1.45rem);
+  font-weight: 800;
+  line-height: 1.2;
+  color: var(--text, #f5f5f5);
+}
+
+.fractional-jeweller-pay-hero__location {
+  margin: 0 0 0.65rem;
+  font-size: 0.84rem;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+.fractional-jeweller-pay-hero__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.fractional-jeweller-pay-hero__badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--gold-light, #f0d078);
+  background: rgba(212, 175, 55, 0.16);
+  border: 1px solid rgba(212, 175, 55, 0.28);
+}
+
+.fractional-jeweller-pay-hero__badge--muted {
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.04);
+  border-color: var(--border-soft);
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 600;
+}
+
+.fractional-jeweller-pay-hero__change {
+  align-self: start;
+  min-height: auto !important;
+  padding: 0.35rem 0.65rem !important;
+  font-size: 0.78rem !important;
+  border-radius: 999px !important;
+  border: 1px solid var(--border-soft) !important;
+  background: rgba(0, 0, 0, 0.18) !important;
+}
+
+.fractional-jeweller-picker__change-panel {
+  display: grid;
+  gap: var(--sp-3);
+  padding: var(--sp-3);
+  border-radius: 14px;
+  border: 1px dashed var(--border-soft);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.fractional-jeweller-picker__change-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+}
+
+.fractional-jeweller-picker__change-title {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.fractional-jeweller-picker__cancel,
+.fractional-jeweller-picker__restore {
+  min-height: auto !important;
+  padding: 0 !important;
+  font-size: var(--ts-caption) !important;
+}
+
+.fractional-jeweller-picker__intro-title {
+  margin: 0 0 0.35rem;
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.fractional-jeweller-picker__intro-sub {
+  margin: 0;
+  font-size: var(--ts-caption);
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+.fractional-jeweller-known__label {
+  margin: 0 0 0.5rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.fractional-jeweller-known__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+  gap: 0.55rem;
+}
+
+.fractional-jeweller-known__chip {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 12px;
+  border: 1px solid var(--border-soft);
+  background: var(--veil);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+}
+
+.fractional-jeweller-known__chip:hover {
+  border-color: var(--gold-line-25, rgba(212, 175, 55, 0.25));
+  transform: translateY(-1px);
+}
+
+.fractional-jeweller-known__chip--active {
+  border-color: var(--gold-line-40, rgba(212, 175, 55, 0.45));
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.12), rgba(212, 175, 55, 0.04));
+  box-shadow: inset 0 0 0 1px rgba(212, 175, 55, 0.12);
+}
+
+.fractional-jeweller-known__chip-name {
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.fractional-jeweller-known__chip-meta {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
 .fractional-jeweller-picker__search {
   position: relative;
+}
+
+.fractional-jeweller-picker__suggest-name {
+  font-weight: 650;
+}
+
+.fractional-jeweller-picker__empty {
+  margin-top: var(--sp-2);
+}
+
+@media (max-width: 520px) {
+  .fractional-jeweller-pay-hero__inner {
+    grid-template-columns: auto 1fr;
+    grid-template-areas:
+      'avatar body'
+      'change change';
+  }
+
+  .fractional-jeweller-pay-hero__change {
+    grid-area: change;
+    justify-self: start;
+  }
 }
 
 .fractional-jeweller-picker__suggest {

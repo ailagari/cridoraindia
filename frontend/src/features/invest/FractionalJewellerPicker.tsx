@@ -1,9 +1,8 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import type { JewellerStorefrontDTO } from '@/lib/marketplaceApi'
-import { Button, Input, Select } from '@/components/ui'
+import { Button, Input } from '@/components/ui'
 import {
   filterVerifiedJewellersByQuery,
-  jewellerOptionLabel,
   type FractionalJewellerOption,
 } from '@/features/invest/fractionalJewellerSelect'
 
@@ -14,6 +13,63 @@ type Props = {
   jewellerId: number | ''
   onJewellerChange: (id: number | '') => void
   disabled?: boolean
+}
+
+function locationLine(j: Pick<FractionalJewellerOption, 'city' | 'state'> & { shop_address?: string }): string {
+  const cityState = [j.city.trim(), j.state.trim()].filter(Boolean).join(', ')
+  const address = j.shop_address?.trim()
+  if (address && cityState) return `${address} · ${cityState}`
+  return address || cityState || 'Verified Cridora partner'
+}
+
+function SelectedJewellerHero({
+  jeweller,
+  storefront,
+  onChangeClick,
+  disabled,
+}: {
+  jeweller: FractionalJewellerOption
+  storefront: JewellerStorefrontDTO | null
+  onChangeClick: () => void
+  disabled?: boolean
+}) {
+  const initials = jeweller.business_name.trim().slice(0, 2).toUpperCase() || 'J'
+  return (
+    <div className="fractional-jeweller-pay-hero" aria-live="polite">
+      <div className="fractional-jeweller-pay-hero__glow" aria-hidden="true" />
+      <div className="fractional-jeweller-pay-hero__inner">
+        <div className="fractional-jeweller-pay-hero__avatar" aria-hidden="true">
+          {storefront?.logo_url ? (
+            <img src={storefront.logo_url} alt="" className="fractional-jeweller-pay-hero__logo" />
+          ) : (
+            <span>{initials}</span>
+          )}
+        </div>
+        <div className="fractional-jeweller-pay-hero__body">
+          <p className="fractional-jeweller-pay-hero__eyebrow">You pay at this jeweller</p>
+          <h2 className="fractional-jeweller-pay-hero__name">{jeweller.business_name}</h2>
+          <p className="fractional-jeweller-pay-hero__location">{locationLine({ ...jeweller, shop_address: storefront?.shop_address })}</p>
+          <div className="fractional-jeweller-pay-hero__badges">
+            <span className="fractional-jeweller-pay-hero__badge">Verified partner</span>
+            {storefront?.approved_listing_count ? (
+              <span className="fractional-jeweller-pay-hero__badge fractional-jeweller-pay-hero__badge--muted">
+                {storefront.approved_listing_count} listings
+              </span>
+            ) : null}
+          </div>
+        </div>
+        <Button
+          type="button"
+          variant="ghost"
+          className="fractional-jeweller-pay-hero__change"
+          disabled={disabled}
+          onClick={onChangeClick}
+        >
+          Change
+        </Button>
+      </div>
+    </div>
+  )
 }
 
 export function FractionalJewellerPicker({
@@ -29,16 +85,13 @@ export function FractionalJewellerPicker({
   const rootRef = useRef<HTMLDivElement>(null)
 
   const isReturning = knownJewellers.length > 0
-  const selectedFromKnown = jewellerId !== '' && knownJewellers.some((j) => j.id === jewellerId)
-  const [searchMode, setSearchMode] = useState(!isReturning)
+  const [changeOpen, setChangeOpen] = useState(!isReturning)
   const [searchQuery, setSearchQuery] = useState('')
   const [suggestOpen, setSuggestOpen] = useState(false)
   const [activeIndex, setActiveIndex] = useState(-1)
 
   useEffect(() => {
-    if (!isReturning) {
-      setSearchMode(true)
-    }
+    if (!isReturning) setChangeOpen(true)
   }, [isReturning])
 
   const suggestions = useMemo(
@@ -46,14 +99,24 @@ export function FractionalJewellerPicker({
     [allJewellers, searchQuery],
   )
 
-  const selectedJeweller = useMemo(() => {
+  const selectedJeweller = useMemo((): FractionalJewellerOption | null => {
     if (jewellerId === '') return null
-    return (
-      allJewellers.find((j) => j.id === jewellerId) ??
-      knownJewellers.find((j) => j.id === jewellerId) ??
-      null
-    )
+    const fromAll = allJewellers.find((j) => j.id === jewellerId)
+    if (fromAll) {
+      return {
+        id: fromAll.id,
+        business_name: fromAll.business_name,
+        city: fromAll.city,
+        state: fromAll.state,
+      }
+    }
+    return knownJewellers.find((j) => j.id === jewellerId) ?? null
   }, [allJewellers, jewellerId, knownJewellers])
+
+  const selectedStorefront = useMemo(() => {
+    if (jewellerId === '') return null
+    return allJewellers.find((j) => j.id === jewellerId) ?? null
+  }, [allJewellers, jewellerId])
 
   useEffect(() => {
     if (!suggestOpen) return
@@ -72,144 +135,173 @@ export function FractionalJewellerPicker({
     setSearchQuery('')
     setSuggestOpen(false)
     setActiveIndex(-1)
-    if (isReturning && !knownJewellers.some((j) => j.id === id)) {
-      setSearchMode(true)
-    }
+    setChangeOpen(false)
   }
 
-  const showSearchField = !isReturning || searchMode || !selectedFromKnown
+  const closeChangePanel = () => {
+    setChangeOpen(false)
+    setSearchQuery('')
+    setSuggestOpen(false)
+    setActiveIndex(-1)
+  }
+
+  const showHero = selectedJeweller != null && !changeOpen
+  const showChangePanel = changeOpen || selectedJeweller == null
 
   return (
     <div ref={rootRef} className="fractional-jeweller-picker">
-      {isReturning && !searchMode && selectedFromKnown ? (
-        <>
-          <Select
-            label="Jeweller"
-            value={String(jewellerId)}
-            disabled={disabled}
-            onChange={(e) => {
-              const v = e.target.value
-              onJewellerChange(v === '' ? '' : Number.parseInt(v, 10))
-            }}
-          >
-            {knownJewellers.map((j) => (
-              <option key={j.id} value={j.id}>
-                {jewellerOptionLabel(j)}
-              </option>
-            ))}
-          </Select>
-          <Button
-            type="button"
-            variant="ghost"
-            disabled={disabled}
-            style={{ marginTop: 'var(--sp-2)', padding: 0, minHeight: 'auto', fontSize: 'var(--ts-caption)' }}
-            onClick={() => {
-              setSearchMode(true)
-              setSearchQuery('')
-              setSuggestOpen(true)
-            }}
-          >
-            Search for a different jeweller
-          </Button>
-        </>
+      {showHero && selectedJeweller ? (
+        <SelectedJewellerHero
+          jeweller={selectedJeweller}
+          storefront={selectedStorefront}
+          disabled={disabled}
+          onChangeClick={() => setChangeOpen(true)}
+        />
       ) : null}
 
-      {showSearchField ? (
-        <div className="fractional-jeweller-picker__search">
-          <Input
-            label={isReturning ? 'Search jeweller' : 'Jeweller'}
-            type="search"
-            value={searchQuery}
-            disabled={disabled}
-            placeholder="Type name, city, or area…"
-            autoComplete="off"
-            role="combobox"
-            aria-expanded={suggestOpen && suggestions.length > 0}
-            aria-controls={listboxId}
-            aria-autocomplete="list"
-            onFocus={() => {
-              setSuggestOpen(true)
-              if (activeIndex < 0 && suggestions.length > 0) setActiveIndex(0)
-            }}
-            onChange={(e) => {
-              setSearchQuery(e.target.value)
-              setSuggestOpen(true)
-              setActiveIndex(0)
-            }}
-            onKeyDown={(e) => {
-              if (!suggestOpen || suggestions.length === 0) return
-              if (e.key === 'ArrowDown') {
-                e.preventDefault()
-                setActiveIndex((i) => (i + 1) % suggestions.length)
-              } else if (e.key === 'ArrowUp') {
-                e.preventDefault()
-                setActiveIndex((i) => (i <= 0 ? suggestions.length - 1 : i - 1))
-              } else if (e.key === 'Enter') {
-                e.preventDefault()
-                const pick = suggestions[activeIndex >= 0 ? activeIndex : 0]
-                if (pick) pickJeweller(pick.id)
-              } else if (e.key === 'Escape') {
-                setSuggestOpen(false)
-                setActiveIndex(-1)
-              }
-            }}
-          />
-          {selectedJeweller && searchQuery.trim() === '' ? (
-            <p style={{ margin: 'var(--sp-2) 0 0', fontSize: 'var(--ts-caption)', color: 'var(--text-muted)' }}>
-              Selected: <strong>{jewellerOptionLabel(selectedJeweller)}</strong>
-            </p>
+      {showChangePanel ? (
+        <div className="fractional-jeweller-picker__change-panel">
+          {selectedJeweller ? (
+            <div className="fractional-jeweller-picker__change-head">
+              <p className="fractional-jeweller-picker__change-title">Choose jeweller</p>
+              <Button
+                type="button"
+                variant="ghost"
+                className="fractional-jeweller-picker__cancel"
+                disabled={disabled}
+                onClick={closeChangePanel}
+              >
+                Cancel
+              </Button>
+            </div>
+          ) : (
+            <div className="fractional-jeweller-picker__intro">
+              <p className="fractional-jeweller-picker__intro-title">Where will you pay?</p>
+              <p className="fractional-jeweller-picker__intro-sub">
+                Pick a verified jeweller showroom — your gold is custodied with them after purchase.
+              </p>
+            </div>
+          )}
+
+          {isReturning && knownJewellers.length > 0 ? (
+            <div className="fractional-jeweller-known">
+              <p className="fractional-jeweller-known__label">Your jewellers</p>
+              <div className="fractional-jeweller-known__grid" role="list">
+                {knownJewellers.map((j) => {
+                  const active = jewellerId === j.id
+                  return (
+                    <button
+                      key={j.id}
+                      type="button"
+                      role="listitem"
+                      disabled={disabled}
+                      aria-pressed={active}
+                      className={
+                        active
+                          ? 'fractional-jeweller-known__chip fractional-jeweller-known__chip--active'
+                          : 'fractional-jeweller-known__chip'
+                      }
+                      onClick={() => pickJeweller(j.id)}
+                    >
+                      <span className="fractional-jeweller-known__chip-name">{j.business_name}</span>
+                      <span className="fractional-jeweller-known__chip-meta">{j.city || j.state || 'Verified'}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
           ) : null}
-          {suggestOpen && suggestions.length > 0 ? (
-            <ul
-              id={listboxId}
-              role="listbox"
-              className="fractional-jeweller-picker__suggest"
-              aria-label="Matching jewellers"
-            >
-              {suggestions.map((j, idx) => (
-                <li key={j.id} role="presentation">
-                  <button
-                    type="button"
-                    role="option"
-                    aria-selected={activeIndex === idx}
-                    className={
-                      activeIndex === idx
-                        ? 'fractional-jeweller-picker__suggest-item fractional-jeweller-picker__suggest-item--active'
-                        : 'fractional-jeweller-picker__suggest-item'
-                    }
-                    onMouseEnter={() => setActiveIndex(idx)}
-                    onClick={() => pickJeweller(j.id)}
-                  >
-                    <span>{j.business_name}</span>
-                    <span className="fractional-jeweller-picker__suggest-meta">
-                      {[j.city, j.state].filter(Boolean).join(', ') || 'Verified partner'}
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ) : suggestOpen && searchQuery.trim() !== '' ? (
-            <p className="ds-feedback" style={{ marginTop: 'var(--sp-2)' }}>
-              No matching jewellers.
-            </p>
-          ) : null}
-          {isReturning ? (
+
+          <div className="fractional-jeweller-picker__search">
+            <Input
+              label={isReturning ? 'Search all jewellers' : 'Find jeweller'}
+              type="search"
+              value={searchQuery}
+              disabled={disabled}
+              placeholder="Type name, city, or area…"
+              autoComplete="off"
+              role="combobox"
+              aria-expanded={suggestOpen && suggestions.length > 0}
+              aria-controls={listboxId}
+              aria-autocomplete="list"
+              onFocus={() => {
+                setSuggestOpen(true)
+                if (activeIndex < 0 && suggestions.length > 0) setActiveIndex(0)
+              }}
+              onChange={(e) => {
+                setSearchQuery(e.target.value)
+                setSuggestOpen(true)
+                setActiveIndex(0)
+              }}
+              onKeyDown={(e) => {
+                if (!suggestOpen || suggestions.length === 0) return
+                if (e.key === 'ArrowDown') {
+                  e.preventDefault()
+                  setActiveIndex((i) => (i + 1) % suggestions.length)
+                } else if (e.key === 'ArrowUp') {
+                  e.preventDefault()
+                  setActiveIndex((i) => (i <= 0 ? suggestions.length - 1 : i - 1))
+                } else if (e.key === 'Enter') {
+                  e.preventDefault()
+                  const pick = suggestions[activeIndex >= 0 ? activeIndex : 0]
+                  if (pick) pickJeweller(pick.id)
+                } else if (e.key === 'Escape') {
+                  setSuggestOpen(false)
+                  setActiveIndex(-1)
+                  if (selectedJeweller) closeChangePanel()
+                }
+              }}
+            />
+
+            {suggestOpen && suggestions.length > 0 ? (
+              <ul
+                id={listboxId}
+                role="listbox"
+                className="fractional-jeweller-picker__suggest"
+                aria-label="Matching jewellers"
+              >
+                {suggestions.map((j, idx) => {
+                  const selected = jewellerId === j.id
+                  return (
+                    <li key={j.id} role="presentation">
+                      <button
+                        type="button"
+                        role="option"
+                        aria-selected={activeIndex === idx || selected}
+                        className={
+                          activeIndex === idx
+                            ? 'fractional-jeweller-picker__suggest-item fractional-jeweller-picker__suggest-item--active'
+                            : 'fractional-jeweller-picker__suggest-item'
+                        }
+                        onMouseEnter={() => setActiveIndex(idx)}
+                        onClick={() => pickJeweller(j.id)}
+                      >
+                        <span className="fractional-jeweller-picker__suggest-name">{j.business_name}</span>
+                        <span className="fractional-jeweller-picker__suggest-meta">
+                          {[j.city, j.state].filter(Boolean).join(', ') || 'Verified partner'}
+                          {selected ? ' · selected' : ''}
+                        </span>
+                      </button>
+                    </li>
+                  )
+                })}
+              </ul>
+            ) : suggestOpen && searchQuery.trim() !== '' ? (
+              <p className="ds-feedback fractional-jeweller-picker__empty">No matching jewellers.</p>
+            ) : null}
+          </div>
+
+          {isReturning && defaultKnownJewellerId != null ? (
             <Button
               type="button"
               variant="ghost"
+              className="fractional-jeweller-picker__restore"
               disabled={disabled}
-              style={{ marginTop: 'var(--sp-2)', padding: 0, minHeight: 'auto', fontSize: 'var(--ts-caption)' }}
               onClick={() => {
-                setSearchMode(false)
-                setSearchQuery('')
-                setSuggestOpen(false)
-                const restoreId =
-                  defaultKnownJewellerId ??
-                  (knownJewellers[0] ? knownJewellers[0].id : '')
-                onJewellerChange(restoreId === '' ? '' : restoreId)
+                pickJeweller(defaultKnownJewellerId)
               }}
             >
-              Back to your jewellers
+              Use last paid jeweller
             </Button>
           ) : null}
         </div>

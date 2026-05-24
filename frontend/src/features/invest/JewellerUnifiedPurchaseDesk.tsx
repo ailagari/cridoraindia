@@ -179,6 +179,12 @@ export function JewellerUnifiedPurchaseDesk() {
     }
   }, [verifiedReceipt])
 
+  useEffect(() => {
+    if (!verifiedReceipt) return
+    const timer = window.setTimeout(() => setVerifiedReceipt(null), 2800)
+    return () => window.clearTimeout(timer)
+  }, [verifiedReceipt])
+
   const highConfidenceFractional = useMemo(
     () =>
       rows.filter(
@@ -560,9 +566,6 @@ export function JewellerUnifiedPurchaseDesk() {
             <strong>{verifiedReceipt.reference}</strong> — {verifiedReceipt.customerLabel} · ₹
             {formatInr(verifiedReceipt.amount)}
           </p>
-          <button type="button" className="btn btn-ghost" style={{ marginTop: '0.5rem' }} onClick={() => setVerifiedReceipt(null)}>
-            Dismiss
-          </button>
         </div>
       ) : null}
 
