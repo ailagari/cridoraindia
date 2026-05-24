@@ -12,7 +12,8 @@ import {
   PortfolioDonut,
   PortfolioLiveValueVsCostChart,
 } from './PortfolioCharts'
-import { PortfolioGrowwHero, PortfolioSpotPillsRow, PortfolioVaultHoldingsList } from './PortfolioGrowwViews'
+import { PortfolioLiveGoldPriceCard } from './PortfolioLiveGoldPriceCard'
+import { PortfolioGrowwHero, PortfolioVaultHoldingsList } from './PortfolioGrowwViews'
 import { CustomerVaultsPanel } from './CustomerVaultsPanel'
 import { DashboardActions } from '@/components/ui'
 
@@ -276,7 +277,15 @@ export function CustomerPortfolioPanel() {
       {loadErr ? <p className="form-error">{loadErr}</p> : null}
 
       <div className="pf-groww-shell pf-stagger">
-        <PortfolioSpotPillsRow spot={spotPayload} tickerFallback={goldTickerFallback} />
+        <PortfolioLiveGoldPriceCard
+          spot={spotPayload}
+          tickerFallback={goldTickerFallback}
+          holdingsGrams={totals ? parseG(totals.total_gold_grams ?? '0') : totalGrams}
+          holdingsValueInr={
+            totals ? parseInrNum(totals.total_estimated_value_inr ?? '0') : marketValueInr
+          }
+          masked={privacyMasked}
+        />
 
         <DashboardActions
           title="Quick moves"

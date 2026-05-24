@@ -36,8 +36,13 @@ export function formatFetchError(err: unknown): string {
     const msg = err.message.toLowerCase()
     if (msg.includes('fetch') || msg.includes('network') || msg.includes('failed')) {
       const base = getApiBaseUrl()
+      if (isNativePlatform()) {
+        return base
+          ? `Cannot reach the server (${base}). Reinstall the latest APK build; if this persists, try mobile data vs Wi‑Fi.`
+          : nativeApiConfigError()
+      }
       if (base) {
-        return `Cannot reach the server (${base}). Check mobile data/Wi‑Fi and try again.`
+        return `Cannot reach the server (${base}). Check your connection and try again.`
       }
       return nativeApiConfigError()
     }

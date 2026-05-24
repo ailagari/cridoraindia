@@ -35,6 +35,9 @@ const config: CapacitorConfig = {
     webContentsDebuggingEnabled: true,
   },
   plugins: {
+    CapacitorHttp: {
+      enabled: true,
+    },
     LocalNotifications: {
       smallIcon: 'ic_stat_cridora',
       iconColor: '#D4AF37',
@@ -42,6 +45,7 @@ const config: CapacitorConfig = {
   },
   server: {
     androidScheme: 'https',
+    hostname: 'localhost',
     ...(liveUrl
       ? {
           url: liveUrl,

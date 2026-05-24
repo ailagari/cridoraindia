@@ -162,12 +162,37 @@ export async function fetchMarketplaceProduct(id: number): Promise<MarketplacePr
   return (await res.json()) as MarketplaceProductDTO
 }
 
+export type GoldTickerHistoryPoint = {
+  t: string
+  v: string
+  src?: string
+}
+
+export type GoldTickerHistoryPayload = {
+  range: string
+  window_hours?: number
+  note?: string
+  points: GoldTickerHistoryPoint[]
+  latest?: { t: string; v: string; source?: string }
+}
+
 export async function fetchGoldTicker(): Promise<GoldTickerPayload | null> {
   const res = await apiFetch('/api/v1/marketplace/gold-ticker/')
   if (!res.ok) {
     return null
   }
   return (await res.json()) as GoldTickerPayload
+}
+
+export async function fetchGoldTickerHistory(range = '1d'): Promise<GoldTickerHistoryPayload | null> {
+  const res = await apiFetch(
+    `/api/v1/marketplace/gold-ticker/history/?range=${encodeURIComponent(range)}`,
+    { cache: 'no-store' },
+  )
+  if (!res.ok) {
+    return null
+  }
+  return (await res.json()) as GoldTickerHistoryPayload
 }
 
 export async function fetchSpotPrices(): Promise<SpotPricesPayload | null> {

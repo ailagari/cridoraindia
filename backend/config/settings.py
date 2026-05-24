@@ -193,6 +193,8 @@ _CAPACITOR_ORIGINS = (
     "http://localhost:5173",
     "https://localhost",
     "http://localhost",
+    "https://capacitor.localhost",
+    "http://capacitor.localhost",
     "capacitor://localhost",
 )
 CORS_ALLOWED_ORIGINS = list(
@@ -205,6 +207,10 @@ CORS_ALLOWED_ORIGINS = list(
         + list(_CAPACITOR_ORIGINS)
     )
 )
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^https://([a-zA-Z0-9-]+\.)?localhost$",
+    r"^http://([a-zA-Z0-9-]+\.)?localhost$",
+]
 CORS_ALLOW_CREDENTIALS = True
 
 CSRF_TRUSTED_ORIGINS = [

@@ -5009,6 +5009,172 @@ select.input {
   color: rgba(148, 163, 184, 0.85);
 }
 
+.pf-live-gold {
+  border-radius: 16px;
+  padding: 1rem 1.05rem 0.95rem;
+  border: 1px solid rgba(51, 65, 85, 0.55);
+  background: linear-gradient(165deg, rgba(15, 23, 42, 0.92) 0%, rgba(0, 8, 20, 0.88) 100%);
+  box-shadow: 0 10px 36px rgba(0, 0, 0, 0.28);
+}
+
+.pf-live-gold__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.65rem;
+}
+
+.pf-live-gold__title {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: 0.01em;
+}
+
+.pf-live-gold__invest {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--gold-light);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color 0.15s ease;
+}
+
+.pf-live-gold__invest:hover {
+  color: #f0d49a;
+}
+
+.pf-live-gold__price-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.45rem 0.75rem;
+  margin-bottom: 0.35rem;
+}
+
+.pf-live-gold__price {
+  margin: 0;
+  font-family: Georgia, 'Times New Roman', Times, serif;
+  font-size: clamp(1.85rem, 5.5vw, 2.35rem);
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: var(--gold-light);
+}
+
+.pf-live-gold__price-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 0.55rem;
+}
+
+.pf-live-gold__unit {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.pf-live-gold__change {
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.pf-live-gold__change--up {
+  color: var(--success);
+}
+
+.pf-live-gold__change--down {
+  color: var(--danger);
+}
+
+.pf-live-gold__change--flat {
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.pf-live-gold__chart {
+  height: 88px;
+  margin: 0.15rem 0 0.85rem;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.pf-live-gold__chart .pf-chart-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.pf-live-gold__chart-empty {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(180deg, rgba(212, 168, 92, 0.08) 0%, transparent 70%);
+  border-radius: 10px;
+}
+
+.pf-live-gold__stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.55rem;
+}
+
+.pf-live-gold__stat {
+  padding: 0.65rem 0.75rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(71, 85, 105, 0.35);
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+  min-width: 0;
+}
+
+.pf-live-gold__stat-label {
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.pf-live-gold__stat-val {
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.pf-live-gold__stat-val--high {
+  color: var(--success);
+}
+
+.pf-live-gold__stat-val--low {
+  color: var(--danger);
+}
+
+.pf-live-gold__stat-val--gold {
+  color: var(--gold-light);
+}
+
+@media (max-width: 767px) {
+  .pf-live-gold {
+    padding: 0.9rem 0.85rem 0.85rem;
+  }
+
+  .pf-live-gold__price {
+    font-size: 1.75rem;
+  }
+
+  .pf-live-gold__stat {
+    padding: 0.55rem 0.6rem;
+  }
+
+  .pf-live-gold__stat-val {
+    font-size: 0.82rem;
+  }
+}
+
 .pf-groww-tabs {
   display: flex;
   gap: 1.35rem;

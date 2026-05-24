@@ -1,0 +1,182 @@
+import { useCallback, useEffect, useId, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
+import {
+  fetchGoldTickerHistory,
+  type GoldTickerHistoryPayload,
+  type GoldTickerPayload,
+  type SpotPricesPayload,
+} from '@/lib/marketplaceApi'
+import { PortfolioTrendChart } from './PortfolioCharts'
+
+function fmtInr0(n: number): string {
+  return n.toLocaleString('en-IN', { maximumFractionDigits: 0 })
+}
+
+function fmtInr2(n: number): string {
+  return n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+function maskInr(s: string): string {
+  return s.replace(/[0-9]/g, '•')
+}
+
+function numFromGold(block: Record<string, number> | undefined, key: string): number | null {
+  if (!block) return null
+  const v = block[key]
+  return typeof v === 'number' && Number.isFinite(v) ? v : null
+}
+
+function resolve22kPrice(
+  spot: SpotPricesPayload | null,
+  tickerFallback: GoldTickerPayload | null,
+): number | null {
+  let g22 = numFromGold(spot?.gold, '22K')
+  if (g22 == null && spot?.platform_base_inr_per_gram_22k) {
+    const p = Number.parseFloat(spot.platform_base_inr_per_gram_22k)
+    if (Number.isFinite(p)) g22 = p
+  }
+  if (g22 == null && tickerFallback != null) {
+    const p = Number.parseFloat(tickerFallback.platform_base_inr_per_gram_22k)
+    if (Number.isFinite(p)) g22 = p
+  }
+  return g22
+}
+
+function parseHistoryValues(payload: GoldTickerHistoryPayload | null, livePrice: number | null): number[] {
+  const vals: number[] = []
+  for (const pt of payload?.points ?? []) {
+    const n = Number.parseFloat(pt.v)
+    if (Number.isFinite(n)) vals.push(n)
+  }
+  if (livePrice != null && Number.isFinite(livePrice)) {
+    const last = vals[vals.length - 1]
+    if (last == null || Math.abs(last - livePrice) > 0.005) {
+      vals.push(livePrice)
+    }
+  }
+  return vals
+}
+
+function fmtHoldingsGrams(g: number): string {
+  if (g <= 0) return '0 g'
+  if (g >= 1) return `${g.toFixed(2)} g`
+  return `${g.toFixed(4)} g`
+}
+
+export function PortfolioLiveGoldPriceCard({
+  spot,
+  tickerFallback,
+  holdingsGrams,
+  holdingsValueInr,
+  masked,
+}: {
+  spot: SpotPricesPayload | null
+  tickerFallback: GoldTickerPayload | null
+  holdingsGrams: number
+  holdingsValueInr: number
+  masked: boolean
+}) {
+  const fillId = useId().replace(/:/g, '')
+  const [history, setHistory] = useState<GoldTickerHistoryPayload | null>(null)
+
+  const livePrice = useMemo(() => resolve22kPrice(spot, tickerFallback), [spot, tickerFallback])
+
+  const refreshHistory = useCallback(async () => {
+    const h = await fetchGoldTickerHistory('1d')
+    setHistory(h)
+  }, [])
+
+  useEffect(() => {
+    void refreshHistory()
+  }, [refreshHistory])
+
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      void refreshHistory()
+    }, 60000)
+    return () => window.clearInterval(id)
+  }, [refreshHistory])
+
+  const series = useMemo(() => parseHistoryValues(history, livePrice), [history, livePrice])
+
+  const dayHigh = series.length > 0 ? Math.max(...series) : null
+  const dayLow = series.length > 0 ? Math.min(...series) : null
+
+  const changePct = useMemo(() => {
+    if (livePrice == null || series.length < 2) return null
+    const base = series[0]
+    if (!Number.isFinite(base) || base <= 0) return null
+    return ((livePrice - base) / base) * 100
+  }, [livePrice, series])
+
+  const disp = (s: string) => (masked ? maskInr(s) : s)
+
+  const changeUp = changePct != null && changePct >= 0
+
+  return (
+    <section className="pf-live-gold" aria-label="Live gold price">
+      <header className="pf-live-gold__head">
+        <h2 className="pf-live-gold__title">Live Gold Price</h2>
+        <Link to="/userdashboard?section=invest_fractional" className="pf-live-gold__invest">
+          Invest →
+        </Link>
+      </header>
+
+      <div className="pf-live-gold__price-row">
+        <p className="pf-live-gold__price tabular">
+          {livePrice != null ? `₹${fmtInr0(livePrice)}` : '—'}
+        </p>
+        <div className="pf-live-gold__price-meta">
+          <span className="pf-live-gold__unit">/ gram · 22K</span>
+          {changePct != null ? (
+            <span
+              className={`pf-live-gold__change tabular ${changeUp ? 'pf-live-gold__change--up' : 'pf-live-gold__change--down'}`}
+            >
+              {changeUp ? '▲' : '▼'} {Math.abs(changePct).toFixed(2)}%
+            </span>
+          ) : (
+            <span className="pf-live-gold__change pf-live-gold__change--flat">24h —</span>
+          )}
+        </div>
+      </div>
+
+      <div className="pf-live-gold__chart">
+        {series.length >= 2 ? (
+          <PortfolioTrendChart
+            values={series}
+            stroke="var(--gold-light)"
+            fillId={`pf-live-gold-fill-${fillId}`}
+            ariaLabel="22K gold reference price over the last 24 hours"
+          />
+        ) : (
+          <div className="pf-live-gold__chart-empty" aria-hidden />
+        )}
+      </div>
+
+      <div className="pf-live-gold__stats">
+        <div className="pf-live-gold__stat">
+          <span className="pf-live-gold__stat-label">24H High</span>
+          <span className="pf-live-gold__stat-val pf-live-gold__stat-val--high tabular">
+            {dayHigh != null ? `₹${fmtInr0(dayHigh)}` : '—'}
+          </span>
+        </div>
+        <div className="pf-live-gold__stat">
+          <span className="pf-live-gold__stat-label">24H Low</span>
+          <span className="pf-live-gold__stat-val pf-live-gold__stat-val--low tabular">
+            {dayLow != null ? `₹${fmtInr0(dayLow)}` : '—'}
+          </span>
+        </div>
+        <div className="pf-live-gold__stat">
+          <span className="pf-live-gold__stat-label">Your holdings</span>
+          <span className="pf-live-gold__stat-val tabular">{fmtHoldingsGrams(holdingsGrams)}</span>
+        </div>
+        <div className="pf-live-gold__stat">
+          <span className="pf-live-gold__stat-label">Value</span>
+          <span className="pf-live-gold__stat-val pf-live-gold__stat-val--gold tabular">
+            {holdingsGrams > 0 ? disp(`₹${fmtInr2(holdingsValueInr)}`) : '—'}
+          </span>
+        </div>
+      </div>
+    </section>
+  )
+}
