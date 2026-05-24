@@ -45,9 +45,11 @@ function SummaryCard({ summary }: { summary: ActiveGoldLedgerSummaryDTO }) {
   return (
     <div className="pf-grid pf-grid--kpis pf-stagger pf-active-ledger-summary">
       <div className="pf-kpi pf-kpi--gold">
-        <span className="pf-kpi__eyebrow">Active lots</span>
+        <span className="pf-kpi__eyebrow">Vault holdings</span>
         <p className="pf-kpi__value tabular">{summary.lot_count}</p>
-        <span className="pf-kpi__hint">{parseG(summary.total_grams).toFixed(4)} g total</span>
+        <span className="pf-kpi__hint">
+          {parseG(summary.vault_balance_grams ?? summary.total_grams).toFixed(4)} g · matches vault total
+        </span>
       </div>
       <div className="pf-kpi pf-kpi--ocean">
         <span className="pf-kpi__eyebrow">Total cost</span>
@@ -102,7 +104,8 @@ export function CustomerActiveGoldLedgerPanel() {
           Active gold ledger
         </h3>
         <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
-          Where your vaulted gold came from — acquisition price, cost, today&apos;s mark, and unrealized P/L per lot.
+          Current vaulted holdings by jeweller and type — matches your vault balance. Cost and P/L use purchase or
+          deposit records where available.
         </p>
       </header>
 
@@ -161,8 +164,9 @@ export function CustomerActiveGoldLedgerPanel() {
             </table>
           </div>
           <p className="pf-groww-footnote" style={{ margin: '0.75rem 0 0' }}>
-            Live values use each jeweller&apos;s current board ₹/g. Transfers and scheme balances may not have recorded
-            cost — P/L shows only where cost is known.
+            One row per jeweller holding type (fractional, deposit, scheme). Grams sum to your vault total — not every
+            past purchase. Live values use each jeweller&apos;s board ₹/g. Transfers and scheme balances may not have
+            recorded cost.
           </p>
         </article>
       )}

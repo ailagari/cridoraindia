@@ -130,6 +130,7 @@ export type ActiveGoldLotDTO = {
 
 export type ActiveGoldLedgerSummaryDTO = {
   lot_count: number
+  vault_balance_grams?: string
   total_grams: string
   total_cost_inr: string
   total_live_value_inr: string
