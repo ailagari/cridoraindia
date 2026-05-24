@@ -1,56 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { GoldDepositsTable } from '@/features/invest/GoldDepositsTable'
 import {
   jewellerGoldDepositCreate,
-  jewellerGoldDepositPending,
+  jewellerGoldDepositList,
   jewellerGoldDepositVerify,
-  type JewellerGoldDepositPendingRow,
 } from '@/lib/goldDepositApi'
 import { jewellerLookupCustomer } from '@/lib/personalHoldingsApi'
-import { useCounterOtpCountdown } from '@/features/invest/useCounterOtpCountdown'
 import { LIVE_BALANCE_POLL_MS } from '@/lib/liveDeskIntervals'
 import { useLivePoll } from '@/lib/useLivePoll'
 
-function formatInr(s: string): string {
-  const n = Number.parseFloat(s)
-  if (!Number.isFinite(n)) return s
-  return n.toLocaleString('en-IN', { maximumFractionDigits: 2 })
-}
-
 const OTP_LEN = 6
 
-function formatExpiryShort(iso: string): string {
-  const t = Date.parse(iso)
-  if (Number.isNaN(t)) return iso
-  return new Date(t).toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' })
-}
-
-function CustomerOtpExpiryHint({ expiresAt }: { expiresAt?: string | null }) {
-  const { expired, labelMmSs } = useCounterOtpCountdown(expiresAt ?? null)
-  if (expiresAt == null || expiresAt === '') {
-    return (
-      <p style={{ margin: '0.35rem 0 0', fontSize: '0.72rem', color: 'var(--text-faint)' }}>
-        No OTP yet — customer opens <strong>Gold deposit</strong> and taps Generate OTP.
-      </p>
-    )
-  }
-  return (
-    <p
-      style={{
-        margin: '0.35rem 0 0',
-        fontSize: '0.72rem',
-        color: expired ? 'var(--danger)' : 'var(--text-muted)',
-        fontWeight: expired ? 700 : 400,
-      }}
-    >
-      {expired
-        ? 'OTP expired — customer must generate a new code.'
-        : `OTP valid ${labelMmSs} remaining · ends ${formatExpiryShort(expiresAt)}`}
-    </p>
-  )
-}
-
 export function JewellerGoldDepositPanel() {
-  const [rows, setRows] = useState<JewellerGoldDepositPendingRow[]>([])
+  const [rows, setRows] = useState<Awaited<ReturnType<typeof jewellerGoldDepositList>>>([])
   const [err, setErr] = useState('')
   const [busyId, setBusyId] = useState<number | null>(null)
   const [otpById, setOtpById] = useState<Record<number, string>>({})
@@ -69,7 +31,7 @@ export function JewellerGoldDepositPanel() {
 
   const load = useCallback(async () => {
     setErr('')
-    setRows(await jewellerGoldDepositPending())
+    setRows(await jewellerGoldDepositList())
   }, [])
 
   useEffect(() => {
@@ -119,7 +81,7 @@ export function JewellerGoldDepositPanel() {
         return
       }
       setFormMsg(
-        `Intake ${out.data.reference} created. Ask the customer to open Gold deposit → Generate OTP; enter the code below.`,
+        `Intake ${out.data.reference} created. Ask the customer to open Gold deposit → Generate OTP; enter the code in the deposits table.`,
       )
       setGrams('')
       setNote('')
@@ -136,7 +98,7 @@ export function JewellerGoldDepositPanel() {
       return
     }
     const row = rows.find((r) => r.id === id)
-    const customerLabelRow = row ? row.customer.name || row.customer.email : 'Customer'
+    const customerLabelRow = row?.customer ? row.customer.name || row.customer.email : 'Customer'
 
     setBusyId(id)
     setErr('')
@@ -167,6 +129,8 @@ export function JewellerGoldDepositPanel() {
       successRef.current.focus()
     }
   }, [doneBanner])
+
+  const pendingCount = rows.filter((r) => r.status === 'awaiting_customer_otp').length
 
   return (
     <div className="dash-panel-max jeweller-counter-verify-panel">
@@ -252,7 +216,7 @@ export function JewellerGoldDepositPanel() {
           style={{ maxWidth: '42rem', padding: '1rem 1.15rem', marginBottom: '1.25rem', outline: 'none' }}
           role="status"
         >
-          <p style={{ margin: 0, fontWeight: 800, color: 'var(--success)' }}>Deposit credited</p>
+          <p style={{ margin: 0, fontWeight: 800, color: 'var(--success)' }}>Deposit approved</p>
           <p style={{ margin: '0.35rem 0 0', fontSize: '0.88rem' }}>
             <strong className="tabular">{doneBanner.reference}</strong> — {doneBanner.label} ·{' '}
             <strong className="tabular">{doneBanner.grams} g</strong> added as gold deposit.
@@ -264,8 +228,12 @@ export function JewellerGoldDepositPanel() {
       ) : null}
 
       <div style={{ marginBottom: '1rem', display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center' }}>
+        <h3 style={{ margin: 0, fontSize: '0.95rem', flex: '1 1 auto' }}>Deposits</h3>
+        {pendingCount > 0 ? (
+          <span className="jeweller-unified-desk-summary">{pendingCount} pending approval</span>
+        ) : null}
         <button type="button" className="btn btn-ghost" onClick={() => void load()}>
-          Refresh queue
+          Refresh
         </button>
       </div>
 
@@ -275,110 +243,17 @@ export function JewellerGoldDepositPanel() {
         </p>
       ) : null}
 
-      {rows.length === 0 ? (
-        <p style={{ color: 'var(--text-muted)' }}>No gold deposits awaiting customer OTP.</p>
-      ) : (
-        <div className="jeweller-purchases-wrap">
-          <table className="jeweller-purchases-table">
-            <thead>
-              <tr>
-                <th scope="col">Customer</th>
-                <th scope="col">Metal</th>
-                <th scope="col">Intake</th>
-                <th scope="col">Verify OTP</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => {
-                const otp = otpById[r.id] ?? ''
-                const otpComplete = otp.length === OTP_LEN
-                return (
-                  <tr key={r.id}>
-                    <td data-label="Customer">
-                      <div className="jeweller-purchases-customer-stack">
-                        <strong className="jeweller-purchases-customer-name">
-                          {r.customer.name || r.customer.email}
-                        </strong>
-                        <span className="jeweller-purchases-customer-email">{r.customer.email}</span>
-                        {r.customer.cridora_member_id ? (
-                          <span className="jeweller-purchases-member">
-                            Member ID <strong className="tabular">{r.customer.cridora_member_id}</strong>
-                          </span>
-                        ) : null}
-                      </div>
-                    </td>
-                    <td data-label="Metal">
-                      <div className="jeweller-purchases-metal-stack">
-                        <span>
-                          <strong className="tabular">{r.grams} g</strong>
-                        </span>
-                        <span>Purity {r.purity_karat}</span>
-                        <span className="tabular">Est. ₹{formatInr(r.estimated_value_inr)}</span>
-                      </div>
-                    </td>
-                    <td data-label="Intake">
-                      <div className="jeweller-purchases-order-stack">
-                        <span className="jeweller-purchases-order-ref">
-                          <strong className="tabular">{r.reference}</strong>
-                        </span>
-                        <span className="jeweller-purchases-order-rate">
-                          ref. ₹{formatInr(r.reference_metal_inr_per_gram)}/g
-                        </span>
-                        {r.jeweller_note ? (
-                          <span className="jeweller-purchases-note">Note: {r.jeweller_note}</span>
-                        ) : null}
-                      </div>
-                    </td>
-                    <td data-label="Verify OTP" className="jeweller-purchases-otp-cell">
-                      <div className="jeweller-purchases-otp-stack">
-                        <p className="jeweller-purchases-otp-lead">
-                          Customer taps <strong>Generate OTP</strong> under Gold deposit. Enter the {OTP_LEN}-digit code.
-                        </p>
-                        <label htmlFor={`gd-otp-${r.id}`} className="sr-only">
-                          OTP for {r.reference}
-                        </label>
-                        <input
-                          id={`gd-otp-${r.id}`}
-                          type="text"
-                          inputMode="numeric"
-                          pattern="[0-9]*"
-                          autoComplete="one-time-code"
-                          maxLength={OTP_LEN}
-                          className="tabular jeweller-purchases-otp-input"
-                          style={{
-                            border: otpComplete ? '2px solid var(--success)' : '1px solid var(--border-soft)',
-                          }}
-                          value={otp}
-                          onChange={(e) => {
-                            setErr('')
-                            setOtpById((m) => ({
-                              ...m,
-                              [r.id]: e.target.value.replace(/\D/g, '').slice(0, OTP_LEN),
-                            }))
-                          }}
-                          placeholder="······"
-                        />
-                        <p className="jeweller-purchases-otp-count">
-                          {otp.length}/{OTP_LEN} digits
-                        </p>
-                        <CustomerOtpExpiryHint expiresAt={r.otp_expires_at} />
-                        <button
-                          type="button"
-                          className="btn btn-primary jeweller-purchases-verify-btn"
-                          disabled={busyId != null || !otpComplete}
-                          onClick={() => void verify(r.id)}
-                        >
-                          {busyId === r.id ? 'Verifying…' : 'Verify OTP & credit deposit'}
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
+      <GoldDepositsTable
+        role="jeweller"
+        rows={rows}
+        busyId={busyId}
+        otpById={otpById}
+        onOtpChange={(id, otp) => {
+          setErr('')
+          setOtpById((m) => ({ ...m, [id]: otp }))
+        }}
+        onVerify={(id) => void verify(id)}
+      />
     </div>
   )
 }

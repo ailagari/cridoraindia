@@ -61,6 +61,13 @@ export async function jewellerGoldDepositPending(): Promise<JewellerGoldDepositP
   return body.results ?? []
 }
 
+export async function jewellerGoldDepositList(): Promise<JewellerGoldDepositPendingRow[]> {
+  const res = await authFetch('/api/v1/jeweller/gold-deposit/intakes/')
+  if (!res.ok) return []
+  const body = (await res.json()) as { results?: JewellerGoldDepositPendingRow[] }
+  return body.results ?? []
+}
+
 export async function jewellerGoldDepositVerify(
   intakeId: number,
   otp: string,

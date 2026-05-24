@@ -33,6 +33,7 @@ from apps.accounts.services.personal_holdings import (
     reference_gold_rate_inr_per_gram,
     validate_document_upload,
 )
+from apps.accounts.services.customer_active_gold_ledger import customer_active_gold_ledger_payload
 from apps.accounts.services.personal_holdings_audit import log_personal_portfolio_action
 from apps.accounts.services.portfolio_user_notify import create_portfolio_notification
 
@@ -184,6 +185,15 @@ class CustomerPortfolioLedgerView(APIView):
             return Response({"detail": "Customers only."}, status=status.HTTP_403_FORBIDDEN)
         lf = (request.query_params.get("filter") or "all").strip()
         return Response(customer_portfolio_ledger_payload(request.user, ledger_filter=lf))
+
+
+class CustomerActiveGoldLedgerView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if request.user.user_type != User.CUSTOMER:
+            return Response({"detail": "Customers only."}, status=status.HTTP_403_FORBIDDEN)
+        return Response(customer_active_gold_ledger_payload(request.user))
 
 
 class PortfolioUserNotificationsListView(APIView):

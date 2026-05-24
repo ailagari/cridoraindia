@@ -113,6 +113,27 @@ class JewellerGoldDepositIntakeCreateView(APIView):
         notify_gold_deposit_intake_created(intake)
         return Response(_ser_intake(intake, include_customer=True), status=status.HTTP_201_CREATED)
 
+    def get(self, request):
+        if request.user.user_type != User.JEWELLER:
+            return Response({"detail": "Jewellers only."}, status=status.HTTP_403_FORBIDDEN)
+        qs = (
+            GoldDepositIntake.objects.filter(jeweller=request.user)
+            .select_related("customer", "counter_otp")
+            .order_by("-created_at")[:100]
+        )
+        out = []
+        for d in qs:
+            row = _ser_intake(d, include_customer=True)
+            if d.status == GoldDepositIntake.AWAITING_CUSTOMER_OTP:
+                try:
+                    row["otp_expires_at"] = d.counter_otp.expires_at.isoformat()
+                except GoldDepositCounterOtp.DoesNotExist:
+                    row["otp_expires_at"] = None
+            else:
+                row["otp_expires_at"] = None
+            out.append(row)
+        return Response({"results": out})
+
 
 class JewellerGoldDepositPendingView(APIView):
     permission_classes = [IsAuthenticated]

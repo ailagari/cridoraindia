@@ -112,6 +112,40 @@ export async function fetchPersonalVaultDocuments(): Promise<{ results: Personal
   return (await res.json()) as { results: PersonalDocumentDTO[] }
 }
 
+export type ActiveGoldLotDTO = {
+  occurred_at: string
+  source_type: string
+  source_label: string
+  reference: string
+  jeweller_name: string
+  grams: string
+  price_inr_per_gram: string
+  cost_inr: string
+  live_value_inr: string
+  pnl_inr: string
+  pnl_percent: string
+  counterparty_label?: string
+  note?: string
+}
+
+export type ActiveGoldLedgerSummaryDTO = {
+  lot_count: number
+  total_grams: string
+  total_cost_inr: string
+  total_live_value_inr: string
+  total_pnl_inr: string
+  total_pnl_percent: string
+}
+
+export async function fetchActiveGoldLedger(): Promise<{
+  summary: ActiveGoldLedgerSummaryDTO
+  lots: ActiveGoldLotDTO[]
+} | null> {
+  const res = await authFetch('/api/v1/portfolio/active-ledger/')
+  if (!res.ok) return null
+  return (await res.json()) as { summary: ActiveGoldLedgerSummaryDTO; lots: ActiveGoldLotDTO[] }
+}
+
 export async function fetchPortfolioLedger(filter: string): Promise<{ entries: PortfolioLedgerEntryDTO[] } | null> {
   const q = filter.trim() ? `?filter=${encodeURIComponent(filter)}` : ''
   const res = await authFetch(`/api/v1/portfolio/ledger/${q}`)

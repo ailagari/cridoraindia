@@ -9362,6 +9362,42 @@ select.input {
   background: var(--veil);
 }
 
+.gold-deposits-table-wrap {
+  margin-top: 0.25rem;
+}
+
+.gold-deposit-detail {
+  max-width: 36rem;
+}
+
+.gold-deposit-otp-reveal {
+  margin-top: 0.65rem;
+  padding: 0.85rem 1rem;
+  border-radius: 12px;
+  border: 1px solid var(--border-soft);
+  background: rgba(0, 8, 20, 0.35);
+}
+
+.pf-active-ledger-section {
+  margin-top: 1.75rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border-soft);
+}
+
+.pf-active-ledger-summary {
+  margin-top: 0.75rem;
+}
+
+.pf-active-ledger-table th,
+.pf-active-ledger-table td {
+  white-space: nowrap;
+}
+
+.pf-active-ledger-table td:nth-child(4) {
+  white-space: normal;
+  min-width: 7rem;
+}
+
 .upi-proof-review--compact .upi-proof-review__actions {
   margin-top: 0;
 }

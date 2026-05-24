@@ -4,6 +4,7 @@ import { LIVE_BALANCE_POLL_MS } from '@/lib/liveDeskIntervals'
 import { useLivePoll } from '@/lib/useLivePoll'
 import { formatJewellerMetalRateAsOf } from '@/features/marketplace/productPricing'
 import { formatVaultCardDisplay } from '@/lib/vaultRoutingDisplay'
+import { CustomerActiveGoldLedgerPanel } from '@/features/portfolio/CustomerActiveGoldLedgerPanel'
 
 function parseG(s: string | undefined): number {
   if (s == null || String(s).trim() === '') return 0
@@ -133,6 +134,8 @@ export function CustomerVaultsPanel() {
           ))}
         </div>
       )}
+
+      <CustomerActiveGoldLedgerPanel />
     </div>
   )
 }

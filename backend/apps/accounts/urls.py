@@ -163,6 +163,7 @@ from .views_personal_portfolio import (
     AdminPersonalHoldingsListView,
     AdminPersonalHoldingVerifyView,
     CustomerPortfolioLedgerView,
+    CustomerActiveGoldLedgerView,
     JewellerCustomerLookupView,
     JewellerPersonalHoldingCreateView,
     PersonalHoldingDetailView,
@@ -209,6 +210,7 @@ from .cross_redemption_views import (
 )
 urlpatterns = [
     path("portfolio/ledger/", CustomerPortfolioLedgerView.as_view()),
+    path("portfolio/active-ledger/", CustomerActiveGoldLedgerView.as_view()),
     path("portfolio/notifications/", PortfolioUserNotificationsListView.as_view()),
     path("portfolio/notifications/mark-read/", PortfolioUserNotificationsMarkReadView.as_view()),
     path("portfolio/personal-holdings/", PersonalHoldingsListCreateView.as_view()),
