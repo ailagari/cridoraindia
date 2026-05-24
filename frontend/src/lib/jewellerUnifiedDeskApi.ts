@@ -12,10 +12,12 @@ export type UnifiedDeskRow = {
   source_id: number
   reference: string
   transaction_type: string
+  type_label?: string
   customer: UnifiedDeskCustomer
   amount_inr: string
   grams: string
   payment_method: string
+  method_label?: string
   otp_utr: string
   status: string
   status_raw: string

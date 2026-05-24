@@ -59,12 +59,30 @@ const METHOD_OPTIONS = [
 ]
 
 const TYPE_LABEL: Record<string, string> = {
-  fractional: 'Fractional',
-  deposit: 'Deposit',
-  ornament_redemption: 'Ornament',
-  cridorapay: 'CridoraPay',
+  fractional: 'Fractional gold',
+  deposit: 'Gold deposit',
+  ornament_redemption: 'Jewellery purchase',
+  cridorapay: 'CridoraPay bill',
   sellback: 'Sellback',
-  loan_fee: 'Loan fee',
+  loan_fee: 'Loan processing fee',
+}
+
+function typeLabel(row: UnifiedDeskRow): string {
+  return row.type_label || TYPE_LABEL[row.transaction_type] || row.transaction_type
+}
+
+function methodLabel(row: UnifiedDeskRow): string {
+  return row.method_label || row.payment_method || '—'
+}
+
+function statusLabel(raw: string): string {
+  return raw.replace(/_/g, ' ')
+}
+
+function platformFeeDisplay(fee: string): string {
+  const n = Number.parseFloat(fee)
+  if (!Number.isFinite(n) || n <= 0) return '—'
+  return `₹${formatInr(fee)}`
 }
 
 const OTP_LEN = 6
@@ -427,26 +445,21 @@ export function JewellerUnifiedPurchaseDesk() {
 
   const renderDetail = (row: UnifiedDeskRow) => {
     const entries = Object.entries(row.detail).filter(([, v]) => v != null && v !== '')
-    if (entries.length === 0) return <p style={{ margin: 0, color: 'var(--text-muted)' }}>No extra detail.</p>
     return (
-      <dl style={{ margin: 0, fontSize: '0.82rem', display: 'grid', gap: '0.25rem' }}>
-        {entries.map(([k, v]) => (
-          <div key={k}>
-            <dt style={{ display: 'inline', fontWeight: 600 }}>{k.replace(/_/g, ' ')}: </dt>
-            <dd style={{ display: 'inline', margin: 0 }}>
-              {typeof v === 'object' ? JSON.stringify(v) : String(v)}
-            </dd>
+      <div className="jeweller-unified-desk-detail">
+        <dl className="jeweller-unified-desk-detail-grid">
+          {entries.map(([k, v]) => (
+            <div key={k}>
+              <dt>{k.replace(/_/g, ' ')}</dt>
+              <dd>{typeof v === 'object' ? JSON.stringify(v) : String(v)}</dd>
+            </div>
+          ))}
+          <div>
+            <dt>Completed</dt>
+            <dd>{formatWhen(row.completed_at)}</dd>
           </div>
-        ))}
-        <div>
-          <dt style={{ display: 'inline', fontWeight: 600 }}>member id: </dt>
-          <dd style={{ display: 'inline', margin: 0 }}>{row.customer.member_id || '—'}</dd>
-        </div>
-        <div>
-          <dt style={{ display: 'inline', fontWeight: 600 }}>completed: </dt>
-          <dd style={{ display: 'inline', margin: 0 }}>{formatWhen(row.completed_at)}</dd>
-        </div>
-      </dl>
+        </dl>
+      </div>
     )
   }
 
@@ -464,15 +477,25 @@ export function JewellerUnifiedPurchaseDesk() {
         className="fractional-jeweller-verify-tabs"
       />
 
-      <div style={{ marginBottom: '1rem', display: 'flex', flexWrap: 'wrap', gap: '0.75rem', alignItems: 'center' }}>
-        <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} aria-label="Filter by type">
+      <div className="jeweller-unified-desk-filters">
+        <select
+          className="jeweller-unified-desk-select"
+          value={typeFilter}
+          onChange={(e) => setTypeFilter(e.target.value)}
+          aria-label="Filter by type"
+        >
           {TYPE_OPTIONS.map((o) => (
             <option key={o.value || 'all'} value={o.value}>
               {o.label}
             </option>
           ))}
         </select>
-        <select value={methodFilter} onChange={(e) => setMethodFilter(e.target.value)} aria-label="Filter by method">
+        <select
+          className="jeweller-unified-desk-select"
+          value={methodFilter}
+          onChange={(e) => setMethodFilter(e.target.value)}
+          aria-label="Filter by method"
+        >
           {METHOD_OPTIONS.map((o) => (
             <option key={o.value || 'all'} value={o.value}>
               {o.label}
@@ -483,7 +506,7 @@ export function JewellerUnifiedPurchaseDesk() {
           Refresh
         </button>
         {tab === 'pending' && summary.pending_action_count > 0 ? (
-          <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+          <span className="jeweller-unified-desk-summary">
             {summary.pending_action_count} need action · {summary.pending_count} open
           </span>
         ) : null}
@@ -529,11 +552,10 @@ export function JewellerUnifiedPurchaseDesk() {
       {rows.length === 0 ? (
         <p style={{ color: 'var(--text-muted)' }}>No transactions in this bucket.</p>
       ) : (
-        <div className="jeweller-purchases-wrap">
-          <table className="jeweller-purchases-table">
+        <div className="jeweller-purchases-wrap jeweller-unified-desk-scroll">
+          <table className="jeweller-purchases-table jeweller-unified-desk-table">
             <thead>
               <tr>
-                <th scope="col" aria-label="Expand" />
                 <th scope="col">Customer</th>
                 <th scope="col">Order</th>
                 <th scope="col">Type</th>
@@ -548,45 +570,78 @@ export function JewellerUnifiedPurchaseDesk() {
             <tbody>
               {rows.map((row) => {
                 const isOpen = expanded.has(row.id)
+                const orderRef = (row.detail.order_reference as string | undefined) || ''
+                const metalRate = row.detail.metal_rate_inr_per_gram as string | undefined
+                const reconScore = row.detail.reconciliation_score as number | undefined
+                const utr =
+                  row.otp_utr && row.otp_utr !== '—'
+                    ? row.otp_utr
+                    : (row.detail.upi_utr as string | undefined) || ''
                 return (
-                    <Fragment key={row.id}>
-                      <tr>
-                      <td>
-                        <button
-                          type="button"
-                          className="btn btn-ghost"
-                          aria-expanded={isOpen}
-                          onClick={() => toggleExpanded(row.id)}
-                        >
-                          {isOpen ? '−' : '+'}
-                        </button>
-                      </td>
+                  <Fragment key={row.id}>
+                    <tr className={isOpen ? 'jeweller-unified-desk-row--open' : undefined}>
                       <td data-label="Customer">
-                        <strong>{row.customer.name || row.customer.email}</strong>
+                        <div className="jeweller-purchases-customer-stack">
+                          <strong className="jeweller-purchases-customer-name">
+                            {row.customer.name || row.customer.email}
+                          </strong>
+                          <span className="jeweller-purchases-customer-email">{row.customer.email}</span>
+                          {row.customer.member_id ? (
+                            <span className="jeweller-purchases-member">{row.customer.member_id}</span>
+                          ) : null}
+                        </div>
                       </td>
                       <td data-label="Order">
-                        <strong className="tabular">{row.reference}</strong>
+                        <div className="jeweller-purchases-order-stack">
+                          <button
+                            type="button"
+                            className="jeweller-unified-desk-order-toggle tabular"
+                            aria-expanded={isOpen}
+                            onClick={() => toggleExpanded(row.id)}
+                          >
+                            {row.reference}
+                          </button>
+                          {orderRef ? <span className="jeweller-purchases-order-ref">{orderRef}</span> : null}
+                        </div>
                       </td>
-                      <td data-label="Type">{TYPE_LABEL[row.transaction_type] ?? row.transaction_type}</td>
+                      <td data-label="Type">
+                        <span className="jeweller-unified-type-pill">{typeLabel(row)}</span>
+                      </td>
                       <td data-label="Amount">
-                        <strong className="tabular">₹{formatInr(row.amount_inr)}</strong>
-                        {row.grams && row.grams !== '0' ? (
-                          <span style={{ display: 'block', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                            {row.grams} g
-                          </span>
+                        <div className="jeweller-purchases-metal-stack">
+                          <strong className="tabular">₹{formatInr(row.amount_inr)}</strong>
+                          {row.grams && row.grams !== '0' ? (
+                            <span>
+                              {row.grams} g
+                              {metalRate ? ` @ ₹${formatInr(metalRate)}/g` : ''}
+                            </span>
+                          ) : null}
+                        </div>
+                      </td>
+                      <td data-label="Method">{methodLabel(row)}</td>
+                      <td data-label="OTP / UTR">
+                        {utr ? (
+                          <strong className="tabular fractional-upi-utr-display">{utr}</strong>
+                        ) : (
+                          '—'
+                        )}
+                        {reconScore != null ? (
+                          <span className="jeweller-unified-recon-score">{reconScore}% match</span>
                         ) : null}
                       </td>
-                      <td data-label="Method">{row.payment_method}</td>
-                      <td data-label="OTP / UTR">{row.otp_utr || '—'}</td>
-                      <td data-label="Status">{row.status}</td>
-                      <td data-label="Platform fee">₹{formatInr(row.platform_fee_inr)}</td>
-                      {tab === 'pending' ? <td data-label="Actions">{renderActions(row)}</td> : null}
+                      <td data-label="Status">{row.status || statusLabel(row.status_raw)}</td>
+                      <td data-label="Platform fee">
+                        <strong className="tabular">{platformFeeDisplay(row.platform_fee_inr)}</strong>
+                      </td>
+                      {tab === 'pending' ? (
+                        <td data-label="Actions" className="jeweller-purchases-otp-cell">
+                          {renderActions(row)}
+                        </td>
+                      ) : null}
                     </tr>
                     {isOpen ? (
-                      <tr key={`${row.id}-detail`}>
-                        <td colSpan={tab === 'pending' ? 10 : 9} style={{ background: 'var(--surface-muted, rgba(0,0,0,0.03))' }}>
-                          {renderDetail(row)}
-                        </td>
+                      <tr className="jeweller-unified-desk-detail-row">
+                        <td colSpan={tab === 'pending' ? 9 : 8}>{renderDetail(row)}</td>
                       </tr>
                     ) : null}
                   </Fragment>

@@ -62,6 +62,34 @@ CP_CANCELLED = (
 )
 
 
+TRANSACTION_TYPE_LABELS = {
+    "fractional": "Fractional gold",
+    "deposit": "Gold deposit",
+    "ornament_redemption": "Jewellery purchase",
+    "cridorapay": "CridoraPay bill",
+    "sellback": "Sellback",
+    "loan_fee": "Loan processing fee",
+}
+
+METHOD_LABELS = {
+    "upi": "UPI",
+    "counter": "Counter",
+    "vault": "Vault",
+    "cash": "Cash",
+    "mixed": "Mixed",
+}
+
+
+def _type_label(transaction_type: str) -> str:
+    return TRANSACTION_TYPE_LABELS.get(transaction_type, transaction_type.replace("_", " ").title())
+
+
+def _method_label(method: str) -> str:
+    if not method or method == "—":
+        return "—"
+    return METHOD_LABELS.get(method, method.replace("_", " ").title())
+
+
 def _customer_dict(user: User) -> dict[str, str]:
     return {
         "name": f"{user.first_name} {user.last_name}".strip(),
@@ -88,6 +116,8 @@ def _build_row(
     completed_at: str | None,
     detail: dict[str, Any],
     actions: list[str],
+    type_label: str = "",
+    method_label: str = "",
 ) -> dict[str, Any]:
     return {
         "id": f"{source_model}:{source_id}",
@@ -95,10 +125,12 @@ def _build_row(
         "source_id": source_id,
         "reference": reference,
         "transaction_type": transaction_type,
+        "type_label": type_label or _type_label(transaction_type),
         "customer": _customer_dict(customer),
         "amount_inr": amount_inr,
         "grams": grams,
         "payment_method": payment_method,
+        "method_label": method_label or _method_label(payment_method),
         "otp_utr": otp_utr,
         "status": status_label,
         "status_raw": status_raw,
@@ -144,9 +176,7 @@ def _fractional_platform_fee(p: FractionalGoldPurchase, ledger: dict[tuple[str, 
     fee = ledger.get(("fractional", p.pk))
     if fee is not None:
         return str(fee)
-    if p.status == FractionalGoldPurchase.COMPLETED:
-        return str(spread_fee_inr_for_purchase(p))
-    return "0"
+    return str(spread_fee_inr_for_purchase(p))
 
 
 def _map_fractional(

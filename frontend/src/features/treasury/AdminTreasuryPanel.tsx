@@ -36,7 +36,7 @@ export function AdminTreasuryPanel({ mode }: { mode: 'ledger' | 'settlement' | '
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set())
 
   const loadLedger = useCallback(async () => {
-    const out = await adminTreasuryLedger({ limit: 100 })
+    const out = await adminTreasuryLedger({ limit: 200 })
     if (!out.ok) {
       setErr(out.detail)
       setLedger([])
@@ -73,7 +73,10 @@ export function AdminTreasuryPanel({ mode }: { mode: 'ledger' | 'settlement' | '
 
   return (
     <div className="dash-panel-max">
-      <p className="dash-panel-lead">Platform treasury — ledger, live settlement balances, and fee revenue.</p>
+      <p className="dash-panel-lead">
+        Platform-wide ledger — all jeweller and customer transactions across fractional, deposits, jewellery purchases,
+        CridoraPay, sellbacks, and loans.
+      </p>
 
       <DashSegmentPair
         items={[...TABS]}
@@ -182,13 +185,12 @@ export function AdminTreasuryPanel({ mode }: { mode: 'ledger' | 'settlement' | '
       ) : null}
 
       {tab === 'ledger' ? (
-        <div className="jeweller-purchases-wrap">
-          <table className="jeweller-purchases-table">
+        <div className="jeweller-purchases-wrap admin-treasury-ledger-scroll">
+          <table className="jeweller-purchases-table admin-treasury-ledger-table">
             <thead>
               <tr>
-                <th />
                 <th>When</th>
-                <th>Feature</th>
+                <th>Type</th>
                 <th>Reference</th>
                 <th>Customer</th>
                 <th>Jeweller</th>
@@ -200,7 +202,7 @@ export function AdminTreasuryPanel({ mode }: { mode: 'ledger' | 'settlement' | '
             <tbody>
               {ledger.length === 0 ? (
                 <tr>
-                  <td colSpan={9}>No ledger entries.</td>
+                  <td colSpan={8}>No ledger entries.</td>
                 </tr>
               ) : (
                 ledger.map((row) => {
@@ -209,29 +211,39 @@ export function AdminTreasuryPanel({ mode }: { mode: 'ledger' | 'settlement' | '
                   return (
                     <Fragment key={key}>
                       <tr>
-                        <td>
-                          <button type="button" className="btn btn-ghost" onClick={() => setExpanded((s) => {
-                            const n = new Set(s)
-                            if (n.has(key)) n.delete(key)
-                            else n.add(key)
-                            return n
-                          })}>
-                            {open ? '−' : '+'}
+                        <td data-label="When">{row.when.slice(0, 16).replace('T', ' ')}</td>
+                        <td data-label="Type">{row.feature_label || row.feature}</td>
+                        <td data-label="Reference">
+                          <button
+                            type="button"
+                            className="jeweller-unified-desk-order-toggle tabular"
+                            aria-expanded={open}
+                            onClick={() =>
+                              setExpanded((s) => {
+                                const n = new Set(s)
+                                if (n.has(key)) n.delete(key)
+                                else n.add(key)
+                                return n
+                              })
+                            }
+                          >
+                            {row.reference}
                           </button>
                         </td>
-                        <td>{row.when.slice(0, 16).replace('T', ' ')}</td>
-                        <td>{row.feature}</td>
-                        <td>{row.reference}</td>
-                        <td>{row.customer || '—'}</td>
-                        <td>{row.jeweller}</td>
-                        <td className="tabular">₹{formatInr(row.amount_inr)}</td>
-                        <td className="tabular">₹{formatInr(row.platform_revenue_inr)}</td>
-                        <td>{row.settlement_status}</td>
+                        <td data-label="Customer">{row.customer || '—'}</td>
+                        <td data-label="Jeweller">{row.jeweller}</td>
+                        <td data-label="Amount" className="tabular">
+                          ₹{formatInr(row.amount_inr)}
+                        </td>
+                        <td data-label="Platform fee" className="tabular">
+                          ₹{formatInr(row.platform_revenue_inr)}
+                        </td>
+                        <td data-label="Settlement">{row.settlement_status}</td>
                       </tr>
                       {open ? (
-                        <tr key={`${key}-d`}>
-                          <td colSpan={9}>
-                            <pre style={{ margin: 0, fontSize: '0.78rem' }}>{JSON.stringify(row.detail, null, 2)}</pre>
+                        <tr className="jeweller-unified-desk-detail-row">
+                          <td colSpan={8}>
+                            <pre className="jeweller-unified-desk-detail-pre">{JSON.stringify(row.detail, null, 2)}</pre>
                           </td>
                         </tr>
                       ) : null}

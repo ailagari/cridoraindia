@@ -1,0 +1,123 @@
+/* Unified purchase desk — 8-column layout (does not use fractional 4-col nth-child widths) */
+
+.jeweller-unified-desk-scroll {
+  overflow-x: auto;
+}
+
+.jeweller-unified-desk-table {
+  min-width: 920px;
+  table-layout: auto;
+}
+
+.jeweller-unified-desk-table th:nth-child(1),
+.jeweller-unified-desk-table th:nth-child(2),
+.jeweller-unified-desk-table th:nth-child(3),
+.jeweller-unified-desk-table th:nth-child(4),
+.jeweller-unified-desk-table th:nth-child(5),
+.jeweller-unified-desk-table th:nth-child(6),
+.jeweller-unified-desk-table th:nth-child(7),
+.jeweller-unified-desk-table th:nth-child(8),
+.jeweller-unified-desk-table th:nth-child(9) {
+  width: auto;
+}
+
+.jeweller-unified-desk-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.jeweller-unified-desk-select {
+  padding: 0.45rem 0.65rem;
+  border-radius: 10px;
+  border: 1px solid var(--border-soft);
+  background: var(--veil-35);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 0.84rem;
+}
+
+.jeweller-unified-desk-summary {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.jeweller-unified-type-pill {
+  display: inline-block;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  background: rgba(165, 180, 252, 0.12);
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.jeweller-unified-desk-order-toggle {
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-weight: 800;
+  color: var(--accent, #6366f1);
+  cursor: pointer;
+  text-align: left;
+}
+
+.jeweller-unified-desk-order-toggle:hover {
+  text-decoration: underline;
+}
+
+.jeweller-unified-recon-score {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 0.76rem;
+  color: var(--text-muted);
+}
+
+.jeweller-unified-desk-detail-row td {
+  background: rgba(165, 180, 252, 0.06);
+  padding: 0.75rem 0.85rem !important;
+}
+
+.jeweller-unified-desk-detail-grid {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 0.5rem 1rem;
+  font-size: 0.8rem;
+}
+
+.jeweller-unified-desk-detail-grid dt {
+  font-weight: 700;
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.jeweller-unified-desk-detail-grid dd {
+  margin: 0.15rem 0 0;
+}
+
+.jeweller-unified-desk-detail-pre {
+  margin: 0;
+  font-size: 0.78rem;
+  white-space: pre-wrap;
+}
+
+.admin-treasury-ledger-scroll {
+  overflow-x: auto;
+}
+
+.admin-treasury-ledger-table {
+  min-width: 880px;
+  table-layout: auto;
+}
+
+.admin-treasury-ledger-table th:nth-child(n) {
+  width: auto;
+}

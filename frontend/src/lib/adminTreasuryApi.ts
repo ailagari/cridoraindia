@@ -3,6 +3,7 @@ import { authFetch, authUpload, apiUrl } from '@/lib/api'
 export type TreasuryLedgerRow = {
   when: string
   feature: string
+  feature_label?: string
   reference: string
   customer: string
   jeweller: string

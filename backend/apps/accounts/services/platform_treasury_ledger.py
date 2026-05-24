@@ -17,20 +17,25 @@ from apps.accounts.models import (
     CridoraPayBill,
     FractionalGoldPurchase,
     GoldDepositIntake,
+    GoldLoanRequest,
+    GoldSellbackRequest,
     JewellerRevenueLedgerEntry,
     PlatformCommercialLedgerEntry,
     PlatformSettlementBatch,
     SettlementObligation,
     VaultProductRedemption,
 )
+from apps.accounts.platform_commercial_service import spread_fee_inr_for_purchase
 
 User = get_user_model()
 
 FEATURE_LABELS = {
-    "fractional": "Fractional",
-    "deposit": "Deposit",
-    "ornament_redemption": "Ornament",
+    "fractional": "Fractional gold",
+    "deposit": "Gold deposit",
+    "ornament_redemption": "Jewellery purchase",
     "cridorapay": "CridoraPay",
+    "sellback": "Sellback",
+    "loan_fee": "Loan fee",
     "cross_platform_fee": "Cross-platform fee",
     "spread_fee": "Spread fee",
 }
@@ -46,10 +51,45 @@ def _customer_label(c: User | None) -> str:
     return f"{c.first_name} {c.last_name}".strip() or (c.email or "")
 
 
-def _platform_fee_for_entry(e: PlatformCommercialLedgerEntry | None) -> Decimal:
-    if e is None:
-        return Decimal("0")
-    return e.amount_inr or Decimal("0")
+def _commercial_fee_map() -> dict[tuple[str, int], PlatformCommercialLedgerEntry]:
+    out: dict[tuple[str, int], PlatformCommercialLedgerEntry] = {}
+    for e in PlatformCommercialLedgerEntry.objects.all().select_related("fractional_purchase", "vault_product_redemption"):
+        if e.fractional_purchase_id:
+            out[("fractional", e.fractional_purchase_id)] = e
+        elif e.vault_product_redemption_id:
+            out[("ornament", e.vault_product_redemption_id)] = e
+    return out
+
+
+def _ledger_row(
+    *,
+    when: str,
+    feature: str,
+    reference: str,
+    customer: User | None,
+    jeweller: User,
+    amount_inr: str,
+    platform_revenue_inr: str,
+    status: str,
+    settlement_status: str,
+    detail: dict[str, Any],
+    jeweller_revenue_inr: str = "0",
+) -> dict[str, Any]:
+    return {
+        "when": when,
+        "feature": feature,
+        "feature_label": FEATURE_LABELS.get(feature, feature.replace("_", " ").title()),
+        "reference": reference,
+        "customer": _customer_label(customer),
+        "jeweller": _jeweller_label(jeweller),
+        "jeweller_id": jeweller.pk,
+        "amount_inr": amount_inr,
+        "platform_revenue_inr": platform_revenue_inr,
+        "jeweller_revenue_inr": jeweller_revenue_inr,
+        "status": status,
+        "settlement_status": settlement_status,
+        "detail": detail,
+    }
 
 
 def _ledger_rows(
@@ -61,96 +101,20 @@ def _ledger_rows(
     limit: int = 100,
     offset: int = 0,
 ) -> tuple[list[dict[str, Any]], int]:
-    rows: list[dict[str, Any]] = []
-
-    commercial = PlatformCommercialLedgerEntry.objects.select_related(
-        "jeweller",
-        "fractional_purchase__customer",
-        "vault_product_redemption__customer",
-        "settlement_batch",
-    ).order_by("-created_at")
-    if jeweller_id:
-        commercial = commercial.filter(jeweller_id=jeweller_id)
-    if from_date:
-        commercial = commercial.filter(created_at__date__gte=from_date)
-    if to_date:
-        commercial = commercial.filter(created_at__date__lte=to_date)
-
-    for e in commercial[:500]:
-        feat = "spread_fee" if e.kind == PlatformCommercialLedgerEntry.KIND_SPREAD_FEE else "cross_platform_fee"
-        if feature and feat != feature and feature not in (e.kind, feat):
-            continue
-        ref = ""
-        customer = None
-        amount_inr = Decimal("0")
-        if e.fractional_purchase_id and e.fractional_purchase:
-            p = e.fractional_purchase
-            ref = f"FR-{p.pk}"
-            customer = p.customer
-            amount_inr = p.total_inr
-            feat = "fractional"
-        elif e.vault_product_redemption_id and e.vault_product_redemption:
-            r = e.vault_product_redemption
-            ref = f"RP-{r.pk}"
-            customer = r.customer
-            amount_inr = r.final_invoice_inr
-            feat = "ornament_redemption"
-
-        rows.append(
-            {
-                "when": e.created_at.isoformat(),
-                "feature": feat,
-                "reference": ref,
-                "customer": _customer_label(customer),
-                "jeweller": _jeweller_label(e.jeweller),
-                "jeweller_id": e.jeweller_id,
-                "amount_inr": str(amount_inr),
-                "platform_revenue_inr": str(e.amount_inr),
-                "jeweller_revenue_inr": _jeweller_revenue_for_commercial(e),
-                "status": e.status,
-                "settlement_status": e.status,
-                "detail": {
-                    "kind": e.kind,
-                    "batch_id": e.settlement_batch_id,
-                },
-            }
-        )
-
-    if not feature or feature in ("fractional", "deposit", "cridorapay", "ornament_redemption"):
-        rows.extend(_transaction_only_rows(feature=feature, jeweller_id=jeweller_id, from_date=from_date, to_date=to_date))
-
+    rows = _all_platform_transaction_rows(
+        feature=feature,
+        jeweller_id=jeweller_id,
+        from_date=from_date,
+        to_date=to_date,
+    )
     rows.sort(key=lambda r: r["when"], reverse=True)
     if feature:
-        rows = [r for r in rows if r["feature"] == feature or (feature == "spread_fee" and r["feature"] == "fractional")]
+        rows = [r for r in rows if r["feature"] == feature]
     total = len(rows)
     return rows[offset : offset + limit], total
 
 
-def _jeweller_revenue_for_commercial(e: PlatformCommercialLedgerEntry) -> str:
-    if e.fractional_purchase_id:
-        rev = (
-            JewellerRevenueLedgerEntry.objects.filter(
-                fractional_purchase_id=e.fractional_purchase_id,
-                jeweller_id=e.jeweller_id,
-            )
-            .aggregate(s=Sum("amount_inr"))
-            .get("s")
-        )
-        return str(rev or Decimal("0"))
-    if e.vault_product_redemption_id:
-        rev = (
-            JewellerRevenueLedgerEntry.objects.filter(
-                vault_product_redemption_id=e.vault_product_redemption_id,
-                jeweller_id=e.jeweller_id,
-            )
-            .aggregate(s=Sum("amount_inr"))
-            .get("s")
-        )
-        return str(rev or Decimal("0"))
-    return "0"
-
-
-def _transaction_only_rows(
+def _all_platform_transaction_rows(
     *,
     feature: str,
     jeweller_id: int | None,
@@ -158,41 +122,47 @@ def _transaction_only_rows(
     to_date: date | None,
 ) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
-    existing_refs: set[str] = set()
+    fee_map = _commercial_fee_map()
 
     if not feature or feature == "fractional":
-        qs = FractionalGoldPurchase.objects.filter(status=FractionalGoldPurchase.COMPLETED).select_related(
-            "customer", "jeweller"
-        )
+        qs = FractionalGoldPurchase.objects.exclude(
+            status__in=(
+                FractionalGoldPurchase.CANCELLED,
+                FractionalGoldPurchase.REJECTED,
+            )
+        ).select_related("customer", "jeweller")
         if jeweller_id:
             qs = qs.filter(jeweller_id=jeweller_id)
         if from_date:
             qs = qs.filter(created_at__date__gte=from_date)
         if to_date:
             qs = qs.filter(created_at__date__lte=to_date)
-        for p in qs.order_by("-created_at")[:200]:
-            ref = f"FR-{p.pk}"
-            existing_refs.add(ref)
-            fee = PlatformCommercialLedgerEntry.objects.filter(fractional_purchase_id=p.pk).first()
+        for p in qs.order_by("-created_at")[:400]:
+            commercial = fee_map.get(("fractional", p.pk))
+            platform_fee = commercial.amount_inr if commercial else spread_fee_inr_for_purchase(p)
+            settlement = commercial.status if commercial else "—"
             out.append(
-                {
-                    "when": (p.jeweller_verified_at or p.created_at).isoformat(),
-                    "feature": "fractional",
-                    "reference": ref,
-                    "customer": _customer_label(p.customer),
-                    "jeweller": _jeweller_label(p.jeweller),
-                    "jeweller_id": p.jeweller_id,
-                    "amount_inr": str(p.total_inr),
-                    "platform_revenue_inr": str(_platform_fee_for_entry(fee)),
-                    "jeweller_revenue_inr": "0",
-                    "status": p.status,
-                    "settlement_status": fee.status if fee else "—",
-                    "detail": {"payment_method": p.payment_method},
-                }
+                _ledger_row(
+                    when=(p.jeweller_verified_at or p.created_at).isoformat(),
+                    feature="fractional",
+                    reference=f"FR-{p.pk}",
+                    customer=p.customer,
+                    jeweller=p.jeweller,
+                    amount_inr=str(p.total_inr),
+                    platform_revenue_inr=str(platform_fee),
+                    status=p.status,
+                    settlement_status=settlement,
+                    detail={
+                        "payment_method": p.payment_method,
+                        "grams": str(p.grams),
+                        "upi_utr": p.upi_utr or "",
+                    },
+                    jeweller_revenue_inr=_jeweller_revenue_for_fractional(p),
+                )
             )
 
     if not feature or feature == "deposit":
-        qs = GoldDepositIntake.objects.filter(status=GoldDepositIntake.COMPLETED).select_related(
+        qs = GoldDepositIntake.objects.exclude(status=GoldDepositIntake.CANCELLED).select_related(
             "customer", "jeweller"
         )
         if jeweller_id:
@@ -201,53 +171,137 @@ def _transaction_only_rows(
             qs = qs.filter(created_at__date__gte=from_date)
         if to_date:
             qs = qs.filter(created_at__date__lte=to_date)
-        for d in qs.order_by("-created_at")[:100]:
+        for d in qs.order_by("-created_at")[:200]:
             out.append(
-                {
-                    "when": (d.completed_at or d.created_at).isoformat(),
-                    "feature": "deposit",
-                    "reference": f"GD-{d.pk}",
-                    "customer": _customer_label(d.customer),
-                    "jeweller": _jeweller_label(d.jeweller),
-                    "jeweller_id": d.jeweller_id,
-                    "amount_inr": str(d.estimated_value_inr),
-                    "platform_revenue_inr": "0",
-                    "jeweller_revenue_inr": "0",
-                    "status": d.status,
-                    "settlement_status": "—",
-                    "detail": {},
-                }
+                _ledger_row(
+                    when=(d.completed_at or d.created_at).isoformat(),
+                    feature="deposit",
+                    reference=f"GD-{d.pk}",
+                    customer=d.customer,
+                    jeweller=d.jeweller,
+                    amount_inr=str(d.estimated_value_inr),
+                    platform_revenue_inr="0",
+                    status=d.status,
+                    settlement_status="—",
+                    detail={"grams": str(d.grams), "payment_method": "counter"},
+                )
             )
 
     if not feature or feature == "cridorapay":
-        qs = CridoraPayBill.objects.filter(status=CridoraPayBill.STATUS_COMPLETED).select_related(
-            "customer", "jeweller"
-        )
+        qs = CridoraPayBill.objects.exclude(
+            status__in=(CridoraPayBill.STATUS_CANCELLED, CridoraPayBill.STATUS_EXPIRED)
+        ).select_related("customer", "jeweller")
         if jeweller_id:
             qs = qs.filter(jeweller_id=jeweller_id)
         if from_date:
             qs = qs.filter(created_at__date__gte=from_date)
         if to_date:
             qs = qs.filter(created_at__date__lte=to_date)
-        for b in qs.order_by("-created_at")[:100]:
+        for b in qs.order_by("-created_at")[:200]:
             out.append(
-                {
-                    "when": (b.completed_at or b.created_at).isoformat(),
-                    "feature": "cridorapay",
-                    "reference": b.reference,
-                    "customer": _customer_label(b.customer),
-                    "jeweller": _jeweller_label(b.jeweller),
-                    "jeweller_id": b.jeweller_id,
-                    "amount_inr": str(b.total_inr),
-                    "platform_revenue_inr": "0",
-                    "jeweller_revenue_inr": "0",
-                    "status": b.status,
-                    "settlement_status": "—",
-                    "detail": {"title": b.title},
-                }
+                _ledger_row(
+                    when=(b.completed_at or b.created_at).isoformat(),
+                    feature="cridorapay",
+                    reference=b.reference,
+                    customer=b.customer,
+                    jeweller=b.jeweller,
+                    amount_inr=str(b.total_inr),
+                    platform_revenue_inr="0",
+                    status=b.status,
+                    settlement_status="—",
+                    detail={"title": b.title, "payment_method": b.payment_method or ""},
+                )
+            )
+
+    if not feature or feature == "ornament_redemption":
+        qs = VaultProductRedemption.objects.select_related("customer", "jeweller")
+        if jeweller_id:
+            qs = qs.filter(jeweller_id=jeweller_id)
+        if from_date:
+            qs = qs.filter(created_at__date__gte=from_date)
+        if to_date:
+            qs = qs.filter(created_at__date__lte=to_date)
+        for r in qs.order_by("-created_at")[:200]:
+            commercial = fee_map.get(("ornament", r.pk))
+            platform_fee = commercial.amount_inr if commercial else (r.cross_platform_fee_inr or Decimal("0"))
+            settlement = commercial.status if commercial else "—"
+            out.append(
+                _ledger_row(
+                    when=r.created_at.isoformat(),
+                    feature="ornament_redemption",
+                    reference=f"RP-{r.pk}",
+                    customer=r.customer,
+                    jeweller=r.jeweller,
+                    amount_inr=str(r.final_invoice_inr),
+                    platform_revenue_inr=str(platform_fee),
+                    status="completed",
+                    settlement_status=settlement,
+                    detail={"product_name": r.product_name, "grams": str(r.grams_charged)},
+                )
+            )
+
+    if not feature or feature == "sellback":
+        qs = GoldSellbackRequest.objects.exclude(
+            status__in=(GoldSellbackRequest.STATUS_CANCELLED, GoldSellbackRequest.STATUS_REJECTED)
+        ).select_related("customer", "jeweller")
+        if jeweller_id:
+            qs = qs.filter(jeweller_id=jeweller_id)
+        if from_date:
+            qs = qs.filter(created_at__date__gte=from_date)
+        if to_date:
+            qs = qs.filter(created_at__date__lte=to_date)
+        for s in qs.order_by("-created_at")[:200]:
+            out.append(
+                _ledger_row(
+                    when=(s.updated_at if s.status == GoldSellbackRequest.STATUS_COMPLETED else s.created_at).isoformat(),
+                    feature="sellback",
+                    reference=f"SB-{s.pk}",
+                    customer=s.customer,
+                    jeweller=s.jeweller,
+                    amount_inr=str(s.cash_estimate_inr),
+                    platform_revenue_inr="0",
+                    status=s.status,
+                    settlement_status="—",
+                    detail={"grams": str(s.grams), "payment_method": s.payment_method, "upi_utr": s.upi_utr or ""},
+                )
+            )
+
+    if not feature or feature == "loan_fee":
+        qs = GoldLoanRequest.objects.exclude(
+            status__in=(GoldLoanRequest.STATUS_CANCELLED, GoldLoanRequest.STATUS_REJECTED)
+        ).select_related("customer", "jeweller")
+        if jeweller_id:
+            qs = qs.filter(jeweller_id=jeweller_id)
+        if from_date:
+            qs = qs.filter(created_at__date__gte=from_date)
+        if to_date:
+            qs = qs.filter(created_at__date__lte=to_date)
+        for l in qs.order_by("-created_at")[:200]:
+            out.append(
+                _ledger_row(
+                    when=l.created_at.isoformat(),
+                    feature="loan_fee",
+                    reference=f"LN-{l.pk}",
+                    customer=l.customer,
+                    jeweller=l.jeweller,
+                    amount_inr=str(l.processing_fee_inr_snapshot),
+                    platform_revenue_inr="0",
+                    status=l.status,
+                    settlement_status="—",
+                    detail={"grams": str(l.grams), "payment_method": l.payment_method or "cash"},
+                )
             )
 
     return out
+
+
+def _jeweller_revenue_for_fractional(p: FractionalGoldPurchase) -> str:
+    rev = (
+        JewellerRevenueLedgerEntry.objects.filter(fractional_purchase_id=p.pk, jeweller_id=p.jeweller_id)
+        .aggregate(s=Sum("amount_inr"))
+        .get("s")
+    )
+    return str(rev or Decimal("0"))
 
 
 def platform_treasury_ledger_payload(
