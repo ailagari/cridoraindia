@@ -15,7 +15,6 @@ import {
 import { PortfolioLiveGoldPriceCard } from './PortfolioLiveGoldPriceCard'
 import { PortfolioGrowwHero, PortfolioVaultHoldingsList } from './PortfolioGrowwViews'
 import { CustomerVaultsPanel } from './CustomerVaultsPanel'
-import { DashboardActions } from '@/components/ui'
 
 const DONUT_COLORS = ['#fbbf24', '#d4a85c', '#67e8f9', '#a78bfa', '#34d399', '#f472b6', '#38bdf8']
 const SESSION_VALUE_SAMPLES_CAP = 56
@@ -277,26 +276,6 @@ export function CustomerPortfolioPanel() {
       {loadErr ? <p className="form-error">{loadErr}</p> : null}
 
       <div className="pf-groww-shell pf-stagger">
-        <PortfolioLiveGoldPriceCard
-          spot={spotPayload}
-          tickerFallback={goldTickerFallback}
-          holdingsGrams={totals ? parseG(totals.total_gold_grams ?? '0') : totalGrams}
-          holdingsValueInr={
-            totals ? parseInrNum(totals.total_estimated_value_inr ?? '0') : marketValueInr
-          }
-          masked={privacyMasked}
-        />
-
-        <DashboardActions
-          title="Quick moves"
-          actions={[
-            { label: 'Check holdings', description: `${activeVaultCount} active vaults`, tone: 'primary', onClick: () => setPortfolioTab('active') },
-            { label: 'Track personal gold', description: 'Add off-platform items', onClick: () => setPortfolioTab('personal') },
-            { label: 'Review ledger', description: 'Recent credits and redemptions', onClick: () => setPortfolioTab('transactions') },
-          ]}
-          aside={totalGrams > 0 ? `${totalGrams.toFixed(4)} g total` : undefined}
-        />
-
         <nav ref={portfolioTabsRef} className="pf-groww-tabs" aria-label="Portfolio sections">
           {(
             [
@@ -349,6 +328,16 @@ export function CustomerPortfolioPanel() {
                   )
                 ) : undefined
               }
+            />
+
+            <PortfolioLiveGoldPriceCard
+              spot={spotPayload}
+              tickerFallback={goldTickerFallback}
+              holdingsGrams={totals ? parseG(totals.total_gold_grams ?? '0') : totalGrams}
+              holdingsValueInr={
+                totals ? parseInrNum(totals.total_estimated_value_inr ?? '0') : marketValueInr
+              }
+              masked={privacyMasked}
             />
 
             <PortfolioVaultHoldingsList
