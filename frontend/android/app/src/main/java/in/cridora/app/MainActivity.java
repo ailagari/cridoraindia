@@ -19,6 +19,7 @@ import com.getcapacitor.BridgeActivity;
 public class MainActivity extends BridgeActivity {
     private static final String CHANNEL_ID = "cridora-alerts";
     private static final String JS_BRIDGE_NAME = "CridoraPaymentSms";
+    private static final String UPI_JS_BRIDGE_NAME = "CridoraUpiPay";
 
     private final PaymentSmsReceiver paymentSmsReceiver = new PaymentSmsReceiver();
     private boolean paymentSmsReceiverRegistered = false;
@@ -127,6 +128,7 @@ public class MainActivity extends BridgeActivity {
             return;
         }
         webView.addJavascriptInterface(new PaymentSmsJsBridge(this), JS_BRIDGE_NAME);
+        webView.addJavascriptInterface(new UpiPayJsBridge(this), UPI_JS_BRIDGE_NAME);
         jsBridgeRegistered = true;
     }
 
@@ -170,6 +172,25 @@ public class MainActivity extends BridgeActivity {
         @JavascriptInterface
         public void stop() {
             activity.runOnUiThread(PaymentSmsBridge::stopListening);
+        }
+    }
+
+    /** JS bridge: open UPI pay URI in external PSP app via native Android intent. */
+    public static final class UpiPayJsBridge {
+        private final MainActivity activity;
+
+        UpiPayJsBridge(MainActivity activity) {
+            this.activity = activity;
+        }
+
+        @JavascriptInterface
+        public boolean open(String uri) {
+            final String payUri = uri != null ? uri.trim() : "";
+            if (payUri.isEmpty()) {
+                return false;
+            }
+            activity.runOnUiThread(() -> UpiPayBridge.launchUpiPay(activity, payUri));
+            return true;
         }
     }
 }

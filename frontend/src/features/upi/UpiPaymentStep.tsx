@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import QRCode from 'qrcode'
 import { Input } from '@/components/ui'
+import { UpiMobilePayLinks } from '@/features/upi/UpiMobilePayLinks'
 import { UpiPayMethodNotice } from '@/components/UpiPayMethodNotice'
 import { UpiOnHoldNotice } from '@/features/upi/UpiOnHoldNotice'
 import {
@@ -13,7 +14,6 @@ import {
   type UpiPaymentState,
 } from '@/features/upi/upiPaymentApi'
 import { usePublicLayoutMax767 } from '@/hooks/usePublicLayoutMax767'
-import { openUpiPayUri } from '@/lib/openUpiPayUri'
 import { isValidUtr, utrValidationHint } from '@/lib/utrNormalize'
 import { LIVE_BALANCE_POLL_MS } from '@/lib/liveDeskIntervals'
 import { useLivePoll } from '@/lib/useLivePoll'
@@ -33,6 +33,16 @@ function formatInr(s: string | undefined): string {
   const n = Number.parseFloat(s)
   if (!Number.isFinite(n)) return s
   return n.toLocaleString('en-IN', { maximumFractionDigits: 2 })
+}
+
+function manualPayClipboardText(state: UpiPaymentState): string {
+  const lines = [
+    state.payee_vpa ? `UPI ID: ${state.payee_vpa}` : '',
+    state.amount_inr ? `Amount: ₹${formatInr(state.amount_inr)}` : '',
+    state.reference ? `Reference: ${state.reference}` : '',
+    state.payee_name ? `Payee: ${state.payee_name}` : '',
+  ].filter(Boolean)
+  return lines.join('\n')
 }
 
 export function UpiPaymentStep({
@@ -69,6 +79,8 @@ export function UpiPaymentStep({
 
   useLivePoll(refresh, LIVE_BALANCE_POLL_MS, !busy && state?.status === UPI_PENDING_REVIEW)
 
+  const qrSize = 180
+
   useEffect(() => {
     const uri = state?.upi_uri ?? ''
     if (!uri || narrow) {
@@ -76,7 +88,7 @@ export function UpiPaymentStep({
       return
     }
     let cancelled = false
-    void QRCode.toDataURL(uri, { margin: 1, width: 180, errorCorrectionLevel: 'M' }).then((url) => {
+    void QRCode.toDataURL(uri, { margin: 1, width: qrSize, errorCorrectionLevel: 'M' }).then((url) => {
       if (!cancelled) setQrSrc(url)
     })
     return () => {
@@ -213,15 +225,13 @@ export function UpiPaymentStep({
         <>
           {!isResubmit ? <UpiPayMethodNotice compact={narrow} /> : null}
 
-          {!isResubmit && narrow && state.upi_uri ? (
-            <button
-              type="button"
-              className="btn btn-primary btn--block"
-              disabled={busy}
-              onClick={() => openUpiPayUri(state.upi_uri!)}
-            >
-              Pay by UPI
-            </button>
+          {!isResubmit && narrow && state.upi_uri ? <UpiMobilePayLinks upiUri={state.upi_uri} /> : null}
+
+          {!isResubmit && !narrow && qrSrc ? (
+            <>
+              <p className="fractional-upi-pay__qr-caption">Scan with your UPI app to pay.</p>
+              <img src={qrSrc} alt="" width={qrSize} height={qrSize} className="fractional-upi-pay__qr" />
+            </>
           ) : null}
 
           {!isResubmit && state.payee_vpa ? (
@@ -231,14 +241,21 @@ export function UpiPaymentStep({
               <p className="fractional-upi-pay__meta">
                 {state.payee_name} · {state.reference}
               </p>
+              {narrow ? (
+                <button
+                  type="button"
+                  className="btn btn-secondary btn--block"
+                  disabled={busy}
+                  onClick={() => {
+                    void navigator.clipboard.writeText(manualPayClipboardText(state)).then(() => {
+                      onSuccess?.('Payment details copied. Pay manually in your UPI app if the button fails.')
+                    })
+                  }}
+                >
+                  Copy payment details
+                </button>
+              ) : null}
             </div>
-          ) : null}
-
-          {!isResubmit && !narrow && qrSrc ? (
-            <>
-              <p className="fractional-upi-pay__qr-caption">Scan with your UPI app to pay.</p>
-              <img src={qrSrc} alt="" width={180} height={180} className="fractional-upi-pay__qr" />
-            </>
           ) : null}
 
           <div className="fractional-upi-pay__proof-options">
