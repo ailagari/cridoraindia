@@ -2,19 +2,19 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { fetchGoldWallet, vaultRowEstimatedInr, vaultRowTotalGrams, type VaultRowDTO } from '@/lib/goldTransferApi'
 import { fetchPortfolioLedger, type PortfolioLedgerEntryDTO } from '@/lib/personalHoldingsApi'
-import { CustomerPersonalHoldingsPanel } from '@/features/portfolio/CustomerPersonalHoldingsPanel'
+import { CustomerPortfolioOverviewDash } from './CustomerPortfolioOverviewDash'
 import { fetchGoldTicker, fetchSpotPrices, type GoldTickerPayload, type SpotPricesPayload } from '@/lib/marketplaceApi'
-import { LIVE_BALANCE_POLL_MS } from '@/lib/liveDeskIntervals'
+import { useAuth } from '@/context/AuthContext'
 import { useLivePoll } from '@/lib/useLivePoll'
+import { LIVE_BALANCE_POLL_MS } from '@/lib/liveDeskIntervals'
 import {
   PortfolioBarChart,
   PortfolioCostVsMarketBoard,
   PortfolioDonut,
-  PortfolioLiveValueVsCostChart,
 } from './PortfolioCharts'
 import { PortfolioLiveGoldPriceCard } from './PortfolioLiveGoldPriceCard'
-import { PortfolioGrowwHero, PortfolioVaultHoldingsList } from './PortfolioGrowwViews'
 import { CustomerVaultsPanel } from './CustomerVaultsPanel'
+import { CustomerPersonalHoldingsPanel } from './CustomerPersonalHoldingsPanel'
 
 const DONUT_COLORS = ['#fbbf24', '#d4a85c', '#67e8f9', '#a78bfa', '#34d399', '#f472b6', '#38bdf8']
 const SESSION_VALUE_SAMPLES_CAP = 56
@@ -106,6 +106,7 @@ function parseInrNum(s: string): number {
 }
 
 export function CustomerPortfolioPanel() {
+  const { user } = useAuth()
   const [searchParams] = useSearchParams()
   const [wallet, setWallet] = useState<Awaited<ReturnType<typeof fetchGoldWallet>>>(null)
   const [spotPayload, setSpotPayload] = useState<SpotPricesPayload | null>(null)
@@ -161,7 +162,7 @@ export function CustomerPortfolioPanel() {
     const nav = portfolioTabsRef.current
     if (!nav) return
     if (typeof window.matchMedia === 'function' && window.matchMedia('(min-width: 721px)').matches) return
-    const active = nav.querySelector('.pf-groww-tab--active')
+    const active = nav.querySelector('.tab-btn.on')
     active?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' })
   }, [portfolioTab])
 
@@ -188,16 +189,10 @@ export function CustomerPortfolioPanel() {
   }, [portfolioTab, ledgerFilter])
 
   const vaults = wallet?.vaults ?? []
-  const totals = wallet?.portfolio_totals ?? null
   const ledger = wallet?.fractional_ledger ?? []
   const totalGramsStr = wallet?.balance_grams ?? '0'
   const totalGrams = parseG(totalGramsStr)
   const estInr = fmtInrSum(vaults)
-
-  const activeVaultCount = useMemo(
-    () => vaults.filter((v) => vaultRowTotalGrams(v) > 0).length,
-    [vaults],
-  )
 
   const heldGramsSum = useMemo(
     () => vaults.reduce((acc, v) => acc + Math.max(0, vaultRowTotalGrams(v)), 0),
@@ -276,7 +271,7 @@ export function CustomerPortfolioPanel() {
       {loadErr ? <p className="form-error">{loadErr}</p> : null}
 
       <div className="pf-groww-shell pf-stagger">
-        <nav ref={portfolioTabsRef} className="pf-groww-tabs" aria-label="Portfolio sections">
+        <nav ref={portfolioTabsRef} className="tabs" aria-label="Portfolio sections">
           {(
             [
               ['overview', 'Overview'],
@@ -289,7 +284,7 @@ export function CustomerPortfolioPanel() {
             <button
               key={id}
               type="button"
-              className={`pf-groww-tab${portfolioTab === id ? ' pf-groww-tab--active' : ''}`}
+              className={`tab-btn${portfolioTab === id ? ' on' : ''}`}
               onClick={() => setPortfolioTab(id)}
             >
               {label}
@@ -299,69 +294,44 @@ export function CustomerPortfolioPanel() {
 
         {portfolioTab === 'overview' ? (
           <>
-            <PortfolioGrowwHero
-              activeVaultCount={activeVaultCount}
-              totalGrams={totalGrams}
+            <CustomerPortfolioOverviewDash
+              wallet={wallet}
+              spotPayload={spotPayload}
+              totals={wallet?.portfolio_totals ?? null}
+              vaults={vaults}
+              fractionalLedger={ledger}
               marketValueInr={marketValueInr}
               allocatedCost={allocatedCost}
+              totalGrams={totalGrams}
+              heldGramsSum={heldGramsSum}
               pnlInr={pnlInr}
               pnlPct={Number.isFinite(pnlPct) ? pnlPct : null}
               masked={privacyMasked}
-              onToggleMask={() => setPrivacyMasked((m) => !m)}
-              portfolioTotalGrams={totals ? parseG(totals.total_gold_grams ?? '0') : null}
-              portfolioTotalInr={totals ? parseInrNum(totals.total_estimated_value_inr ?? '0') : null}
-              personalGrams={totals ? parseG(totals.personal_grams ?? '0') : null}
-              summaryChartSlot={
-                heldGramsSum > 0 ? (
-                  sessionValueSamples.length === 0 ? (
-                    <p className="pf-groww-hero__chart-wait">Sampling live valuation…</p>
-                  ) : (
-                    <PortfolioLiveValueVsCostChart
-                      samples={sessionValueSamples}
-                      investedInr={allocatedCost}
-                      formatInrAxis={(n) =>
-                        privacyMasked
-                          ? '••••'
-                          : `₹${n.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`
-                      }
-                    />
-                  )
-                ) : undefined
-              }
+              sessionSamples={sessionValueSamples}
+              kycVerified={user?.kyc_status === 'verified'}
+              onViewLedger={() => setPortfolioTab('transactions')}
+              onTogglePrivacy={() => setPrivacyMasked((m) => !m)}
             />
 
             <PortfolioLiveGoldPriceCard
               spot={spotPayload}
               tickerFallback={goldTickerFallback}
-              holdingsGrams={totals ? parseG(totals.total_gold_grams ?? '0') : totalGrams}
+              holdingsGrams={wallet?.portfolio_totals ? parseG(wallet.portfolio_totals.total_gold_grams ?? '0') : totalGrams}
               holdingsValueInr={
-                totals ? parseInrNum(totals.total_estimated_value_inr ?? '0') : marketValueInr
+                wallet?.portfolio_totals
+                  ? parseInrNum(wallet.portfolio_totals.total_estimated_value_inr ?? '0')
+                  : marketValueInr
               }
               masked={privacyMasked}
             />
 
-            <PortfolioVaultHoldingsList
-              vaults={vaults}
-              allocatedCost={allocatedCost}
-              totalHeldGrams={heldGramsSum}
-              masked={privacyMasked}
-            />
-
-            {unrealized?.basis_note || wallet?.cridora_member_id || totals ? (
-              <details className="dash-disclosure">
-                <summary>Portfolio notes</summary>
+            {unrealized?.basis_note ? (
+              <details className="dash-disclosure" style={{ marginTop: '1.25rem' }}>
+                <summary>Portfolio methodology</summary>
                 <div className="dash-disclosure__body">
-                  {totals ? (
-                    <p className="pf-groww-footnote" style={{ marginTop: 0 }}>
-                      Total metal includes Cridora vaults and personal tracked items.
-                    </p>
-                  ) : null}
-                  {unrealized?.basis_note ? <p className="pf-groww-footnote">{unrealized.basis_note}</p> : null}
-                  {wallet?.cridora_member_id ? (
-                    <p className="pf-groww-footnote">
-                      Member ID <strong className="tabular">{wallet.cridora_member_id}</strong>
-                    </p>
-                  ) : null}
+                  <p className="pf-groww-footnote" style={{ marginTop: 0 }}>
+                    {unrealized.basis_note}
+                  </p>
                 </div>
               </details>
             ) : null}

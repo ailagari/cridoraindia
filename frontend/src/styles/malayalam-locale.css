@@ -21,7 +21,8 @@ html[lang='ml'] .pub-ref .nav,
 html[lang='ml'] .public-bottom-nav,
 html[lang='ml'] .public-hub-tabs,
 html[lang='ml'] .public-mobile-segment-bar,
-html[lang='ml'] .pub-footer {
+html[lang='ml'] .pub-footer,
+html[lang='ml'] .ref-index-footer {
   letter-spacing: inherit;
   line-height: inherit;
 }
@@ -122,7 +123,7 @@ html[lang='ml'] .section-band {
   padding: var(--ml-section-pad-y) 0;
 }
 
-html[lang='ml'] .home-hero {
+html[lang='ml'] .ref-landing .hero {
   padding: 3.85rem 0 2.75rem;
 }
 
@@ -222,29 +223,21 @@ html[lang='ml'] .public-main section + section {
   margin-top: 0.35rem;
 }
 
-/* Home hero (inline styles in HomePage) */
-html[lang='ml'] .home-hero h1 {
+/* Home hero — reference landing */
+html[lang='ml'] .ref-landing .hero .hero-h1 {
   font-size: clamp(1.62rem, 3.8vw, 2.5rem) !important;
   line-height: var(--ml-heading-lh) !important;
   letter-spacing: 0 !important;
 }
 
-html[lang='ml'] .home-hero p {
+html[lang='ml'] .ref-landing .hero .hero-sub {
   font-size: 0.98rem !important;
   line-height: 1.75 !important;
   max-width: min(50ch, 100%) !important;
 }
 
-html[lang='ml'] .home-hero ul {
+html[lang='ml'] .ref-landing .hero .hero-pills {
   gap: 0.75rem !important;
-}
-
-html[lang='ml'] .home-hero li {
-  line-height: 1.68 !important;
-}
-
-html[lang='ml'] .home-hero li span {
-  font-size: 0.9rem !important;
 }
 
 html[lang='ml'] .cridora-quote {
@@ -263,7 +256,8 @@ html[lang='ml'] .form-footnote {
   line-height: 1.65;
 }
 
-html[lang='ml'] .pub-footer p {
+html[lang='ml'] .pub-ref .pub-footer > .inner > p,
+html[lang='ml'] .pub-ref footer.ref-index-footer .footer-brand > p {
   line-height: 1.72;
   max-width: 42rem;
 }
@@ -280,11 +274,11 @@ html[lang='ml'] .pub-footer p {
     line-height: 1.72;
   }
 
-  html[lang='ml'] .home-hero {
+  html[lang='ml'] .ref-landing .hero {
     padding: 3rem 0 2.25rem;
   }
 
-  html[lang='ml'] .home-hero h1 {
+  html[lang='ml'] .ref-landing .hero .hero-h1 {
     font-size: clamp(1.42rem, 5.2vw, 2.05rem) !important;
   }
 

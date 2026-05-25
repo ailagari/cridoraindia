@@ -32,11 +32,12 @@ import { isNativePlatform } from '@/lib/capacitorPlatform'
 import '@/styles/index.css'
 import '@/styles/reference-tokens.css'
 import '@/styles/reference-legacy-bridge.css'
+import '@/styles/reference-ui.css'
 import '@/styles/jeweller-unified-desk.css'
 import '@/styles/tokens.css'
 import '@/styles/ds.css'
-import '@/styles/reference-ui.css'
-import '@/styles/malayalam-locale.css'
+import '@/styles/reference-dashboard-panels.css'
+import '@/styles/reference-index-landing.css'
 
 const useHashRouter =
   import.meta.env.VITE_CAPACITOR_BUILD === 'true' || isNativePlatform()

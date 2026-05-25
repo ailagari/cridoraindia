@@ -707,7 +707,12 @@ html[data-theme='light'] .pub-ref .tt-k {
   text-align: left;
   font-family: inherit;
 }
-.ref-dash-shell .sb-foot-btn:hover {
+.ref-dash-shell a.sb-foot-btn {
+  text-decoration: none;
+  color: inherit;
+}
+.ref-dash-shell .sb-foot-btn:hover,
+.ref-dash-shell a.sb-foot-btn:hover {
   color: rgba(255, 255, 255, 0.6);
   background: rgba(255, 255, 255, 0.04);
 }

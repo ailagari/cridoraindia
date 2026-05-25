@@ -1,6 +1,5 @@
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { CridoraLogo } from '@/components/CridoraLogo'
 import { DashboardMobileSubNav } from '@/components/DashboardMobileSubNav'
 import { NavHubIcon } from '@/components/NavHubIcon'
 import { GoldTickerStrip } from '@/components/GoldTickerStrip'
@@ -18,6 +17,18 @@ const ROLE_META: Record<'customer' | 'jeweller' | 'admin', { badge: string }> = 
   customer: { badge: 'Saver' },
   jeweller: { badge: 'Jeweller' },
   admin: { badge: 'Cridora admin' },
+}
+
+const ROLE_SUB: Record<'customer' | 'jeweller' | 'admin', string> = {
+  customer: 'Customer Portal',
+  jeweller: 'Jeweller Desk',
+  admin: 'Operations',
+}
+
+const DEFAULT_DASHBOARD_HREF: Record<'customer' | 'jeweller' | 'admin', string> = {
+  customer: '/userdashboard',
+  jeweller: '/dashboard/jeweller',
+  admin: '/dashboard/admin',
 }
 
 function jewellerSidebarDisplayName(user: AuthUser): string {
@@ -197,6 +208,11 @@ export function DashboardLayout({
 
   const avatarUser = user
 
+  const crumbPieces = title.split(' · ')
+  const crumbLead = crumbPieces[0] ?? title
+  const crumbRest = crumbPieces.length >= 2 ? crumbPieces.slice(1).join(' · ') : null
+  const dashHomeHref = DEFAULT_DASHBOARD_HREF[role]
+
   return (
     <div className="ref-dash-shell shell">
       {mobileOpen ? (
@@ -210,8 +226,32 @@ export function DashboardLayout({
 
       <aside className={`sidebar${mobileOpen ? ' is-open' : ''}`}>
         <div className="sb-logo">
-          <Link to="/" onClick={() => setMobileOpen(false)} style={{ textDecoration: 'none', color: 'inherit' }}>
-            <CridoraLogo size="sm" />
+          <Link
+            to="/"
+            className="sb-logo-dash-link"
+            onClick={() => setMobileOpen(false)}
+          >
+            <div className="sb-mark" aria-hidden>
+              <svg viewBox="0 0 20 20" fill="none" width={16} height={16}>
+                <circle cx="10" cy="10" r="7.5" stroke="rgba(255,255,255,.5)" strokeWidth="1.2" />
+                <path
+                  d="M7.5 10.5C7.5 8.84 8.84 7.5 10.5 7.5"
+                  stroke="#fff"
+                  strokeWidth="1.7"
+                  strokeLinecap="round"
+                />
+                <path
+                  d="M12.5 9.5C12.5 11.16 11.16 12.5 9.5 12.5"
+                  stroke="rgba(255,255,255,.65)"
+                  strokeWidth="1.7"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </div>
+            <div className="sb-brand">
+              <div className="sb-name">Cridora India</div>
+              <div className="sb-sub">{ROLE_SUB[role]}</div>
+            </div>
           </Link>
           {mobileOpen ? (
             <button type="button" className="btn btn-ghost dash-close" onClick={() => setMobileOpen(false)}>
@@ -246,8 +286,17 @@ export function DashboardLayout({
 
         <div className="sb-foot">
           <button type="button" className="sb-foot-btn" onClick={handleLogout}>
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden width={13} height={13}>
+              <path d="M13 3h4v14h-4M8 13l4-3-4-3M2 10h10" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
             Sign out
           </button>
+          <Link className="sb-foot-btn" to="/">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden width={13} height={13}>
+              <path d="M10 3H3v14h14v-7M14 2h4v4M10 10l8-8" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            Public site
+          </Link>
         </div>
       </aside>
 
@@ -263,9 +312,35 @@ export function DashboardLayout({
               <path d="M3 6h18M3 12h18M3 18h18" strokeLinecap="round" />
             </svg>
           </button>
+          <Link className="tb-logo-m" to={dashHomeHref} title="Dashboard home">
+            <div className="sb-mark" style={{ width: 28, height: 28, borderRadius: 7 }}>
+              <svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden>
+                <circle cx="10" cy="10" r="7.5" stroke="rgba(255,255,255,.5)" strokeWidth="1.2" />
+                <path d="M7.5 10.5C7.5 8.84 8.84 7.5 10.5 7.5" stroke="#fff" strokeWidth="1.7" strokeLinecap="round" />
+                <path
+                  d="M12.5 9.5C12.5 11.16 11.16 12.5 9.5 12.5"
+                  stroke="rgba(255,255,255,.65)"
+                  strokeWidth="1.7"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </div>
+            <span className="tb-logo-name">Cridora</span>
+          </Link>
+
           <div className="tb-crumb" aria-hidden={false}>
-            <span className="cur">{title}</span>
+            {crumbRest ? (
+              <>
+                <span>{crumbLead}</span>
+                <span className="sep">›</span>
+                <span className="cur">{crumbRest}</span>
+              </>
+            ) : (
+              <span className="cur">{title}</span>
+            )}
           </div>
+
+          {role === 'customer' ? <GoldTickerStrip variant="customer" /> : null}
           <span className="dash-mobile-username" title={user?.first_name?.trim() || undefined}>
             {user?.first_name?.trim() || 'Account'}
           </span>

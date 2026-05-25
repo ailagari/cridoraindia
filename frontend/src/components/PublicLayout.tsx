@@ -7,7 +7,6 @@ import { GoldTickerStrip } from '@/components/GoldTickerStrip'
 import { PublicMobileSegmentBar } from '@/components/PublicMobileSegmentBar'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { useAuth, type AuthUser } from '@/context/AuthContext'
-import { crossRedemptionMasterDisclaimer } from '@/features/crossRedemption/legalCopy'
 import { LanguageSwitcher, PublicLocaleProvider, usePublicLocale } from '@/i18n/PublicLocaleProvider'
 import { dashboardLandingPath } from '@/lib/routes'
 
@@ -189,23 +188,113 @@ function PublicLayoutInner() {
       <main className="public-main">
         <Outlet />
       </main>
-      <footer className="pub-footer">
-        <div className="inner">
-          <p style={{ margin: '0 0 1rem', color: 'var(--ink2)', maxWidth: '56ch', lineHeight: 1.55 }}>
-            {t('footer.blurb')}
-          </p>
-          <p style={{ margin: '0 0 1rem', color: 'var(--ink3)', maxWidth: '72ch', fontSize: '0.78rem' }}>
-            {crossRedemptionMasterDisclaimer}
-          </p>
-          <div className="nav-links" style={{ gap: '0.75rem 1.25rem', flexWrap: 'wrap' }}>
-            <Link to="/why-cridora">{t('footer.whyCridora')}</Link>
-            <Link to="/features">{t('footer.features')}</Link>
-            <Link to="/how-it-works">{t('nav.howItWorks')}</Link>
-            <Link to="/investors">{t('footer.investors')}</Link>
-            <Link to="/jewellers">{t('nav.jewellers')}</Link>
-            <Link to="/marketplace">{t('nav.products')}</Link>
-            <Link to="/waitlist">{t('nav.waitlist')}</Link>
+      <footer className="pub-footer ref-index-footer">
+        <div className="footer-grid">
+          <div className="footer-brand">
+            <Link to="/" className="nav-logo" onClick={() => setDrawerOpen(false)}>
+              <div className="nav-mark-mini" aria-hidden>
+                <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
+                  <circle cx="10" cy="10" r="7.5" stroke="rgba(255,255,255,.55)" strokeWidth="1.2" />
+                  <path d="M7.5 10.5C7.5 8.84 8.84 7.5 10.5 7.5" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" />
+                  <path
+                    d="M12.5 9.5C12.5 11.16 11.16 12.5 9.5 12.5"
+                    stroke="rgba(255,255,255,.65)"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </div>
+              <div className="nav-brand">
+                Cridora <span>India</span>
+              </div>
+            </Link>
+            <p>
+              India&apos;s gold savings infrastructure. Linking verified jewellers to digital gold records, live rates,
+              and real redemption tools.
+            </p>
+            <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+              <span className="badge badge-gold">KYC Secured</span>
+              <span className="badge badge-ok">BIS 916</span>
+            </div>
           </div>
+
+          <div className="footer-col">
+            <h4>Platform</h4>
+            <Link className="footer-link" to={{ pathname: '/', hash: 'home' }}>
+              Home
+            </Link>
+            <Link className="footer-link" to={{ pathname: '/', hash: 'discover' }}>
+              Discover
+            </Link>
+            <Link className="footer-link" to={{ pathname: '/', hash: 'how' }}>
+              How it works
+            </Link>
+            <Link className="footer-link" to={{ pathname: '/', hash: 'invest' }}>
+              Invest
+            </Link>
+            <Link className="footer-link" to={{ pathname: '/', hash: 'trust' }}>
+              Trust &amp; safety
+            </Link>
+          </div>
+
+          <div className="footer-col">
+            <h4>For customers</h4>
+            <Link className="footer-link" to="/login">
+              Log in
+            </Link>
+            <Link className="footer-link" to={{ pathname: '/', hash: 'join' }}>
+              Sign up
+            </Link>
+            <Link className="footer-link" to={{ pathname: '/', hash: 'jewellers' }}>
+              Find jewellers
+            </Link>
+            <Link className="footer-link" to="/marketplace">
+              Marketplace
+            </Link>
+            <Link className="footer-link" to="/waitlist">
+              Waitlist
+            </Link>
+          </div>
+
+          <div className="footer-col">
+            <h4>Company</h4>
+            <Link className="footer-link" to="/jeweller/apply">
+              For jewellers
+            </Link>
+            <Link className="footer-link" to="/investors">
+              Investor relations
+            </Link>
+            <Link className="footer-link" to="/features">
+              Features
+            </Link>
+            <Link className="footer-link" to="/why-cridora">
+              Why Cridora
+            </Link>
+            <Link className="footer-link" to="/waitlist">
+              Contact
+            </Link>
+          </div>
+        </div>
+
+        <div className="footer-bottom">
+          <span>© 2026 Cridora India. All rights reserved.</span>
+          <div className="fb-links">
+            <a className="fb-link" href="#">
+              Privacy policy
+            </a>
+            <a className="fb-link" href="#">
+              Terms of use
+            </a>
+            <a className="fb-link" href="#">
+              Disclaimer
+            </a>
+            <a className="fb-link" href="#">
+              Grievance
+            </a>
+          </div>
+          <span style={{ color: 'var(--ink3)', fontSize: '0.68rem' }}>
+            Gold rates are indicative. Not SEBI regulated investment advice.
+          </span>
         </div>
       </footer>
     </div>

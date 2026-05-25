@@ -16,8 +16,8 @@ function formatInr(n: number, fractionDigits = 0): string {
 }
 
 type Props = {
-  /** Public site banner; jeweller dash compact row (live market only); admin dash includes international reference. */
-  variant?: 'public' | 'jeweller' | 'admin'
+  /** Public site banner; jeweller/admin/customer dashboards; admin includes international reference. */
+  variant?: 'public' | 'jeweller' | 'admin' | 'customer'
 }
 
 function numFromGold(block: Record<string, number> | undefined, key: string): number | null {
@@ -123,6 +123,21 @@ export function GoldTickerStrip({ variant = 'public' }: Props) {
     spot?.live_raw_spot?.source != null && spot.live_raw_spot.source !== ''
       ? spot.live_raw_spot.source.replace(/_/g, ' ')
       : 'international'
+
+  if (variant === 'customer') {
+    return (
+      <div className="tb-ticker-dash" role="status" aria-live="polite">
+        <span className="tick-dot" aria-hidden />
+        <span className="tb-ticker-lbl">22K&nbsp;</span>
+        <span className="tn">{market22 != null ? `₹${formatInr(market22, 2)}/g` : '—'}</span>
+        <span aria-hidden style={{ opacity: 0.3, margin: '0 5px' }}>
+          ·
+        </span>
+        <span className="tb-ticker-lbl">24K&nbsp;</span>
+        <span className="tn">{market24 != null ? `₹${formatInr(market24, 2)}/g` : '—'}</span>
+      </div>
+    )
+  }
 
   if (variant === 'admin') {
     return (
