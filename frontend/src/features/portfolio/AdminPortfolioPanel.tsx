@@ -35,7 +35,7 @@ export function AdminPortfolioPanel({
     const normalize = (w: number) => w / sum
     return [
       { pct: normalize(wActive), color: '#34d399', label: 'Cleared cohort' },
-      { pct: normalize(wQueue), color: '#fbbf24', label: 'Docs in review' },
+      { pct: normalize(wQueue), color: '#eabd5a', label: 'Docs in review' },
       { pct: normalize(wId), color: '#38bdf8', label: 'Identity backlog' },
       { pct: normalize(wOther), color: '#a78bfa', label: 'Residual' },
     ]
@@ -49,7 +49,7 @@ export function AdminPortfolioPanel({
       return [{ pct: 1, color: '#475569', label: 'No fractional balances recorded' }]
     }
     return [
-      { pct: cust / sum, color: '#fbbf24', label: 'Customer vault fractional' },
+      { pct: cust / sum, color: '#eabd5a', label: 'Customer vault fractional' },
       { pct: liab / sum, color: '#f472b6', label: 'Jeweller custodial liability' },
     ]
   }, [stats.customer_fractional_grams_total, stats.jeweller_custodial_liability_grams_total])
@@ -179,7 +179,7 @@ export function AdminPortfolioPanel({
             <PortfolioBarChart
               values={barValues}
               labels={['Cust', 'Jew', 'KYC', 'KYB']}
-              colors={['#34d399', '#d4a85c', '#fbbf24', '#a78bfa']}
+              colors={['#34d399', '#d4a85c', '#eabd5a', '#a78bfa']}
               ariaLabel="Bar chart comparing customer count, jeweller count, and review queue sizes"
             />
           </div>

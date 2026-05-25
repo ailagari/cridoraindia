@@ -2,16 +2,36 @@
    Loaded after index.css :root — theme blocks override via html[data-theme]. */
 
 :root {
-  --gold: #c9a840;
-  --gold-hi: #e2c870;
-  --gold-lo: #8a6e20;
-  --gold-bg: rgba(201, 168, 64, 0.08);
-  --gold-bd: rgba(201, 168, 64, 0.2);
-  --gold-border: rgba(201, 168, 64, 0.18);
+  /* Rich luminous bullion: less “lemon amber”, more molten antique gold glow */
+  --gold: #d1a838;
+  --gold-hi: #f5eac0;
+  --gold-lo: #7e5e18;
+  --gold-bg: rgba(209, 168, 56, 0.1);
+  --gold-bd: rgba(237, 210, 150, 0.26);
+  --gold-border: rgba(230, 205, 140, 0.22);
+
+  /* Legacy aliases + halos — keep in sync when tuning gold ramp */
+  --gold-light: var(--gold-hi);
+  --gold-deep: #4c340c;
+  --gold-soft: rgba(209, 168, 56, 0.2);
+  --gold-shine-10: rgba(237, 210, 150, 0.12);
+  --gold-shine-12: rgba(237, 210, 150, 0.16);
+  --gold-line-20: rgba(230, 205, 140, 0.26);
+  --gold-line-35: rgba(230, 205, 140, 0.42);
+  --gold-glow-25: rgba(245, 222, 150, 0.32);
+  --gold-text-glow:
+    0 1px 0 rgba(0, 8, 20, 0.45),
+    0 0 18px rgba(237, 210, 155, 0.42),
+    0 0 42px rgba(209, 168, 56, 0.24),
+    0 0 68px rgba(209, 168, 56, 0.1);
+  --gold-text-glow-soft:
+    0 1px 0 rgba(0, 8, 20, 0.38),
+    0 0 14px rgba(237, 210, 155, 0.32),
+    0 0 36px rgba(209, 168, 56, 0.14);
 
   --ok: #23c55e;
   --err: #f04747;
-  --warn: #f59e0b;
+  --warn: #e0aa3d;
   --info: #3b9eff;
 
   --ease: cubic-bezier(0.4, 0, 0.2, 1);
@@ -56,7 +76,7 @@
   /* Dashboard overlap names */
   --sidebar: #060810;
   --nav-text: #64748b;
-  --nav-act: rgba(201, 168, 64, 0.1);
+  --nav-act: rgba(209, 168, 56, 0.12);
   --glass-bg: rgba(11, 15, 26, 0.82);
   --overlay: rgba(0, 0, 0, 0.72);
   --inp: rgba(255, 255, 255, 0.04);
@@ -85,7 +105,7 @@
 
   --sidebar: #111827;
   --nav-text: #8fa0b4;
-  --nav-act: rgba(201, 168, 64, 0.12);
+  --nav-act: rgba(209, 168, 56, 0.14);
   --glass-bg: rgba(255, 255, 255, 0.9);
   --overlay: rgba(0, 0, 0, 0.45);
   --inp: rgba(0, 0, 0, 0.04);

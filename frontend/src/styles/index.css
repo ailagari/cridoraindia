@@ -9,11 +9,11 @@
   --text-muted: #a5b4fc;
   --text-faint: rgba(165, 180, 252, 0.55);
   --text-silk: #a5b4fc;
-  /* Warm bullion gold (less yellow, more copper / antique metal) */
-  --gold: #a67a28;
-  --gold-light: #d4a85c;
-  --gold-deep: #6e3f12;
-  --gold-soft: rgba(166, 122, 40, 0.2);
+  /* Warm bullion (aligns with reference-tokens.css); luminous on dark UI */
+  --gold: #d1a838;
+  --gold-light: #f5eac0;
+  --gold-deep: #4c340c;
+  --gold-soft: rgba(209, 168, 56, 0.2);
   --accent: var(--gold-light);
   --accent-dim: rgba(165, 180, 252, 0.12);
   --danger: #d9534f;
@@ -39,17 +39,17 @@
   --navy-40: rgba(0, 21, 41, 0.4);
   --navy-45: rgba(0, 21, 41, 0.45);
   --navy-55: rgba(0, 21, 41, 0.55);
-  --gold-shine-10: rgba(166, 122, 40, 0.1);
-  --gold-shine-12: rgba(166, 122, 40, 0.12);
-  --gold-line-20: rgba(166, 122, 40, 0.2);
-  --gold-line-35: rgba(166, 122, 40, 0.35);
-  --gold-glow-25: rgba(166, 122, 40, 0.25);
+  --gold-shine-10: rgba(237, 210, 150, 0.12);
+  --gold-shine-12: rgba(237, 210, 150, 0.16);
+  --gold-line-20: rgba(230, 205, 140, 0.26);
+  --gold-line-35: rgba(230, 205, 140, 0.42);
+  --gold-glow-25: rgba(245, 222, 150, 0.32);
   --danger-ring: rgba(217, 83, 79, 0.25);
   --success-ring: rgba(31, 169, 113, 0.28);
   --silk-06: rgba(165, 180, 252, 0.06);
   --silk-10: rgba(165, 180, 252, 0.1);
   --silk-12: rgba(165, 180, 252, 0.12);
-  --radial-gold: radial-gradient(circle, rgba(212, 168, 92, 0.12) 0%, transparent 70%);
+  --radial-gold: radial-gradient(circle, rgba(237, 210, 150, 0.14) 0%, transparent 70%);
   --gradient-media: linear-gradient(145deg, rgba(0, 43, 92, 0.85) 0%, rgba(0, 8, 20, 0.95) 100%);
   --gradient-hero-band: linear-gradient(165deg, rgba(0, 21, 41, 0.95) 0%, rgba(0, 8, 20, 1) 100%);
   --gradient-market-hero: linear-gradient(180deg, var(--gold-shine-12) 0%, rgba(0, 8, 20, 1) 100%);
@@ -63,18 +63,18 @@
   /* Themeable page & surfaces (dark defaults) */
   --body-bg-color: #000814;
   --body-bg-image:
-    radial-gradient(ellipse 120% 80% at 10% -20%, rgba(166, 122, 40, 0.09) 0%, transparent 48%),
+    radial-gradient(ellipse 120% 80% at 10% -20%, rgba(209, 168, 56, 0.11) 0%, transparent 48%),
     radial-gradient(ellipse 90% 60% at 95% 15%, rgba(165, 180, 252, 0.1) 0%, transparent 45%),
     linear-gradient(165deg, #000814 0%, #060a14 22%, #030816 48%, #0a0e22 72%, #000814 100%);
   --logo-glow-shadow:
-    0 8px 28px rgba(0, 8, 20, 0.5), 0 0 0 1px rgba(200, 162, 77, 0.12);
+    0 8px 28px rgba(0, 8, 20, 0.5), 0 0 0 1px rgba(237, 210, 150, 0.16);
   --veil-25: rgba(0, 8, 20, 0.25);
   --shadow-soft: 0 8px 28px rgba(0, 8, 20, 0.35);
   --shadow-premium-hover: 0 12px 40px rgba(0, 8, 20, 0.35);
   --shadow-btn-deep: 0 4px 14px rgba(0, 8, 20, 0.45);
   --shadow-btn-deep-hover: 0 4px 20px rgba(0, 8, 20, 0.5);
   --shadow-cridora-card-hover:
-    0 32px 64px rgba(0, 8, 20, 0.58), 0 0 0 1px rgba(212, 168, 92, 0.28), 0 0 80px rgba(166, 122, 40, 0.12),
+    0 32px 64px rgba(0, 8, 20, 0.58), 0 0 0 1px rgba(230, 205, 140, 0.3), 0 0 80px rgba(209, 168, 56, 0.16),
     inset 0 1px 0 rgba(255, 255, 255, 0.04);
   --surface-stat-gradient: linear-gradient(145deg, rgba(0, 21, 41, 0.65) 0%, rgba(0, 8, 20, 0.5) 100%);
   --surface-spot-gradient: linear-gradient(145deg, rgba(0, 37, 78, 0.55), rgba(0, 8, 20, 0.72));
@@ -82,7 +82,7 @@
     135deg,
     rgba(99, 102, 241, 0.12) 0%,
     rgba(0, 21, 41, 0.45) 50%,
-    rgba(212, 168, 92, 0.08) 100%
+    rgba(209, 168, 56, 0.1) 100%
   );
   --image-fade-overlay: linear-gradient(to top, rgba(0, 8, 20, 0.55), transparent);
   --dash-avatar-bg: rgba(0, 8, 20, 0.5);
@@ -96,7 +96,7 @@
   --pwa-bar-bg: rgba(0, 8, 20, 0.94);
   --pwa-bar-shadow: 0 -12px 40px rgba(0, 0, 0, 0.45);
   --dash-shell-bg:
-    radial-gradient(ellipse 80% 50% at 10% -10%, rgba(212, 168, 92, 0.12), transparent 50%),
+    radial-gradient(ellipse 80% 50% at 10% -10%, rgba(237, 210, 150, 0.14), transparent 50%),
     radial-gradient(ellipse 60% 40% at 95% 5%, rgba(147, 197, 253, 0.1), transparent 45%),
     var(--bg-deep);
   --card-surface: linear-gradient(155deg, var(--navy-55) 0%, rgba(0, 21, 41, 0.62) 100%);
@@ -2109,9 +2109,9 @@ select.input {
   font-weight: 800;
   line-height: 1.2;
   text-align: center;
-  background: rgba(251, 191, 36, 0.22);
-  color: #fcd34d;
-  border: 1px solid rgba(251, 191, 36, 0.35);
+  background: rgba(209, 168, 56, 0.2);
+  color: var(--gold-hi);
+  border: 1px solid rgba(230, 205, 140, 0.35);
 }
 
 .dash-side-foot {
@@ -4123,7 +4123,7 @@ select.input {
 }
 
 .admin-dash-stat--amber::before {
-  background: linear-gradient(180deg, #fbbf24, rgba(251, 191, 36, 0.35));
+  background: linear-gradient(180deg, var(--gold-hi), rgba(209, 168, 56, 0.35));
 }
 
 .admin-dash-stat--iris::before {
@@ -5150,7 +5150,7 @@ select.input {
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
-  color: #fde68a;
+  color: var(--gold-hi);
   line-height: 1.1;
 }
 
@@ -5226,7 +5226,7 @@ select.input {
 }
 
 .pf-mkt-board__bar-fill--mkt {
-  background: linear-gradient(90deg, #d97706, #fcd34d);
+  background: linear-gradient(90deg, var(--gold-deep), var(--gold-hi));
 }
 
 .pf-mkt-board__bar-num {
@@ -5304,8 +5304,8 @@ select.input {
 .pf-mkt-board__lg-i--mv {
   background: repeating-linear-gradient(
     90deg,
-    #fcd34d 0px,
-    #fcd34d 4px,
+    var(--gold-hi) 0px,
+    var(--gold-hi) 4px,
     transparent 4px,
     transparent 7px
   );
@@ -5474,6 +5474,7 @@ select.input {
   line-height: 1.05;
   letter-spacing: -0.02em;
   color: var(--gold-light);
+  text-shadow: var(--gold-text-glow-soft);
 }
 
 .pf-live-gold__price-meta {
@@ -5511,7 +5512,7 @@ select.input {
   margin: 0.15rem 0 0.85rem;
   border-radius: 10px;
   overflow: visible;
-  background: linear-gradient(180deg, rgba(201, 168, 64, 0.035) 0%, transparent 55%);
+  background: linear-gradient(180deg, rgba(237, 210, 150, 0.055) 0%, transparent 55%);
 }
 
 .pf-live-gold__chart .pf-chart-svg {
@@ -5523,7 +5524,7 @@ select.input {
 .pf-live-gold__chart-empty {
   width: 100%;
   height: 100%;
-  background: linear-gradient(180deg, rgba(212, 168, 92, 0.08) 0%, transparent 70%);
+  background: linear-gradient(180deg, rgba(237, 210, 150, 0.085) 0%, transparent 70%);
   border-radius: 10px;
 }
 
@@ -5907,22 +5908,14 @@ select.input {
   font-size: clamp(1.55rem, 4vw, 1.95rem);
   font-weight: 800;
   letter-spacing: -0.03em;
-  color: #fff6c8;
-  text-shadow:
-    0 0 10px rgba(253, 224, 71, 0.95),
-    0 0 22px rgba(245, 158, 11, 0.75),
-    0 0 40px rgba(217, 119, 6, 0.45),
-    0 0 56px rgba(180, 83, 9, 0.28);
+  color: color-mix(in srgb, var(--gold-hi) 94%, #ffffff);
+  text-shadow: var(--gold-text-glow);
 }
 
 /* Vault hero: grams use the same golden glow as headline metal emphasis */
 .pf-groww-hero__big--grams {
-  color: #fff6c8;
-  text-shadow:
-    0 0 10px rgba(253, 224, 71, 0.95),
-    0 0 22px rgba(245, 158, 11, 0.75),
-    0 0 40px rgba(217, 119, 6, 0.45),
-    0 0 56px rgba(180, 83, 9, 0.28);
+  color: color-mix(in srgb, var(--gold-hi) 94%, #ffffff);
+  text-shadow: var(--gold-text-glow);
 }
 
 .pf-groww-hero__secondary-inr {
@@ -6501,7 +6494,7 @@ select.input {
 .pf-ledger-pill--fee {
   background: rgba(251, 191, 36, 0.12);
   border: 1px solid rgba(251, 191, 36, 0.38);
-  color: #fde68a;
+  color: var(--gold-hi);
 }
 
 .pf-ledger-pill--credit {
@@ -6608,7 +6601,7 @@ select.input {
   font-weight: 800;
   letter-spacing: 0.02em;
   background: rgba(251, 191, 36, 0.2);
-  color: #fcd34d;
+  color: var(--gold-hi);
   border: 1px solid rgba(251, 191, 36, 0.35);
 }
 
@@ -7097,7 +7090,7 @@ select.input {
   color: #60a5fa;
 }
 .notif-kind--promo {
-  color: #fbbf24;
+  color: var(--gold);
 }
 .notif-kind--alert {
   color: #f472b6;
@@ -8078,10 +8071,10 @@ select.input {
   border: none;
   cursor: pointer;
   color: #0c1222;
-  background: linear-gradient(155deg, #fef3c7 0%, #fbbf24 42%, #d97706 125%);
+  background: linear-gradient(155deg, #fcf6e8 0%, var(--gold-hi) 38%, var(--gold) 72%, var(--gold-lo) 125%);
   box-shadow:
     0 1px 0 rgba(255, 255, 255, 0.4) inset,
-    0 6px 20px rgba(180, 83, 9, 0.28);
+    0 6px 22px rgba(209, 168, 56, 0.32);
   transition:
     transform 0.16s ease,
     box-shadow 0.16s ease,
@@ -8092,7 +8085,7 @@ select.input {
   filter: brightness(1.04);
   box-shadow:
     0 1px 0 rgba(255, 255, 255, 0.45) inset,
-    0 10px 28px rgba(180, 83, 9, 0.34);
+    0 10px 28px rgba(126, 72, 28, 0.32);
 }
 .pf-scope .pf-vault-hero__cta:active {
   transform: translateY(0);
@@ -8281,7 +8274,7 @@ select.input {
 .pf-scope .pf-vault-form__chip--active {
   border-color: rgba(251, 191, 36, 0.65);
   background: rgba(251, 191, 36, 0.14);
-  color: #fde68a;
+  color: var(--gold-hi);
   box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.12);
 }
 .pf-scope .pf-vault-form__chip:focus-visible {
@@ -8376,7 +8369,7 @@ select.input {
   border-radius: 10px;
   border: 1px solid rgba(251, 191, 36, 0.35);
   background: rgba(251, 191, 36, 0.08);
-  color: #fde68a;
+  color: var(--gold-hi);
   font-size: 0.82rem;
   font-weight: 650;
 }
@@ -8488,7 +8481,7 @@ select.input {
 
 .pf-scope .pf-vault-acc__est {
   font-weight: 750;
-  color: var(--gold-light, #fbbf24);
+  color: var(--gold-light);
 }
 
 .pf-scope .pf-vault-acc__est-hint {
@@ -8516,7 +8509,7 @@ select.input {
 .pf-scope .pf-vault-acc__src {
   font-size: 0.76rem;
   font-weight: 650;
-  color: var(--gold-light, #fbbf24);
+  color: var(--gold-light);
   line-height: 1.35;
 }
 
@@ -8609,7 +8602,7 @@ select.input {
   margin: 0.35rem 0 0;
   font-size: 0.8rem;
   font-weight: 650;
-  color: var(--gold-light, #fbbf24);
+  color: var(--gold-light);
 }
 .pf-scope .pf-vault-card__side {
   text-align: right;
@@ -8618,7 +8611,7 @@ select.input {
   margin: 0.25rem 0 0;
   font-size: 1.2rem;
   font-weight: 800;
-  color: var(--gold-light, #fbbf24);
+  color: var(--gold-light);
 }
 .pf-scope .pf-vault-card__hint {
   margin: 0.15rem 0 0;
@@ -8677,7 +8670,7 @@ select.input {
   margin: 0.35rem 0 0;
   font-size: 0.8rem;
   font-weight: 650;
-  color: #fde68a;
+  color: var(--gold-hi);
 }
 .pf-scope .pf-vault-docs .pf-vault-disclaimer {
   margin: 0 0 0.65rem;
@@ -8790,7 +8783,7 @@ select.input {
 }
 .pf-scope .pf-vault-badge--jeweller_added {
   background: rgba(251, 191, 36, 0.12);
-  color: #fcd34d;
+  color: var(--gold-hi);
 }
 .pf-scope .pf-vault-badge--verified {
   background: rgba(52, 211, 153, 0.15);
@@ -8994,7 +8987,7 @@ select.input {
 
 .pf-jeweller-kyb--wait {
   background: rgba(251, 191, 36, 0.12);
-  color: #fcd34d;
+  color: var(--gold-hi);
   border-color: rgba(251, 191, 36, 0.35);
 }
 

@@ -374,9 +374,9 @@ export function JewellerRatesSchemesPanel() {
     <div className="dash-panel-max jeweller-rates-schemes">
       <style>{`
         .jeweller-rates-unified tbody tr.jeweller-rates-acc-head:hover { background: var(--veil-35); }
-        .jeweller-rates-unified tbody tr.jeweller-rates-acc-head.is-active { background: rgba(212, 175, 55, 0.08); }
+        .jeweller-rates-unified tbody tr.jeweller-rates-acc-head.is-active { background: rgba(224, 182, 92, 0.08); }
         .jeweller-rates-unified tbody tr.jeweller-metal-row:hover { background: var(--veil-35); }
-        .jeweller-rates-unified tbody tr.jeweller-metal-row.is-picked { background: rgba(212, 175, 55, 0.06); }
+        .jeweller-rates-unified tbody tr.jeweller-metal-row.is-picked { background: rgba(224, 182, 92, 0.06); }
       `}</style>
       <p className="dash-panel-lead">
         Every metal tracks the <strong>live market</strong> admins publish. Use the table below —{' '}

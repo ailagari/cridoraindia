@@ -20,13 +20,6 @@ html[data-theme='light'] {
   --border-soft: var(--b0);
   --border: var(--b0);
 
-  --gold-soft: rgba(201, 168, 64, 0.2);
-  --gold-shine-10: rgba(201, 168, 64, 0.1);
-  --gold-shine-12: rgba(201, 168, 64, 0.12);
-  --gold-line-20: var(--gold-border);
-  --gold-line-35: rgba(201, 168, 64, 0.35);
-  --gold-glow-25: rgba(201, 168, 64, 0.25);
-
   --danger: var(--err);
   --danger-ring: rgba(240, 71, 71, 0.25);
   --success: var(--ok);
@@ -36,7 +29,7 @@ html[data-theme='light'] {
 
   --silk-06: var(--b1);
   --silk-10: var(--inp);
-  --silk-12: rgba(201, 168, 64, 0.12);
+  --silk-12: var(--gold-shine-12);
 
   --veil: var(--glass-bg);
   --veil-25: rgba(0, 0, 0, 0.25);
@@ -71,13 +64,13 @@ html[data-theme='light'] {
     135deg,
     rgba(99, 102, 241, 0.12) 0%,
     rgba(15, 21, 33, 0.45) 50%,
-    rgba(201, 168, 64, 0.08) 100%
+    rgba(209, 168, 56, 0.1) 100%
   );
   --gradient-media: linear-gradient(145deg, rgba(26, 34, 53, 0.85) 0%, rgba(7, 9, 15, 0.95) 100%);
   --gradient-hero-band: linear-gradient(165deg, rgba(15, 21, 33, 0.95) 0%, rgba(7, 9, 15, 1) 100%);
   --gradient-market-hero: linear-gradient(180deg, var(--gold-shine-12) 0%, rgba(7, 9, 15, 1) 100%);
   --gradient-card-top: linear-gradient(180deg, var(--b1) 0%, transparent 55%);
-  --radial-gold: radial-gradient(circle, rgba(201, 168, 64, 0.12) 0%, transparent 70%);
+  --radial-gold: radial-gradient(circle, rgba(237, 210, 150, 0.14) 0%, transparent 70%);
 
   --card-surface: linear-gradient(155deg, rgba(26, 34, 53, 0.55) 0%, rgba(11, 15, 26, 0.62) 100%);
   --image-fade-overlay: linear-gradient(to top, rgba(7, 9, 15, 0.55), transparent);
@@ -101,7 +94,7 @@ html[data-theme='light'] {
   --dash-copper: var(--gold-hi);
   --dash-silver-tone: var(--gold-hi);
 
-  --logo-glow-shadow: 0 8px 28px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(201, 168, 64, 0.12);
+  --logo-glow-shadow: 0 8px 28px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(237, 210, 150, 0.16);
 
   --warning: var(--warn);
   --info: #3b82f6;
