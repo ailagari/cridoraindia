@@ -4,7 +4,7 @@
 :root {
   /* Reference gold — exact values from webpages prototypes */
   --gold: #c9a840;
-  --gold-hi: #e2c870;
+  --gold-hi: #ffd400;
   --gold-lo: #8a6e20;
   --gold-bg: rgba(201, 168, 64, 0.08);
   --gold-bd: rgba(201, 168, 64, 0.2);
