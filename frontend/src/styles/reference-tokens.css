@@ -1,39 +1,38 @@
-/* Canonical design tokens merged from webpages/index.html + customer-dashboard.html
+/* Canonical design tokens — aligned with webpages/index.html + customer-dashboard.html
    Loaded after index.css :root — theme blocks override via html[data-theme]. */
 
 :root {
-  /* Rich luminous bullion: less “lemon amber”, more molten antique gold glow */
-  --gold: #d1a838;
-  --gold-hi: #f5eac0;
-  --gold-lo: #7e5e18;
-  --gold-bg: rgba(209, 168, 56, 0.1);
-  --gold-bd: rgba(237, 210, 150, 0.26);
-  --gold-border: rgba(230, 205, 140, 0.22);
+  /* Reference gold — exact values from webpages prototypes */
+  --gold: #c9a840;
+  --gold-hi: #e2c870;
+  --gold-lo: #8a6e20;
+  --gold-bg: rgba(201, 168, 64, 0.08);
+  --gold-bd: rgba(201, 168, 64, 0.2);
+  --gold-border: rgba(201, 168, 64, 0.18);
 
-  /* Legacy aliases + halos — keep in sync when tuning gold ramp */
+  /* Legacy aliases */
   --gold-light: var(--gold-hi);
   --gold-deep: #4c340c;
-  --gold-soft: rgba(209, 168, 56, 0.2);
-  --gold-shine-10: rgba(237, 210, 150, 0.12);
-  --gold-shine-12: rgba(237, 210, 150, 0.16);
-  --gold-line-20: rgba(230, 205, 140, 0.26);
-  --gold-line-35: rgba(230, 205, 140, 0.42);
-  --gold-glow-25: rgba(245, 222, 150, 0.32);
-  /* Text halos matching legacy Groww-era portfolio headline (Pf vault / holdings) */
+  --gold-soft: rgba(201, 168, 64, 0.2);
+  --gold-shine-10: rgba(226, 200, 112, 0.12);
+  --gold-shine-12: rgba(226, 200, 112, 0.16);
+  --gold-line-20: rgba(201, 168, 64, 0.26);
+  --gold-line-35: rgba(201, 168, 64, 0.42);
+  --gold-glow-25: rgba(226, 200, 112, 0.32);
   --gold-portfolio-glow-fill: #fff6c8;
   --gold-text-glow:
-    0 0 10px rgba(253, 224, 71, 0.95),
-    0 0 22px rgba(245, 158, 11, 0.75),
-    0 0 40px rgba(217, 119, 6, 0.45),
-    0 0 56px rgba(180, 83, 9, 0.28);
+    0 0 10px rgba(226, 200, 112, 0.95),
+    0 0 22px rgba(201, 168, 64, 0.75),
+    0 0 40px rgba(138, 110, 32, 0.45),
+    0 0 56px rgba(138, 110, 32, 0.28);
   --gold-text-glow-soft:
-    0 0 8px rgba(253, 224, 71, 0.9),
-    0 0 18px rgba(245, 158, 11, 0.6),
-    0 0 30px rgba(217, 119, 6, 0.35);
+    0 0 8px rgba(226, 200, 112, 0.9),
+    0 0 18px rgba(201, 168, 64, 0.6),
+    0 0 30px rgba(138, 110, 32, 0.35);
 
   --ok: #23c55e;
   --err: #f04747;
-  --warn: #e0aa3d;
+  --warn: #f59e0b;
   --info: #3b9eff;
 
   --ease: cubic-bezier(0.4, 0, 0.2, 1);
@@ -43,7 +42,7 @@
   --t3: 0.5s;
 
   /* Public chrome */
-  --nav-h: 64px;
+  --nav-h: 58px;
 
   /* Dashboard chrome */
   --fw: 220px;
@@ -57,7 +56,6 @@
   --r5: 32px;
 }
 
-/* Public marketing page tokens (webpages/index.html) */
 [data-theme='dark'] {
   --page: #07090f;
   --s0: #0b0f1a;
@@ -66,26 +64,24 @@
   --s3: #1b2438;
   --b0: rgba(255, 255, 255, 0.06);
   --b1: rgba(255, 255, 255, 0.04);
+  --b2: rgba(255, 255, 255, 0.03);
   --ink: #eaecf4;
   --ink2: #7a8699;
   --ink3: #3e4c5e;
   --nav-bg: rgba(7, 9, 15, 0.88);
   --glass: rgba(11, 15, 26, 0.8);
-  --overlay-public: rgba(0, 0, 0, 0.75);
-  --cs: 0 1px 3px rgba(0, 0, 0, 0.5), 0 6px 24px rgba(0, 0, 0, 0.3);
-  --fs: 0 12px 48px rgba(0, 0, 0, 0.55);
-
-  /* Dashboard overlap names */
-  --sidebar: #060810;
-  --nav-text: #64748b;
-  --nav-act: rgba(209, 168, 56, 0.12);
   --glass-bg: rgba(11, 15, 26, 0.82);
   --overlay: rgba(0, 0, 0, 0.72);
+  --overlay-public: rgba(0, 0, 0, 0.75);
   --inp: rgba(255, 255, 255, 0.04);
   --hover: rgba(255, 255, 255, 0.04);
+  --cs: 0 1px 3px rgba(0, 0, 0, 0.5), 0 6px 24px rgba(0, 0, 0, 0.3);
+  --fs: 0 12px 48px rgba(0, 0, 0, 0.55);
   --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 4px 16px rgba(0, 0, 0, 0.3);
   --float-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-  --b2: rgba(255, 255, 255, 0.03);
+  --sidebar: #060810;
+  --nav-text: #64748b;
+  --nav-act: rgba(201, 168, 64, 0.1);
 }
 
 [data-theme='light'] {
@@ -96,29 +92,28 @@
   --s3: #e6e1d8;
   --b0: rgba(0, 0, 0, 0.08);
   --b1: rgba(0, 0, 0, 0.055);
+  --b2: rgba(0, 0, 0, 0.04);
   --ink: #111827;
   --ink2: #5a6370;
   --ink3: #a0a9b4;
   --nav-bg: rgba(245, 243, 238, 0.9);
   --glass: rgba(255, 255, 255, 0.88);
-  --overlay-public: rgba(0, 0, 0, 0.45);
-  --cs: 0 1px 3px rgba(0, 0, 0, 0.07), 0 6px 24px rgba(0, 0, 0, 0.06);
-  --fs: 0 12px 48px rgba(0, 0, 0, 0.1);
-
-  --sidebar: #111827;
-  --nav-text: #8fa0b4;
-  --nav-act: rgba(209, 168, 56, 0.14);
   --glass-bg: rgba(255, 255, 255, 0.9);
   --overlay: rgba(0, 0, 0, 0.45);
+  --overlay-public: rgba(0, 0, 0, 0.45);
   --inp: rgba(0, 0, 0, 0.04);
   --hover: rgba(0, 0, 0, 0.04);
+  --cs: 0 1px 3px rgba(0, 0, 0, 0.07), 0 6px 24px rgba(0, 0, 0, 0.06);
+  --fs: 0 12px 48px rgba(0, 0, 0, 0.1);
   --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.07), 0 4px 16px rgba(0, 0, 0, 0.05);
   --float-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
-  --b2: rgba(0, 0, 0, 0.04);
+  --sidebar: #111827;
+  --nav-text: #8fa0b4;
+  --nav-act: rgba(201, 168, 64, 0.12);
 }
 
 @media (max-width: 767px) {
   :root {
-    --nav-h: 56px;
+    --nav-h: 54px;
   }
 }

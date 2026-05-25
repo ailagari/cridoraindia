@@ -1,8 +1,82 @@
-import { Fragment, useCallback, useState } from 'react'
+import { Fragment, useCallback, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
 import { useRefLandingReveal } from '@/hooks/useRefLandingReveal'
 import { dashboardLandingPath } from '@/lib/routes'
+
+const INVEST_TABS: ReadonlyArray<{
+  key: string
+  label: string
+  hint: string
+  lead: string
+}> = [
+  {
+    key: 'all',
+    label: 'All methods',
+    hint: 'Full comparison',
+    lead: 'Every route lands in one wallet: live board-rate valuation, gram history, P/L — no separate dashboards.',
+  },
+  {
+    key: 'fractional',
+    label: 'Fractional',
+    hint: 'UPI · from ₹100',
+    lead: 'Top up digitally or conclude at the counter — each buy posts with GST rolled into the gram quote and settles in minutes.',
+  },
+  {
+    key: 'deposit',
+    label: 'Deposit',
+    hint: 'Physical → vault',
+    lead: 'Carry ornaments or bullion into a verified counter. Weight and purity OTP confirmation credits deposit-class grams instantly.',
+  },
+  {
+    key: 'purchase',
+    label: 'Purchase-linked',
+    hint: 'Store invoices',
+    lead: 'Jewellery paid through CridoraPay auto-builds lineage in your vault — hallmark, weight and partner stamps for audits.',
+  },
+]
+
+const INVEST_METHODS = [
+  {
+    tabIndex: 1 as const,
+    num: 'Method 01 — Fractional',
+    title: 'Buy from ₹100, any time',
+    desc:
+      'Choose a partner jeweller, enter any INR amount or gram weight. GST on gold is already included in the quote. Pay via UPI — or visit the counter and get an OTP. Grams are credited to your vault within minutes.',
+    tag: 'Start from ₹100 · UPI or counter',
+    highlights: [
+      'Jeweller-linked quote spells out INR, grams after GST — no spreadsheet math.',
+      'Remote UPI buys or OTP walk-throughs both route through the partner you chose.',
+      'Credits hit the unified vault tally used for transfers, loans, and sellbacks.',
+    ] as const,
+  },
+  {
+    tabIndex: 2 as const,
+    num: 'Method 02 — Gold deposit',
+    title: 'Digitise gold you already own',
+    desc:
+      'Bring physical gold — coins, bars, or ornaments — to a verified partner jeweller. The counter records weight and purity. You confirm with a one-time OTP. Deposit-class grams appear in your vault immediately.',
+    tag: 'No cash moves · Deposit class grams',
+    highlights: [
+      'Custody stays with trusted jewellers; Cridora only digitises proofs and OTP trail.',
+      'Deposit grams stay tagged so auditors can reconcile physical vs vaulted metal.',
+      'Appears beside fractional rows — one portfolio instead of spreadsheets.',
+    ] as const,
+  },
+  {
+    tabIndex: 3 as const,
+    num: 'Method 03 — Purchase-linked',
+    title: 'Gold records from store purchases',
+    desc:
+      'When you buy jewellery at a partner store via CridoraPay, the purchase is automatically logged in your Gold Records vault — purity, weight, jeweller, date. Perfect for insurance and valuation tracking.',
+    tag: 'Auto-logged · Records vault',
+    highlights: [
+      'Invoices ingest hallmark, SKU, valuation — ready for insurer submissions.',
+      'Works even when fractional purchases already exist; everything rolls into one ledger.',
+      'Still redeemable downstream via sellbacks, transfers, or 0% loan pledges.',
+    ] as const,
+  },
+]
 
 export function HomePage() {
   const { user } = useAuth()
@@ -11,6 +85,13 @@ export function HomePage() {
   const [investTab, setInvestTab] = useState(0)
 
   const goInvestTab = useCallback((i: number) => setInvestTab(i), [])
+
+  const visibleInvestMethods = useMemo(
+    () => (investTab === 0 ? INVEST_METHODS : INVEST_METHODS.filter((m) => m.tabIndex === investTab)),
+    [investTab],
+  )
+
+  const activeInvestLead = INVEST_TABS[investTab]?.lead ?? INVEST_TABS[0].lead
 
   const startHref = user ? dashboardLandingPath(user) : '/signup'
 
@@ -440,45 +521,51 @@ export function HomePage() {
             </p>
           </div>
 
-          <div className="invest-tabs reveal" style={{ marginTop: 36 }}>
-            {['All methods', 'Fractional', 'Deposit', 'Purchase-linked'].map((label, i) => (
-              <button key={label} type="button" className={`it-btn${investTab === i ? ' on' : ''}`} onClick={() => goInvestTab(i)}>
-                {label}
-              </button>
-            ))}
+          <div className="invest-tabs-wrap reveal" style={{ marginTop: 36 }}>
+            <div className="invest-tabs" role="tablist" aria-label="Ways gold reaches your unified vault">
+              {INVEST_TABS.map((t, i) => (
+                <button
+                  key={t.key}
+                  type="button"
+                  role="tab"
+                  aria-selected={investTab === i}
+                  id={`invest-tab-${String(i)}`}
+                  aria-controls="invest-methods-panel"
+                  tabIndex={investTab === i ? 0 : -1}
+                  className={`it-btn${investTab === i ? ' on' : ''}`}
+                  onClick={() => goInvestTab(i)}
+                >
+                  <span className="it-btn__label">{t.label}</span>
+                  <span className="it-btn__hint">{t.hint}</span>
+                </button>
+              ))}
+            </div>
+            <p id="invest-panel-lead" className="invest-panel-lead">
+              {activeInvestLead}
+            </p>
           </div>
 
-          <div className={`invest-grid reveal reveal-delay-1 tab-${investTab}`} aria-hidden>
-            {/* Prototype tabs only highlight buttons; grid content unchanged */}
-            <div className="invest-card">
-              <div className="invc-num">Method 01 — Fractional</div>
-              <div className="invc-title">Buy from ₹100, any time</div>
-              <div className="invc-desc">
-                Choose a partner jeweller, enter any INR amount or gram weight. GST on gold is already included in the
-                quote. Pay via UPI — or visit the counter and get an OTP. Grams are credited to your vault within
-                minutes.
+          <div
+            id="invest-methods-panel"
+            role="tabpanel"
+            aria-labelledby={`invest-tab-${String(investTab)}`}
+            aria-describedby="invest-panel-lead"
+            className={`invest-grid reveal reveal-delay-1${investTab === 0 ? ' invest-grid--all' : ' invest-grid--focused'}`}
+          >
+            {visibleInvestMethods.map((m) => (
+              <div key={m.num} className={`invest-card${investTab !== 0 ? ' invest-card--featured' : ''}`}>
+                <div className="invc-num">{m.num}</div>
+                <div className="invc-title">{m.title}</div>
+                <div className="invc-desc">{m.desc}</div>
+                <ul className="invc-highlights">
+                  {m.highlights.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+                <span className="invc-tag">{m.tag}</span>
               </div>
-              <span className="invc-tag">Start from ₹100 · UPI or counter</span>
-            </div>
-            <div className="invest-card">
-              <div className="invc-num">Method 02 — Gold Deposit</div>
-              <div className="invc-title">Digitise gold you already own</div>
-              <div className="invc-desc">
-                Bring physical gold — coins, bars, or ornaments — to a verified partner jeweller. The counter records
-                weight and purity. You confirm with a one-time OTP. Deposit-class grams appear in your vault immediately.
-              </div>
-              <span className="invc-tag">No cash moves · Deposit class grams</span>
-            </div>
-            <div className="invest-card">
-              <div className="invc-num">Method 03 — Purchase-linked</div>
-              <div className="invc-title">Gold records from store purchases</div>
-              <div className="invc-desc">
-                When you buy jewellery at a partner store via CridoraPay, the purchase is automatically logged in your
-                Gold Records vault — purity, weight, jeweller, date. Perfect for insurance and valuation tracking.
-              </div>
-              <span className="invc-tag">Auto-logged · Records vault</span>
-            </div>
-            <div className="invest-card" style={{ background: 'var(--s1)' }}>
+            ))}
+            <div className="invest-card invest-card--redemption" style={{ background: 'var(--s1)' }}>
               <div className="invc-num">Redemption — Three Options</div>
               <div className="invc-title">Use your gold, don&apos;t just hold it</div>
               <div className="invc-desc">

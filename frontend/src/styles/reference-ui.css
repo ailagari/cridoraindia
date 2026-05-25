@@ -717,16 +717,122 @@ html[data-theme='light'] .pub-ref .tt-k {
   background: rgba(255, 255, 255, 0.04);
 }
 
-/* Accordion inside sidebar */
-.ref-dash-shell .dash-side-acc {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+/* Flat grouped sidebar nav */
+.ref-dash-shell .sb-group {
+  padding: 14px 18px 4px;
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.18);
 }
+
+.ref-dash-shell .sb-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 18px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--nav-text);
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+  position: relative;
+  transition: color var(--t1) var(--easing), background var(--t1) var(--easing);
+}
+.ref-dash-shell .sb-item:hover {
+  color: rgba(255, 255, 255, 0.65);
+  background: rgba(255, 255, 255, 0.035);
+}
+.ref-dash-shell .sb-item.is-active {
+  color: var(--gold-hi);
+  font-weight: 600;
+  background: var(--nav-act);
+}
+.ref-dash-shell .sb-item.is-active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 25%;
+  bottom: 25%;
+  width: 2.5px;
+  border-radius: 0 2px 2px 0;
+  background: var(--gold);
+}
+.ref-dash-shell .sb-icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  opacity: 0.6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ref-dash-shell .sb-icon svg {
+  width: 14px;
+  height: 14px;
+}
+.ref-dash-shell .sb-item.is-active .sb-icon {
+  opacity: 1;
+}
+
+.ref-dash-shell .mobile-tab-ico {
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ref-dash-shell .mobile-tab-ico svg {
+  width: 22px;
+  height: 22px;
+}
+.ref-dash-shell .mobile-tab-label {
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+.ref-dash-shell .dash-nav-badge {
+  margin-left: auto;
+  background: var(--err);
+  color: #fff;
+  font-size: 0.55rem;
+  font-weight: 800;
+  padding: 1px 5px;
+  border-radius: 10px;
+  min-width: 18px;
+  text-align: center;
+}
+
+.ref-dash-shell .sb-close-btn {
+  margin-left: auto;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  color: var(--nav-text);
+  background: none;
+  border: none;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.ref-dash-shell .sb-close-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* Legacy accordion classes — kept for any panels not yet migrated */
 .ref-dash-shell .dash-side-acc-trigger {
   color: var(--nav-text);
-}
-.ref-dash-shell .dash-side-acc--open > .dash-side-acc-trigger {
-  color: var(--gold-hi);
-  background: var(--nav-act);
 }
 .ref-dash-shell .dash-side-btn {
   color: var(--nav-text);
@@ -739,7 +845,6 @@ html[data-theme='light'] .pub-ref .tt-k {
   color: var(--gold-hi);
   font-weight: 600;
   background: var(--nav-act);
-  border-color: transparent;
 }
 
 /* Mobile subnav → snpill */

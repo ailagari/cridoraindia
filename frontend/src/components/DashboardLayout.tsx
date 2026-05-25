@@ -39,6 +39,10 @@ function jewellerSidebarDisplayName(user: AuthUser): string {
   return user.email
 }
 
+function findGroupForSection(groups: DashboardNavGroup[], section: string): DashboardNavGroup | undefined {
+  return groups.find((g) => g.items.some((i) => i.sectionKey === section))
+}
+
 type Props = {
   navGroups: DashboardNavGroup[]
   activeSection: string
@@ -46,19 +50,6 @@ type Props = {
   title: string
   role: 'customer' | 'jeweller' | 'admin'
   children: ReactNode
-}
-
-function findGroupForSection(groups: DashboardNavGroup[], section: string): DashboardNavGroup | undefined {
-  return groups.find((g) => g.items.some((i) => i.sectionKey === section))
-}
-
-function initialAccordionOpen(groups: DashboardNavGroup[], section: string): Record<string, boolean> {
-  const ag = findGroupForSection(groups, section)
-  const m: Record<string, boolean> = {}
-  for (const g of groups) {
-    m[g.id] = ag?.id === g.id
-  }
-  return m
 }
 
 export function DashboardLayout({
@@ -101,14 +92,6 @@ export function DashboardLayout({
     [pickSection],
   )
 
-  const [accordionOpen, setAccordionOpen] = useState(() => initialAccordionOpen(navGroups, activeSection))
-
-  useEffect(() => {
-    const ag = findGroupForSection(navGroups, activeSection)
-    if (!ag) return
-    setAccordionOpen(initialAccordionOpen(navGroups, activeSection))
-  }, [activeSection, navGroups])
-
   useEffect(() => {
     if (!mobileOpen) return
     const onKey = (e: KeyboardEvent) => {
@@ -117,96 +100,6 @@ export function DashboardLayout({
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [mobileOpen])
-
-  const toggleAccordion = useCallback(
-    (groupId: string) => {
-      setAccordionOpen((prev) => {
-        const wasOpen = prev[groupId] ?? false
-        if (wasOpen) {
-          return { ...prev, [groupId]: false }
-        }
-        const next: Record<string, boolean> = {}
-        for (const g of navGroups) {
-          next[g.id] = g.id === groupId
-        }
-        return next
-      })
-    },
-    [navGroups],
-  )
-
-  const renderSidebarAccordion = useCallback(
-    (g: DashboardNavGroup) => {
-      const sole = g.items.length === 1 ? g.items[0] : null
-      if (sole) {
-        const navActive = sole.sectionKey === activeSection
-        return (
-          <button
-            key={g.id}
-            type="button"
-            className={'dash-side-acc-trigger dash-side-acc-trigger--solo' + (navActive ? ' dash-side-acc-trigger--solo-active' : '')}
-            onClick={() => pickSection(sole.sectionKey)}
-          >
-            <span className="dash-side-acc-trigger-label">
-              <span className="dash-side-acc-ico" aria-hidden="true">
-                <NavHubIcon icon={g.icon} active={navActive} />
-              </span>
-              {g.label}
-            </span>
-          </button>
-        )
-      }
-      const open = accordionOpen[g.id] ?? false
-      const panelId = `dash-acc-${role}-${g.id}`
-      const hubActive = g.items.some((i) => i.sectionKey === activeSection)
-      return (
-        <div key={g.id} className={`dash-side-acc${open ? ' dash-side-acc--open' : ''}`}>
-          <button
-            type="button"
-            className="dash-side-acc-trigger"
-            aria-expanded={open}
-            aria-controls={panelId}
-            onClick={() => toggleAccordion(g.id)}
-          >
-            <span className="dash-side-acc-trigger-label">
-              <span className="dash-side-acc-ico" aria-hidden="true">
-                <NavHubIcon icon={g.icon} active={hubActive} />
-              </span>
-              {g.label}
-            </span>
-            <span className={`dash-side-acc-chev${open ? ' dash-side-acc-chev--open' : ''}`} aria-hidden="true">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </span>
-          </button>
-          {open ? (
-            <div className="dash-side-acc-panel" id={panelId} role="region">
-              {g.items.map((item) => {
-                const navActive = item.sectionKey === activeSection
-                return (
-                  <button
-                    key={item.sectionKey}
-                    type="button"
-                    className={'dash-side-btn' + (navActive ? ' dash-side-btn--active' : '')}
-                    onClick={() => pickSection(item.sectionKey)}
-                  >
-                    <span className="dash-side-btn-label">{item.label}</span>
-                    {typeof item.badge === 'number' && item.badge > 0 ? (
-                      <span className="dash-nav-badge">{item.badge > 99 ? '99+' : item.badge}</span>
-                    ) : null}
-                  </button>
-                )
-              })}
-            </div>
-          ) : null}
-        </div>
-      )
-    },
-    [accordionOpen, activeSection, pickSection, role, toggleAccordion],
-  )
-
-  const avatarUser = user
 
   const crumbPieces = title.split(' · ')
   const crumbLead = crumbPieces[0] ?? title
@@ -254,26 +147,26 @@ export function DashboardLayout({
             </div>
           </Link>
           {mobileOpen ? (
-            <button type="button" className="btn btn-ghost dash-close" onClick={() => setMobileOpen(false)}>
-              Close
+            <button type="button" className="sb-close-btn" onClick={() => setMobileOpen(false)} aria-label="Close menu">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" />
+              </svg>
             </button>
           ) : null}
         </div>
 
         <div className="sb-user">
           <UserAvatar
-            className="dash-avatar"
-            imageUrl={avatarUser ? userAvatarImageUrl(avatarUser) : ''}
-            fallback={avatarUser ? userAvatarFallback(avatarUser) : 'U'}
-            imageFit={avatarUser ? userAvatarImageFit(avatarUser) : 'cover'}
+            className="dash-avatar av"
+            imageUrl={user ? userAvatarImageUrl(user) : ''}
+            fallback={user ? userAvatarFallback(user) : 'U'}
+            imageFit={user ? userAvatarImageFit(user) : 'cover'}
             style={{ borderColor: 'var(--gold-hi)', color: 'var(--gold-hi)' }}
           />
-          <div>
+          <div style={{ minWidth: 0 }}>
             <div className="sb-user-name">
               {!user ? null : role === 'jeweller' ? jewellerSidebarDisplayName(user) : (
-                <>
-                  {user.first_name} {user.last_name}
-                </>
+                <>{user.first_name} {user.last_name}</>
               )}
             </div>
             <div className="sb-badge">{meta.badge}</div>
@@ -281,7 +174,30 @@ export function DashboardLayout({
         </div>
 
         <nav className="sb-nav" aria-label="Dashboard sections">
-          {navGroups.map(renderSidebarAccordion)}
+          {navGroups.map((g) => (
+            <div key={g.id}>
+              <div className="sb-group">{g.label}</div>
+              {g.items.map((item) => {
+                const isActive = item.sectionKey === activeSection
+                return (
+                  <button
+                    key={item.sectionKey}
+                    type="button"
+                    className={`sb-item${isActive ? ' is-active' : ''}`}
+                    onClick={() => pickSection(item.sectionKey)}
+                  >
+                    <span className="sb-icon" aria-hidden="true">
+                      <NavHubIcon icon={g.icon} active={isActive} />
+                    </span>
+                    {item.label}
+                    {typeof item.badge === 'number' && item.badge > 0 ? (
+                      <span className="dash-nav-badge">{item.badge > 99 ? '99+' : item.badge}</span>
+                    ) : null}
+                  </button>
+                )
+              })}
+            </div>
+          ))}
         </nav>
 
         <div className="sb-foot">
@@ -317,18 +233,13 @@ export function DashboardLayout({
               <svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden>
                 <circle cx="10" cy="10" r="7.5" stroke="rgba(255,255,255,.5)" strokeWidth="1.2" />
                 <path d="M7.5 10.5C7.5 8.84 8.84 7.5 10.5 7.5" stroke="#fff" strokeWidth="1.7" strokeLinecap="round" />
-                <path
-                  d="M12.5 9.5C12.5 11.16 11.16 12.5 9.5 12.5"
-                  stroke="rgba(255,255,255,.65)"
-                  strokeWidth="1.7"
-                  strokeLinecap="round"
-                />
+                <path d="M12.5 9.5C12.5 11.16 11.16 12.5 9.5 12.5" stroke="rgba(255,255,255,.65)" strokeWidth="1.7" strokeLinecap="round" />
               </svg>
             </div>
             <span className="tb-logo-name">Cridora</span>
           </Link>
 
-          <div className="tb-crumb" aria-hidden={false}>
+          <div className="tb-crumb">
             {crumbRest ? (
               <>
                 <span>{crumbLead}</span>
@@ -341,9 +252,11 @@ export function DashboardLayout({
           </div>
 
           {role === 'customer' ? <GoldTickerStrip variant="customer" /> : null}
+
           <span className="dash-mobile-username" title={user?.first_name?.trim() || undefined}>
             {user?.first_name?.trim() || 'Account'}
           </span>
+
           <div className="tb-end">
             <div className="dash-mobile-actions">
               <NotificationBell compact role={role} />
@@ -354,9 +267,6 @@ export function DashboardLayout({
               {role === 'admin' ? <GoldTickerStrip variant="admin" /> : null}
               <NotificationBell compact role={role} />
               <ThemeToggle />
-              <Link to="/" className="dash-public-link">
-                Public site
-              </Link>
             </div>
           </div>
         </header>
@@ -381,7 +291,7 @@ export function DashboardLayout({
               <button
                 key={g.id}
                 type="button"
-                className={'btab' + (inGroup ? ' is-active' : '')}
+                className={`btab${inGroup ? ' is-active' : ''}`}
                 onClick={() => pickHub(g)}
               >
                 <span className="mobile-tab-ico" aria-hidden="true">

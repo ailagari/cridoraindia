@@ -635,25 +635,64 @@
 
 .ref-landing .invest-tabs {
   display: flex;
+  flex-wrap: wrap;
   gap: 3px;
   background: var(--s1);
   border: 1px solid var(--b0);
   border-radius: var(--r1);
   padding: 4px;
-  margin-bottom: 28px;
+  margin-bottom: 14px;
   width: fit-content;
+  max-width: 100%;
+}
+.ref-landing .invest-tabs-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
 }
 .ref-landing .it-btn {
-  padding: 8px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 9px 16px 11px;
   border-radius: 7px;
   font-size: 0.8rem;
   font-weight: 600;
   color: var(--ink2);
-  transition: all var(--t1);
+  transition: color var(--t1), box-shadow var(--t1), background var(--t1);
   cursor: pointer;
   border: none;
   font-family: inherit;
   background: transparent;
+  text-align: left;
+  min-width: min(146px, 100%);
+}
+.ref-landing .it-btn__label {
+  font-size: 0.8rem;
+  font-weight: 750;
+  letter-spacing: 0.01em;
+}
+.ref-landing .it-btn__hint {
+  font-size: 0.62rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--ink3);
+}
+.ref-landing .it-btn.on .it-btn__hint {
+  color: var(--ink2);
+}
+.ref-landing .it-btn:focus-visible {
+  outline: 2px solid var(--gold-border);
+  outline-offset: 2px;
+}
+.ref-landing .invest-panel-lead {
+  margin: 0 0 18px;
+  max-width: 52rem;
+  font-size: 0.82rem;
+  font-weight: 500;
+  line-height: 1.55;
+  color: var(--ink2);
 }
 .ref-landing .it-btn.on {
   background: var(--s0);
@@ -664,6 +703,14 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 14px;
+}
+.ref-landing .invest-grid--all .invest-card--redemption {
+  grid-column: 1 / -1;
+}
+.ref-landing .invest-grid--focused {
+  grid-template-columns: 1fr;
+  max-width: 720px;
+  margin-inline: auto;
 }
 .ref-landing .invest-card {
   background: var(--s0);
@@ -676,6 +723,10 @@
   border-color: var(--gold-bd);
   transform: translateY(-2px);
   box-shadow: var(--fs);
+}
+.ref-landing .invest-card--featured {
+  border-color: rgba(201, 168, 64, 0.28);
+  background: linear-gradient(165deg, rgba(201, 168, 64, 0.07) 0%, var(--s0) 44%);
 }
 .ref-landing .invc-num {
   font-size: 0.6rem;
@@ -695,7 +746,20 @@
   font-size: 0.78rem;
   color: var(--ink2);
   line-height: 1.65;
-  margin-bottom: 14px;
+  margin-bottom: 10px;
+}
+.ref-landing .invc-highlights {
+  margin: 0 0 14px;
+  padding-left: 1.05rem;
+  font-size: 0.73rem;
+  color: var(--ink2);
+  line-height: 1.52;
+}
+.ref-landing .invc-highlights li {
+  margin-bottom: 0.45rem;
+}
+.ref-landing .invc-highlights li:last-child {
+  margin-bottom: 0;
 }
 .ref-landing .invc-tag {
   display: inline-block;
@@ -771,10 +835,27 @@
   border-radius: var(--r2);
 }
 
+.ref-landing .idx-row {
   display: flex;
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+.ref-landing .cta-note {
+  font-size: 0.72rem;
+  color: var(--ink3);
+  margin-top: 14px;
+}
+
+.ref-landing .qb-source {
+  font-size: 0.7rem;
+  color: var(--ink3);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-top: 18px;
+  text-align: center;
 }
 
 .ref-landing .badge {
@@ -1020,6 +1101,10 @@
   }
   .ref-landing .landing-trust-grid {
     grid-template-columns: 1fr;
+  }
+  .ref-landing .invest-tabs-wrap {
+    width: 100%;
+    align-items: stretch;
   }
   .ref-landing .invest-tabs {
     overflow-x: auto;

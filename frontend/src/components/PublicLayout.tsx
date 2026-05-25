@@ -45,22 +45,6 @@ function PublicLayoutInner() {
   return (
     <div className="pub-ref app-shell">
       <header className="nav" role="banner">
-        <button
-          type="button"
-          className="nav-burger"
-          aria-label={drawerOpen ? 'Close menu' : 'Open menu'}
-          aria-expanded={drawerOpen}
-          onClick={() => setDrawerOpen((o) => !o)}
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            {drawerOpen ? (
-              <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" />
-            ) : (
-              <path d="M3 6h18M3 12h18M3 18h18" strokeLinecap="round" />
-            )}
-          </svg>
-        </button>
-
         <Link to="/" className="nav-logo" style={{ textDecoration: 'none', color: 'inherit' }} onClick={() => setDrawerOpen(false)}>
           <CridoraLogo size="sm" />
         </Link>
@@ -122,6 +106,21 @@ function PublicLayoutInner() {
               </>
             )}
           </nav>
+          <button
+            type="button"
+            className="nav-burger"
+            aria-label={drawerOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={drawerOpen}
+            onClick={() => setDrawerOpen((o) => !o)}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              {drawerOpen ? (
+                <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" />
+              ) : (
+                <path d="M3 6h18M3 12h18M3 18h18" strokeLinecap="round" />
+              )}
+            </svg>
+          </button>
         </div>
       </header>
 
