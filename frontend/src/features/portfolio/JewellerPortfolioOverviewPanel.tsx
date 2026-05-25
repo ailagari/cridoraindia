@@ -6,6 +6,8 @@ import { LIVE_BALANCE_POLL_MS, LIVE_PROFILE_POLL_MS } from '@/lib/liveDeskInterv
 import { useLivePoll } from '@/lib/useLivePoll'
 import { PortfolioBarChart, PortfolioDonut, PortfolioSparkRow } from './PortfolioCharts'
 import { JewellerPortfolioPanel } from './JewellerPortfolioPanel'
+import { TablePagination } from '@/components/ui'
+import { useTablePagination } from '@/hooks/useTablePagination'
 
 const DONUT_COLORS = ['#c9a840', '#3b9eff', '#67e8f9', '#a78bfa']
 
@@ -100,6 +102,12 @@ export function JewellerPortfolioOverviewPanel({ onNavigate }: Props) {
       .reverse()
       .map((c) => Number.parseFloat(c.grams) || 0)
   }, [snap])
+
+  const recentCreditRows = snap?.recentCredits ?? []
+  const creditsPg = useTablePagination(recentCreditRows.length, 10)
+  const creditPageRows = creditsPg.active
+    ? recentCreditRows.slice(creditsPg.sliceStart, creditsPg.sliceEnd)
+    : recentCreditRows
 
   const kybBadgeClass =
     kybTone === 'ok' ? 'bdg bdg-ok' : kybTone === 'bad' ? 'bdg bdg-err' : 'bdg bdg-grey'
@@ -346,26 +354,39 @@ export function JewellerPortfolioOverviewPanel({ onNavigate }: Props) {
                   <p>Fractional confirmations will appear here.</p>
                 </div>
               ) : (
-                <table className="tbl tbl-sm">
-                  <thead>
-                    <tr>
-                      <th>When</th>
-                      <th>Customer</th>
-                      <th>Reference</th>
-                      <th className="tn">Grams</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {snap.recentCredits.slice(0, 8).map((row, idx) => (
-                      <tr key={`${row.purchase_reference ?? ''}-${idx}-${row.created_at}`}>
-                        <td className="tx">{fmtCreditWhen(row.created_at)}</td>
-                        <td>{row.customer_label ?? row.customer_member_id ?? '—'}</td>
-                        <td className="tn">{row.purchase_reference ?? '—'}</td>
-                        <td className="tn c-gold">+{parseCG(row.grams).toFixed(4)} g</td>
+                <>
+                  <table className="tbl tbl-sm">
+                    <thead>
+                      <tr>
+                        <th>When</th>
+                        <th>Customer</th>
+                        <th>Reference</th>
+                        <th className="tn">Grams</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {creditPageRows.map((row, idx) => (
+                        <tr key={`${row.purchase_reference ?? ''}-${idx}-${row.created_at}`}>
+                          <td className="tx">{fmtCreditWhen(row.created_at)}</td>
+                          <td>{row.customer_label ?? row.customer_member_id ?? '—'}</td>
+                          <td className="tn">{row.purchase_reference ?? '—'}</td>
+                          <td className="tn c-gold">+{parseCG(row.grams).toFixed(4)} g</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {creditsPg.active ? (
+                    <TablePagination
+                      page={creditsPg.page}
+                      totalPages={creditsPg.totalPages}
+                      totalItems={recentCreditRows.length}
+                      pageSize={creditsPg.pageSize}
+                      onPrev={() => creditsPg.setPage((p) => Math.max(0, p - 1))}
+                      onNext={() => creditsPg.setPage((p) => Math.min(creditsPg.totalPages - 1, p + 1))}
+                      className="tbl-inline-pagination"
+                    />
+                  ) : null}
+                </>
               )}
             </div>
           </div>

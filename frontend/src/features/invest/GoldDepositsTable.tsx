@@ -1,8 +1,10 @@
 import { Fragment, useState } from 'react'
-import { Badge } from '@/components/ui'
+import { Badge, TablePagination } from '@/components/ui'
+import { useTablePagination } from '@/hooks/useTablePagination'
 import { useCounterOtpCountdown } from '@/features/invest/useCounterOtpCountdown'
 import type { GoldDepositIntakeDTO } from '@/lib/goldDepositApi'
 
+const DEPOSITS_PAGE_SZ = 10
 const OTP_LEN = 6
 
 function formatInr(s: string): string {
@@ -104,6 +106,8 @@ type Props = CustomerProps | JewellerProps
 export function GoldDepositsTable(props: Props) {
   const { rows, busyId, role } = props
   const [expanded, setExpanded] = useState<Set<number>>(() => new Set())
+  const pg = useTablePagination(rows.length, DEPOSITS_PAGE_SZ)
+  const pageRows = pg.active ? rows.slice(pg.sliceStart, pg.sliceEnd) : rows
 
   const toggle = (id: number) => {
     setExpanded((prev) => {
@@ -138,7 +142,7 @@ export function GoldDepositsTable(props: Props) {
           </tr>
         </thead>
         <tbody>
-          {rows.map((r) => {
+          {pageRows.map((r) => {
             const isOpen = expanded.has(r.id)
             const isPending = r.status === 'awaiting_customer_otp'
             return (
@@ -280,6 +284,17 @@ export function GoldDepositsTable(props: Props) {
           })}
         </tbody>
       </table>
+      {pg.active ? (
+        <TablePagination
+          page={pg.page}
+          totalPages={pg.totalPages}
+          totalItems={rows.length}
+          pageSize={pg.pageSize}
+          onPrev={() => pg.setPage((p) => Math.max(0, p - 1))}
+          onNext={() => pg.setPage((p) => Math.min(pg.totalPages - 1, p + 1))}
+          className="pf-ledger-pagination"
+        />
+      ) : null}
     </div>
   )
 }

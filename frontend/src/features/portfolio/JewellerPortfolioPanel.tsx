@@ -5,6 +5,8 @@ import { LIVE_BALANCE_POLL_MS } from '@/lib/liveDeskIntervals'
 import { useLivePoll } from '@/lib/useLivePoll'
 import { LiabilityCreditsMiniList } from './LiabilityCreditsMiniList'
 import { JewellerPortfolioLedgerSection } from './JewellerPortfolioLedgerSection'
+import { TablePagination } from '@/components/ui'
+import { useTablePagination } from '@/hooks/useTablePagination'
 
 function parseG(s: string): number {
   const n = Number.parseFloat(s)
@@ -54,6 +56,9 @@ export function JewellerPortfolioPanel({ embedded }: PanelProps = {}) {
   const credits = wallet?.recent_liability_credits ?? []
   const liabilityG = parseG(wallet?.custodial_liability_grams ?? '0')
   const vaultG = parseG(wallet?.balance_grams ?? '0')
+
+  const pendingPg = useTablePagination(pending.length, 10)
+  const pendingPageRows = pendingPg.active ? pending.slice(pendingPg.sliceStart, pendingPg.sliceEnd) : pending
 
   return (
     <div className={embedded ? 'pf-scope' : 'dash-panel-max pf-scope'}>
@@ -112,7 +117,7 @@ export function JewellerPortfolioPanel({ embedded }: PanelProps = {}) {
                 </tr>
               </thead>
               <tbody>
-                {pending.map((row) => (
+                {pendingPageRows.map((row) => (
                   <tr key={row.id} className="pf-ledger-row">
                     <td className="pf-ledger-date" data-label="Created">
                       {fmtWhen(row.created_at)}
@@ -142,6 +147,17 @@ export function JewellerPortfolioPanel({ embedded }: PanelProps = {}) {
                 ))}
               </tbody>
             </table>
+            {pendingPg.active ? (
+              <TablePagination
+                page={pendingPg.page}
+                totalPages={pendingPg.totalPages}
+                totalItems={pending.length}
+                pageSize={pendingPg.pageSize}
+                onPrev={() => pendingPg.setPage((p) => Math.max(0, p - 1))}
+                onNext={() => pendingPg.setPage((p) => Math.min(pendingPg.totalPages - 1, p + 1))}
+                className="pf-ledger-pagination"
+              />
+            ) : null}
           </div>
         )}
       </article>
@@ -153,7 +169,7 @@ export function JewellerPortfolioPanel({ embedded }: PanelProps = {}) {
             <p className="pf-card__meta">Grams posted when purchases complete.</p>
           </div>
         </header>
-        <LiabilityCreditsMiniList rows={credits} limit={8} />
+        <LiabilityCreditsMiniList rows={credits} pageSize={10} />
       </article>
 
       <JewellerPortfolioLedgerSection />

@@ -1,5 +1,6 @@
 import { Fragment, useCallback, useState } from 'react'
-import { Badge, Button } from '@/components/ui'
+import { Badge, Button, TablePagination } from '@/components/ui'
+import { useTablePagination } from '@/hooks/useTablePagination'
 import { UpiOnHoldNotice } from '@/features/upi/UpiOnHoldNotice'
 import { UpiPaymentStep } from '@/features/upi/UpiPaymentStep'
 import { UpiProofTableCell } from '@/features/upi/UpiProofTableCell'
@@ -26,6 +27,8 @@ type Props = {
   onRefreshOrders: () => Promise<void>
   onSuccess?: (message: string) => void
 }
+
+const FRACTIONAL_ORDERS_PAGE_SZ = 10
 
 const UPI_DETAIL_STATUSES = new Set([
   'pending_payment',
@@ -95,6 +98,8 @@ export function CustomerFractionalOrdersTable({
   const [upiStateById, setUpiStateById] = useState<Record<number, UpiPaymentState>>({})
   const [loadErrById, setLoadErrById] = useState<Record<number, string>>({})
   const [cancelErrById, setCancelErrById] = useState<Record<number, string>>({})
+  const pg = useTablePagination(orders.length, FRACTIONAL_ORDERS_PAGE_SZ)
+  const pageOrders = pg.active ? orders.slice(pg.sliceStart, pg.sliceEnd) : orders
 
   const cancelOrder = useCallback(
     async (order: FractionalPurchaseDTO) => {
@@ -155,7 +160,7 @@ export function CustomerFractionalOrdersTable({
           </tr>
         </thead>
         <tbody>
-          {orders.map((o) => {
+          {pageOrders.map((o) => {
             const isOpen = expanded.has(o.id)
             const upiState = upiStateById[o.id]
             const loadErr = loadErrById[o.id]
@@ -347,6 +352,17 @@ export function CustomerFractionalOrdersTable({
           })}
         </tbody>
       </table>
+      {pg.active ? (
+        <TablePagination
+          page={pg.page}
+          totalPages={pg.totalPages}
+          totalItems={orders.length}
+          pageSize={pg.pageSize}
+          onPrev={() => pg.setPage((p) => Math.max(0, p - 1))}
+          onNext={() => pg.setPage((p) => Math.min(pg.totalPages - 1, p + 1))}
+          className="pf-ledger-pagination"
+        />
+      ) : null}
     </div>
   )
 }

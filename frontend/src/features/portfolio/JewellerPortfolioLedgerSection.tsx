@@ -6,6 +6,8 @@ import {
 } from '@/lib/jewellerPortfolioLedgerApi'
 import { LIVE_BALANCE_POLL_MS } from '@/lib/liveDeskIntervals'
 import { useLivePoll } from '@/lib/useLivePoll'
+import { TablePagination } from '@/components/ui'
+import { useTablePagination } from '@/hooks/useTablePagination'
 
 function fmtInr(s: string): string {
   const n = Number.parseFloat(s)
@@ -49,6 +51,14 @@ export function JewellerPortfolioLedgerSection() {
   const entries = data?.entries ?? []
   const customers = data?.loan_customers ?? []
 
+  const customersPg = useTablePagination(customers.length, 10)
+  const customersSlice = customersPg.active
+    ? customers.slice(customersPg.sliceStart, customersPg.sliceEnd)
+    : customers
+
+  const entriesPg = useTablePagination(entries.length, 10)
+  const entriesSlice = entriesPg.active ? entries.slice(entriesPg.sliceStart, entriesPg.sliceEnd) : entries
+
   return (
     <>
       <div className="pf-grid pf-grid--kpis pf-stagger" style={{ marginTop: '1rem' }}>
@@ -72,7 +82,7 @@ export function JewellerPortfolioLedgerSection() {
           <h3 className="pf-card__title">Loans by customer</h3>
           <p className="pf-card__meta">Outstanding principal and collateral per borrower.</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', marginTop: '0.75rem' }}>
-            {customers.map((c: JewellerLoanCustomerSummaryDTO) => (
+            {customersSlice.map((c: JewellerLoanCustomerSummaryDTO) => (
               <div
                 key={c.customer_id}
                 style={{
@@ -90,6 +100,17 @@ export function JewellerPortfolioLedgerSection() {
               </div>
             ))}
           </div>
+          {customersPg.active ? (
+            <TablePagination
+              page={customersPg.page}
+              totalPages={customersPg.totalPages}
+              totalItems={customers.length}
+              pageSize={customersPg.pageSize}
+              onPrev={() => customersPg.setPage((p) => Math.max(0, p - 1))}
+              onNext={() => customersPg.setPage((p) => Math.min(customersPg.totalPages - 1, p + 1))}
+              className="pf-ledger-pagination"
+            />
+          ) : null}
         </article>
       ) : null}
 
@@ -138,8 +159,8 @@ export function JewellerPortfolioLedgerSection() {
                 </tr>
               </thead>
               <tbody>
-                {entries.map((e: JewellerLedgerEntryDTO, i: number) => (
-                  <tr key={`${e.reference}-${i}`}>
+                {entriesSlice.map((e: JewellerLedgerEntryDTO, i: number) => (
+                  <tr key={`${e.reference}-${entriesPg.sliceStart + i}`}>
                     <td>{fmtWhen(e.occurred_at)}</td>
                     <td>{txnLabel(e.transaction_type)}</td>
                     <td className="tabular">{e.reference}</td>
@@ -152,6 +173,17 @@ export function JewellerPortfolioLedgerSection() {
                 ))}
               </tbody>
             </table>
+            {entriesPg.active ? (
+              <TablePagination
+                page={entriesPg.page}
+                totalPages={entriesPg.totalPages}
+                totalItems={entries.length}
+                pageSize={entriesPg.pageSize}
+                onPrev={() => entriesPg.setPage((p) => Math.max(0, p - 1))}
+                onNext={() => entriesPg.setPage((p) => Math.min(entriesPg.totalPages - 1, p + 1))}
+                className="pf-ledger-pagination"
+              />
+            ) : null}
           </div>
         )}
       </article>

@@ -25,7 +25,10 @@ import {
 import { PortfolioLiveGoldPriceCard } from './PortfolioLiveGoldPriceCard'
 import { CustomerVaultsPanel } from './CustomerVaultsPanel'
 import { CustomerPersonalHoldingsPanel } from './CustomerPersonalHoldingsPanel'
+import { TablePagination } from '@/components/ui'
+import { useTablePagination } from '@/hooks/useTablePagination'
 
+const LEDGER_PAGE_SZ = 10
 const DONUT_COLORS = ['#fbbf24', '#d4a85c', '#67e8f9', '#a78bfa', '#34d399', '#f472b6', '#38bdf8']
 const PF_HOLDINGS_JEWELLERY_ONLY_KEY = 'cridora_pf_holdings_jewellery_only'
 
@@ -236,6 +239,11 @@ export function CustomerPortfolioPanel() {
       cancelled = true
     }
   }, [portfolioTab, ledgerFilter])
+
+  const ledgerPg = useTablePagination(ledgerEntries.length, LEDGER_PAGE_SZ)
+  const ledgerPageRows = ledgerPg.active
+    ? ledgerEntries.slice(ledgerPg.sliceStart, ledgerPg.sliceEnd)
+    : ledgerEntries
 
   useEffect(() => {
     if (portfolioTab !== 'overview' && portfolioTab !== 'charts') return
@@ -624,7 +632,7 @@ export function CustomerPortfolioPanel() {
                     </tr>
                   </thead>
                   <tbody>
-                    {ledgerEntries.map((row) => (
+                    {ledgerPageRows.map((row) => (
                       <tr
                         key={`${row.reference}-${row.transaction_type}-${row.occurred_at}`}
                         className="pf-ledger-row"
@@ -644,6 +652,17 @@ export function CustomerPortfolioPanel() {
                     ))}
                   </tbody>
                 </table>
+                {ledgerPg.active ? (
+                  <TablePagination
+                    page={ledgerPg.page}
+                    totalPages={ledgerPg.totalPages}
+                    totalItems={ledgerEntries.length}
+                    pageSize={ledgerPg.pageSize}
+                    onPrev={() => ledgerPg.setPage((p) => Math.max(0, p - 1))}
+                    onNext={() => ledgerPg.setPage((p) => Math.min(ledgerPg.totalPages - 1, p + 1))}
+                    className="pf-ledger-pagination"
+                  />
+                ) : null}
               </div>
             )}
           </article>

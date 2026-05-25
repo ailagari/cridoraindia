@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
+import { TablePagination } from '@/components/ui'
 import type { FractionalLedgerRowDTO, GoldWalletDTO, PortfolioTotalsDTO } from '@/lib/goldTransferApi'
 import { vaultRowTotalGrams, type VaultRowDTO } from '@/lib/goldTransferApi'
 import type { SpotPricesPayload } from '@/lib/marketplaceApi'
@@ -9,8 +10,11 @@ import {
   type PortfolioHistoryRangeKey,
   type PortfolioHistoryValuePoint,
 } from './PortfolioCharts'
+import { useTablePagination } from '@/hooks/useTablePagination'
 
 const DONUT_COLORS = ['#c9a840', '#3b9eff', '#67e8f9', '#a78bfa', '#34d399', '#f472b6', '#38bdf8']
+
+const OV_RECENT_TX_PAGE = 5
 
 function parseG(s: string | undefined): number {
   const n = Number.parseFloat(String(s ?? '0'))
@@ -123,9 +127,14 @@ export function CustomerPortfolioOverviewDash(props: {
   const live22 = spot22PerG(spotPayload)
   const activePartners = vaults.filter((v) => vaultRowTotalGrams(v) > 0.000001).length
 
-  const recentTx = [...fractionalLedger]
-    .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at))
-    .slice(0, 5)
+  const recentTxSorted = useMemo(
+    () => [...fractionalLedger].sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at)),
+    [fractionalLedger],
+  )
+  const recentPg = useTablePagination(recentTxSorted.length, OV_RECENT_TX_PAGE)
+  const recentTxRows = recentPg.active
+    ? recentTxSorted.slice(recentPg.sliceStart, recentPg.sliceEnd)
+    : recentTxSorted
 
   return (
     <>
@@ -386,7 +395,7 @@ export function CustomerPortfolioOverviewDash(props: {
           </button>
         </div>
         <div className="tbl-wrap">
-          {recentTx.length === 0 ? (
+          {recentTxSorted.length === 0 ? (
             <div className="empty" style={{ border: 'none', margin: 16 }}>
               <div className="empty-ico" aria-hidden>
                 📜
@@ -395,36 +404,49 @@ export function CustomerPortfolioOverviewDash(props: {
               <p>Fractional buys and deposits appear here.</p>
             </div>
           ) : (
-            <table className="tbl tbl-sm">
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Type</th>
-                  <th>Reference</th>
-                  <th>Jeweller</th>
-                  <th>Grams</th>
-                  <th>Amount</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentTx.map((row, idx) => (
-                  <tr key={`${row.reference}-${idx}-${row.created_at}`}>
-                    <td className="tx">{fmtWhenLedger(row.created_at)}</td>
-                    <td>
-                      <span className="bdg bdg-gold">Fractional</span>
-                    </td>
-                    <td className="tn">{row.reference}</td>
-                    <td>{row.jeweller_name}</td>
-                    <td className="tn c-gold">+{masked ? '••••' : `${parseG(row.grams).toFixed(3)}`} g</td>
-                    <td className="tn">₹{fmtInrMaskedStr(row.total_inr, masked)}</td>
-                    <td>
-                      <span className="bdg bdg-ok">Done</span>
-                    </td>
+            <>
+              <table className="tbl tbl-sm">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Type</th>
+                    <th>Reference</th>
+                    <th>Jeweller</th>
+                    <th>Grams</th>
+                    <th>Amount</th>
+                    <th>Status</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {recentTxRows.map((row, idx) => (
+                    <tr key={`${row.reference}-${idx}-${row.created_at}`}>
+                      <td className="tx">{fmtWhenLedger(row.created_at)}</td>
+                      <td>
+                        <span className="bdg bdg-gold">Fractional</span>
+                      </td>
+                      <td className="tn">{row.reference}</td>
+                      <td>{row.jeweller_name}</td>
+                      <td className="tn c-gold">+{masked ? '••••' : `${parseG(row.grams).toFixed(3)}`} g</td>
+                      <td className="tn">₹{fmtInrMaskedStr(row.total_inr, masked)}</td>
+                      <td>
+                        <span className="bdg bdg-ok">Done</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {recentPg.active ? (
+                <TablePagination
+                  page={recentPg.page}
+                  totalPages={recentPg.totalPages}
+                  totalItems={recentTxSorted.length}
+                  pageSize={recentPg.pageSize}
+                  onPrev={() => recentPg.setPage((p) => Math.max(0, p - 1))}
+                  onNext={() => recentPg.setPage((p) => Math.min(recentPg.totalPages - 1, p + 1))}
+                  className="tbl-inline-pagination"
+                />
+              ) : null}
+            </>
           )}
         </div>
       </div>

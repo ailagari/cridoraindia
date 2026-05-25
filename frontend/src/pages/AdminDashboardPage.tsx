@@ -14,6 +14,8 @@ import { AdminFestivalBroadcastPanel } from '@/features/admin/AdminFestivalBroad
 import { AdminGoldTickerPanel, AdminMarketplaceCatalogSetupPanel } from '@/features/marketplace/AdminMarketplaceSection'
 import { AdminTreasuryPanel } from '@/features/treasury/AdminTreasuryPanel'
 import { AdminUpiFraudReportsPanel } from '@/features/treasury/AdminUpiFraudReportsPanel'
+import { TablePagination } from '@/components/ui'
+import { useTablePagination } from '@/hooks/useTablePagination'
 
 import { ADMIN_DEFAULT_SECTION, ADMIN_NAV_GROUPS, normalizeAdminSection } from '@/lib/mobileNav/adminNav'
 
@@ -617,72 +619,7 @@ export function AdminDashboardPage() {
                     </div>
                   </div>
                   {data.recent_fractional_orders && data.recent_fractional_orders.length > 0 ? (
-                    <div className="tbl-wrap">
-                      <table className="tbl tbl-sm">
-                        <thead>
-                          <tr>
-                            <th>Reference</th>
-                            <th>Status</th>
-                            <th>Method</th>
-                            <th>Amount</th>
-                            <th>UTR / Score</th>
-                            <th>Customer</th>
-                            <th>Jeweller</th>
-                            <th>Created</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {data.recent_fractional_orders.map((o) => {
-                            const inrAmt = Number.parseFloat(o.total_inr)
-                            const inrLabel = Number.isFinite(inrAmt)
-                              ? inrAmt.toLocaleString('en-IN')
-                              : fmtDisplay(o.total_inr)
-                            return (
-                              <tr key={o.id}>
-                                <td className="tx tabular">
-                                  {o.reference}
-                                  {o.order_reference ? (
-                                    <span className="t-mu" style={{ display: 'block', marginTop: 4 }}>
-                                      {o.order_reference}
-                                    </span>
-                                  ) : null}
-                                </td>
-                                <td>
-                                  <span className={adminPipelineStatusBadgeClass(o.status)}>
-                                    {o.status.replace(/_/g, ' ')}
-                                  </span>
-                                </td>
-                                <td>{o.payment_method}</td>
-                                <td className="tabular">
-                                  ₹{inrLabel}
-                                  <span className="t-mu" style={{ display: 'block', marginTop: 4 }}>
-                                    {o.grams} g
-                                  </span>
-                                </td>
-                                <td>
-                                  {o.upi_utr || '—'}
-                                  {o.reconciliation_score != null ? (
-                                    <span className="t-mu" style={{ display: 'block', marginTop: 4 }}>
-                                      {o.reconciliation_score}%
-                                    </span>
-                                  ) : null}
-                                </td>
-                                <td>
-                                  {o.customer_email}
-                                  {o.customer_member_id ? (
-                                    <span className="t-mu" style={{ display: 'block', marginTop: 4 }}>
-                                      {o.customer_member_id}
-                                    </span>
-                                  ) : null}
-                                </td>
-                                <td>{o.jeweller_business}</td>
-                                <td>{fmtDateTime(o.created_at)}</td>
-                              </tr>
-                            )
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
+                    <AdminOverviewRecentFractionalTable orders={data.recent_fractional_orders} />
                   ) : (
                     <div className="empty">
                       <p>No recent fractional orders.</p>
@@ -700,43 +637,7 @@ export function AdminDashboardPage() {
                     </div>
                   </div>
                   {data.recent_gold_deposits && data.recent_gold_deposits.length > 0 ? (
-                    <div className="tbl-wrap">
-                      <table className="tbl tbl-sm">
-                        <thead>
-                          <tr>
-                            <th>Reference</th>
-                            <th>Status</th>
-                            <th>Grams</th>
-                            <th>Customer</th>
-                            <th>Jeweller</th>
-                            <th>Created</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {data.recent_gold_deposits.map((d) => (
-                            <tr key={d.id}>
-                              <td className="tx tabular">{d.reference}</td>
-                              <td>
-                                <span className={adminPipelineStatusBadgeClass(d.status)}>
-                                  {d.status.replace(/_/g, ' ')}
-                                </span>
-                              </td>
-                              <td className="tabular">{d.grams}</td>
-                              <td>
-                                {d.customer_email}
-                                {d.customer_member_id ? (
-                                  <span className="t-mu" style={{ display: 'block', marginTop: 4 }}>
-                                    {d.customer_member_id}
-                                  </span>
-                                ) : null}
-                              </td>
-                              <td>{d.jeweller_business}</td>
-                              <td>{fmtDateTime(d.created_at)}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                    <AdminOverviewRecentGoldDepositsTable deposits={data.recent_gold_deposits} />
                   ) : (
                     <div className="empty">
                       <p>No recent gold deposits.</p>
@@ -1132,6 +1033,149 @@ export function AdminDashboardPage() {
   )
 }
 
+const ADMIN_OVERVIEW_TABLE_PAGE = 10
+
+function AdminOverviewRecentFractionalTable({ orders }: { orders: RecentFractionalOrder[] }) {
+  const pg = useTablePagination(orders.length, ADMIN_OVERVIEW_TABLE_PAGE)
+  const slice = pg.active ? orders.slice(pg.sliceStart, pg.sliceEnd) : orders
+  return (
+    <>
+      <div className="tbl-wrap">
+        <table className="tbl tbl-sm">
+          <thead>
+            <tr>
+              <th>Reference</th>
+              <th>Status</th>
+              <th>Method</th>
+              <th>Amount</th>
+              <th>UTR / Score</th>
+              <th>Customer</th>
+              <th>Jeweller</th>
+              <th>Created</th>
+            </tr>
+          </thead>
+          <tbody>
+            {slice.map((o) => {
+              const inrAmt = Number.parseFloat(o.total_inr)
+              const inrLabel = Number.isFinite(inrAmt)
+                ? inrAmt.toLocaleString('en-IN')
+                : fmtDisplay(o.total_inr)
+              return (
+                <tr key={o.id}>
+                  <td className="tx tabular">
+                    {o.reference}
+                    {o.order_reference ? (
+                      <span className="t-mu" style={{ display: 'block', marginTop: 4 }}>
+                        {o.order_reference}
+                      </span>
+                    ) : null}
+                  </td>
+                  <td>
+                    <span className={adminPipelineStatusBadgeClass(o.status)}>
+                      {o.status.replace(/_/g, ' ')}
+                    </span>
+                  </td>
+                  <td>{o.payment_method}</td>
+                  <td className="tabular">
+                    ₹{inrLabel}
+                    <span className="t-mu" style={{ display: 'block', marginTop: 4 }}>
+                      {o.grams} g
+                    </span>
+                  </td>
+                  <td>
+                    {o.upi_utr || '—'}
+                    {o.reconciliation_score != null ? (
+                      <span className="t-mu" style={{ display: 'block', marginTop: 4 }}>
+                        {o.reconciliation_score}%
+                      </span>
+                    ) : null}
+                  </td>
+                  <td>
+                    {o.customer_email}
+                    {o.customer_member_id ? (
+                      <span className="t-mu" style={{ display: 'block', marginTop: 4 }}>
+                        {o.customer_member_id}
+                      </span>
+                    ) : null}
+                  </td>
+                  <td>{o.jeweller_business}</td>
+                  <td>{fmtDateTime(o.created_at)}</td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+      {pg.active ? (
+        <TablePagination
+          page={pg.page}
+          totalPages={pg.totalPages}
+          totalItems={orders.length}
+          pageSize={pg.pageSize}
+          onPrev={() => pg.setPage((p) => Math.max(0, p - 1))}
+          onNext={() => pg.setPage((p) => Math.min(pg.totalPages - 1, p + 1))}
+          className="tbl-inline-pagination"
+        />
+      ) : null}
+    </>
+  )
+}
+
+function AdminOverviewRecentGoldDepositsTable({ deposits }: { deposits: RecentGoldDeposit[] }) {
+  const pg = useTablePagination(deposits.length, ADMIN_OVERVIEW_TABLE_PAGE)
+  const slice = pg.active ? deposits.slice(pg.sliceStart, pg.sliceEnd) : deposits
+  return (
+    <>
+      <div className="tbl-wrap">
+        <table className="tbl tbl-sm">
+          <thead>
+            <tr>
+              <th>Reference</th>
+              <th>Status</th>
+              <th>Grams</th>
+              <th>Customer</th>
+              <th>Jeweller</th>
+              <th>Created</th>
+            </tr>
+          </thead>
+          <tbody>
+            {slice.map((d) => (
+              <tr key={d.id}>
+                <td className="tx tabular">{d.reference}</td>
+                <td>
+                  <span className={adminPipelineStatusBadgeClass(d.status)}>{d.status.replace(/_/g, ' ')}</span>
+                </td>
+                <td className="tabular">{d.grams}</td>
+                <td>
+                  {d.customer_email}
+                  {d.customer_member_id ? (
+                    <span className="t-mu" style={{ display: 'block', marginTop: 4 }}>
+                      {d.customer_member_id}
+                    </span>
+                  ) : null}
+                </td>
+                <td>{d.jeweller_business}</td>
+                <td>{fmtDateTime(d.created_at)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {pg.active ? (
+        <TablePagination
+          page={pg.page}
+          totalPages={pg.totalPages}
+          totalItems={deposits.length}
+          pageSize={pg.pageSize}
+          onPrev={() => pg.setPage((p) => Math.max(0, p - 1))}
+          onNext={() => pg.setPage((p) => Math.min(pg.totalPages - 1, p + 1))}
+          className="tbl-inline-pagination"
+        />
+      ) : null}
+    </>
+  )
+}
+
 function QueueTable({
   title,
   rows,
@@ -1147,6 +1191,8 @@ function QueueTable({
   onInspect: (id: number) => void
   onApproveInline: (id: number) => void
 }) {
+  const pg = useTablePagination(rows.length, ADMIN_OVERVIEW_TABLE_PAGE)
+  const pageRows = pg.active ? rows.slice(pg.sliceStart, pg.sliceEnd) : rows
   return (
     <>
       <h2 className="dash-table-title">{title}</h2>
@@ -1171,7 +1217,7 @@ function QueueTable({
                 </td>
               </tr>
             ) : (
-              rows.map((u) => {
+              pageRows.map((u) => {
                 const canApprove =
                   kind === 'kyc' ? u.can_approve_kyc === true : u.can_approve_kyb === true
                 return (
@@ -1206,6 +1252,17 @@ function QueueTable({
             )}
           </tbody>
         </table>
+        {pg.active ? (
+          <TablePagination
+            page={pg.page}
+            totalPages={pg.totalPages}
+            totalItems={rows.length}
+            pageSize={pg.pageSize}
+            onPrev={() => pg.setPage((p) => Math.max(0, p - 1))}
+            onNext={() => pg.setPage((p) => Math.min(pg.totalPages - 1, p + 1))}
+            className="tbl-inline-pagination"
+          />
+        ) : null}
       </div>
     </>
   )
@@ -1224,6 +1281,8 @@ function UserDirectoryTable({
   onFreeze: (id: number, freeze: boolean) => void
   onInspect?: (id: number) => void
 }) {
+  const pg = useTablePagination(users.length, ADMIN_OVERVIEW_TABLE_PAGE)
+  const pageUsers = pg.active ? users.slice(pg.sliceStart, pg.sliceEnd) : users
   return (
     <>
       <h2 className="dash-table-title">{title}</h2>
@@ -1239,7 +1298,7 @@ function UserDirectoryTable({
             </tr>
           </thead>
           <tbody>
-            {users.map((u) => (
+            {pageUsers.map((u) => (
               <tr key={u.id}>
                 <td>{u.email}</td>
                 <td>{u.user_type}</td>
@@ -1274,6 +1333,17 @@ function UserDirectoryTable({
             ))}
           </tbody>
         </table>
+        {pg.active ? (
+          <TablePagination
+            page={pg.page}
+            totalPages={pg.totalPages}
+            totalItems={users.length}
+            pageSize={pg.pageSize}
+            onPrev={() => pg.setPage((p) => Math.max(0, p - 1))}
+            onNext={() => pg.setPage((p) => Math.min(pg.totalPages - 1, p + 1))}
+            className="tbl-inline-pagination"
+          />
+        ) : null}
       </div>
     </>
   )

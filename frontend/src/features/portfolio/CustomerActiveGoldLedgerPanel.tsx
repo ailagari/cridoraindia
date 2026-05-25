@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Badge } from '@/components/ui'
+import { Badge, TablePagination } from '@/components/ui'
+import { useTablePagination } from '@/hooks/useTablePagination'
 import {
   fetchActiveGoldLedger,
   type ActiveGoldLotDTO,
@@ -97,6 +98,9 @@ export function CustomerActiveGoldLedgerPanel() {
 
   useLivePoll(load, LIVE_BALANCE_POLL_MS, true)
 
+  const lotsPg = useTablePagination(lots.length, 10)
+  const lotsPageRows = lotsPg.active ? lots.slice(lotsPg.sliceStart, lotsPg.sliceEnd) : lots
+
   return (
     <section className="pf-active-ledger-section" aria-labelledby="pf-active-ledger-title">
       <header style={{ marginBottom: '0.85rem' }}>
@@ -136,7 +140,7 @@ export function CustomerActiveGoldLedgerPanel() {
                 </tr>
               </thead>
               <tbody>
-                {lots.map((row) => (
+                {lotsPageRows.map((row) => (
                   <tr key={`${row.reference}-${row.occurred_at}`} className="pf-ledger-row">
                     <td className="pf-ledger-date">{fmtWhen(row.occurred_at)}</td>
                     <td>
@@ -162,6 +166,17 @@ export function CustomerActiveGoldLedgerPanel() {
                 ))}
               </tbody>
             </table>
+            {lotsPg.active ? (
+              <TablePagination
+                page={lotsPg.page}
+                totalPages={lotsPg.totalPages}
+                totalItems={lots.length}
+                pageSize={lotsPg.pageSize}
+                onPrev={() => lotsPg.setPage((p) => Math.max(0, p - 1))}
+                onNext={() => lotsPg.setPage((p) => Math.min(lotsPg.totalPages - 1, p + 1))}
+                className="pf-ledger-pagination"
+              />
+            ) : null}
           </div>
           <p className="pf-groww-footnote" style={{ margin: '0.75rem 0 0' }}>
             One row per jeweller holding type (fractional, deposit, scheme). Grams sum to your vault total — not every

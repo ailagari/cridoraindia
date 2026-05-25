@@ -149,6 +149,39 @@
   text-align: center;
 }
 
+.ds-table-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: var(--sp-4);
+  padding: var(--sp-5) var(--sp-2) var(--sp-2);
+  font-size: var(--ts-xs);
+  color: var(--text-muted);
+}
+
+.ds-table-pagination__controls {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-4);
+}
+
+.ds-table-pagination__page {
+  min-width: 5.25rem;
+  text-align: center;
+  font-weight: 600;
+}
+
+.tbl-inline-pagination {
+  justify-content: space-between;
+  padding-left: max(var(--sp-4), env(safe-area-inset-left, 0px));
+  padding-right: max(var(--sp-4), env(safe-area-inset-right, 0px));
+}
+
+.pf-ledger-pagination {
+  padding: 0.5rem 0.75rem 0.35rem;
+}
+
 /* ══ BADGE ══════════════════════════════════════════════════════════════════ */
 .badge {
   display: inline-flex;

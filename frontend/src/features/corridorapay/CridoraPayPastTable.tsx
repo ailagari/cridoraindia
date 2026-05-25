@@ -1,4 +1,8 @@
+import { TablePagination } from '@/components/ui'
+import { useTablePagination } from '@/hooks/useTablePagination'
 import type { CridoraPayLedgerEntryDTO } from '@/lib/cridorapayApi'
+
+const PAGE_SZ = 10
 
 function formatInr(s: string): string {
   const n = Number.parseFloat(s)
@@ -28,6 +32,9 @@ type Props = {
 }
 
 export function CridoraPayPastTable({ entries, counterpartyHeader, emptyMessage, error, meta }: Props) {
+  const pg = useTablePagination(entries.length, PAGE_SZ)
+  const pageEntries = pg.active ? entries.slice(pg.sliceStart, pg.sliceEnd) : entries
+
   return (
     <article className="pf-card pf-card--lift pf-card--wide pf-card--ledger-table-wrap" style={{ marginTop: '1.5rem' }}>
       <header className="pf-card__head pf-ledger-head">
@@ -54,7 +61,7 @@ export function CridoraPayPastTable({ entries, counterpartyHeader, emptyMessage,
               </tr>
             </thead>
             <tbody>
-              {entries.map((row) => (
+              {pageEntries.map((row) => (
                 <tr key={`${row.reference}-${row.occurred_at}`} className="pf-ledger-row">
                   <td className="pf-ledger-date">{formatWhen(row.occurred_at)}</td>
                   <td className="tabular">{row.reference}</td>
@@ -67,6 +74,17 @@ export function CridoraPayPastTable({ entries, counterpartyHeader, emptyMessage,
               ))}
             </tbody>
           </table>
+          {pg.active ? (
+            <TablePagination
+              page={pg.page}
+              totalPages={pg.totalPages}
+              totalItems={entries.length}
+              pageSize={pg.pageSize}
+              onPrev={() => pg.setPage((p) => Math.max(0, p - 1))}
+              onNext={() => pg.setPage((p) => Math.min(pg.totalPages - 1, p + 1))}
+              className="pf-ledger-pagination"
+            />
+          ) : null}
         </div>
       )}
     </article>
