@@ -5389,6 +5389,15 @@ select.input {
   max-height: 240px;
 }
 
+/* Live gold card: same thin-line chart module, no in-chart range toolbar */
+.pf-live-gold__chart .pf-history-valuation--gold-spot {
+  margin-top: 0;
+}
+
+.pf-live-gold__chart .pf-history-valuation--gold-spot .pf-history-valuation__svg {
+  max-height: 188px;
+}
+
 .pf-history-valuation__legend {
   display: flex;
   flex-wrap: wrap;
@@ -5427,7 +5436,7 @@ select.input {
   opacity: 0.88;
 }
 
-.pf-history-valuation-change--daily {
+.pf-live-gold__change--daily {
   font-size: 0.72rem;
   opacity: 0.92;
 }

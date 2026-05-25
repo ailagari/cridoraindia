@@ -366,6 +366,30 @@ export function buildPortfolioHoldingsValueSeries(
   return out
 }
 
+/** Stored 22K board ₹/g samples + optional live anchor (same shape as holdings series at 1 g notional). */
+export function buildGoldSpotPricePoints(
+  payload: GoldTickerHistoryPayload | null,
+  livePricePerGram: number | null,
+): PortfolioHistoryValuePoint[] {
+  const out: PortfolioHistoryValuePoint[] = []
+  for (const pt of payload?.points ?? []) {
+    const p = Number.parseFloat(pt.v)
+    if (!Number.isFinite(p)) continue
+    out.push({ iso: pt.t, valueInr: p })
+  }
+  if (livePricePerGram != null && Number.isFinite(livePricePerGram)) {
+    const last = out[out.length - 1]?.valueInr
+    if (last == null || Math.abs(last - livePricePerGram) > 0.005) {
+      out.push({ iso: new Date().toISOString(), valueInr: livePricePerGram })
+    }
+  }
+  if (out.length === 1) {
+    const o = out[0]!
+    out.push({ iso: o.iso, valueInr: o.valueInr })
+  }
+  return out
+}
+
 function formatHistoryXLabel(iso: string, granularity: 'intraday' | 'daily'): string {
   const t = Date.parse(iso)
   if (!Number.isFinite(t)) return '—'
@@ -741,6 +765,193 @@ export function PortfolioHistoryValuationChart({
         <span className="pf-history-valuation__lg">
           <span className="pf-history-valuation__dot" style={{ background: stroke }} /> Estimated value ({rangeKey}) ·{' '}
           {holdingsGrams.toFixed(Math.abs(holdingsGrams) >= 1 ? 2 : 3)} g × 22K board
+        </span>
+      </div>
+    </div>
+  )
+}
+
+/** 22K board ₹/g — same thin-line framed chart as portfolio history (no range toolbar; dashed = period open). */
+export function GoldSpotHistoryThinChart({
+  points,
+  granularity,
+  masked,
+  ariaLabel,
+  windowLabel,
+}: {
+  points: PortfolioHistoryValuePoint[]
+  granularity: 'intraday' | 'daily'
+  masked: boolean
+  ariaLabel: string
+  windowLabel: string
+}) {
+  const svgW = 340
+  const svgH = 120
+  const refPriceInrPerG = points[0]?.valueInr ?? 0
+  const geo = useMemo(
+    () =>
+      refPriceInrPerG > 0
+        ? buildPortfolioHistoryGeo(points, refPriceInrPerG, svgW, svgH)
+        : buildPortfolioHistoryGeo(points, -1, svgW, svgH),
+    [points, refPriceInrPerG, svgH],
+  )
+
+  const lastVal = points.length > 0 ? points[points.length - 1]!.valueInr : null
+  const stroke =
+    refPriceInrPerG <= 0
+      ? 'var(--gold-light)'
+      : lastVal != null && lastVal >= refPriceInrPerG
+        ? '#34d399'
+        : '#fb7185'
+
+  const pctVsOpen =
+    refPriceInrPerG > 0 && lastVal != null && Number.isFinite(lastVal)
+      ? ((lastVal - refPriceInrPerG) / refPriceInrPerG) * 100
+      : null
+  const ariaPct =
+    pctVsOpen != null && Number.isFinite(pctVsOpen)
+      ? `${pctVsOpen >= 0 ? '+' : ''}${pctVsOpen.toFixed(2)} percent vs period open. `
+      : ''
+
+  const aria = `${ariaLabel} Reference open ₹/g ${masked ? 'hidden' : Math.round(refPriceInrPerG).toLocaleString('en-IN')}. ${ariaPct}${points.length} samples.`
+
+  if (!geo || points.length < 2) {
+    return null
+  }
+
+  const midV = geo.minV + (geo.maxV - geo.minV) / 2
+  const gTop = geo.pt
+  const gBot = geo.innerBottom
+
+  return (
+    <div className="pf-history-valuation pf-history-valuation--gold-spot" role="img" aria-label={aria}>
+      <svg
+        viewBox={`0 0 ${svgW} ${svgH}`}
+        className="pf-history-valuation__svg"
+        preserveAspectRatio="xMidYMid meet"
+      >
+        <title>{aria}</title>
+
+        {[0.25, 0.5, 0.75].map((t) => {
+          const y = geo.pt + geo.ch * (1 - t)
+          return (
+            <line
+              key={`gh-${String(t)}`}
+              x1={geo.pl}
+              y1={y}
+              x2={geo.pl + geo.cw}
+              y2={y}
+              stroke="rgba(148, 163, 184, 0.12)"
+              strokeWidth={1}
+              vectorEffect="nonScalingStroke"
+              strokeDasharray="3 5"
+            />
+          )
+        })}
+
+        {geo.baselineY != null ? (
+          <rect x={geo.pl} y={gTop} width={geo.cw} height={Math.max(0, geo.baselineY - gTop)} fill="rgba(52,211,153,0.07)" />
+        ) : null}
+        {geo.baselineY != null ? (
+          <rect
+            x={geo.pl}
+            y={geo.baselineY}
+            width={geo.cw}
+            height={Math.max(0, gBot - geo.baselineY)}
+            fill="rgba(251,113,133,0.07)"
+          />
+        ) : null}
+
+        <text x="10" y="13" fill="rgba(226,232,240,0.55)" fontSize="9" className="pf-history-valuation__axis-y">
+          {`${axisInrTxt(geo.maxV, masked)}${masked ? '' : ' · j=max · /g'}`}
+        </text>
+        <text
+          x="10"
+          y={geo.pt + geo.ch / 2 + 3}
+          fill="rgba(226,232,240,0.45)"
+          fontSize="8.5"
+          className="pf-history-valuation__axis-y"
+        >
+          {`${axisInrTxt(midV, masked)}${masked ? '' : ' · j=mid · /g'}`}
+        </text>
+        <text
+          x="10"
+          y={geo.innerBottom - 4}
+          fill="rgba(226,232,240,0.55)"
+          fontSize="9"
+          className="pf-history-valuation__axis-y"
+        >
+          {`${axisInrTxt(geo.minV, masked)}${masked ? '' : ' · j=min · /g'}`}
+        </text>
+
+        <text
+          x={Math.min(geo.pl + geo.cw * 0.02 + 12, geo.xs[geo.firstIdx]!)}
+          y={svgH - 5}
+          textAnchor="middle"
+          fill="rgba(148,163,184,0.78)"
+          fontSize="8.5"
+        >
+          {!masked
+            ? `${formatHistoryXLabel(points[geo.firstIdx]!.iso, granularity)} · i=${geo.firstIdx + 1}`
+            : '••'}
+        </text>
+        {geo.midIdx !== geo.firstIdx ? (
+          <text
+            x={geo.xs[geo.midIdx]!}
+            y={svgH - 5}
+            textAnchor="middle"
+            fill="rgba(148,163,184,0.78)"
+            fontSize="8.5"
+          >
+            {!masked
+              ? `${formatHistoryXLabel(points[geo.midIdx]!.iso, granularity)} · i=${geo.midIdx + 1}`
+              : '••'}
+          </text>
+        ) : null}
+        {geo.lastIdx !== geo.midIdx ? (
+          <text
+            x={Math.max(geo.pl + geo.cw * 0.98 - 12, geo.xs[geo.lastIdx]!)}
+            y={svgH - 5}
+            textAnchor="middle"
+            fill="rgba(148,163,184,0.78)"
+            fontSize="8.5"
+          >
+            {!masked
+              ? `${formatHistoryXLabel(points[geo.lastIdx]!.iso, granularity)} · i=${geo.lastIdx + 1}`
+              : '••'}
+          </text>
+        ) : null}
+
+        {geo.baselineY != null ? (
+          <line
+            x1={geo.pl}
+            y1={geo.baselineY}
+            x2={geo.pl + geo.cw}
+            y2={geo.baselineY}
+            stroke="rgba(226,232,240,0.55)"
+            strokeWidth={1.1}
+            vectorEffect="nonScalingStroke"
+            strokeDasharray="5 5"
+          />
+        ) : null}
+
+        <path
+          d={geo.lineD}
+          fill="none"
+          stroke={stroke}
+          strokeWidth={1.2}
+          vectorEffect="nonScalingStroke"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <circle cx={geo.xs[geo.lastIdx]!} cy={geo.ys[geo.lastIdx]!} r={3.2} fill={stroke} />
+      </svg>
+      <div className="pf-history-valuation__legend" aria-hidden>
+        <span className="pf-history-valuation__lg">
+          <span className="pf-history-valuation__dash" /> Period open (ref.)
+        </span>
+        <span className="pf-history-valuation__lg">
+          <span className="pf-history-valuation__dot" style={{ background: stroke }} /> Board 22K · {windowLabel}
         </span>
       </div>
     </div>

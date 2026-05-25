@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   fetchGoldTickerHistory,
@@ -6,7 +6,10 @@ import {
   type GoldTickerPayload,
   type SpotPricesPayload,
 } from '@/lib/marketplaceApi'
-import { PortfolioTrendChart } from './PortfolioCharts'
+import {
+  buildGoldSpotPricePoints,
+  GoldSpotHistoryThinChart,
+} from './PortfolioCharts'
 
 type HistoryRange = '1d' | '1w' | '1m' | '1y'
 
@@ -58,21 +61,6 @@ function resolve22kPrice(
   return g22
 }
 
-function parseHistoryValues(payload: GoldTickerHistoryPayload | null, livePrice: number | null): number[] {
-  const vals: number[] = []
-  for (const pt of payload?.points ?? []) {
-    const n = Number.parseFloat(pt.v)
-    if (Number.isFinite(n)) vals.push(n)
-  }
-  if (livePrice != null && Number.isFinite(livePrice)) {
-    const last = vals[vals.length - 1]
-    if (last == null || Math.abs(last - livePrice) > 0.005) {
-      vals.push(livePrice)
-    }
-  }
-  return vals
-}
-
 function fmtHoldingsGrams(g: number): string {
   if (g <= 0) return '0 g'
   if (g >= 1) return `${g.toFixed(2)} g`
@@ -92,7 +80,6 @@ export function PortfolioLiveGoldPriceCard({
   holdingsValueInr: number
   masked: boolean
 }) {
-  const fillId = useId().replace(/:/g, '')
   const [historyRange, setHistoryRange] = useState<HistoryRange>('1d')
   const [history, setHistory] = useState<GoldTickerHistoryPayload | null>(null)
 
@@ -114,17 +101,21 @@ export function PortfolioLiveGoldPriceCard({
     return () => window.clearInterval(id)
   }, [refreshHistory])
 
-  const series = useMemo(() => parseHistoryValues(history, livePrice), [history, livePrice])
+  const pricePoints = useMemo(() => buildGoldSpotPricePoints(history, livePrice), [history, livePrice])
 
-  const periodHigh = series.length > 0 ? Math.max(...series) : null
-  const periodLow = series.length > 0 ? Math.min(...series) : null
+  const granularity: 'intraday' | 'daily' = history?.granularity === 'intraday' ? 'intraday' : 'daily'
+
+  const periodHigh =
+    pricePoints.length > 0 ? Math.max(...pricePoints.map((p) => p.valueInr)) : null
+  const periodLow =
+    pricePoints.length > 0 ? Math.min(...pricePoints.map((p) => p.valueInr)) : null
 
   const changePct = useMemo(() => {
-    if (livePrice == null || series.length < 2) return null
-    const base = series[0]
+    if (livePrice == null || pricePoints.length < 2) return null
+    const base = pricePoints[0]!.valueInr
     if (!Number.isFinite(base) || base <= 0) return null
     return ((livePrice - base) / base) * 100
-  }, [livePrice, series])
+  }, [livePrice, pricePoints])
 
   const todayChange = useMemo(() => {
     if (history?.granularity !== 'daily') return null
@@ -190,12 +181,13 @@ export function PortfolioLiveGoldPriceCard({
       </div>
 
       <div className="pf-live-gold__chart">
-        {series.length >= 2 ? (
-          <PortfolioTrendChart
-            values={series}
-            stroke="var(--gold-light)"
-            fillId={`pf-live-gold-fill-${fillId}`}
-            ariaLabel={`22K gold reference price over ${rangeLabel}`}
+        {pricePoints.length >= 2 ? (
+          <GoldSpotHistoryThinChart
+            points={pricePoints}
+            granularity={granularity}
+            masked={masked}
+            ariaLabel={`22K board reference ₹ per gram over ${rangeLabel}`}
+            windowLabel={rangeLabel}
           />
         ) : (
           <div className="pf-live-gold__chart-empty" aria-hidden />
