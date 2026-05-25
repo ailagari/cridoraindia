@@ -1,0 +1,102 @@
+/* Canonical design tokens merged from webpages/index.html + customer-dashboard.html
+   Loaded after index.css :root — theme blocks override via html[data-theme]. */
+
+:root {
+  --gold: #c9a840;
+  --gold-hi: #e2c870;
+  --gold-lo: #8a6e20;
+  --gold-bg: rgba(201, 168, 64, 0.08);
+  --gold-bd: rgba(201, 168, 64, 0.2);
+  --gold-border: rgba(201, 168, 64, 0.18);
+
+  --ok: #23c55e;
+  --err: #f04747;
+  --warn: #f59e0b;
+  --info: #3b9eff;
+
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --easing: cubic-bezier(0.4, 0, 0.2, 1);
+  --t1: 0.15s;
+  --t2: 0.25s;
+  --t3: 0.5s;
+
+  /* Public chrome */
+  --nav-h: 64px;
+
+  /* Dashboard chrome */
+  --fw: 220px;
+  --th: 58px;
+  --bh: 60px;
+
+  --r1: 8px;
+  --r2: 12px;
+  --r3: 16px;
+  --r4: 20px;
+  --r5: 32px;
+}
+
+/* Public marketing page tokens (webpages/index.html) */
+[data-theme='dark'] {
+  --page: #07090f;
+  --s0: #0b0f1a;
+  --s1: #0f1521;
+  --s2: #141c2b;
+  --s3: #1b2438;
+  --b0: rgba(255, 255, 255, 0.06);
+  --b1: rgba(255, 255, 255, 0.04);
+  --ink: #eaecf4;
+  --ink2: #7a8699;
+  --ink3: #3e4c5e;
+  --nav-bg: rgba(7, 9, 15, 0.88);
+  --glass: rgba(11, 15, 26, 0.8);
+  --overlay-public: rgba(0, 0, 0, 0.75);
+  --cs: 0 1px 3px rgba(0, 0, 0, 0.5), 0 6px 24px rgba(0, 0, 0, 0.3);
+  --fs: 0 12px 48px rgba(0, 0, 0, 0.55);
+
+  /* Dashboard overlap names */
+  --sidebar: #060810;
+  --nav-text: #64748b;
+  --nav-act: rgba(201, 168, 64, 0.1);
+  --glass-bg: rgba(11, 15, 26, 0.82);
+  --overlay: rgba(0, 0, 0, 0.72);
+  --inp: rgba(255, 255, 255, 0.04);
+  --hover: rgba(255, 255, 255, 0.04);
+  --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 4px 16px rgba(0, 0, 0, 0.3);
+  --float-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  --b2: rgba(255, 255, 255, 0.03);
+}
+
+[data-theme='light'] {
+  --page: #f5f3ee;
+  --s0: #ffffff;
+  --s1: #f8f6f2;
+  --s2: #f0ede6;
+  --s3: #e6e1d8;
+  --b0: rgba(0, 0, 0, 0.08);
+  --b1: rgba(0, 0, 0, 0.055);
+  --ink: #111827;
+  --ink2: #5a6370;
+  --ink3: #a0a9b4;
+  --nav-bg: rgba(245, 243, 238, 0.9);
+  --glass: rgba(255, 255, 255, 0.88);
+  --overlay-public: rgba(0, 0, 0, 0.45);
+  --cs: 0 1px 3px rgba(0, 0, 0, 0.07), 0 6px 24px rgba(0, 0, 0, 0.06);
+  --fs: 0 12px 48px rgba(0, 0, 0, 0.1);
+
+  --sidebar: #111827;
+  --nav-text: #8fa0b4;
+  --nav-act: rgba(201, 168, 64, 0.12);
+  --glass-bg: rgba(255, 255, 255, 0.9);
+  --overlay: rgba(0, 0, 0, 0.45);
+  --inp: rgba(0, 0, 0, 0.04);
+  --hover: rgba(0, 0, 0, 0.04);
+  --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.07), 0 4px 16px rgba(0, 0, 0, 0.05);
+  --float-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  --b2: rgba(0, 0, 0, 0.04);
+}
+
+@media (max-width: 767px) {
+  :root {
+    --nav-h: 56px;
+  }
+}

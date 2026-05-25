@@ -6,6 +6,7 @@ import { NavHubIcon } from '@/components/NavHubIcon'
 import { GoldTickerStrip } from '@/components/GoldTickerStrip'
 import { DashboardMobileUserMenu } from '@/components/DashboardMobileUserMenu'
 import { NotificationBell } from '@/components/NotificationBell'
+import { ThemeToggle } from '@/components/ThemeToggle'
 import { UserAvatar } from '@/components/UserAvatar'
 import { useAuth, type AuthUser } from '@/context/AuthContext'
 import { userAvatarFallback, userAvatarImageFit, userAvatarImageUrl } from '@/lib/userAvatar'
@@ -13,13 +14,10 @@ import type { DashboardNavGroup } from '@/lib/mobileNav/types'
 
 export type { DashboardNavItem, DashboardNavGroup } from '@/lib/mobileNav/types'
 
-const ROLE_META: Record<
-  'customer' | 'jeweller' | 'admin',
-  { badge: string; accentVar: string }
-> = {
-  customer: { badge: 'Saver', accentVar: 'var(--dash-copper)' },
-  jeweller: { badge: 'Jeweller', accentVar: 'var(--dash-silver-tone)' },
-  admin: { badge: 'Cridora admin', accentVar: 'var(--gold-light)' },
+const ROLE_META: Record<'customer' | 'jeweller' | 'admin', { badge: string }> = {
+  customer: { badge: 'Saver' },
+  jeweller: { badge: 'Jeweller' },
+  admin: { badge: 'Cridora admin' },
 }
 
 function jewellerSidebarDisplayName(user: AuthUser): string {
@@ -100,6 +98,15 @@ export function DashboardLayout({
     setAccordionOpen(initialAccordionOpen(navGroups, activeSection))
   }, [activeSection, navGroups])
 
+  useEffect(() => {
+    if (!mobileOpen) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMobileOpen(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [mobileOpen])
+
   const toggleAccordion = useCallback(
     (groupId: string) => {
       setAccordionOpen((prev) => {
@@ -127,7 +134,6 @@ export function DashboardLayout({
             key={g.id}
             type="button"
             className={'dash-side-acc-trigger dash-side-acc-trigger--solo' + (navActive ? ' dash-side-acc-trigger--solo-active' : '')}
-            style={navActive ? { borderColor: meta.accentVar, color: meta.accentVar } : undefined}
             onClick={() => pickSection(sole.sectionKey)}
           >
             <span className="dash-side-acc-trigger-label">
@@ -172,9 +178,6 @@ export function DashboardLayout({
                     key={item.sectionKey}
                     type="button"
                     className={'dash-side-btn' + (navActive ? ' dash-side-btn--active' : '')}
-                    style={{
-                      ...(navActive ? { borderColor: meta.accentVar, color: meta.accentVar } : {}),
-                    }}
                     onClick={() => pickSection(item.sectionKey)}
                   >
                     <span className="dash-side-btn-label">{item.label}</span>
@@ -189,25 +192,25 @@ export function DashboardLayout({
         </div>
       )
     },
-    [accordionOpen, activeSection, meta.accentVar, pickSection, role, toggleAccordion],
+    [accordionOpen, activeSection, pickSection, role, toggleAccordion],
   )
 
   const avatarUser = user
 
   return (
-    <div className={`dash-shell dash-shell--${role}`}>
+    <div className="ref-dash-shell shell">
       {mobileOpen ? (
         <button
           type="button"
-          className="dash-overlay"
+          className="overlay is-open"
           aria-label="Close menu"
           onClick={() => setMobileOpen(false)}
         />
       ) : null}
 
-      <aside className={`dash-sidebar${mobileOpen ? ' dash-sidebar--open' : ''}`}>
-        <div className="dash-sidebar-head">
-          <Link to="/" className="dash-logo-wrap" onClick={() => setMobileOpen(false)}>
+      <aside className={`sidebar${mobileOpen ? ' is-open' : ''}`}>
+        <div className="sb-logo">
+          <Link to="/" onClick={() => setMobileOpen(false)} style={{ textDecoration: 'none', color: 'inherit' }}>
             <CridoraLogo size="sm" />
           </Link>
           {mobileOpen ? (
@@ -217,99 +220,103 @@ export function DashboardLayout({
           ) : null}
         </div>
 
-        <div className="dash-user-card">
+        <div className="sb-user">
           <UserAvatar
             className="dash-avatar"
             imageUrl={avatarUser ? userAvatarImageUrl(avatarUser) : ''}
             fallback={avatarUser ? userAvatarFallback(avatarUser) : 'U'}
             imageFit={avatarUser ? userAvatarImageFit(avatarUser) : 'cover'}
-            style={{ borderColor: meta.accentVar, color: meta.accentVar }}
+            style={{ borderColor: 'var(--gold-hi)', color: 'var(--gold-hi)' }}
           />
-          <div className="dash-user-text">
-            <div className="dash-user-name">
+          <div>
+            <div className="sb-user-name">
               {!user ? null : role === 'jeweller' ? jewellerSidebarDisplayName(user) : (
                 <>
                   {user.first_name} {user.last_name}
                 </>
               )}
             </div>
-            <div className="dash-user-role" style={{ color: meta.accentVar }}>
-              {meta.badge}
-            </div>
+            <div className="sb-badge">{meta.badge}</div>
           </div>
         </div>
 
-        <nav className="dash-side-nav" aria-label="Dashboard sections">
+        <nav className="sb-nav" aria-label="Dashboard sections">
           {navGroups.map(renderSidebarAccordion)}
         </nav>
 
-        <div className="dash-side-foot">
-          <button type="button" className="dash-logout" onClick={handleLogout}>
+        <div className="sb-foot">
+          <button type="button" className="sb-foot-btn" onClick={handleLogout}>
             Sign out
           </button>
         </div>
       </aside>
 
-      <div className="dash-main">
-        <header className="dash-topbar">
-          <div className="dash-topbar-inner">
-            <Link to="/" className="dash-topbar-logo" onClick={() => setMobileOpen(false)}>
-              <CridoraLogo size="sm" />
-            </Link>
-            <h1 className="dash-topbar-title">{title}</h1>
-            <span className="dash-mobile-username" title={user?.first_name?.trim() || undefined}>
-              {user?.first_name?.trim() || 'Account'}
-            </span>
-            <div className="dash-topbar-end">
-              <div className="dash-mobile-actions">
-                <NotificationBell compact role={role} />
-                <DashboardMobileUserMenu onLogout={handleLogout} />
-              </div>
-              <div className="dash-topbar-right">
-                {role === 'jeweller' ? <GoldTickerStrip variant="jeweller" /> : null}
-                {role === 'admin' ? <GoldTickerStrip variant="admin" /> : null}
-                <NotificationBell compact role={role} />
-                <Link to="/" className="dash-public-link">
-                  Public site
-                </Link>
-              </div>
-            </div>
+      <div className="col">
+        <header className="topbar">
+          <button
+            type="button"
+            className="tb-burger"
+            aria-label="Open menu"
+            onClick={() => setMobileOpen(true)}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M3 6h18M3 12h18M3 18h18" strokeLinecap="round" />
+            </svg>
+          </button>
+          <div className="tb-crumb" aria-hidden={false}>
+            <span className="cur">{title}</span>
           </div>
-          {role === 'jeweller' || role === 'admin' ? (
-            <div className="dash-topbar-mobile-ticker">
+          <span className="dash-mobile-username" title={user?.first_name?.trim() || undefined}>
+            {user?.first_name?.trim() || 'Account'}
+          </span>
+          <div className="tb-end">
+            <div className="dash-mobile-actions">
+              <NotificationBell compact role={role} />
+              <DashboardMobileUserMenu onLogout={handleLogout} />
+            </div>
+            <div className="dash-topbar-right">
               {role === 'jeweller' ? <GoldTickerStrip variant="jeweller" /> : null}
               {role === 'admin' ? <GoldTickerStrip variant="admin" /> : null}
+              <NotificationBell compact role={role} />
+              <ThemeToggle />
+              <Link to="/" className="dash-public-link">
+                Public site
+              </Link>
             </div>
-          ) : null}
+          </div>
         </header>
 
-        <DashboardMobileSubNav
-          items={activeGroup.items}
-          activeSection={activeSection}
-          accentVar={meta.accentVar}
-          onPick={pickSection}
-        />
+        {role === 'jeweller' || role === 'admin' ? (
+          <div className="dash-topbar-mobile-ticker">
+            {role === 'jeweller' ? <GoldTickerStrip variant="jeweller" /> : null}
+            {role === 'admin' ? <GoldTickerStrip variant="admin" /> : null}
+          </div>
+        ) : null}
 
-        <main className="dash-content dash-content--with-bottom">{children}</main>
+        <DashboardMobileSubNav items={activeGroup.items} activeSection={activeSection} onPick={pickSection} />
+
+        <main className="main dash-content dash-content--with-bottom">{children}</main>
       </div>
 
-      <nav className="dash-bottom-nav" aria-label="Primary sections">
-        {navGroups.map((g) => {
-          const inGroup = g.items.some((i) => i.sectionKey === activeSection)
-          return (
-            <button
-              key={g.id}
-              type="button"
-              className={'dash-bottom-item' + (inGroup ? ' dash-bottom-item--active' : '')}
-              onClick={() => pickHub(g)}
-            >
-              <span className="mobile-tab-ico" style={{ color: inGroup ? meta.accentVar : undefined }}>
-                <NavHubIcon icon={g.icon} active={inGroup} />
-              </span>
-              <span className="mobile-tab-label">{g.shortLabel}</span>
-            </button>
-          )
-        })}
+      <nav className="bnav" aria-label="Primary sections">
+        <div className="bnav-inner">
+          {navGroups.map((g) => {
+            const inGroup = g.items.some((i) => i.sectionKey === activeSection)
+            return (
+              <button
+                key={g.id}
+                type="button"
+                className={'btab' + (inGroup ? ' is-active' : '')}
+                onClick={() => pickHub(g)}
+              >
+                <span className="mobile-tab-ico" aria-hidden="true">
+                  <NavHubIcon icon={g.icon} active={inGroup} />
+                </span>
+                <span className="mobile-tab-label">{g.shortLabel}</span>
+              </button>
+            )
+          })}
+        </div>
       </nav>
     </div>
   )

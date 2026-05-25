@@ -201,13 +201,7 @@ export function GoldTickerStrip({ variant = 'public' }: Props) {
   }
 
   return (
-    <div
-      className="gold-ticker gold-ticker--public"
-      style={{
-        borderBottom: '1px solid var(--border-soft)',
-        background: 'linear-gradient(90deg, var(--gold-shine-10), transparent)',
-      }}
-    >
+    <div className="gold-ticker gold-ticker--public ref-pub-ticker">
       <div
         className="container"
         style={{

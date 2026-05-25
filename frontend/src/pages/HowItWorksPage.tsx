@@ -39,7 +39,7 @@ export function HowItWorksPage() {
   const { t } = usePublicLocale()
 
   return (
-    <div className="container page enterprise-public" style={{ maxWidth: 760, paddingTop: '2.5rem', paddingBottom: '4rem' }}>
+    <div className="inner-narrow page enterprise-public" style={{ paddingTop: '2.5rem', paddingBottom: '4rem' }}>
       <p className="enterprise-public__eyebrow">{t('how.eyebrow')}</p>
       <h1 className="enterprise-public__title">{t('how.heroTitle')}</h1>
       <p className="enterprise-public__lead">{t('how.heroLead')}</p>

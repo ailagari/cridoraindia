@@ -1,28 +1,65 @@
-import { createContext, useContext, useLayoutEffect, useMemo } from 'react'
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useState } from 'react'
 
-export type ThemeMode = 'dark'
+const STORAGE_KEY = 'crdr_theme'
 
-function applyDarkTheme(): void {
-  document.documentElement.dataset.theme = 'dark'
+export type ThemeMode = 'dark' | 'light'
+
+function readStoredTheme(): ThemeMode {
+  if (typeof window === 'undefined') return 'dark'
+  try {
+    const v = window.localStorage.getItem(STORAGE_KEY)
+    if (v === 'light' || v === 'dark') return v
+  } catch {
+    /* ignore */
+  }
+  return 'dark'
+}
+
+function metaThemeColors(mode: ThemeMode): string {
+  return mode === 'dark' ? '#07090f' : '#f5f3ee'
+}
+
+function applyTheme(mode: ThemeMode): void {
+  document.documentElement.dataset.theme = mode
   const meta = document.querySelector('meta[name="theme-color"]')
   if (meta) {
-    meta.setAttribute('content', '#000814')
+    meta.setAttribute('content', metaThemeColors(mode))
   }
 }
 
 type ThemeContextValue = {
   theme: ThemeMode
+  toggleTheme: () => void
+  setTheme: (mode: ThemeMode) => void
 }
 
 const ThemeContext = createContext<ThemeContextValue | null>(null)
 
-/** Cridora uses dark mode only on all devices. */
+/** Reference-aligned light/dark; persists to localStorage (`crdr_theme`). */
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  const [theme, setThemeState] = useState<ThemeMode>(() => readStoredTheme())
+
   useLayoutEffect(() => {
-    applyDarkTheme()
+    applyTheme(theme)
+  }, [theme])
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(STORAGE_KEY, theme)
+    } catch {
+      /* ignore */
+    }
+  }, [theme])
+
+  const setTheme = useCallback((mode: ThemeMode) => {
+    setThemeState(mode)
   }, [])
 
-  const value = useMemo(() => ({ theme: 'dark' as const }), [])
+  const toggleTheme = useCallback(() => {
+    setThemeState((prev) => (prev === 'dark' ? 'light' : 'dark'))
+  }, [])
+
+  const value = useMemo(() => ({ theme, toggleTheme, setTheme }), [theme, toggleTheme, setTheme])
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
 }

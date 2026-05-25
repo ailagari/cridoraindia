@@ -30,9 +30,12 @@ import { NativeAppSplash } from '@/components/NativeAppSplash'
 import { NativeAppEntryRoute } from '@/components/NativeAppEntryRoute'
 import { isNativePlatform } from '@/lib/capacitorPlatform'
 import '@/styles/index.css'
+import '@/styles/reference-tokens.css'
+import '@/styles/reference-legacy-bridge.css'
 import '@/styles/jeweller-unified-desk.css'
 import '@/styles/tokens.css'
 import '@/styles/ds.css'
+import '@/styles/reference-ui.css'
 import '@/styles/malayalam-locale.css'
 
 const useHashRouter =

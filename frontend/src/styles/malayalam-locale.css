@@ -17,31 +17,31 @@ html[lang='ml'] body {
  * Site chrome (header, footer, mobile nav) — font swap only.
  * Keep English layout metrics so switching locale does not shift the bar.
  */
-html[lang='ml'] .public-sticky-stack,
+html[lang='ml'] .pub-ref .nav,
 html[lang='ml'] .public-bottom-nav,
 html[lang='ml'] .public-hub-tabs,
 html[lang='ml'] .public-mobile-segment-bar,
-html[lang='ml'] .public-footer {
+html[lang='ml'] .pub-footer {
   letter-spacing: inherit;
   line-height: inherit;
 }
 
-html[lang='ml'] .public-sticky-stack .nav-link,
+html[lang='ml'] .pub-ref .nav-link,
 html[lang='ml'] .public-hub-pill,
-html[lang='ml'] .public-mobile-segment-btn,
+html[lang='ml'] .pub-ref .snpill,
 html[lang='ml'] .public-bottom-item {
   text-transform: uppercase;
   line-height: 1.2;
 }
 
-html[lang='ml'] .public-sticky-stack .nav-link {
+html[lang='ml'] .pub-ref .nav-link {
   font-size: 0.68rem;
   font-weight: 600;
   letter-spacing: 0.14em;
   padding: 0.2rem 0;
 }
 
-html[lang='ml'] .public-sticky-stack .btn.btn-ghost {
+html[lang='ml'] .pub-ref .btn.btn-ghost {
   font-size: 0.65rem;
   font-weight: 600;
   letter-spacing: 0.12em;
@@ -57,7 +57,7 @@ html[lang='ml'] .public-hub-pill {
   padding: 0.35rem 0.82rem;
 }
 
-html[lang='ml'] .public-mobile-segment-btn {
+html[lang='ml'] .pub-ref .snpill {
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.06em;
@@ -263,7 +263,7 @@ html[lang='ml'] .form-footnote {
   line-height: 1.65;
 }
 
-html[lang='ml'] .public-footer p {
+html[lang='ml'] .pub-footer p {
   line-height: 1.72;
   max-width: 42rem;
 }
