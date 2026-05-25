@@ -36,7 +36,7 @@
 }
 
 .ref-dash-shell .dash-content .hero {
-  background: var(--s1);
+  background: #080b13;
   border: 1px solid var(--b0);
   border-radius: var(--r4);
   padding: 28px;

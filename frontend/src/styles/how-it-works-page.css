@@ -1,0 +1,348 @@
+/* /how-it-works — richer layout scoped to `.how-page` */
+
+.how-page {
+  --how-r: var(--radius, 12px);
+  --how-gap: clamp(1rem, 3vw, 1.75rem);
+  padding-bottom: 4rem;
+}
+
+.how-page__hero {
+  position: relative;
+  padding: clamp(1.5rem, 4vw, 2.75rem);
+  padding-left: clamp(1.25rem, 4vw, 2.25rem);
+  margin: 0 0 clamp(2rem, 5vw, 3rem);
+  border-radius: calc(var(--how-r) + 6px);
+  border: 1px solid var(--b0, rgba(255, 255, 255, 0.06));
+  background:
+    radial-gradient(ellipse 120% 80% at 100% 0%, rgba(201, 168, 64, 0.12), transparent 55%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.04), transparent 40%),
+    var(--s1, #0f1521);
+  overflow: hidden;
+}
+
+.how-page__hero::after {
+  content: '';
+  position: absolute;
+  width: clamp(140px, 28vw, 220px);
+  height: clamp(140px, 28vw, 220px);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(201, 168, 64, 0.18), transparent 68%);
+  right: clamp(-40px, -5vw, -20px);
+  top: clamp(-50px, -8vw, -30px);
+  pointer-events: none;
+}
+
+.how-page__hero > * {
+  position: relative;
+  z-index: 1;
+}
+
+.how-page__section {
+  margin-top: clamp(2rem, 5vw, 3rem);
+}
+
+.how-page__section-head {
+  margin: 0 0 clamp(0.85rem, 2vw, 1.25rem);
+  font-size: clamp(1.15rem, 2.8vw, 1.35rem);
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+
+.how-page__section-lead {
+  margin: 0 0 1.25rem;
+  color: var(--text-muted);
+  line-height: 1.65;
+  max-width: 62ch;
+}
+
+/* Customer steps */
+.how-page__steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--how-gap);
+}
+
+@media (max-width: 1023px) {
+  .how-page__steps {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 767px) {
+  .how-page__steps {
+    grid-template-columns: 1fr;
+  }
+}
+
+.how-step-card {
+  position: relative;
+  padding: clamp(1.1rem, 3vw, 1.35rem);
+  border-radius: var(--how-r);
+  border: 1px solid var(--b0, rgba(255, 255, 255, 0.06));
+  background: var(--s0, #0b0f1a);
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+
+.how-step-card:hover {
+  border-color: var(--gold-border, rgba(201, 168, 64, 0.2));
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+  transform: translateY(-2px);
+}
+
+.how-step-card__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.how-step-card__num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.85rem;
+  height: 1.85rem;
+  padding: 0 0.35rem;
+  border-radius: 8px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+  color: var(--gold-hi, #ffd400);
+  background: rgba(201, 168, 64, 0.12);
+  border: 1px solid var(--gold-border, rgba(201, 168, 64, 0.18));
+}
+
+.how-step-card__icon {
+  font-size: 1.65rem;
+  line-height: 1;
+  filter: saturate(1.05);
+}
+
+.how-step-card__title {
+  margin: 0 0 0.45rem;
+  font-size: 1rem;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.how-step-card__body {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  line-height: 1.62;
+}
+
+/* Jeweller tiles */
+.how-page__jewel-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.65rem var(--how-gap);
+  margin-top: 1rem;
+}
+
+@media (max-width: 767px) {
+  .how-page__jewel-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 479px) {
+  .how-page__jewel-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.how-jewel-tile {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  padding: 0.75rem 0.85rem;
+  border-radius: 10px;
+  border: 1px solid var(--b0);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.how-jewel-tile__glyph {
+  flex-shrink: 0;
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  font-size: 1.1rem;
+  background: rgba(201, 168, 64, 0.08);
+  border: 1px solid rgba(201, 168, 64, 0.12);
+}
+
+.how-jewel-tile__text {
+  margin: 0;
+  font-size: 0.84rem;
+  font-weight: 550;
+  line-height: 1.45;
+  color: var(--ink, #eaecf4);
+}
+
+.how-page__jewel-foot {
+  margin: 1.15rem 0 0;
+  padding: 0.85rem 1rem;
+  border-radius: 10px;
+  border-left: 3px solid var(--gold-lo, #8a6e20);
+  background: rgba(201, 168, 64, 0.06);
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  line-height: 1.58;
+}
+
+/* Vault split */
+.how-page__vault {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: clamp(1.25rem, 4vw, 2rem);
+  align-items: start;
+}
+
+@media (max-width: 767px) {
+  .how-page__vault {
+    grid-template-columns: 1fr;
+  }
+}
+
+.how-page__vault-card {
+  padding: clamp(1.35rem, 3.5vw, 1.75rem);
+  border-radius: calc(var(--how-r) + 4px);
+  border: 1px solid var(--b0);
+  background:
+    radial-gradient(ellipse 80% 60% at 0% 100%, rgba(59, 158, 255, 0.06), transparent 50%),
+    var(--s0);
+}
+
+.how-page__vault-side-title {
+  margin: 0 0 0.75rem;
+  font-size: 0.76rem;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--gold-hi);
+}
+
+.how-page__pill-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.55rem;
+}
+
+@media (max-width: 479px) {
+  .how-page__pill-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.how-page__pill {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0.65rem;
+  border-radius: 10px;
+  border: 1px solid var(--b0);
+  background: rgba(255, 255, 255, 0.02);
+  font-size: 0.8rem;
+  font-weight: 500;
+  line-height: 1.38;
+}
+
+.how-page__pill-dot {
+  flex-shrink: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ok);
+  box-shadow: 0 0 0 2px rgba(35, 197, 94, 0.25);
+}
+
+/* Transparency */
+.how-page__truth-intro {
+  margin: 0 0 1rem;
+}
+
+.how-page__truth-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.65rem var(--how-gap);
+}
+
+@media (max-width: 767px) {
+  .how-page__truth-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 479px) {
+  .how-page__truth-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.how-truth-tile {
+  display: flex;
+  gap: 0.65rem;
+  align-items: flex-start;
+  padding: 0.75rem;
+  border-radius: 10px;
+  border: 1px solid var(--b0);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.how-truth-tile__mark {
+  flex-shrink: 0;
+  margin-top: 0.06rem;
+  width: 1.15rem;
+  height: 1.15rem;
+  border-radius: 4px;
+  display: grid;
+  place-items: center;
+  font-size: 0.62rem;
+  font-weight: 800;
+  color: var(--ok);
+  background: rgba(35, 197, 94, 0.12);
+  border: 1px solid rgba(35, 197, 94, 0.35);
+}
+
+.how-truth-tile__text {
+  margin: 0;
+  font-size: 0.815rem;
+  line-height: 1.46;
+  color: var(--text-muted);
+}
+
+.how-page__truth-note {
+  margin: 1.15rem 0 0;
+  padding: 0.85rem 1rem;
+  border-radius: 10px;
+  border: 1px dashed rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.how-page__truth-note p {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.58;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.how-page__cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: clamp(2rem, 5vw, 3rem);
+  padding-top: clamp(1.5rem, 4vw, 2rem);
+  border-top: 1px solid var(--b0);
+}

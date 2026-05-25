@@ -2,21 +2,27 @@ import { Link } from 'react-router-dom'
 import { usePublicLocale } from '@/i18n/PublicLocaleProvider'
 import type { MessageKey } from '@/i18n/messages/en'
 
-const CUSTOMER_STEPS: { titleKey: MessageKey; bodyKey: MessageKey }[] = [
-  { titleKey: 'how.customerStep1Title', bodyKey: 'how.customerStep1Body' },
-  { titleKey: 'how.customerStep2Title', bodyKey: 'how.customerStep2Body' },
-  { titleKey: 'how.customerStep3Title', bodyKey: 'how.customerStep3Body' },
-  { titleKey: 'how.customerStep4Title', bodyKey: 'how.customerStep4Body' },
+type StepDef = {
+  titleKey: MessageKey
+  bodyKey: MessageKey
+  icon: string
+}
+
+const CUSTOMER_STEPS: StepDef[] = [
+  { titleKey: 'how.customerStep1Title', bodyKey: 'how.customerStep1Body', icon: '🏪' },
+  { titleKey: 'how.customerStep2Title', bodyKey: 'how.customerStep2Body', icon: '💰' },
+  { titleKey: 'how.customerStep3Title', bodyKey: 'how.customerStep3Body', icon: '📊' },
+  { titleKey: 'how.customerStep4Title', bodyKey: 'how.customerStep4Body', icon: '✨' },
 ]
 
-const JEWELLER_FEATURES: MessageKey[] = [
-  'how.jewellersFeature1',
-  'how.jewellersFeature2',
-  'how.jewellersFeature3',
-  'how.jewellersFeature4',
-  'how.jewellersFeature5',
-  'how.jewellersFeature6',
-  'how.jewellersFeature7',
+const JEWELLER_FEATURES: { key: MessageKey; icon: string }[] = [
+  { key: 'how.jewellersFeature1', icon: '🧾' },
+  { key: 'how.jewellersFeature2', icon: '📲' },
+  { key: 'how.jewellersFeature3', icon: '⚡' },
+  { key: 'how.jewellersFeature4', icon: '🏛️' },
+  { key: 'how.jewellersFeature5', icon: '🔁' },
+  { key: 'how.jewellersFeature6', icon: '📦' },
+  { key: 'how.jewellersFeature7', icon: '🏬' },
 ]
 
 const VAULT_CUSTOMER: MessageKey[] = [
@@ -39,67 +45,112 @@ export function HowItWorksPage() {
   const { t } = usePublicLocale()
 
   return (
-    <div className="inner-narrow page enterprise-public" style={{ paddingTop: '2.5rem', paddingBottom: '4rem' }}>
-      <p className="enterprise-public__eyebrow">{t('how.eyebrow')}</p>
-      <h1 className="enterprise-public__title">{t('how.heroTitle')}</h1>
-      <p className="enterprise-public__lead">{t('how.heroLead')}</p>
+    <div className="how-page inner-narrow page enterprise-public" style={{ paddingTop: '2rem' }}>
+      <header className="how-page__hero">
+        <p className="enterprise-public__eyebrow">{t('how.eyebrow')}</p>
+        <h1 className="enterprise-public__title">{t('how.heroTitle')}</h1>
+        <p className="enterprise-public__lead" style={{ marginBottom: 0 }}>
+          {t('how.heroLead')}
+        </p>
+      </header>
 
-      <section style={{ marginTop: '2.5rem' }}>
-        <h2 className="cridora-section-title">{t('how.customersHeading')}</h2>
-        <ol className="enterprise-public__steps">
-          {CUSTOMER_STEPS.map((s) => (
-            <li key={s.titleKey}>
-              <h2>{t(s.titleKey)}</h2>
-              <p>{t(s.bodyKey)}</p>
+      <section className="how-page__section" aria-labelledby="how-customers">
+        <h2 id="how-customers" className="how-page__section-head">
+          {t('how.customersHeading')}
+        </h2>
+        <ol className="how-page__steps">
+          {CUSTOMER_STEPS.map((s, i) => (
+            <li key={s.titleKey} className="how-step-card">
+              <div className="how-step-card__top">
+                <span className="how-step-card__num" aria-hidden="true">
+                  {String(i + 1)}
+                </span>
+                <span className="how-step-card__icon" aria-hidden="true">
+                  {s.icon}
+                </span>
+              </div>
+              <h3 className="how-step-card__title">{t(s.titleKey)}</h3>
+              <p className="how-step-card__body">{t(s.bodyKey)}</p>
             </li>
           ))}
         </ol>
       </section>
 
-      <section style={{ marginTop: '2.5rem' }}>
-        <h2 className="cridora-section-title">{t('how.jewellersHeading')}</h2>
-        <p style={{ color: 'var(--text-muted)', lineHeight: 1.6 }}>{t('how.jewellersIntro')}</p>
-        <ul style={{ color: 'var(--text-muted)', paddingLeft: '1.1rem', display: 'grid', gap: '0.4rem' }}>
-          {JEWELLER_FEATURES.map((key) => (
-            <li key={key}>{t(key)}</li>
+      <section className="how-page__section" aria-labelledby="how-jewellers">
+        <h2 id="how-jewellers" className="how-page__section-head">
+          {t('how.jewellersHeading')}
+        </h2>
+        <p className="how-page__section-lead">{t('how.jewellersIntro')}</p>
+        <div className="how-page__jewel-grid">
+          {JEWELLER_FEATURES.map((row) => (
+            <article key={row.key} className="how-jewel-tile">
+              <span className="how-jewel-tile__glyph" aria-hidden="true">
+                {row.icon}
+              </span>
+              <p className="how-jewel-tile__text">{t(row.key)}</p>
+            </article>
           ))}
-        </ul>
-        <p style={{ color: 'var(--text-muted)', marginTop: '1rem', lineHeight: 1.6 }}>{t('how.jewellersClosing')}</p>
+        </div>
+        <p className="how-page__jewel-foot">{t('how.jewellersClosing')}</p>
       </section>
 
-      <section className="card" style={{ marginTop: '2.5rem', padding: '1.5rem', borderRadius: 20 }}>
-        <h2 className="cridora-section-title" style={{ marginTop: 0 }}>{t('how.vaultHeading')}</h2>
-        <p style={{ color: 'var(--text-muted)', lineHeight: 1.6 }}>{t('how.vaultIntro')}</p>
-        <p style={{ marginTop: '1rem', marginBottom: '0.5rem', fontWeight: 600 }}>{t('how.vaultCustomersHeading')}</p>
-        <ul style={{ color: 'var(--text-muted)', paddingLeft: '1.1rem', display: 'grid', gap: '0.4rem' }}>
-          {VAULT_CUSTOMER.map((key) => (
-            <li key={key}>{t(key)}</li>
-          ))}
-        </ul>
-        <p style={{ color: 'var(--text-muted)', marginTop: '1rem', lineHeight: 1.6 }}>{t('how.vaultClosing')}</p>
+      <section className="how-page__section how-page__vault-card" aria-labelledby="how-vault">
+        <h2 id="how-vault" className="how-page__section-head" style={{ marginTop: 0 }}>
+          {t('how.vaultHeading')}
+        </h2>
+        <div className="how-page__vault">
+          <div>
+            <p className="how-page__section-lead" style={{ marginBottom: '1rem' }}>
+              {t('how.vaultIntro')}
+            </p>
+            <p className="how-page__section-lead" style={{ marginBottom: 0 }}>
+              {t('how.vaultClosing')}
+            </p>
+          </div>
+          <div>
+            <p className="how-page__vault-side-title">{t('how.vaultCustomersHeading')}</p>
+            <div className="how-page__pill-grid">
+              {VAULT_CUSTOMER.map((key) => (
+                <div key={key} className="how-page__pill">
+                  <span className="how-page__pill-dot" aria-hidden="true" />
+                  <span>{t(key)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </section>
 
-      <section className="card" style={{ marginTop: '2.5rem', padding: '1.5rem', borderRadius: 20 }}>
-        <h2 className="cridora-section-title" style={{ marginTop: 0 }}>{t('how.transparencyHeading')}</h2>
-        <p style={{ color: 'var(--text-muted)', lineHeight: 1.6 }}>{t('how.transparencyIntro')}</p>
-        <ul style={{ color: 'var(--text-muted)', paddingLeft: '1.1rem', display: 'grid', gap: '0.4rem' }}>
-          {TRANSPARENCY.map((key) => (
-            <li key={key}>{t(key)}</li>
-          ))}
-        </ul>
-        <p style={{ color: 'var(--text-muted)', marginTop: '1rem', lineHeight: 1.6, fontStyle: 'italic' }}>
-          {t('how.transparencyNote')}
+      <section className="how-page__section how-page__vault-card" aria-labelledby="how-transparency">
+        <h2 id="how-transparency" className="how-page__section-head" style={{ marginTop: 0 }}>
+          {t('how.transparencyHeading')}
+        </h2>
+        <p className="how-page__truth-intro how-page__section-lead" style={{ marginBottom: '1rem' }}>
+          {t('how.transparencyIntro')}
         </p>
+        <div className="how-page__truth-grid">
+          {TRANSPARENCY.map((key) => (
+            <article key={key} className="how-truth-tile">
+              <span className="how-truth-tile__mark" aria-hidden="true">
+                ✓
+              </span>
+              <p className="how-truth-tile__text">{t(key)}</p>
+            </article>
+          ))}
+        </div>
+        <div className="how-page__truth-note">
+          <p>{t('how.transparencyNote')}</p>
+        </div>
       </section>
 
-      <div className="enterprise-public__cta">
+      <footer className="how-page__cta">
         <Link to="/jewellers" className="btn btn-primary">
           {t('how.ctaBrowse')}
         </Link>
         <Link to="/waitlist" className="btn btn-ghost">
           {t('how.ctaWaitlist')}
         </Link>
-      </div>
+      </footer>
     </div>
   )
 }

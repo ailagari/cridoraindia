@@ -38,6 +38,7 @@ import '@/styles/tokens.css'
 import '@/styles/ds.css'
 import '@/styles/reference-dashboard-panels.css'
 import '@/styles/reference-index-landing.css'
+import '@/styles/how-it-works-page.css'
 import '@/styles/malayalam-locale.css'
 
 const useHashRouter =
