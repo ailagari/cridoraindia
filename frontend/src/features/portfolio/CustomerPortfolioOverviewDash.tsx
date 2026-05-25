@@ -1,9 +1,14 @@
-import { useId, useMemo } from 'react'
+import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import type { FractionalLedgerRowDTO, GoldWalletDTO, PortfolioTotalsDTO } from '@/lib/goldTransferApi'
 import { vaultRowTotalGrams, type VaultRowDTO } from '@/lib/goldTransferApi'
 import type { SpotPricesPayload } from '@/lib/marketplaceApi'
-import { PortfolioDonut, PortfolioTrendChart } from './PortfolioCharts'
+import {
+  PortfolioDonut,
+  PortfolioHistoryValuationChart,
+  type PortfolioHistoryRangeKey,
+  type PortfolioHistoryValuePoint,
+} from './PortfolioCharts'
 
 const DONUT_COLORS = ['#c9a840', '#3b9eff', '#67e8f9', '#a78bfa', '#34d399', '#f472b6', '#38bdf8']
 
@@ -60,12 +65,15 @@ export function CustomerPortfolioOverviewDash(props: {
   onHoldingsJewelleryVaultOnlyChange: (jewelleryVaultOnly: boolean) => void
   showHoldingsScopeToggle: boolean
   masked: boolean
-  sessionSamples: number[]
+  portfolioHistoryPoints: PortfolioHistoryValuePoint[]
+  portfolioHistoryGranularity: 'intraday' | 'daily'
+  portfolioHistoryRange: PortfolioHistoryRangeKey
+  portfolioHistoryLoading: boolean
+  onPortfolioHistoryRangeChange: (next: PortfolioHistoryRangeKey) => void
   kycVerified: boolean
   onViewLedger: () => void
   onTogglePrivacy: () => void
 }) {
-  const chartGradId = useId().replace(/:/g, '')
   const {
     wallet,
     spotPayload,
@@ -84,7 +92,11 @@ export function CustomerPortfolioOverviewDash(props: {
     onHoldingsJewelleryVaultOnlyChange,
     showHoldingsScopeToggle,
     masked,
-    sessionSamples,
+    portfolioHistoryPoints,
+    portfolioHistoryGranularity,
+    portfolioHistoryRange,
+    portfolioHistoryLoading,
+    onPortfolioHistoryRangeChange,
     kycVerified,
     onViewLedger,
     onTogglePrivacy,
@@ -110,25 +122,6 @@ export function CustomerPortfolioOverviewDash(props: {
   const redeemG = Math.max(0, heldGramsSum - lockedLoanG)
   const live22 = spot22PerG(spotPayload)
   const activePartners = vaults.filter((v) => vaultRowTotalGrams(v) > 0.000001).length
-
-  const chartValues =
-    sessionSamples.length > 1 ? sessionSamples : sessionSamples.length === 1 ? [sessionSamples[0]!, sessionSamples[0]!] : []
-
-  const heroTrendValues = useMemo(() => {
-    if (chartValues.length > 0) {
-      const cap = 36
-      return chartValues.slice(-Math.min(chartValues.length, cap))
-    }
-    if (masked) {
-      return [98, 100, 99, 101, 102, 101.5, 102.2]
-    }
-    if (summaryMarketValueInr > 0) {
-      const jitter = Math.max(summaryMarketValueInr * 0.0045, 1)
-      const v = summaryMarketValueInr
-      return [v - jitter * 2.8, v - jitter * 1.2, v + jitter * 0.35, v - jitter * 0.65, v + jitter * 0.85, v]
-    }
-    return [1, 1, 1.01, 1]
-  }, [chartValues, summaryMarketValueInr, masked])
 
   const recentTx = [...fractionalLedger]
     .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at))
@@ -208,15 +201,26 @@ export function CustomerPortfolioOverviewDash(props: {
           </div>
         </div>
 
-        <div className="pf-hero-trend-wrap">
-          <PortfolioTrendChart
-            values={heroTrendValues}
-            stroke="#c9a840"
-            fillId={`${chartGradId}_hero_sg`}
-            ariaLabel={
+        <div className="pf-hero-trend-wrap pf-hero-history-block">
+          <p className="t-fa fs11" style={{ margin: '0 0 10px', color: 'var(--ink3)', lineHeight: 1.45 }}>
+            Board-rate snapshots × {fmtGramsMasked(summaryGrams, masked, 3)} g (selected scope). Dashed line: invested metal
+            cost. Tint above → unrealised gain at that sample; tint below → unrealised loss versus cost. Past holdings
+            changes aren&apos;t rolled back along the curve — use Charts or Ledger for full history context.
+          </p>
+          <PortfolioHistoryValuationChart
+            points={portfolioHistoryPoints}
+            investedInr={summaryAllocatedCost}
+            granularity={portfolioHistoryGranularity}
+            rangeKey={portfolioHistoryRange}
+            onRangeChange={onPortfolioHistoryRangeChange}
+            masked={masked}
+            loading={portfolioHistoryLoading}
+            holdingsGrams={summaryGrams}
+            compact
+            ariaLead={
               masked
-                ? 'Vault valuation trend (balances hidden)'
-                : 'Approximate vault valuation trend this session'
+                ? 'Portfolio valuation versus invested baseline, balances masked.'
+                : 'Estimated portfolio value versus invested baseline from board-rate storage.'
             }
           />
         </div>
@@ -289,7 +293,10 @@ export function CustomerPortfolioOverviewDash(props: {
           <div className="row-b mb12">
             <div>
               <div className="sec-title">Portfolio performance</div>
-              <div className="sec-sub t-fa fs11">INR · session</div>
+              <div className="sec-sub t-fa fs11">
+                Board-rate track · same window as overview ·{' '}
+                <span className="tn">{fmtGramsMasked(summaryGrams, masked, 3)}</span> g scope
+              </div>
             </div>
             {summaryPnlPct != null && Number.isFinite(summaryPnlPct) ? (
               <span className={`bdg${summaryPnlPct >= 0 ? ' bdg-ok' : ' bdg-err'}`}>
@@ -300,18 +307,17 @@ export function CustomerPortfolioOverviewDash(props: {
               <span className="bdg bdg-grey">—</span>
             )}
           </div>
-          {chartValues.length > 0 ? (
-            <PortfolioTrendChart
-              values={chartValues}
-              stroke="#c9a840"
-              fillId={`cdpf_${chartGradId}`}
-              ariaLabel="Approximate live vault valuation samples this session"
-            />
-          ) : (
-            <p className="t-fa fs11" style={{ margin: 0 }}>
-              Valuation samples appear after your balance updates.
-            </p>
-          )}
+          <PortfolioHistoryValuationChart
+            points={portfolioHistoryPoints}
+            investedInr={summaryAllocatedCost}
+            granularity={portfolioHistoryGranularity}
+            rangeKey={portfolioHistoryRange}
+            onRangeChange={onPortfolioHistoryRangeChange}
+            masked={masked}
+            loading={portfolioHistoryLoading}
+            holdingsGrams={summaryGrams}
+            ariaLead="Portfolio valuation over selected window versus invested metal cost baseline."
+          />
         </div>
 
         <div className="card card-p">

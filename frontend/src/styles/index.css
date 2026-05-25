@@ -5362,7 +5362,72 @@ select.input {
   color: var(--gold-light);
 }
 
-.pf-live-gold__change--daily {
+/* Portfolio board-rate valuation chart (history × holdings vs invested baseline) */
+.pf-history-valuation {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.pf-history-valuation__toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0.35rem;
+}
+
+.pf-hero-history-block .pf-history-valuation__toolbar {
+  justify-content: flex-end;
+}
+
+.pf-history-valuation__svg {
+  width: 100%;
+  height: auto;
+  max-height: 200px;
+  display: block;
+}
+
+.pf-history-valuation-card-slot .pf-history-valuation__svg {
+  max-height: 240px;
+}
+
+.pf-history-valuation__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.9rem;
+  margin-top: 0.38rem;
+  font-size: 0.62rem;
+  color: var(--text-muted);
+  line-height: 1.35;
+}
+
+.pf-history-valuation__lg {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.32rem;
+}
+
+.pf-history-valuation__dash {
+  width: 14px;
+  border-top: 1px dashed rgba(148, 163, 184, 0.55);
+}
+
+.pf-history-valuation__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.pf-history-valuation__empty {
+  margin: 0.4rem 0 0;
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.pf-history-valuation--waiting .pf-history-valuation__empty {
+  opacity: 0.88;
+}
+
+.pf-history-valuation-change--daily {
   font-size: 0.72rem;
   opacity: 0.92;
 }

@@ -3,7 +3,14 @@ import { useSearchParams } from 'react-router-dom'
 import { fetchGoldWallet, vaultRowEstimatedInr, vaultRowTotalGrams, type VaultRowDTO } from '@/lib/goldTransferApi'
 import { fetchPortfolioLedger, type PortfolioLedgerEntryDTO } from '@/lib/personalHoldingsApi'
 import { CustomerPortfolioOverviewDash } from './CustomerPortfolioOverviewDash'
-import { fetchGoldTicker, fetchSpotPrices, type GoldTickerPayload, type SpotPricesPayload } from '@/lib/marketplaceApi'
+import {
+  fetchSpotPrices,
+  fetchGoldTicker,
+  fetchGoldTickerHistory,
+  type GoldTickerPayload,
+  type GoldTickerHistoryPayload,
+  type SpotPricesPayload,
+} from '@/lib/marketplaceApi'
 import { useAuth } from '@/context/AuthContext'
 import { useLivePoll } from '@/lib/useLivePoll'
 import { LIVE_BALANCE_POLL_MS } from '@/lib/liveDeskIntervals'
@@ -11,13 +18,15 @@ import {
   PortfolioBarChart,
   PortfolioCostVsMarketBoard,
   PortfolioDonut,
+  PortfolioHistoryValuationChart,
+  buildPortfolioHoldingsValueSeries,
+  type PortfolioHistoryRangeKey,
 } from './PortfolioCharts'
 import { PortfolioLiveGoldPriceCard } from './PortfolioLiveGoldPriceCard'
 import { CustomerVaultsPanel } from './CustomerVaultsPanel'
 import { CustomerPersonalHoldingsPanel } from './CustomerPersonalHoldingsPanel'
 
 const DONUT_COLORS = ['#fbbf24', '#d4a85c', '#67e8f9', '#a78bfa', '#34d399', '#f472b6', '#38bdf8']
-const SESSION_VALUE_SAMPLES_CAP = 56
 const PF_HOLDINGS_JEWELLERY_ONLY_KEY = 'cridora_pf_holdings_jewellery_only'
 
 function safeMoneyStr(s?: string | null): number {
@@ -31,6 +40,21 @@ function loadJewelleryOnlyPref(): boolean {
   } catch {
     return false
   }
+}
+
+function resolveLive22kPerGram(spot: SpotPricesPayload | null, tickerFallback: GoldTickerPayload | null): number | null {
+  const g22Raw = spot?.gold?.['22K']
+  if (typeof g22Raw === 'number' && Number.isFinite(g22Raw)) return g22Raw
+  const p = spot?.platform_base_inr_per_gram_22k
+  if (p) {
+    const n = Number.parseFloat(p)
+    if (Number.isFinite(n)) return n
+  }
+  if (tickerFallback) {
+    const n = Number.parseFloat(tickerFallback.platform_base_inr_per_gram_22k)
+    if (Number.isFinite(n)) return n
+  }
+  return null
 }
 
 type PortfolioTabId = 'overview' | 'active' | 'personal' | 'charts' | 'transactions'
@@ -131,10 +155,11 @@ export function CustomerPortfolioPanel() {
   const [ledgerFilter, setLedgerFilter] = useState('all')
   const [ledgerEntries, setLedgerEntries] = useState<PortfolioLedgerEntryDTO[]>([])
   const [ledgerLoading, setLedgerLoading] = useState(false)
-  const [sessionValueSamples, setSessionValueSamples] = useState<number[]>([])
+  const [portfolioHistRange, setPortfolioHistRange] = useState<PortfolioHistoryRangeKey>('1w')
+  const [portfolioHistPayload, setPortfolioHistPayload] = useState<GoldTickerHistoryPayload | null>(null)
+  const [portfolioHistLoading, setPortfolioHistLoading] = useState(false)
   /** When true: summary shows jewellery vault only; when false (default): vault + personal. */
   const [jewelleryVaultOnlyView, setJewelleryVaultOnlyView] = useState(loadJewelleryOnlyPref)
-  const basisInrRef = useRef<number | null>(null)
   const portfolioTabsRef = useRef<HTMLElement | null>(null)
 
   useEffect(() => {
@@ -211,6 +236,29 @@ export function CustomerPortfolioPanel() {
       cancelled = true
     }
   }, [portfolioTab, ledgerFilter])
+
+  useEffect(() => {
+    if (portfolioTab !== 'overview' && portfolioTab !== 'charts') return
+    let cancelled = false
+    setPortfolioHistLoading(true)
+    void fetchGoldTickerHistory(portfolioHistRange).then((payload) => {
+      if (!cancelled) {
+        setPortfolioHistPayload(payload)
+        setPortfolioHistLoading(false)
+      }
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [portfolioTab, portfolioHistRange])
+
+  useEffect(() => {
+    if (portfolioTab !== 'overview' && portfolioTab !== 'charts') return
+    const id = window.setInterval(() => {
+      void fetchGoldTickerHistory(portfolioHistRange).then(setPortfolioHistPayload)
+    }, 60_000)
+    return () => clearInterval(id)
+  }, [portfolioTab, portfolioHistRange])
 
   const vaults = wallet?.vaults ?? []
   const ledger = wallet?.fractional_ledger ?? []
@@ -321,28 +369,24 @@ export function CustomerPortfolioPanel() {
       ? fullPnLPctPortfolio
       : null
 
+  const live22PerGramPortfolio = useMemo(
+    () => resolveLive22kPerGram(spotPayload, goldTickerFallback),
+    [spotPayload, goldTickerFallback],
+  )
+
+  const portfolioHistPoints = useMemo(
+    () => buildPortfolioHoldingsValueSeries(portfolioHistPayload, displayPortfolioGrams, live22PerGramPortfolio),
+    [portfolioHistPayload, displayPortfolioGrams, live22PerGramPortfolio],
+  )
+
+  const portfolioHistGranularity: 'intraday' | 'daily' =
+    portfolioHistPayload?.granularity === 'intraday' ? 'intraday' : 'daily'
+
   useEffect(() => {
     if (!showCombinedHoldingsToggle && jewelleryVaultOnlyView) {
       setJewelleryVaultOnlyView(false)
     }
   }, [showCombinedHoldingsToggle, jewelleryVaultOnlyView])
-
-  useEffect(() => {
-    if (heldGramsSum <= 0) {
-      setSessionValueSamples([])
-      basisInrRef.current = allocatedCost
-      return
-    }
-    const prevBasis = basisInrRef.current
-    basisInrRef.current = allocatedCost
-    if (prevBasis !== null && prevBasis !== allocatedCost) {
-      setSessionValueSamples([marketValueInr])
-      return
-    }
-    setSessionValueSamples((prev) =>
-      [...prev, marketValueInr].slice(-SESSION_VALUE_SAMPLES_CAP),
-    )
-  }, [allocatedCost, heldGramsSum, marketValueInr])
 
   const cumulativeMetalCostSteps = useMemo(() => {
     const sorted = [...ledger].sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at))
@@ -402,7 +446,11 @@ export function CustomerPortfolioPanel() {
               onHoldingsJewelleryVaultOnlyChange={setJewelleryVaultOnlyView}
               showHoldingsScopeToggle={showCombinedHoldingsToggle}
               masked={privacyMasked}
-              sessionSamples={sessionValueSamples}
+              portfolioHistoryPoints={portfolioHistPoints}
+              portfolioHistoryGranularity={portfolioHistGranularity}
+              portfolioHistoryRange={portfolioHistRange}
+              portfolioHistoryLoading={portfolioHistLoading}
+              onPortfolioHistoryRangeChange={setPortfolioHistRange}
               kycVerified={user?.kyc_status === 'verified'}
               onViewLedger={() => setPortfolioTab('transactions')}
               onTogglePrivacy={() => setPrivacyMasked((m) => !m)}
@@ -431,6 +479,31 @@ export function CustomerPortfolioPanel() {
 
         {portfolioTab === 'charts' ? (
           <div className="pf-grid pf-grid--charts pf-groww-charts-grid">
+            <article className="pf-card pf-card--lift pf-card--wide">
+              <header className="pf-card__head">
+                <h3 className="pf-card__title">Historical valuation curve</h3>
+                <p className="pf-card__meta">
+                  Cridora 22K board-rate history × current holdings grams (1D / 1W / 1M / 1Y). Dashed baseline: invested
+                  metal cost. Green tint above tends to unrealised profit at that sample; red below toward unrealised
+                  loss. Today&apos;s gram total is scaled across all points — past quantity changes aren&apos;t stepped
+                  in.
+                </p>
+              </header>
+              <div className="pf-card__viz pf-history-valuation-card-slot">
+                <PortfolioHistoryValuationChart
+                  points={portfolioHistPoints}
+                  investedInr={displayPortfolioAllocated}
+                  granularity={portfolioHistGranularity}
+                  rangeKey={portfolioHistRange}
+                  onRangeChange={setPortfolioHistRange}
+                  masked={privacyMasked}
+                  loading={portfolioHistLoading}
+                  holdingsGrams={displayPortfolioGrams}
+                  ariaLead="Historical estimated portfolio INR versus invested baseline from stored board-rate samples."
+                />
+              </div>
+            </article>
+
             <article className="pf-card pf-card--lift pf-card--wide">
               <header className="pf-card__head">
                 <h3 className="pf-card__title">Portfolio performance · INR</h3>
