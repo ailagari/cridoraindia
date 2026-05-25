@@ -5510,7 +5510,8 @@ select.input {
   height: 88px;
   margin: 0.15rem 0 0.85rem;
   border-radius: 10px;
-  overflow: hidden;
+  overflow: visible;
+  background: linear-gradient(180deg, rgba(201, 168, 64, 0.035) 0%, transparent 55%);
 }
 
 .pf-live-gold__chart .pf-chart-svg {
@@ -6283,6 +6284,10 @@ select.input {
   stroke-dashoffset: 1;
   stroke-dasharray: 1;
   animation: pf-line-draw 1.05s cubic-bezier(0.45, 0, 0.2, 1) forwards;
+}
+
+.pf-live-gold__chart .pf-trend-line {
+  shape-rendering: geometricPrecision;
 }
 
 .pf-area-fade {

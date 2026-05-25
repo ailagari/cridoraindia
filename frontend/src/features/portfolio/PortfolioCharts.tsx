@@ -1,6 +1,14 @@
 import { useId, useMemo } from 'react'
 
+/** Width used by portfolio trend SVGs (matching historical linePath viewBox X). */
+const TREND_VIEW_W = 100
+
 type Point = { x: number; y: number }
+
+type TrendPads = { l: number; r: number; t: number; b: number }
+
+/** Extra right inset so the trailing dot halo matches index.html hero sparkline layout. */
+const LIVE_GOLD_PADS: TrendPads = { l: 4, r: 12, t: 8, b: 8 }
 
 function normalizeSeries(values: number[]): Point[] {
   if (values.length === 0) return []
@@ -15,7 +23,7 @@ function normalizeSeries(values: number[]): Point[] {
 
 function linePath(pts: Point[], height = 80): string {
   if (pts.length === 0) return ''
-  const w = 100
+  const w = TREND_VIEW_W
   const pad = 4
   const mapX = (x: number) => pad + x * (w - pad * 2)
   const mapY = (y: number) => pad + (1 - y) * (height - pad * 2)
@@ -23,15 +31,54 @@ function linePath(pts: Point[], height = 80): string {
   return d.join(' ')
 }
 
-function areaPath(pts: Point[], height = 80): string {
+/** Smooth cubic spline through points — same vocabulary as webpages/index.html mini-sparkline. */
+function mapTrendSvgPoint(p: Point, svgH: number, pads: TrendPads) {
+  const innerW = TREND_VIEW_W - pads.l - pads.r
+  const innerH = svgH - pads.t - pads.b
+  return {
+    x: pads.l + p.x * innerW,
+    y: pads.t + (1 - p.y) * innerH,
+  }
+}
+
+function smoothTrendLinePath(pts: Point[], svgH: number, pads: TrendPads): string {
   if (pts.length === 0) return ''
-  const line = linePath(pts, height)
-  const w = 100
-  const pad = 4
-  const lastX = pad + pts[pts.length - 1].x * (w - pad * 2)
-  const firstX = pad + pts[0].x * (w - pad * 2)
-  const bottom = height - pad
-  return `${line} L ${lastX} ${bottom} L ${firstX} ${bottom} Z`
+  const px = pts.map((p) => mapTrendSvgPoint(p, svgH, pads))
+  const n = px.length
+  if (n === 1) return `M ${px[0].x} ${px[0].y}`
+  if (n === 2) return `M ${px[0].x} ${px[0].y} L ${px[1].x} ${px[1].y}`
+
+  let d = `M ${px[0].x} ${px[0].y}`
+  for (let i = 0; i < n - 1; i++) {
+    const p0 = px[Math.max(0, i - 1)]
+    const p1 = px[i]
+    const p2 = px[i + 1]
+    const p3 = px[Math.min(n - 1, i + 2)]
+    const c1x = p1.x + (p2.x - p0.x) / 6
+    const c1y = p1.y + (p2.y - p0.y) / 6
+    const c2x = p2.x - (p3.x - p1.x) / 6
+    const c2y = p2.y - (p3.y - p1.y) / 6
+    d += ` C ${c1x} ${c1y} ${c2x} ${c2y} ${p2.x} ${p2.y}`
+  }
+  return d
+}
+
+function smoothTrendAreaPath(pts: Point[], svgH: number, pads: TrendPads): string {
+  const line = smoothTrendLinePath(pts, svgH, pads)
+  if (line === '' || pts.length === 0) return ''
+  const first = mapTrendSvgPoint(pts[0]!, svgH, pads)
+  const last = mapTrendSvgPoint(pts[pts.length - 1]!, svgH, pads)
+  const bottom = svgH - pads.b
+  return `${line} L ${last.x} ${bottom} L ${first.x} ${bottom} Z`
+}
+
+function trendSeriesEndSvgPoint(
+  pts: Point[],
+  svgH: number,
+  pads: TrendPads,
+): { x: number; y: number } | null {
+  if (pts.length < 2) return null
+  return mapTrendSvgPoint(pts[pts.length - 1]!, svgH, pads)
 }
 
 export function PortfolioTrendChart({
@@ -47,13 +94,15 @@ export function PortfolioTrendChart({
 }) {
   const pts = useMemo(() => normalizeSeries(values), [values])
   const height = 88
-  const dLine = linePath(pts, height)
-  const dArea = areaPath(pts, height)
+  const pads = LIVE_GOLD_PADS
+  const dLine = smoothTrendLinePath(pts, height, pads)
+  const dArea = smoothTrendAreaPath(pts, height, pads)
+  const endPt = trendSeriesEndSvgPoint(pts, height, pads)
 
   return (
     <svg
       className="pf-chart-svg"
-      viewBox={`0 0 100 ${height}`}
+      viewBox={`0 0 ${TREND_VIEW_W} ${height}`}
       preserveAspectRatio="none"
       role="img"
       aria-label={ariaLabel}
@@ -61,8 +110,8 @@ export function PortfolioTrendChart({
       <title>{ariaLabel}</title>
       <defs>
         <linearGradient id={fillId} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={stroke} stopOpacity="0.45" />
-          <stop offset="100%" stopColor={stroke} stopOpacity="0.02" />
+          <stop offset="0%" stopColor={stroke} stopOpacity={0.2} />
+          <stop offset="100%" stopColor={stroke} stopOpacity={0} />
         </linearGradient>
       </defs>
       <path pathLength={1} d={dArea} fill={`url(#${fillId})`} className="pf-area-fade" />
@@ -71,11 +120,17 @@ export function PortfolioTrendChart({
         d={dLine}
         fill="none"
         stroke={stroke}
-        strokeWidth={2}
+        strokeWidth={1.8}
         strokeLinecap="round"
         strokeLinejoin="round"
-        className="pf-line-draw"
+        className="pf-line-draw pf-trend-line"
       />
+      {endPt != null ? (
+        <>
+          <circle cx={endPt.x} cy={endPt.y} r={7} fill={stroke} fillOpacity={0.2} />
+          <circle cx={endPt.x} cy={endPt.y} r={3.5} fill={stroke} />
+        </>
+      ) : null}
     </svg>
   )
 }
