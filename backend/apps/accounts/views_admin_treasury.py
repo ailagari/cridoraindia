@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from datetime import date
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.db import transaction
 from django.utils.dateparse import parse_date
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
@@ -14,8 +14,6 @@ from rest_framework.views import APIView
 
 from apps.accounts.models import PlatformSettlementPayment
 from apps.accounts.services.admin_access import user_is_platform_admin
-from django.conf import settings
-
 from apps.accounts.services.personal_holdings import validate_document_upload
 from apps.accounts.services.platform_treasury_ledger import (
     platform_settlement_summary_payload,
@@ -27,6 +25,13 @@ from apps.accounts.services.settlement_payment_service import (
     reject_settlement_payment,
     serialize_settlement_payment,
 )
+from apps.accounts.services.settlement_treasury_service import (
+    initiate_admin_payment,
+    initiate_jeweller_payment,
+    jeweller_settlement_summary_payload,
+    serialize_payment_initiate_response,
+)
+from apps.accounts.settlement_otp import issue_settlement_otp, verify_settlement_otp
 
 User = get_user_model()
 
@@ -50,6 +55,13 @@ def _parse_date_param(raw: str | None) -> date | None:
     if not raw:
         return None
     return parse_date(raw.strip())
+
+
+def _load_settlement_payment(pk: int) -> PlatformSettlementPayment | None:
+    try:
+        return PlatformSettlementPayment.objects.select_related("jeweller").get(pk=pk)
+    except PlatformSettlementPayment.DoesNotExist:
+        return None
 
 
 class AdminTreasuryLedgerView(APIView):
@@ -108,35 +120,40 @@ class AdminTreasuryPaymentsView(APIView):
         if denied:
             return denied
         data = request.data if isinstance(request.data, dict) else {}
-        jeweller_id = data.get("jeweller_id")
-        amount = data.get("amount_inr")
-        direction = (data.get("direction") or PlatformSettlementPayment.DIR_PLATFORM_TO_JEWELLER).strip()
-        if not jeweller_id or not amount:
-            return Response({"detail": "jeweller_id and amount_inr required."}, status=status.HTTP_400_BAD_REQUEST)
-        try:
-            jeweller = User.objects.get(pk=int(jeweller_id), user_type=User.JEWELLER)
-        except (User.DoesNotExist, ValueError, TypeError):
-            return Response({"detail": "Jeweller not found."}, status=status.HTTP_404_NOT_FOUND)
-
-        payment = PlatformSettlementPayment.objects.create(
-            direction=direction,
-            jeweller=jeweller,
-            amount_inr=amount,
-            status=PlatformSettlementPayment.STATUS_PENDING_PROOF,
-            paid_by=request.user,
-            reference_note=str(data.get("reference_note") or "")[:256],
-            utr=str(data.get("utr") or "")[:64],
+        payment, err = initiate_admin_payment(
+            request.user,
+            jeweller_id=data.get("jeweller_id"),
+            amount_inr=data.get("amount_inr"),
+            payment_method=data.get("payment_method"),
+            direction=(data.get("direction") or PlatformSettlementPayment.DIR_PLATFORM_TO_JEWELLER).strip(),
         )
-        receipt = request.FILES.get("receipt_file")
-        if receipt:
-            err = _validate_receipt_upload(receipt)
-            if err:
-                payment.delete()
-                return Response({"detail": err}, status=status.HTTP_400_BAD_REQUEST)
-            payment.receipt_file = receipt
-            payment.status = PlatformSettlementPayment.STATUS_SUBMITTED
-            payment.save(update_fields=["receipt_file", "status"])
-        return Response(serialize_settlement_payment(payment), status=status.HTTP_201_CREATED)
+        if err:
+            code = status.HTTP_404_NOT_FOUND if err == "Jeweller not found." else status.HTTP_400_BAD_REQUEST
+            return Response({"detail": err}, status=code)
+        assert payment is not None
+        return Response(serialize_payment_initiate_response(payment), status=status.HTTP_201_CREATED)
+
+
+class AdminTreasuryPaymentInitiateView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        denied = _require_admin(request)
+        if denied:
+            return denied
+        data = request.data if isinstance(request.data, dict) else {}
+        payment, err = initiate_admin_payment(
+            request.user,
+            jeweller_id=data.get("jeweller_id"),
+            amount_inr=data.get("amount_inr"),
+            payment_method=data.get("payment_method"),
+            direction=(data.get("direction") or PlatformSettlementPayment.DIR_PLATFORM_TO_JEWELLER).strip(),
+        )
+        if err:
+            code = status.HTTP_404_NOT_FOUND if err == "Jeweller not found." else status.HTTP_400_BAD_REQUEST
+            return Response({"detail": err}, status=code)
+        assert payment is not None
+        return Response(serialize_payment_initiate_response(payment), status=status.HTTP_201_CREATED)
 
 
 class AdminTreasuryPaymentConfirmView(APIView):
@@ -146,9 +163,8 @@ class AdminTreasuryPaymentConfirmView(APIView):
         denied = _require_admin(request)
         if denied:
             return denied
-        try:
-            payment = PlatformSettlementPayment.objects.select_related("jeweller").get(pk=pk)
-        except PlatformSettlementPayment.DoesNotExist:
+        payment = _load_settlement_payment(pk)
+        if not payment:
             return Response({"detail": "Payment not found."}, status=status.HTTP_404_NOT_FOUND)
         if payment.status not in (
             PlatformSettlementPayment.STATUS_SUBMITTED,
@@ -167,14 +183,47 @@ class AdminTreasuryPaymentRejectView(APIView):
         denied = _require_admin(request)
         if denied:
             return denied
-        try:
-            payment = PlatformSettlementPayment.objects.get(pk=pk)
-        except PlatformSettlementPayment.DoesNotExist:
+        payment = _load_settlement_payment(pk)
+        if not payment:
             return Response({"detail": "Payment not found."}, status=status.HTTP_404_NOT_FOUND)
         reason = ""
         if isinstance(request.data, dict):
             reason = str(request.data.get("reason") or "")
         reject_settlement_payment(payment, request.user, reason)
+        payment.refresh_from_db()
+        return Response(serialize_settlement_payment(payment))
+
+
+class SettlementPaymentOtpIssueView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk: int):
+        payment = _load_settlement_payment(pk)
+        if not payment:
+            return Response({"detail": "Payment not found."}, status=status.HTTP_404_NOT_FOUND)
+        code, expires_at, err = issue_settlement_otp(payment, request.user)
+        if err:
+            return Response({"detail": err}, status=status.HTTP_400_BAD_REQUEST)
+        payment.refresh_from_db()
+        payload = serialize_settlement_payment(payment)
+        payload["otp"] = code
+        payload["expires_at"] = expires_at.isoformat() if expires_at else None
+        return Response(payload)
+
+
+class SettlementPaymentOtpVerifyView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk: int):
+        payment = _load_settlement_payment(pk)
+        if not payment:
+            return Response({"detail": "Payment not found."}, status=status.HTTP_404_NOT_FOUND)
+        raw_otp = ""
+        if isinstance(request.data, dict):
+            raw_otp = str(request.data.get("otp") or "")
+        ok, err = verify_settlement_otp(payment, request.user, raw_otp)
+        if not ok:
+            return Response({"detail": err}, status=status.HTTP_400_BAD_REQUEST)
         payment.refresh_from_db()
         return Response(serialize_settlement_payment(payment))
 
@@ -206,8 +255,6 @@ class JewellerTreasurySummaryView(APIView):
     def get(self, request):
         if request.user.user_type != User.JEWELLER:
             return Response({"detail": "Jewellers only."}, status=status.HTTP_403_FORBIDDEN)
-        from apps.accounts.services.platform_treasury_ledger import jeweller_settlement_summary_payload
-
         return Response(jeweller_settlement_summary_payload(request.user))
 
 
@@ -224,26 +271,30 @@ class JewellerTreasuryPaymentsView(APIView):
         if request.user.user_type != User.JEWELLER:
             return Response({"detail": "Jewellers only."}, status=status.HTTP_403_FORBIDDEN)
         data = request.data if isinstance(request.data, dict) else {}
-        amount = data.get("amount_inr")
-        if not amount:
-            return Response({"detail": "amount_inr required."}, status=status.HTTP_400_BAD_REQUEST)
-        payment = PlatformSettlementPayment.objects.create(
-            direction=PlatformSettlementPayment.DIR_JEWELLER_TO_PLATFORM,
-            jeweller=request.user,
-            amount_inr=amount,
-            status=PlatformSettlementPayment.STATUS_PENDING_PROOF,
-            paid_by=request.user,
-            reference_note=str(data.get("reference_note") or "")[:256],
-            utr=str(data.get("utr") or "")[:64],
+        payment, err = initiate_jeweller_payment(
+            request.user,
+            amount_inr=data.get("amount_inr"),
+            payment_method=data.get("payment_method") or PlatformSettlementPayment.PAY_UPI,
         )
-        receipt = request.FILES.get("receipt_file")
-        if not receipt:
-            return Response({"detail": "receipt_file required."}, status=status.HTTP_400_BAD_REQUEST)
-        err = _validate_receipt_upload(receipt)
         if err:
-            payment.delete()
             return Response({"detail": err}, status=status.HTTP_400_BAD_REQUEST)
-        payment.receipt_file = receipt
-        payment.status = PlatformSettlementPayment.STATUS_SUBMITTED
-        payment.save(update_fields=["receipt_file", "status"])
-        return Response(serialize_settlement_payment(payment), status=status.HTTP_201_CREATED)
+        assert payment is not None
+        return Response(serialize_payment_initiate_response(payment), status=status.HTTP_201_CREATED)
+
+
+class JewellerTreasuryPaymentInitiateView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        if request.user.user_type != User.JEWELLER:
+            return Response({"detail": "Jewellers only."}, status=status.HTTP_403_FORBIDDEN)
+        data = request.data if isinstance(request.data, dict) else {}
+        payment, err = initiate_jeweller_payment(
+            request.user,
+            amount_inr=data.get("amount_inr"),
+            payment_method=data.get("payment_method") or PlatformSettlementPayment.PAY_UPI,
+        )
+        if err:
+            return Response({"detail": err}, status=status.HTTP_400_BAD_REQUEST)
+        assert payment is not None
+        return Response(serialize_payment_initiate_response(payment), status=status.HTTP_201_CREATED)

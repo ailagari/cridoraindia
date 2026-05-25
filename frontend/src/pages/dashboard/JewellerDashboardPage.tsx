@@ -17,6 +17,7 @@ import { JewellerSellbacksPanel } from '@/features/redeem/JewellerSellbacksPanel
 import { JewellerLoanDashboardPanel } from '@/features/loans/JewellerLoanDashboardPanel'
 import { JewellerOrnamentRedemptionsPanel } from '@/features/marketplace/JewellerOrnamentRedemptionsPanel'
 import { JewellerSettlementsPanel } from '@/features/treasury/JewellerSettlementsPanel'
+import { JewellerSettlementPaymentsPanel } from '@/features/treasury/JewellerSettlementPaymentsPanel'
 import { ChangePasswordPanel } from '@/features/auth/ChangePasswordPanel'
 import { useAuth } from '@/context/AuthContext'
 import { LIVE_PROFILE_POLL_MS } from '@/lib/liveDeskIntervals'
@@ -141,6 +142,11 @@ export function JewellerDashboardPage() {
       {active === 'fin_settlements' ? (
         <div className="dash-panel-max">
           <JewellerSettlementsPanel />
+        </div>
+      ) : null}
+      {active === 'fin_settlement_payments' ? (
+        <div className="dash-panel-max">
+          <JewellerSettlementPaymentsPanel />
         </div>
       ) : null}
       {active === 'txn_transfers' ? <GoldTransferPanel roleLabel="jeweller" /> : null}

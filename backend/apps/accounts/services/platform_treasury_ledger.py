@@ -500,25 +500,9 @@ def treasury_report_csv(
 
 
 def jeweller_settlement_summary_payload(jeweller: User) -> dict[str, Any]:
-    pending = (
-        PlatformCommercialLedgerEntry.objects.filter(
-            jeweller=jeweller,
-            status=PlatformCommercialLedgerEntry.STATUS_PENDING_SETTLEMENT,
-        ).aggregate(s=Sum("amount_inr"))
-        .get("s")
-        or Decimal("0")
-    )
-    open_batch = (
-        PlatformSettlementBatch.objects.filter(jeweller=jeweller, settled_at__isnull=True)
-        .aggregate(s=Sum("net_payable_inr"))
-        .get("s")
-        or Decimal("0")
-    )
-    total = (pending + open_batch).quantize(Decimal("0.01"))
-    return {
-        "pending_platform_fee_inr": str(total),
-        "period": "open",
-    }
+    from apps.accounts.services.settlement_treasury_service import jeweller_settlement_summary_payload as _payload
+
+    return _payload(jeweller)
 
 
 def treasury_daily_report_snapshot(report_date: date | None = None) -> dict[str, Any]:

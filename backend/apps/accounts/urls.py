@@ -43,12 +43,16 @@ from .platform_features_views import AdminFeatureRolloutView, PlatformFeaturesVi
 from .views_admin_treasury import (
     AdminTreasuryLedgerView,
     AdminTreasuryPaymentConfirmView,
+    AdminTreasuryPaymentInitiateView,
     AdminTreasuryPaymentRejectView,
     AdminTreasuryPaymentsView,
     AdminTreasuryReportExportView,
     AdminTreasurySettlementSummaryView,
+    JewellerTreasuryPaymentInitiateView,
     JewellerTreasuryPaymentsView,
     JewellerTreasurySummaryView,
+    SettlementPaymentOtpIssueView,
+    SettlementPaymentOtpVerifyView,
 )
 from .views_admin import (
     AdminCustomerKYCActionView,
@@ -427,6 +431,7 @@ urlpatterns = [
     path("admin/treasury/ledger/", AdminTreasuryLedgerView.as_view()),
     path("admin/treasury/settlement/summary/", AdminTreasurySettlementSummaryView.as_view()),
     path("admin/treasury/payments/", AdminTreasuryPaymentsView.as_view()),
+    path("admin/treasury/payments/initiate/", AdminTreasuryPaymentInitiateView.as_view()),
     path(
         "admin/treasury/payments/<int:pk>/confirm/",
         AdminTreasuryPaymentConfirmView.as_view(),
@@ -435,9 +440,26 @@ urlpatterns = [
         "admin/treasury/payments/<int:pk>/reject/",
         AdminTreasuryPaymentRejectView.as_view(),
     ),
+    path(
+        "admin/treasury/payments/<int:pk>/otp/issue/",
+        SettlementPaymentOtpIssueView.as_view(),
+    ),
+    path(
+        "admin/treasury/payments/<int:pk>/otp/verify/",
+        SettlementPaymentOtpVerifyView.as_view(),
+    ),
     path("admin/treasury/export/", AdminTreasuryReportExportView.as_view()),
     path("jeweller/treasury/summary/", JewellerTreasurySummaryView.as_view()),
     path("jeweller/treasury/payments/", JewellerTreasuryPaymentsView.as_view()),
+    path("jeweller/treasury/payments/initiate/", JewellerTreasuryPaymentInitiateView.as_view()),
+    path(
+        "jeweller/treasury/payments/<int:pk>/otp/issue/",
+        SettlementPaymentOtpIssueView.as_view(),
+    ),
+    path(
+        "jeweller/treasury/payments/<int:pk>/otp/verify/",
+        SettlementPaymentOtpVerifyView.as_view(),
+    ),
     path("admin/overview/", AdminOverviewView.as_view()),
     path(
         "admin/fractional-counter-otp-policy/",

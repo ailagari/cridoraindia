@@ -1,4 +1,4 @@
-import { authFetch, authUpload, apiUrl } from '@/lib/api'
+import { authFetch, apiUrl } from '@/lib/api'
 
 export type TreasuryLedgerRow = {
   when: string
@@ -40,9 +40,32 @@ export type SettlementSummary = {
   platform_revenue_mtd_inr: string
 }
 
+export type SettlementActivePayment = {
+  id: number
+  direction: string
+  status: string
+  amount_inr: string
+  payment_method: 'upi' | 'otp'
+  otp_expires_at: string | null
+  otp_verified: boolean
+}
+
+export type JewellerSettlementSummary = {
+  fees_accrued_inr: string
+  platform_credit_inr: string
+  in_flight_inr: string
+  net_payable_inr: string
+  net_credit_inr: string
+  direction: 'pay' | 'receive' | 'clear'
+  pending_platform_fee_inr: string
+  period: string
+  active_payment: SettlementActivePayment | null
+}
+
 export type SettlementPaymentRow = {
   id: number
   direction: string
+  payment_method: 'upi' | 'otp'
   jeweller_id: number
   jeweller_name: string
   settlement_batch_id: number | null
@@ -50,11 +73,31 @@ export type SettlementPaymentRow = {
   status: string
   reference_note: string
   utr: string
+  upi_utr?: string
   has_receipt: boolean
   receipt_url: string
+  proof_file_url?: string
+  otp_issued?: boolean
+  otp_expires_at?: string | null
+  otp_verified?: boolean
   confirmed_at: string | null
   rejection_reason: string
+  upi_rejection_count?: number
+  upi_last_rejection_remark?: string
+  upi_fraud_reported?: boolean
   created_at: string
+}
+
+export type SettlementPaymentInitResponse = SettlementPaymentRow & {
+  upi_payment_id: number
+  otp?: string
+  expires_at?: string
+}
+
+type ApiDetail = { detail?: string }
+
+function treasuryPaymentsBase(role: 'admin' | 'jeweller'): string {
+  return role === 'admin' ? '/api/v1/admin/treasury/payments' : '/api/v1/jeweller/treasury/payments'
 }
 
 export async function adminTreasuryLedger(params?: {
@@ -82,7 +125,7 @@ export async function adminTreasurySettlementSummary(): Promise<
   { ok: true; data: SettlementSummary } | { ok: false; detail: string }
 > {
   const res = await authFetch('/api/v1/admin/treasury/settlement/summary/')
-  const data = (await res.json().catch(() => ({}))) as SettlementSummary & { detail?: string }
+  const data = (await res.json().catch(() => ({}))) as SettlementSummary & ApiDetail
   if (!res.ok) {
     return { ok: false, detail: data.detail != null ? String(data.detail) : 'Could not load summary' }
   }
@@ -100,6 +143,23 @@ export async function adminTreasuryPayments(): Promise<
   return { ok: true, results: data.results ?? [] }
 }
 
+export async function adminTreasuryPaymentInitiate(body: {
+  jeweller_id: number
+  amount_inr: string
+  payment_method: 'upi' | 'otp'
+  direction?: 'platform_to_jeweller' | 'jeweller_to_platform'
+}): Promise<{ ok: true; data: SettlementPaymentInitResponse } | { ok: false; detail: string }> {
+  const res = await authFetch('/api/v1/admin/treasury/payments/initiate/', {
+    method: 'POST',
+    jsonBody: body,
+  })
+  const data = (await res.json().catch(() => ({}))) as SettlementPaymentInitResponse & ApiDetail
+  if (!res.ok) {
+    return { ok: false, detail: data.detail != null ? String(data.detail) : 'Initiate failed' }
+  }
+  return { ok: true, data }
+}
+
 export async function adminTreasuryPaymentConfirm(
   paymentId: number,
 ): Promise<{ ok: true } | { ok: false; detail: string }> {
@@ -107,7 +167,7 @@ export async function adminTreasuryPaymentConfirm(
     method: 'POST',
     jsonBody: {},
   })
-  const data = (await res.json().catch(() => ({}))) as { detail?: string }
+  const data = (await res.json().catch(() => ({}))) as ApiDetail
   if (!res.ok) {
     return { ok: false, detail: data.detail != null ? String(data.detail) : 'Confirm failed' }
   }
@@ -122,7 +182,7 @@ export async function adminTreasuryPaymentReject(
     method: 'POST',
     jsonBody: { reason },
   })
-  const data = (await res.json().catch(() => ({}))) as { detail?: string }
+  const data = (await res.json().catch(() => ({}))) as ApiDetail
   if (!res.ok) {
     return { ok: false, detail: data.detail != null ? String(data.detail) : 'Reject failed' }
   }
@@ -130,24 +190,14 @@ export async function adminTreasuryPaymentReject(
 }
 
 export async function jewellerTreasurySummary(): Promise<
-  { ok: true; data: { pending_platform_fee_inr: string; period: string } } | { ok: false; detail: string }
+  { ok: true; data: JewellerSettlementSummary } | { ok: false; detail: string }
 > {
   const res = await authFetch('/api/v1/jeweller/treasury/summary/')
-  const data = (await res.json().catch(() => ({}))) as {
-    pending_platform_fee_inr?: string
-    period?: string
-    detail?: string
-  }
+  const data = (await res.json().catch(() => ({}))) as JewellerSettlementSummary & ApiDetail
   if (!res.ok) {
     return { ok: false, detail: data.detail != null ? String(data.detail) : 'Could not load summary' }
   }
-  return {
-    ok: true,
-    data: {
-      pending_platform_fee_inr: data.pending_platform_fee_inr ?? '0',
-      period: data.period ?? 'open',
-    },
-  }
+  return { ok: true, data: data as JewellerSettlementSummary }
 }
 
 export async function jewellerTreasuryPayments(): Promise<
@@ -161,23 +211,50 @@ export async function jewellerTreasuryPayments(): Promise<
   return { ok: true, results: data.results ?? [] }
 }
 
-export async function jewellerTreasuryPaymentSubmit(body: {
-  amount_inr: string
-  utr?: string
-  reference_note?: string
-  receipt_file: File
-}): Promise<{ ok: true } | { ok: false; detail: string }> {
-  const fd = new FormData()
-  fd.set('amount_inr', body.amount_inr)
-  if (body.utr) fd.set('utr', body.utr)
-  if (body.reference_note) fd.set('reference_note', body.reference_note)
-  fd.set('receipt_file', body.receipt_file)
-  const res = await authUpload('/api/v1/jeweller/treasury/payments/', fd)
-  const data = (await res.json().catch(() => ({}))) as { detail?: string }
+export async function jewellerTreasuryPaymentInitiate(body: {
+  amount_inr?: string
+  payment_method: 'upi' | 'otp'
+}): Promise<{ ok: true; data: SettlementPaymentInitResponse } | { ok: false; detail: string }> {
+  const res = await authFetch('/api/v1/jeweller/treasury/payments/initiate/', {
+    method: 'POST',
+    jsonBody: body,
+  })
+  const data = (await res.json().catch(() => ({}))) as SettlementPaymentInitResponse & ApiDetail
   if (!res.ok) {
-    return { ok: false, detail: data.detail != null ? String(data.detail) : 'Submit failed' }
+    return { ok: false, detail: data.detail != null ? String(data.detail) : 'Initiate failed' }
   }
-  return { ok: true }
+  return { ok: true, data }
+}
+
+export async function settlementOtpIssue(
+  paymentId: number,
+  role: 'admin' | 'jeweller',
+): Promise<{ ok: true; data: SettlementPaymentInitResponse } | { ok: false; detail: string }> {
+  const res = await authFetch(`${treasuryPaymentsBase(role)}/${paymentId}/otp/issue/`, {
+    method: 'POST',
+    jsonBody: {},
+  })
+  const data = (await res.json().catch(() => ({}))) as SettlementPaymentInitResponse & ApiDetail
+  if (!res.ok) {
+    return { ok: false, detail: data.detail != null ? String(data.detail) : 'Could not issue OTP' }
+  }
+  return { ok: true, data }
+}
+
+export async function settlementOtpVerify(
+  paymentId: number,
+  otp: string,
+  role: 'admin' | 'jeweller',
+): Promise<{ ok: true; data: SettlementPaymentRow } | { ok: false; detail: string }> {
+  const res = await authFetch(`${treasuryPaymentsBase(role)}/${paymentId}/otp/verify/`, {
+    method: 'POST',
+    jsonBody: { otp },
+  })
+  const data = (await res.json().catch(() => ({}))) as SettlementPaymentRow & ApiDetail
+  if (!res.ok) {
+    return { ok: false, detail: data.detail != null ? String(data.detail) : 'OTP verification failed' }
+  }
+  return { ok: true, data }
 }
 
 export function treasuryExportUrl(groupBy: string, from?: string, to?: string): string {

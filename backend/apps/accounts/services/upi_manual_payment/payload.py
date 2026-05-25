@@ -134,14 +134,33 @@ def build_payment_payload(kind: str, entity: Any) -> dict:
         state["expires_at"] = payment.get("payout_expires_at")
         state["expired"] = payment.get("expired", False)
     elif kind == KIND_SETTLEMENT:
+        from django.conf import settings
+
+        from apps.accounts.services.fractional_upi import build_upi_pay_uri
+
         state["reference"] = f"SET-{entity.pk}"
         state["amount_inr"] = str(entity.amount_inr)
-        state["payee_vpa"] = ""
-        state["payee_name"] = "Cridora Platform"
-        state["upi_uri"] = ""
         state["payment_note"] = entity.reference_note or state["reference"]
         state["expires_at"] = None
         state["expired"] = False
+        if entity.direction == PlatformSettlementPayment.DIR_PLATFORM_TO_JEWELLER:
+            vpa = (entity.jeweller.payout_upi_vpa or "").strip()
+            payee = entity.jeweller.business_name or entity.jeweller.email or "Jeweller"
+        else:
+            vpa = getattr(settings, "CRIDORA_PLATFORM_UPI_VPA", "") or ""
+            payee = getattr(settings, "CRIDORA_PLATFORM_UPI_NAME", "Cridora") or "Cridora"
+        state["payee_vpa"] = vpa
+        state["payee_name"] = payee
+        state["upi_uri"] = ""
+        if vpa:
+            state["upi_uri"] = build_upi_pay_uri(
+                vpa=vpa,
+                payee_name=payee,
+                amount_inr=entity.amount_inr,
+                purchase_id=entity.pk,
+                transaction_ref=state["reference"],
+                payment_note=state["payment_note"],
+            )
 
     state["payment"] = payment if kind == KIND_FRACTIONAL else {}
     return state

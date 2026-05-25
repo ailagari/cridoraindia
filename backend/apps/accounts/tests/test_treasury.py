@@ -3,7 +3,6 @@
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
-from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework.test import APITestCase
 
 from apps.accounts.models import (
@@ -132,7 +131,7 @@ class TreasuryDeskTests(APITestCase):
         self.assertIsNotNone(row)
         self.assertEqual(row["pending_inr"], "35.00")
 
-    def test_payment_confirm_marks_entries_settled(self):
+    def test_payment_otp_verify_marks_entries_settled(self):
         purchase = FractionalGoldPurchase.objects.create(
             customer=self.customer,
             jeweller=self.jeweller,
@@ -151,22 +150,53 @@ class TreasuryDeskTests(APITestCase):
             kind=PlatformCommercialLedgerEntry.KIND_SPREAD_FEE,
             status=PlatformCommercialLedgerEntry.STATUS_PENDING_SETTLEMENT,
         )
-        receipt = SimpleUploadedFile("rcpt.pdf", b"%PDF-1.4 test", content_type="application/pdf")
         self.client.force_authenticate(self.jeweller)
         create = self.client.post(
-            "/api/v1/jeweller/treasury/payments/",
-            {"amount_inr": "35.00", "utr": "123456789012", "receipt_file": receipt},
-            format="multipart",
+            "/api/v1/jeweller/treasury/payments/initiate/",
+            {"amount_inr": "35.00", "payment_method": "otp"},
+            format="json",
         )
         self.assertEqual(create.status_code, 201)
         payment_id = create.json()["id"]
+        issue = self.client.post(f"/api/v1/jeweller/treasury/payments/{payment_id}/otp/issue/", {}, format="json")
+        self.assertEqual(issue.status_code, 200)
+        otp = issue.json()["otp"]
         self.client.force_authenticate(self.admin)
-        confirm = self.client.post(f"/api/v1/admin/treasury/payments/{payment_id}/confirm/", {})
-        self.assertEqual(confirm.status_code, 200)
+        verify = self.client.post(
+            f"/api/v1/admin/treasury/payments/{payment_id}/otp/verify/",
+            {"otp": otp},
+            format="json",
+        )
+        self.assertEqual(verify.status_code, 200)
         entry.refresh_from_db()
         self.assertEqual(entry.status, PlatformCommercialLedgerEntry.STATUS_SETTLED)
         payment = PlatformSettlementPayment.objects.get(pk=payment_id)
         self.assertEqual(payment.status, PlatformSettlementPayment.STATUS_CONFIRMED)
+
+    def test_jeweller_summary_net_payable(self):
+        purchase = FractionalGoldPurchase.objects.create(
+            customer=self.customer,
+            jeweller=self.jeweller,
+            grams=Decimal("0.5"),
+            metal_rate_inr_per_gram=Decimal("7000"),
+            gold_value_inr_pre_gst=Decimal("3500"),
+            gst_inr=Decimal("105"),
+            total_inr=Decimal("3605"),
+            payment_method=FractionalGoldPurchase.PAY_UPI,
+            status=FractionalGoldPurchase.COMPLETED,
+        )
+        PlatformCommercialLedgerEntry.objects.create(
+            jeweller=self.jeweller,
+            fractional_purchase=purchase,
+            amount_inr=Decimal("35.00"),
+            kind=PlatformCommercialLedgerEntry.KIND_SPREAD_FEE,
+            status=PlatformCommercialLedgerEntry.STATUS_PENDING_SETTLEMENT,
+        )
+        self.client.force_authenticate(self.jeweller)
+        res = self.client.get("/api/v1/jeweller/treasury/summary/")
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.json()["net_payable_inr"], "35.00")
+        self.assertEqual(res.json()["direction"], "pay")
 
     def test_export_csv_returns_rows(self):
         purchase = FractionalGoldPurchase.objects.create(

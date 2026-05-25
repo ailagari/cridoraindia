@@ -2,6 +2,7 @@ import { Fragment, useCallback, useEffect, useState } from 'react'
 import { DashSegmentPair } from '@/components/DashSegmentPair'
 import {
   adminTreasuryLedger,
+  adminTreasuryPaymentInitiate,
   adminTreasurySettlementSummary,
   treasuryExportUrl,
   type SettlementSummary,
@@ -33,6 +34,8 @@ export function AdminTreasuryPanel({ mode }: { mode: 'ledger' | 'settlement' | '
   const [ledger, setLedger] = useState<TreasuryLedgerRow[]>([])
   const [summary, setSummary] = useState<SettlementSummary | null>(null)
   const [err, setErr] = useState('')
+  const [msg, setMsg] = useState('')
+  const [payoutBusyId, setPayoutBusyId] = useState<number | null>(null)
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set())
 
   const loadLedger = useCallback(async () => {
@@ -69,6 +72,23 @@ export function AdminTreasuryPanel({ mode }: { mode: 'ledger' | 'settlement' | '
 
   const exportCsv = (groupBy: string) => {
     window.open(treasuryExportUrl(groupBy), '_blank', 'noopener,noreferrer')
+  }
+
+  const initiatePayout = async (jewellerId: number, amountInr: string, method: 'upi' | 'otp') => {
+    setPayoutBusyId(jewellerId)
+    setErr('')
+    const out = await adminTreasuryPaymentInitiate({
+      jeweller_id: jewellerId,
+      amount_inr: amountInr,
+      payment_method: method,
+      direction: 'platform_to_jeweller',
+    })
+    setPayoutBusyId(null)
+    if (!out.ok) {
+      setErr(out.detail)
+      return
+    }
+    setMsg(`Payout SET-${out.data.id} started — complete in Payments tab.`)
   }
 
   return (
@@ -110,6 +130,7 @@ export function AdminTreasuryPanel({ mode }: { mode: 'ledger' | 'settlement' | '
           {err}
         </p>
       ) : null}
+      {msg ? <p className="form-success">{msg}</p> : null}
 
       {tab === 'settlement' && summary ? (
         <div style={{ display: 'grid', gap: '1.25rem' }}>
@@ -145,6 +166,51 @@ export function AdminTreasuryPanel({ mode }: { mode: 'ledger' | 'settlement' | '
                       <td>{r.name}</td>
                       <td className="tabular">₹{formatInr(r.pending_inr)}</td>
                       <td>{r.period}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </section>
+
+          <section>
+            <h3 style={{ marginBottom: '0.5rem' }}>Platform owes jewellers</h3>
+            <table className="jeweller-purchases-table">
+              <thead>
+                <tr>
+                  <th>Jeweller</th>
+                  <th>Net credit INR</th>
+                  <th>Payout</th>
+                </tr>
+              </thead>
+              <tbody>
+                {summary.platform_owes_jewellers_inr.length === 0 ? (
+                  <tr>
+                    <td colSpan={3}>No net credits owed to jewellers.</td>
+                  </tr>
+                ) : (
+                  summary.platform_owes_jewellers_inr.map((r) => (
+                    <tr key={r.jeweller_id}>
+                      <td>{r.name}</td>
+                      <td className="tabular">₹{formatInr(r.net_credit_inr)}</td>
+                      <td>
+                        <button
+                          type="button"
+                          className="btn btn-ghost"
+                          disabled={payoutBusyId != null}
+                          onClick={() => void initiatePayout(r.jeweller_id, r.net_credit_inr, 'otp')}
+                        >
+                          OTP payout
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-primary"
+                          disabled={payoutBusyId != null}
+                          onClick={() => void initiatePayout(r.jeweller_id, r.net_credit_inr, 'upi')}
+                        >
+                          UPI payout
+                        </button>
+                      </td>
                     </tr>
                   ))
                 )}

@@ -238,3 +238,6 @@ WEB_PUSH_VAPID_CONTACT = (
 
 # Firebase Cloud Messaging for Capacitor Android/iOS (JSON service account string).
 FIREBASE_SERVICE_ACCOUNT_JSON = (os.environ.get("FIREBASE_SERVICE_ACCOUNT_JSON") or "").strip()
+
+CRIDORA_PLATFORM_UPI_VPA = (os.environ.get("CRIDORA_PLATFORM_UPI_VPA") or "").strip()
+CRIDORA_PLATFORM_UPI_NAME = (os.environ.get("CRIDORA_PLATFORM_UPI_NAME") or "Cridora").strip()

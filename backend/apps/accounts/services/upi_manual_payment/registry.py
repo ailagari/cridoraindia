@@ -16,8 +16,13 @@ from apps.accounts.models import (
     PlatformSettlementPayment,
     User,
 )
+from apps.accounts.services.admin_access import user_is_platform_admin
 
 UserModel = get_user_model()
+
+
+def _settlement_is_upi(entity: Any) -> bool:
+    return getattr(entity, "payment_method", PlatformSettlementPayment.PAY_UPI) == PlatformSettlementPayment.PAY_UPI
 
 KIND_FRACTIONAL = "fractional"
 KIND_LOAN_REPAYMENT = "loan_repayment"
@@ -178,6 +183,14 @@ def content_type_for(kind: str) -> ContentType:
 
 
 def user_can_payer(user: UserModel, kind: str, entity: Any) -> bool:
+    if kind == KIND_SETTLEMENT:
+        if not _settlement_is_upi(entity):
+            return False
+        if entity.direction == PlatformSettlementPayment.DIR_JEWELLER_TO_PLATFORM:
+            return user.user_type == User.JEWELLER and entity.jeweller_id == user.pk
+        if entity.direction == PlatformSettlementPayment.DIR_PLATFORM_TO_JEWELLER:
+            return user_is_platform_admin(user)
+        return False
     spec = get_spec(kind)
     if user.user_type != spec.payer_role:
         return False
@@ -189,12 +202,18 @@ def user_can_payer(user: UserModel, kind: str, entity: Any) -> bool:
         return entity.customer_id == user.pk
     if kind == KIND_SELLBACK:
         return entity.jeweller_id == user.pk
-    if kind == KIND_SETTLEMENT:
-        return entity.jeweller_id == user.pk
     return False
 
 
 def user_can_reviewer(user: UserModel, kind: str, entity: Any) -> bool:
+    if kind == KIND_SETTLEMENT:
+        if not _settlement_is_upi(entity):
+            return False
+        if entity.direction == PlatformSettlementPayment.DIR_JEWELLER_TO_PLATFORM:
+            return user_is_platform_admin(user)
+        if entity.direction == PlatformSettlementPayment.DIR_PLATFORM_TO_JEWELLER:
+            return user.user_type == User.JEWELLER and entity.jeweller_id == user.pk
+        return False
     spec = get_spec(kind)
     if user.user_type != spec.reviewer_role:
         return False
@@ -206,8 +225,6 @@ def user_can_reviewer(user: UserModel, kind: str, entity: Any) -> bool:
         return entity.jeweller_id == user.pk
     if kind == KIND_SELLBACK:
         return entity.customer_id == user.pk
-    if kind == KIND_SETTLEMENT:
-        return True
     return False
 
 

@@ -646,6 +646,13 @@ class PlatformSettlementPayment(models.Model):
         (DIR_PLATFORM_TO_JEWELLER, "Platform to jeweller"),
     ]
 
+    PAY_UPI = "upi"
+    PAY_OTP = "otp"
+    PAYMENT_METHOD_CHOICES = [
+        (PAY_UPI, "UPI"),
+        (PAY_OTP, "OTP"),
+    ]
+
     STATUS_PENDING_PROOF = "pending_proof"
     STATUS_SUBMITTED = "submitted"
     STATUS_CONFIRMED = "confirmed"
@@ -672,6 +679,11 @@ class PlatformSettlementPayment(models.Model):
         related_name="payments",
     )
     amount_inr = models.DecimalField(max_digits=18, decimal_places=2)
+    payment_method = models.CharField(
+        max_length=16,
+        choices=PAYMENT_METHOD_CHOICES,
+        default=PAY_UPI,
+    )
     status = models.CharField(
         max_length=32,
         choices=STATUS_CHOICES,
@@ -699,6 +711,24 @@ class PlatformSettlementPayment(models.Model):
     upi_rejection_count = models.PositiveSmallIntegerField(default=0)
     upi_last_rejection_remark = models.TextField(blank=True)
     upi_fraud_reported = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+
+class PlatformSettlementOtp(models.Model):
+    """Offline settlement OTP — payer generates, receiver verifies."""
+
+    payment = models.OneToOneField(
+        PlatformSettlementPayment,
+        on_delete=models.CASCADE,
+        related_name="settlement_otp",
+    )
+    code_hash = models.CharField(max_length=64)
+    expires_at = models.DateTimeField(db_index=True)
+    failed_attempts = models.PositiveSmallIntegerField(default=0)
+    verified_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
