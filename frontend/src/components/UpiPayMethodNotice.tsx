@@ -7,12 +7,13 @@ export function UpiPayMethodNotice({ compact }: Props) {
     <div className={`fractional-upi-pay__notice${compact ? ' fractional-upi-pay__notice--compact' : ''}`} role="note">
       <strong>Use Open UPI app to pay.</strong>{' '}
       {compact ? (
-        <>Do not upload a screenshot to PhonePe gallery — limits apply.</>
+        <>
+          Tap <strong>Pay by UPI</strong> to open PhonePe or GPay with the amount filled in. You can also copy the UPI ID
+          below and pay manually in your app.
+        </>
       ) : (
         <>
-          Tap the button below to open GPay or PhonePe with amount pre-filled. Do not screenshot this page and pay via
-          PhonePe&apos;s &ldquo;gallery QR&rdquo; — NPCI limits those payments to ₹2,000 and may block the flow. You can
-          also copy the UPI ID and pay manually inside your UPI app.
+          Scan the QR code with your UPI app camera, or copy the UPI ID and pay manually inside GPay or PhonePe.
         </>
       )}
     </div>

@@ -71,7 +71,7 @@ export function UpiPaymentStep({
 
   useEffect(() => {
     const uri = state?.upi_uri ?? ''
-    if (!uri) {
+    if (!uri || narrow) {
       setQrSrc('')
       return
     }
@@ -82,7 +82,7 @@ export function UpiPaymentStep({
     return () => {
       cancelled = true
     }
-  }, [state?.upi_uri])
+  }, [state?.upi_uri, narrow])
 
   const utrHint = useMemo(() => utrValidationHint(utrInput), [utrInput])
   const utrReady = isValidUtr(utrInput)
@@ -213,6 +213,17 @@ export function UpiPaymentStep({
         <>
           {!isResubmit ? <UpiPayMethodNotice compact={narrow} /> : null}
 
+          {!isResubmit && narrow && state.upi_uri ? (
+            <button
+              type="button"
+              className="btn btn-primary btn--block"
+              disabled={busy}
+              onClick={() => openUpiPayUri(state.upi_uri!)}
+            >
+              Pay by UPI
+            </button>
+          ) : null}
+
           {!isResubmit && state.payee_vpa ? (
             <div className="fractional-upi-pay__payee">
               <span className="fractional-upi-pay__label">Pay to UPI ID</span>
@@ -223,22 +234,11 @@ export function UpiPaymentStep({
             </div>
           ) : null}
 
-          {!isResubmit && qrSrc ? (
+          {!isResubmit && !narrow && qrSrc ? (
             <>
               <p className="fractional-upi-pay__qr-caption">Scan with your UPI app to pay.</p>
               <img src={qrSrc} alt="" width={180} height={180} className="fractional-upi-pay__qr" />
             </>
-          ) : null}
-
-          {!isResubmit && narrow && state.upi_uri ? (
-            <button
-              type="button"
-              className="btn btn-primary btn--block"
-              disabled={busy}
-              onClick={() => openUpiPayUri(state.upi_uri!)}
-            >
-              Pay by UPI
-            </button>
           ) : null}
 
           <div className="fractional-upi-pay__proof-options">
