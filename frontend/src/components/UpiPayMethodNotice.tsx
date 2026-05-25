@@ -8,8 +8,8 @@ export function UpiPayMethodNotice({ compact }: Props) {
       <strong>Pay with your UPI app.</strong>{' '}
       {compact ? (
         <>
-          Tap a UPI app icon below — PhonePe, GPay, or Paytm opens with details pre-filled. Confirm the payment
-          and enter your UPI PIN.
+          Tap an app icon, then tap <strong>Open</strong> on the next screen. If PhonePe or GPay shows a QR/gallery
+          error, use <strong>Copy UPI ID and amount</strong> on that screen and pay manually inside the app.
         </>
       ) : (
         <>Scan the QR code below with your phone&apos;s UPI app camera.</>

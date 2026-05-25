@@ -1,108 +1,113 @@
 const UPI_PAY_PREFIX = 'upi://pay?'
-/** Juspay/NPCI merchant intent uses mode 00 (default txn), not QR scan mode 01/04. */
-const UPI_INTENT_MODE = '00'
-const UPI_MCC_JEWELLER = '5944'
 
 export type UpiAppId = 'phonepe' | 'gpay' | 'paytm'
 
 export type UpiAppPayLink = {
   id: UpiAppId
   label: string
+  /** Same-origin handoff — user taps again on a page with the native PSP deep link. */
   href: string
 }
 
-type AppIntentConfig = {
-  id: UpiAppId
-  label: string
-  /** Native deep-link scheme (PhonePe, Tez/GPay, Paytm). */
-  scheme: string
-  /** Path after scheme:// — e.g. pay or upi/pay for GPay. */
-  path: string
-  packageName: string
-  storeUrl: string
+export type UpiPayParams = {
+  pa: string
+  pn: string
+  am: string
+  tn: string
+  tr: string
+  cu: string
 }
 
-function isAndroidUserAgent(): boolean {
-  return typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent)
-}
+const UPI_APPS: { id: UpiAppId; label: string }[] = [
+  { id: 'phonepe', label: 'PhonePe' },
+  { id: 'gpay', label: 'GPay' },
+  { id: 'paytm', label: 'Paytm' },
+]
 
-function payQueryFromUri(uri: string): string | null {
+export function parseUpiPayParams(uri: string): UpiPayParams | null {
   if (!uri.startsWith(UPI_PAY_PREFIX)) return null
-  return uri.slice(UPI_PAY_PREFIX.length)
+  const sp = new URLSearchParams(uri.slice(UPI_PAY_PREFIX.length))
+  const pa = sp.get('pa')?.trim() ?? ''
+  const am = sp.get('am')?.trim() ?? ''
+  if (!pa || !am) return null
+  return {
+    pa,
+    pn: sp.get('pn')?.trim() ?? '',
+    am,
+    tn: sp.get('tn')?.trim() ?? '',
+    tr: sp.get('tr')?.trim() ?? '',
+    cu: sp.get('cu')?.trim() || 'INR',
+  }
 }
 
-function setQueryParam(query: string, key: string, value: string): string {
-  const pattern = new RegExp(`(^|&)${key}=[^&]*`)
-  if (pattern.test(query)) {
-    return query.replace(pattern, `$1${key}=${value}`)
-  }
-  return `${query}&${key}=${value}`
+function enc(value: string): string {
+  return encodeURIComponent(value)
 }
 
 /**
- * Query string for app intent buttons — merchant fields + mode=00.
- * Generic upi:// intent is treated as gallery QR by PhonePe; app-native schemes avoid that.
+ * Minimal P2P-style deep links per PSP docs.
+ * Merchant fields (mc, tid, mode) cause PhonePe/GPay to treat browser opens as gallery/static QR.
  */
-export function payQueryForAppIntent(uri: string): string | null {
-  const raw = payQueryFromUri(uri)
-  if (!raw) return null
-  let query = setQueryParam(raw, 'mc', UPI_MCC_JEWELLER)
-  query = setQueryParam(query, 'mode', UPI_INTENT_MODE)
-  query = query.replace(/(^|&)orgid=[^&]*&?/g, '$1').replace(/&&/g, '&').replace(/&$/, '')
-  return query
-}
-
-/** Chrome Android intent using the PSP native scheme (not generic upi://). */
-function buildAndroidAppIntentHref(config: AppIntentConfig, query: string): string {
-  const fallback = encodeURIComponent(config.storeUrl)
-  return `intent://${config.path}?${query}#Intent;scheme=${config.scheme};package=${config.packageName};S.browser_fallback_url=${fallback};end`
-}
-
-function buildAppPayHref(config: AppIntentConfig, query: string): string {
-  const nativeHref = `${config.scheme}://${config.path}?${query}`
-  if (isAndroidUserAgent()) {
-    return buildAndroidAppIntentHref(config, query)
+export function buildNativeAppPayHref(app: UpiAppId, params: UpiPayParams): string {
+  const { pa, pn, am, tn, tr, cu } = params
+  if (app === 'phonepe') {
+    let q = `pa=${enc(pa)}&am=${enc(am)}&cu=${enc(cu)}`
+    if (tn) q += `&tn=${enc(tn)}`
+    return `phonepe://pay?${q}`
   }
-  return nativeHref
+  if (app === 'paytm') {
+    let q = `pa=${enc(pa)}&am=${enc(am)}&cu=${enc(cu)}`
+    if (tn) q += `&tn=${enc(tn)}`
+    return `paytmmp://pay?${q}`
+  }
+  const gPn = pn || ' '
+  const gTr = tr || ' '
+  let q = `pa=${enc(pa)}&pn=${enc(gPn)}&am=${enc(am)}&cu=${enc(cu)}&tr=${enc(gTr)}`
+  if (tn) q += `&tn=${enc(tn)}`
+  return `tez://upi/pay?${q}`
 }
 
-const UPI_APPS: readonly AppIntentConfig[] = [
-  {
-    id: 'phonepe',
-    label: 'PhonePe',
-    scheme: 'phonepe',
-    path: 'pay',
-    packageName: 'com.phonepe.app',
-    storeUrl: 'https://play.google.com/store/apps/details?id=com.phonepe.app',
-  },
-  {
-    id: 'gpay',
-    label: 'GPay',
-    scheme: 'tez',
-    path: 'upi/pay',
-    packageName: 'com.google.android.apps.nbu.paisa.user',
-    storeUrl: 'https://play.google.com/store/apps/details?id=com.google.android.apps.nbu.paisa.user',
-  },
-  {
-    id: 'paytm',
-    label: 'Paytm',
-    scheme: 'paytmmp',
-    path: 'pay',
-    packageName: 'net.one97.paytm',
-    storeUrl: 'https://play.google.com/store/apps/details?id=net.one97.paytm',
-  },
-]
+export function buildUpiHandoffHref(app: UpiAppId, params: UpiPayParams): string {
+  const sp = new URLSearchParams()
+  sp.set('app', app)
+  sp.set('pa', params.pa)
+  sp.set('am', params.am)
+  sp.set('cu', params.cu)
+  if (params.pn) sp.set('pn', params.pn)
+  if (params.tn) sp.set('tn', params.tn)
+  if (params.tr) sp.set('tr', params.tr)
+  return `/upi/open?${sp.toString()}`
+}
 
 export function buildUpiAppPayLinks(uri: string): UpiAppPayLink[] {
-  const query = payQueryForAppIntent(uri)
-  if (!query) return []
+  const params = parseUpiPayParams(uri)
+  if (!params) return []
   return UPI_APPS.map((app) => ({
     id: app.id,
     label: app.label,
-    href: buildAppPayHref(app, query),
+    href: buildUpiHandoffHref(app.id, params),
   }))
 }
 
-export function isAndroidMobileBrowser(): boolean {
-  return isAndroidUserAgent()
+export function parseHandoffSearchParams(sp: URLSearchParams): { app: UpiAppId; params: UpiPayParams } | null {
+  const app = sp.get('app') as UpiAppId | null
+  if (app !== 'phonepe' && app !== 'gpay' && app !== 'paytm') return null
+  const pa = sp.get('pa')?.trim() ?? ''
+  const am = sp.get('am')?.trim() ?? ''
+  if (!pa || !am) return null
+  return {
+    app,
+    params: {
+      pa,
+      pn: sp.get('pn')?.trim() ?? '',
+      am,
+      tn: sp.get('tn')?.trim() ?? '',
+      tr: sp.get('tr')?.trim() ?? '',
+      cu: sp.get('cu')?.trim() || 'INR',
+    },
+  }
+}
+
+export function appLabel(app: UpiAppId): string {
+  return UPI_APPS.find((a) => a.id === app)?.label ?? app
 }

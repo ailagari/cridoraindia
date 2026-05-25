@@ -9377,6 +9377,27 @@ select.input {
   border-color: var(--border);
 }
 
+.fractional-upi-pay__app-icon-btn--open {
+  min-height: 6rem;
+  width: 100%;
+  max-width: 12rem;
+  margin: 0 auto;
+}
+
+.fractional-upi-pay__manual-fallback {
+  margin-top: 1rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--border-soft);
+}
+
+.fractional-upi-pay__manual-steps {
+  margin: 0.35rem 0 0.75rem;
+  padding-left: 1.15rem;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
 .fractional-upi-pay__app-icon {
   display: block;
   width: 48px;
