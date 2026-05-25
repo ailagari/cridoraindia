@@ -251,11 +251,11 @@ export function MarketplaceProductDetailPage() {
             </div>
 
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.65rem', marginTop: '1.35rem' }}>
-              <button type="button" className="btn btn-primary" onClick={goCheckout}>
-                Buy now
+              <button type="button" className="btn btn-primary" onClick={handleAddToCart}>
+                {(qtyById[product.id] ?? 0) > 0 ? `Add to cart · qty ${qtyById[product.id]}` : 'Add to cart'}
               </button>
-              <button type="button" className="btn btn-ghost" onClick={handleAddToCart}>
-                {(qtyById[product.id] ?? 0) > 0 ? `In cart · ${qtyById[product.id]} · Add` : 'Add to cart'}
+              <button type="button" className="btn btn-ghost" onClick={goCheckout}>
+                Buy now
               </button>
               <button type="button" className="btn btn-ghost" onClick={goCart}>
                 {cartItemCount > 0 ? `Cart · ${cartItemCount}` : 'Cart'}

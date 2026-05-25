@@ -9,6 +9,7 @@ export const mlMessages: Record<MessageKey, string> = {
   'nav.howItWorks': 'എങ്ങനെ പ്രവർത്തിക്കുന്നു',
   'nav.jewellers': 'ജ്വല്ലറി',
   'nav.products': 'ഉൽപ്പന്നങ്ങൾ',
+  'nav.cart': 'കാർട്ട്',
   'nav.waitlist': 'വെയ്റ്റ്‌ലിസ്റ്റ്',
   'nav.dashboard': 'ഡാഷ്‌ബോർഡ്',
   'nav.login': 'ലോഗിൻ',

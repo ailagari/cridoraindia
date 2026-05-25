@@ -7,6 +7,7 @@ export const enMessages = {
   'nav.howItWorks': 'How it works',
   'nav.jewellers': 'Jewellers',
   'nav.products': 'Products',
+  'nav.cart': 'Cart',
   'nav.waitlist': 'Waitlist',
   'nav.dashboard': 'Dashboard',
   'nav.login': 'Login',

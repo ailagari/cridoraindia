@@ -1,5 +1,5 @@
-import { useEffect, useId, useState } from 'react'
-import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { useEffect, useId, useMemo, useState } from 'react'
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { CridoraLogo } from '@/components/CridoraLogo'
 import { PublicHeaderActions, PublicMobileChrome } from '@/components/PublicMobileChrome'
 import { PublicMobileUserMenu } from '@/components/PublicMobileUserMenu'
@@ -7,8 +7,10 @@ import { GoldTickerStrip } from '@/components/GoldTickerStrip'
 import { PublicMobileSegmentBar } from '@/components/PublicMobileSegmentBar'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { useAuth, type AuthUser } from '@/context/AuthContext'
+import { useMarketplaceCartBadgeCount } from '@/hooks/useMarketplaceCartBadgeCount'
 import { LanguageSwitcher, PublicLocaleProvider, usePublicLocale } from '@/i18n/PublicLocaleProvider'
 import { dashboardLandingPath } from '@/lib/routes'
+import { marketplaceListingCartHref } from '@/lib/marketplaceCartStorage'
 
 function publicDisplayName(user: AuthUser): string {
   const name = [user.first_name, user.last_name].filter(Boolean).join(' ').trim()
@@ -33,6 +35,12 @@ function PublicLayoutInner() {
   const dashboardHref = user ? dashboardLandingPath(user) : '/'
   const guestLabel = t('nav.guest')
   const mobileTitle = user ? publicDisplayName(user) : guestLabel
+  const marketplaceCartCount = useMarketplaceCartBadgeCount()
+  const location = useLocation()
+  const cartLinkTo = useMemo(
+    () => marketplaceListingCartHref(location.pathname, location.search),
+    [location.pathname, location.search],
+  )
 
   useEffect(() => {
     if (!drawerOpen) return
@@ -56,6 +64,9 @@ function PublicLayoutInner() {
               {item.label}
             </NavLink>
           ))}
+          <Link className="nav-link" to={cartLinkTo}>
+            {marketplaceCartCount > 0 ? `${t('nav.cart')} · ${marketplaceCartCount}` : t('nav.cart')}
+          </Link>
         </nav>
 
         <span
@@ -146,6 +157,9 @@ function PublicLayoutInner() {
             {item.label}
           </NavLink>
         ))}
+        <Link className="drawer-link" to={cartLinkTo} onClick={() => setDrawerOpen(false)}>
+          {marketplaceCartCount > 0 ? `${t('nav.cart')} · ${marketplaceCartCount}` : t('nav.cart')}
+        </Link>
         <div className="drawer-divider" />
         {user ? (
           <>

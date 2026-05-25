@@ -69,6 +69,7 @@ export default function App() {
               <Route path="jewellers" element={<JewellerDirectoryPage />} />
               <Route path="jewellers/:id" element={<JewellerPublicPage />} />
               <Route path="marketplace/product/:productId" element={<MarketplaceProductDetailPage />} />
+              <Route path="marketplace/cart" element={<Navigate to="/marketplace?cart=1" replace />} />
               <Route path="marketplace" element={<ProductMarketplacePage />} />
               <Route path="login" element={<LoginPage />} />
               <Route path="signup" element={<SignupPage />} />

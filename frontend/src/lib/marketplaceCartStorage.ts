@@ -1,5 +1,8 @@
 export const MARKETPLACE_CART_STORAGE_KEY = 'cridora_marketplace_cart_v1'
 
+/** Same-tab updates (`storage` only fires across tabs). */
+export const MARKETPLACE_CART_UPDATED_EVENT = 'cridora:marketplace-cart'
+
 export function readMarketplaceCart(): Record<number, number> {
   if (typeof localStorage === 'undefined') return {}
   try {
@@ -27,6 +30,13 @@ export function writeMarketplaceCart(cart: Record<number, number>): void {
   } catch {
     /* quota / private mode */
   }
+  try {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent(MARKETPLACE_CART_UPDATED_EVENT))
+    }
+  } catch {
+    /* ignore */
+  }
 }
 
 export function cartItemCount(cart: Record<number, number>): number {
@@ -35,4 +45,16 @@ export function cartItemCount(cart: Record<number, number>): number {
     n += v
   }
   return n
+}
+
+/** Open cart sheet while preserving `jeweller=` etc. when already on `/marketplace`. */
+export function marketplaceListingCartHref(pathname: string, search: string): string {
+  if (pathname === '/marketplace') {
+    const n = new URLSearchParams(search)
+    n.set('cart', '1')
+    n.delete('checkout')
+    const qs = n.toString()
+    return qs ? `/marketplace?${qs}` : '/marketplace?cart=1'
+  }
+  return '/marketplace?cart=1'
 }

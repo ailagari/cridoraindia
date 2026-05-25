@@ -18,6 +18,7 @@ import { LIVE_BALANCE_POLL_MS, LIVE_CATALOG_POLL_MS } from '@/lib/liveDeskInterv
 import { useLivePoll } from '@/lib/useLivePoll'
 import { cridoraCrossPlatformFeeInr, type CheckoutPricingContext } from '@/lib/marketplacePricing'
 import { MarketplaceProductListSummary, formatInr } from '@/features/marketplace/productPricing'
+import { useMarketplaceCart } from '@/features/marketplace/useMarketplaceCart'
 
 const filterBarInput: CSSProperties = {
   width: '100%',
@@ -44,6 +45,9 @@ export function CustomerProductsBrowsePanel() {
   const [searchQuery, setSearchQuery] = useState('')
   const [loadError, setLoadError] = useState('')
   const [wallet, setWallet] = useState<GoldWalletDTO | null>(null)
+  const [cartToast, setCartToast] = useState('')
+
+  const { qtyById, addToCart, cartItemCount } = useMarketplaceCart()
 
   const refreshWallet = useCallback(async () => {
     const w = await fetchGoldWallet()
@@ -119,6 +123,25 @@ export function CustomerProductsBrowsePanel() {
 
   const jewellerLabel =
     jewellerFilterId != null ? jewellerOptions.find((j) => j.id === jewellerFilterId)?.business_name : null
+
+  const publicCartHref = useMemo(() => {
+    if (jewellerFilterId != null) return `/marketplace?jeweller=${jewellerFilterId}&cart=1`
+    return '/marketplace?cart=1'
+  }, [jewellerFilterId])
+
+  const handleAddToCart = useCallback(
+    (p: MarketplaceProductDTO) => {
+      const r = addToCart(p, 1)
+      setCartToast(r.message)
+    },
+    [addToCart],
+  )
+
+  useEffect(() => {
+    if (!cartToast) return
+    const t = window.setTimeout(() => setCartToast(''), 2800)
+    return () => window.clearTimeout(t)
+  }, [cartToast])
 
   return (
     <div className="dash-panel-max">
@@ -206,8 +229,15 @@ export function CustomerProductsBrowsePanel() {
         <Link to="/marketplace" style={{ color: 'var(--gold-light)' }}>
           Open full public marketplace
         </Link>
-        . Cross-purchase listings add a Cridora platform fee when you don&apos;t already hold vaulted gold with that
-        jeweller — pricing at checkout reflects your holdings.
+        {' '}
+        ·{' '}
+        <Link to={publicCartHref} style={{ color: 'var(--gold-light)', fontWeight: 600 }}>
+          Cart{cartItemCount > 0 ? ` · ${cartItemCount}` : ''}
+        </Link>{' '}
+        — adjust quantities before checkout.
+        {' '}
+        Cross-purchase listings add a Cridora platform fee when you don&apos;t already hold vaulted gold with that jeweller
+        — pricing at checkout reflects your holdings.
       </p>
 
       {filtered.length === 0 ? (
@@ -254,12 +284,20 @@ export function CustomerProductsBrowsePanel() {
                 </div>
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem', marginTop: 'auto' }}>
-                <Link
+                <button
+                  type="button"
                   className="btn btn-primary"
+                  style={{ padding: '0.45rem 0.65rem', borderRadius: 12, fontSize: '0.72rem' }}
+                  onClick={() => handleAddToCart(p)}
+                >
+                  {(qtyById[p.id] ?? 0) > 0 ? `Add · ${qtyById[p.id]} in cart` : 'Add to cart'}
+                </button>
+                <Link
+                  className="btn btn-ghost"
                   style={{ padding: '0.45rem 0.65rem', borderRadius: 12, fontSize: '0.72rem' }}
                   to={`/marketplace?checkout=${p.id}`}
                 >
-                  Buy piece
+                  Buy now
                 </Link>
                 <Link
                   className="btn btn-ghost"
@@ -274,6 +312,30 @@ export function CustomerProductsBrowsePanel() {
           })}
         </div>
       )}
+
+      {cartToast ? (
+        <div
+          role="status"
+          style={{
+            position: 'fixed',
+            bottom: 24,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 2000,
+            padding: '0.65rem 1.1rem',
+            borderRadius: 14,
+            background: 'var(--veil-90)',
+            border: '1px solid var(--gold)',
+            color: 'var(--text)',
+            fontSize: '0.85rem',
+            boxShadow: 'var(--shadow-card)',
+            maxWidth: 'min(90vw, 380px)',
+            textAlign: 'center',
+          }}
+        >
+          {cartToast}
+        </div>
+      ) : null}
     </div>
   )
 }

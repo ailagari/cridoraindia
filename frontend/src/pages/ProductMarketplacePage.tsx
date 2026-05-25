@@ -1261,15 +1261,15 @@ export function ProductMarketplacePage() {
                   >
                     <button
                       type="button"
-                      className="btn btn-ghost"
+                      className="btn btn-primary"
                       style={{ padding: '0.5rem 0.65rem' }}
                       onClick={() => handleAddToCart(p)}
                     >
-                      {(qtyById[p.id] ?? 0) > 0 ? `In cart · ${qtyById[p.id]}` : 'Add to cart'}
+                      {(qtyById[p.id] ?? 0) > 0 ? `Add again · ${qtyById[p.id]} in cart` : 'Add to cart'}
                     </button>
                     <button
                       type="button"
-                      className="btn btn-primary"
+                      className="btn btn-ghost"
                       style={{ padding: '0.5rem 0.65rem' }}
                       onClick={() => openCheckout(p)}
                     >

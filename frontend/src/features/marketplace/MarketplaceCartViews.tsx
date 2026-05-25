@@ -198,9 +198,31 @@ export function MarketplaceCartReview({
                     >
                       −
                     </button>
-                    <span className="tabular" style={{ fontWeight: 700, minWidth: 28, textAlign: 'center' }}>
-                      {line.qty}
-                    </span>
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      min={1}
+                      max={max}
+                      value={line.qty}
+                      onChange={(e) => {
+                        const raw = Number.parseInt(e.target.value, 10)
+                        if (!Number.isFinite(raw)) return
+                        onChangeQty(p, raw)
+                      }}
+                      aria-label={`Quantity for ${p.name}`}
+                      className="tabular"
+                      style={{
+                        width: 52,
+                        textAlign: 'center',
+                        fontWeight: 700,
+                        padding: '0.2rem 0.35rem',
+                        borderRadius: 8,
+                        border: '1px solid var(--border-soft)',
+                        background: 'var(--veil)',
+                        color: 'var(--text)',
+                        fontSize: '0.9rem',
+                      }}
+                    />
                     <button
                       type="button"
                       className="btn btn-ghost"

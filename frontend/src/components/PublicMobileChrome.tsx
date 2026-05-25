@@ -1,9 +1,16 @@
 import { NavLink, useLocation } from 'react-router-dom'
 import { NotificationBell } from '@/components/NotificationBell'
 import { PublicTabIcon } from '@/components/PublicTabIcon'
+import { useMarketplaceCartBadgeCount } from '@/hooks/useMarketplaceCartBadgeCount'
+import { marketplaceListingCartHref } from '@/lib/marketplaceCartStorage'
 import { usePublicLocale } from '@/i18n/PublicLocaleProvider'
 
-function topForPath(pathname: string, t: (key: string) => string): { to: string; label: string }[] {
+function topForPath(
+  pathname: string,
+  search: string,
+  t: (key: string) => string,
+  marketplaceCartCount: number,
+): { to: string; label: string }[] {
   if (pathname === '/') {
     return [
       { to: '/', label: t('mobile.overview') },
@@ -19,10 +26,13 @@ function topForPath(pathname: string, t: (key: string) => string): { to: string;
     ]
   }
   if (pathname.startsWith('/shop') || pathname.startsWith('/jewellers') || pathname.startsWith('/marketplace')) {
+    const cartLbl =
+      marketplaceCartCount > 0 ? `${t('nav.cart')} · ${marketplaceCartCount}` : t('nav.cart')
     return [
       { to: '/shop', label: t('mobile.hub') },
       { to: '/jewellers', label: t('nav.jewellers') },
       { to: '/marketplace', label: t('nav.products') },
+      { to: marketplaceListingCartHref(pathname, search), label: cartLbl },
     ]
   }
   if (pathname.startsWith('/join') || pathname.startsWith('/signup') || pathname.startsWith('/jeweller/apply')) {
@@ -43,9 +53,10 @@ function topForPath(pathname: string, t: (key: string) => string): { to: string;
 }
 
 export function PublicMobileChrome() {
-  const { pathname } = useLocation()
+  const { pathname, search } = useLocation()
   const { t } = usePublicLocale()
-  const pills = topForPath(pathname, (key) => t(key as Parameters<typeof t>[0]))
+  const marketplaceCartCount = useMarketplaceCartBadgeCount()
+  const pills = topForPath(pathname, search, (key) => t(key as Parameters<typeof t>[0]), marketplaceCartCount)
 
   const isShopPath =
     pathname.startsWith('/shop') ||
