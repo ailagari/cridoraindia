@@ -13,7 +13,9 @@ from apps.accounts.models import (
     PlatformSettlementBatch,
     PlatformSettlementOtp,
     PlatformSettlementPayment,
+    JewellerRevenueLedgerEntry,
 )
+from apps.accounts.services.platform_treasury_ledger import FEATURE_LABELS, _customer_label
 from apps.accounts.services.settlement_payment_service import serialize_settlement_payment
 
 User = get_user_model()
@@ -152,6 +154,108 @@ def jeweller_net_balance(jeweller: User) -> dict[str, Any]:
 
 def jeweller_settlement_summary_payload(jeweller: User) -> dict[str, Any]:
     return jeweller_net_balance(jeweller)
+
+
+def _revenue_inr_for_fractional(purchase_id: int, jeweller_id: int) -> Decimal:
+    total = (
+        JewellerRevenueLedgerEntry.objects.filter(
+            fractional_purchase_id=purchase_id,
+            jeweller_id=jeweller_id,
+        ).aggregate(s=Sum("amount_inr"))
+        .get("s")
+        or Decimal("0")
+    )
+    return _quantize_inr(total)
+
+
+def _revenue_inr_for_redemption(redemption_id: int, jeweller_id: int) -> Decimal:
+    total = (
+        JewellerRevenueLedgerEntry.objects.filter(
+            vault_product_redemption_id=redemption_id,
+            jeweller_id=jeweller_id,
+        ).aggregate(s=Sum("amount_inr"))
+        .get("s")
+        or Decimal("0")
+    )
+    return _quantize_inr(total)
+
+
+def _serialize_pending_commercial_entry(entry: PlatformCommercialLedgerEntry) -> dict[str, Any] | None:
+    purchase = entry.fractional_purchase
+    redemption = entry.vault_product_redemption
+    if purchase:
+        feature = "fractional"
+        reference = f"FR-{purchase.pk}"
+        when = (purchase.jeweller_verified_at or purchase.created_at).isoformat()
+        customer = purchase.customer
+        transaction_inr = _quantize_inr(purchase.total_inr)
+        jeweller_revenue = _revenue_inr_for_fractional(purchase.pk, entry.jeweller_id)
+    elif redemption:
+        feature = "ornament_redemption"
+        reference = f"RP-{redemption.pk}"
+        when = redemption.created_at.isoformat()
+        customer = redemption.customer
+        transaction_inr = _quantize_inr(redemption.final_invoice_inr)
+        jeweller_revenue = _revenue_inr_for_redemption(redemption.pk, entry.jeweller_id)
+    else:
+        return None
+
+    fee_label = "Spread fee" if entry.kind == PlatformCommercialLedgerEntry.KIND_SPREAD_FEE else "Cross-platform fee"
+    return {
+        "when": when,
+        "feature": feature,
+        "feature_label": FEATURE_LABELS.get(feature, feature),
+        "fee_kind": entry.kind,
+        "fee_kind_label": fee_label,
+        "reference": reference,
+        "customer": _customer_label(customer),
+        "transaction_amount_inr": str(transaction_inr),
+        "platform_fee_inr": str(_quantize_inr(entry.amount_inr)),
+        "jeweller_revenue_inr": str(jeweller_revenue),
+        "settlement_status": entry.status,
+    }
+
+
+def jeweller_settlement_ledger_payload(jeweller: User) -> dict[str, Any]:
+    entries = (
+        PlatformCommercialLedgerEntry.objects.filter(
+            jeweller=jeweller,
+            status=PlatformCommercialLedgerEntry.STATUS_PENDING_SETTLEMENT,
+        )
+        .select_related(
+            "fractional_purchase",
+            "fractional_purchase__customer",
+            "vault_product_redemption",
+            "vault_product_redemption__customer",
+        )
+        .order_by("-created_at")
+    )
+
+    rows: list[dict[str, Any]] = []
+    total_fee = Decimal("0")
+    total_revenue = Decimal("0")
+    total_txn = Decimal("0")
+    for entry in entries:
+        row = _serialize_pending_commercial_entry(entry)
+        if not row:
+            continue
+        rows.append(row)
+        total_fee += Decimal(row["platform_fee_inr"])
+        total_revenue += Decimal(row["jeweller_revenue_inr"])
+        total_txn += Decimal(row["transaction_amount_inr"])
+
+    all_rows = rows
+    all_rows.sort(key=lambda r: r["when"], reverse=True)
+
+    return {
+        "results": all_rows,
+        "count": len(all_rows),
+        "totals": {
+            "platform_fee_inr": str(_quantize_inr(total_fee)),
+            "jeweller_revenue_inr": str(_quantize_inr(total_revenue)),
+            "transaction_amount_inr": str(_quantize_inr(total_txn)),
+        },
+    }
 
 
 def _validate_payment_method(raw: Any) -> str | None:

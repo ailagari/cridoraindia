@@ -258,6 +258,17 @@ class JewellerTreasurySummaryView(APIView):
         return Response(jeweller_settlement_summary_payload(request.user))
 
 
+class JewellerTreasuryLedgerView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if request.user.user_type != User.JEWELLER:
+            return Response({"detail": "Jewellers only."}, status=status.HTTP_403_FORBIDDEN)
+        from apps.accounts.services.settlement_treasury_service import jeweller_settlement_ledger_payload
+
+        return Response(jeweller_settlement_ledger_payload(request.user))
+
+
 class JewellerTreasuryPaymentsView(APIView):
     permission_classes = [IsAuthenticated]
 

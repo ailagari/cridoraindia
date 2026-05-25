@@ -48,6 +48,7 @@ from .views_admin_treasury import (
     AdminTreasuryPaymentsView,
     AdminTreasuryReportExportView,
     AdminTreasurySettlementSummaryView,
+    JewellerTreasuryLedgerView,
     JewellerTreasuryPaymentInitiateView,
     JewellerTreasuryPaymentsView,
     JewellerTreasurySummaryView,
@@ -450,6 +451,7 @@ urlpatterns = [
     ),
     path("admin/treasury/export/", AdminTreasuryReportExportView.as_view()),
     path("jeweller/treasury/summary/", JewellerTreasurySummaryView.as_view()),
+    path("jeweller/treasury/ledger/", JewellerTreasuryLedgerView.as_view()),
     path("jeweller/treasury/payments/", JewellerTreasuryPaymentsView.as_view()),
     path("jeweller/treasury/payments/initiate/", JewellerTreasuryPaymentInitiateView.as_view()),
     path(

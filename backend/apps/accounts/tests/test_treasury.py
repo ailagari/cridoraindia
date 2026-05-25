@@ -173,6 +173,40 @@ class TreasuryDeskTests(APITestCase):
         payment = PlatformSettlementPayment.objects.get(pk=payment_id)
         self.assertEqual(payment.status, PlatformSettlementPayment.STATUS_CONFIRMED)
 
+    def test_jeweller_settlement_ledger_shows_pending_fees(self):
+        purchase = FractionalGoldPurchase.objects.create(
+            customer=self.customer,
+            jeweller=self.jeweller,
+            grams=Decimal("0.5"),
+            metal_rate_inr_per_gram=Decimal("7000"),
+            gold_value_inr_pre_gst=Decimal("3500"),
+            gst_inr=Decimal("105"),
+            total_inr=Decimal("3605"),
+            payment_method=FractionalGoldPurchase.PAY_UPI,
+            status=FractionalGoldPurchase.COMPLETED,
+        )
+        PlatformCommercialLedgerEntry.objects.create(
+            jeweller=self.jeweller,
+            fractional_purchase=purchase,
+            amount_inr=Decimal("35.00"),
+            kind=PlatformCommercialLedgerEntry.KIND_SPREAD_FEE,
+            status=PlatformCommercialLedgerEntry.STATUS_PENDING_SETTLEMENT,
+        )
+        from apps.accounts.jeweller_revenue_service import record_fractional_sale_revenue
+
+        record_fractional_sale_revenue(purchase)
+        self.client.force_authenticate(self.jeweller)
+        res = self.client.get("/api/v1/jeweller/treasury/ledger/")
+        self.assertEqual(res.status_code, 200)
+        body = res.json()
+        self.assertEqual(body["count"], 1)
+        row = body["results"][0]
+        self.assertEqual(row["reference"], f"FR-{purchase.id}")
+        self.assertEqual(row["platform_fee_inr"], "35.00")
+        self.assertEqual(row["transaction_amount_inr"], "3605.00")
+        self.assertEqual(row["jeweller_revenue_inr"], "3605.00")
+        self.assertEqual(body["totals"]["platform_fee_inr"], "35.00")
+
     def test_jeweller_summary_net_payable(self):
         purchase = FractionalGoldPurchase.objects.create(
             customer=self.customer,

@@ -189,6 +189,41 @@ export async function adminTreasuryPaymentReject(
   return { ok: true }
 }
 
+export type JewellerSettlementLedgerRow = {
+  when: string
+  feature: string
+  feature_label: string
+  fee_kind: string
+  fee_kind_label: string
+  reference: string
+  customer: string
+  transaction_amount_inr: string
+  platform_fee_inr: string
+  jeweller_revenue_inr: string
+  settlement_status: string
+}
+
+export type JewellerSettlementLedger = {
+  results: JewellerSettlementLedgerRow[]
+  count: number
+  totals: {
+    platform_fee_inr: string
+    jeweller_revenue_inr: string
+    transaction_amount_inr: string
+  }
+}
+
+export async function jewellerTreasuryLedger(): Promise<
+  { ok: true; data: JewellerSettlementLedger } | { ok: false; detail: string }
+> {
+  const res = await authFetch('/api/v1/jeweller/treasury/ledger/')
+  const data = (await res.json().catch(() => ({}))) as JewellerSettlementLedger & ApiDetail
+  if (!res.ok) {
+    return { ok: false, detail: data.detail != null ? String(data.detail) : 'Could not load ledger' }
+  }
+  return { ok: true, data: data as JewellerSettlementLedger }
+}
+
 export async function jewellerTreasurySummary(): Promise<
   { ok: true; data: JewellerSettlementSummary } | { ok: false; detail: string }
 > {

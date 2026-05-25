@@ -7,9 +7,11 @@ import {
   SettlementOtpVerifyInput,
 } from '@/features/treasury/SettlementOtpSteps'
 import {
+  jewellerTreasuryLedger,
   jewellerTreasuryPaymentInitiate,
   jewellerTreasuryPayments,
   jewellerTreasurySummary,
+  type JewellerSettlementLedger,
   type JewellerSettlementSummary,
   type SettlementPaymentRow,
 } from '@/lib/adminTreasuryApi'
@@ -26,6 +28,7 @@ type PayMethod = 'upi' | 'otp'
 
 export function JewellerSettlementsPanel() {
   const [summary, setSummary] = useState<JewellerSettlementSummary | null>(null)
+  const [ledger, setLedger] = useState<JewellerSettlementLedger | null>(null)
   const [payments, setPayments] = useState<SettlementPaymentRow[]>([])
   const [payMethod, setPayMethod] = useState<PayMethod>('upi')
   const [activePaymentId, setActivePaymentId] = useState<number | null>(null)
@@ -37,7 +40,11 @@ export function JewellerSettlementsPanel() {
 
   const load = useCallback(async () => {
     setErr('')
-    const [sumOut, payOut] = await Promise.all([jewellerTreasurySummary(), jewellerTreasuryPayments()])
+    const [sumOut, ledgerOut, payOut] = await Promise.all([
+      jewellerTreasurySummary(),
+      jewellerTreasuryLedger(),
+      jewellerTreasuryPayments(),
+    ])
     if (sumOut.ok) {
       setSummary(sumOut.data)
       const active = sumOut.data.active_payment
@@ -51,6 +58,7 @@ export function JewellerSettlementsPanel() {
     } else {
       setErr(sumOut.detail)
     }
+    if (ledgerOut.ok) setLedger(ledgerOut.data)
     if (payOut.ok) setPayments(payOut.results)
   }, [])
 
@@ -125,6 +133,72 @@ export function JewellerSettlementsPanel() {
             <strong className="tabular">₹{formatInr(summary.in_flight_inr)}</strong>
           </div>
         </div>
+      ) : null}
+
+      {ledger ? (
+        <section style={{ marginBottom: '1.5rem' }}>
+          <h3 style={{ marginBottom: '0.5rem' }}>Fee breakdown — how you owe Cridora</h3>
+          <p style={{ margin: '0 0 0.75rem', fontSize: '0.88rem', color: 'var(--text-muted)' }}>
+            Each row is a completed transaction and the platform fee it added to your settlement balance.
+          </p>
+          <div className="jeweller-purchases-wrap">
+            <table className="jeweller-purchases-table">
+              <thead>
+                <tr>
+                  <th>When</th>
+                  <th>Type</th>
+                  <th>Reference</th>
+                  <th>Customer</th>
+                  <th>Transaction</th>
+                  <th>Your revenue</th>
+                  <th>Cridora fee</th>
+                </tr>
+              </thead>
+              <tbody>
+                {ledger.results.length === 0 ? (
+                  <tr>
+                    <td colSpan={7}>No pending platform fees from individual transactions.</td>
+                  </tr>
+                ) : (
+                  ledger.results.map((r) => (
+                    <tr key={`${r.reference}-${r.when}`}>
+                      <td>{r.when.slice(0, 16).replace('T', ' ')}</td>
+                      <td>
+                        {r.feature_label}
+                        <span style={{ display: 'block', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                          {r.fee_kind_label}
+                        </span>
+                      </td>
+                      <td className="tabular">{r.reference}</td>
+                      <td>{r.customer || '—'}</td>
+                      <td className="tabular">₹{formatInr(r.transaction_amount_inr)}</td>
+                      <td className="tabular">₹{formatInr(r.jeweller_revenue_inr)}</td>
+                      <td className="tabular">₹{formatInr(r.platform_fee_inr)}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+              {ledger.results.length > 0 ? (
+                <tfoot>
+                  <tr>
+                    <td colSpan={4}>
+                      <strong>Totals ({ledger.count} transactions)</strong>
+                    </td>
+                    <td className="tabular">
+                      <strong>₹{formatInr(ledger.totals.transaction_amount_inr)}</strong>
+                    </td>
+                    <td className="tabular">
+                      <strong>₹{formatInr(ledger.totals.jeweller_revenue_inr)}</strong>
+                    </td>
+                    <td className="tabular">
+                      <strong>₹{formatInr(ledger.totals.platform_fee_inr)}</strong>
+                    </td>
+                  </tr>
+                </tfoot>
+              ) : null}
+            </table>
+          </div>
+        </section>
       ) : null}
 
       {err ? (
