@@ -5,6 +5,7 @@ import { PublicHeaderActions, PublicMobileChrome } from '@/components/PublicMobi
 import { PublicMobileUserMenu } from '@/components/PublicMobileUserMenu'
 import { GoldTickerStrip } from '@/components/GoldTickerStrip'
 import { PublicMobileSegmentBar } from '@/components/PublicMobileSegmentBar'
+import { MarketplaceCartDrawerLink, MarketplaceCartNavIcon } from '@/components/MarketplaceCartNavIcon'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { useAuth, type AuthUser } from '@/context/AuthContext'
 import { useMarketplaceCartBadgeCount } from '@/hooks/useMarketplaceCartBadgeCount'
@@ -64,9 +65,6 @@ function PublicLayoutInner() {
               {item.label}
             </NavLink>
           ))}
-          <Link className="nav-link" to={cartLinkTo}>
-            {marketplaceCartCount > 0 ? `${t('nav.cart')} · ${marketplaceCartCount}` : t('nav.cart')}
-          </Link>
         </nav>
 
         <span
@@ -77,6 +75,7 @@ function PublicLayoutInner() {
         </span>
 
         <div className="nav-end public-header-end">
+          <MarketplaceCartNavIcon to={cartLinkTo} count={marketplaceCartCount} label={t('nav.cart')} />
           <LanguageSwitcher />
           <ThemeToggle />
           <div className="public-mobile-actions">
@@ -157,9 +156,12 @@ function PublicLayoutInner() {
             {item.label}
           </NavLink>
         ))}
-        <Link className="drawer-link" to={cartLinkTo} onClick={() => setDrawerOpen(false)}>
-          {marketplaceCartCount > 0 ? `${t('nav.cart')} · ${marketplaceCartCount}` : t('nav.cart')}
-        </Link>
+        <MarketplaceCartDrawerLink
+          to={cartLinkTo}
+          count={marketplaceCartCount}
+          label={t('nav.cart')}
+          onNavigate={() => setDrawerOpen(false)}
+        />
         <div className="drawer-divider" />
         {user ? (
           <>
