@@ -47,12 +47,18 @@ export function CustomerPortfolioOverviewDash(props: {
   totals: PortfolioTotalsDTO | null
   vaults: VaultRowDTO[]
   fractionalLedger: FractionalLedgerRowDTO[]
-  marketValueInr: number
-  allocatedCost: number
-  totalGrams: number
   heldGramsSum: number
-  pnlInr: number
-  pnlPct: number | null
+  /** Combined or jewellery-only totals (matches holdings scope toggle). */
+  summaryGrams: number
+  summaryMarketValueInr: number
+  summaryAllocatedCost: number
+  summaryPnlInr: number
+  summaryPnlPct: number | null
+  vaultGramsPortfolio: number
+  personalGramsPortfolio: number
+  holdingsJewelleryVaultOnly: boolean
+  onHoldingsJewelleryVaultOnlyChange: (jewelleryVaultOnly: boolean) => void
+  showHoldingsScopeToggle: boolean
   masked: boolean
   sessionSamples: number[]
   kycVerified: boolean
@@ -66,12 +72,17 @@ export function CustomerPortfolioOverviewDash(props: {
     totals,
     vaults,
     fractionalLedger,
-    marketValueInr,
-    allocatedCost,
-    totalGrams,
     heldGramsSum,
-    pnlInr,
-    pnlPct,
+    summaryGrams,
+    summaryMarketValueInr,
+    summaryAllocatedCost,
+    summaryPnlInr,
+    summaryPnlPct,
+    vaultGramsPortfolio,
+    personalGramsPortfolio,
+    holdingsJewelleryVaultOnly,
+    onHoldingsJewelleryVaultOnlyChange,
+    showHoldingsScopeToggle,
     masked,
     sessionSamples,
     kycVerified,
@@ -111,13 +122,13 @@ export function CustomerPortfolioOverviewDash(props: {
     if (masked) {
       return [98, 100, 99, 101, 102, 101.5, 102.2]
     }
-    if (marketValueInr > 0) {
-      const jitter = Math.max(marketValueInr * 0.0045, 1)
-      const v = marketValueInr
+    if (summaryMarketValueInr > 0) {
+      const jitter = Math.max(summaryMarketValueInr * 0.0045, 1)
+      const v = summaryMarketValueInr
       return [v - jitter * 2.8, v - jitter * 1.2, v + jitter * 0.35, v - jitter * 0.65, v + jitter * 0.85, v]
     }
     return [1, 1, 1.01, 1]
-  }, [chartValues, marketValueInr, masked])
+  }, [chartValues, summaryMarketValueInr, masked])
 
   const recentTx = [...fractionalLedger]
     .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at))
@@ -130,19 +141,55 @@ export function CustomerPortfolioOverviewDash(props: {
         <p>Live valuation, P&amp;L, and transaction history across all partner jewellers.</p>
       </div>
 
-      <div className="hero mb20">
+      <div className="hero mb20 pf-portfolio-summary--glow">
         <div className="row row-b wrap" style={{ justifyContent: 'space-between', alignItems: 'flex-start', gap: 16 }}>
           <div>
-            <div className="hero-eyebrow">Total vaulted gold</div>
+            <div className="hero-eyebrow">
+              {holdingsJewelleryVaultOnly ? 'Jewellery vault gold' : 'Total gold holdings'}
+            </div>
             <div className="hero-grams">
-              {fmtGramsMasked(totalGrams, masked, 3)}
+              {fmtGramsMasked(summaryGrams, masked, 3)}
               <span className="unit">g</span>
             </div>
             <div className="hero-inr" style={{ marginTop: 6 }}>
-              ≈ ₹{fmtInr(marketValueInr, masked)} at today&apos;s board rate
+              ≈ ₹{fmtInr(summaryMarketValueInr, masked)} at today&apos;s board rate
             </div>
+            {showHoldingsScopeToggle && !holdingsJewelleryVaultOnly && personalGramsPortfolio > 1e-6 ? (
+              <div className="t-fa fs11" style={{ marginTop: 8, color: 'var(--ink3)' }}>
+                Vault &amp; jewellers{' '}
+                <strong className="tn" style={{ color: 'var(--gold-hi)' }}>
+                  {fmtGramsMasked(vaultGramsPortfolio, masked, 3)} g
+                </strong>
+                {' · '}Personal{' '}
+                <strong className="tn">{fmtGramsMasked(personalGramsPortfolio, masked, 3)} g</strong>
+              </div>
+            ) : null}
           </div>
-          <div className="row wrap" style={{ alignSelf: 'flex-start', gap: 8 }}>
+          <div className="row wrap pf-portfolio-hero-actions" style={{ alignSelf: 'flex-start', gap: 8, alignItems: 'center' }}>
+            {showHoldingsScopeToggle ? (
+              <div
+                className="pf-holdings-scope-toggle"
+                role="group"
+                aria-label="Holdings to include in totals"
+              >
+                <button
+                  type="button"
+                  className={`pf-holdings-scope-toggle__btn${!holdingsJewelleryVaultOnly ? ' is-active' : ''}`}
+                  onClick={() => onHoldingsJewelleryVaultOnlyChange(false)}
+                  aria-pressed={!holdingsJewelleryVaultOnly}
+                >
+                  All holdings
+                </button>
+                <button
+                  type="button"
+                  className={`pf-holdings-scope-toggle__btn${holdingsJewelleryVaultOnly ? ' is-active' : ''}`}
+                  onClick={() => onHoldingsJewelleryVaultOnlyChange(true)}
+                  aria-pressed={holdingsJewelleryVaultOnly}
+                >
+                  Jewellery only
+                </button>
+              </div>
+            ) : null}
             {kycVerified ? (
               <span className="bdg bdg-ok" style={{ padding: '4px 10px', fontSize: '0.64rem' }}>
                 KYC verified
@@ -177,17 +224,17 @@ export function CustomerPortfolioOverviewDash(props: {
         <div className="hero-grid">
           <div className="hero-stat">
             <div className="hs-lbl">Invested</div>
-            <div className="hs-val tn">₹{fmtInr(allocatedCost, masked)}</div>
+            <div className="hs-val tn">₹{fmtInr(summaryAllocatedCost, masked)}</div>
           </div>
           <div className="hero-stat">
             <div className="hs-lbl">Unrealised P/L</div>
-            <div className={`hs-val tn${pnlInr >= 0 ? ' c-ok' : ' c-err'}`}>
-              {pnlInr >= 0 ? '+' : '−'}₹{fmtInr(Math.abs(pnlInr), masked)}
-              {pnlPct != null && Number.isFinite(pnlPct) ? (
+            <div className={`hs-val tn${summaryPnlInr >= 0 ? ' c-ok' : ' c-err'}`}>
+              {summaryPnlInr >= 0 ? '+' : '−'}₹{fmtInr(Math.abs(summaryPnlInr), masked)}
+              {summaryPnlPct != null && Number.isFinite(summaryPnlPct) ? (
                 <span style={{ fontSize: '0.68rem', fontWeight: 600 }}>
                   {' '}
-                  ({pnlInr >= 0 ? '+' : ''}
-                  {pnlPct.toFixed(2)}%)
+                  ({summaryPnlInr >= 0 ? '+' : ''}
+                  {summaryPnlPct.toFixed(2)}%)
                 </span>
               ) : null}
             </div>
@@ -244,10 +291,10 @@ export function CustomerPortfolioOverviewDash(props: {
               <div className="sec-title">Portfolio performance</div>
               <div className="sec-sub t-fa fs11">INR · session</div>
             </div>
-            {pnlPct != null && Number.isFinite(pnlPct) ? (
-              <span className={`bdg${pnlPct >= 0 ? ' bdg-ok' : ' bdg-err'}`}>
-                {pnlPct >= 0 ? '+' : ''}
-                {pnlPct.toFixed(2)}%
+            {summaryPnlPct != null && Number.isFinite(summaryPnlPct) ? (
+              <span className={`bdg${summaryPnlPct >= 0 ? ' bdg-ok' : ' bdg-err'}`}>
+                {summaryPnlPct >= 0 ? '+' : ''}
+                {summaryPnlPct.toFixed(2)}%
               </span>
             ) : (
               <span className="bdg bdg-grey">—</span>

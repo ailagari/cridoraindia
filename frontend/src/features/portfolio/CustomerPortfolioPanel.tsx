@@ -18,6 +18,20 @@ import { CustomerPersonalHoldingsPanel } from './CustomerPersonalHoldingsPanel'
 
 const DONUT_COLORS = ['#fbbf24', '#d4a85c', '#67e8f9', '#a78bfa', '#34d399', '#f472b6', '#38bdf8']
 const SESSION_VALUE_SAMPLES_CAP = 56
+const PF_HOLDINGS_JEWELLERY_ONLY_KEY = 'cridora_pf_holdings_jewellery_only'
+
+function safeMoneyStr(s?: string | null): number {
+  const n = Number.parseFloat(String(s ?? '').trim())
+  return Number.isFinite(n) ? n : 0
+}
+
+function loadJewelleryOnlyPref(): boolean {
+  try {
+    return typeof window !== 'undefined' && localStorage.getItem(PF_HOLDINGS_JEWELLERY_ONLY_KEY) === '1'
+  } catch {
+    return false
+  }
+}
 
 type PortfolioTabId = 'overview' | 'active' | 'personal' | 'charts' | 'transactions'
 
@@ -118,8 +132,18 @@ export function CustomerPortfolioPanel() {
   const [ledgerEntries, setLedgerEntries] = useState<PortfolioLedgerEntryDTO[]>([])
   const [ledgerLoading, setLedgerLoading] = useState(false)
   const [sessionValueSamples, setSessionValueSamples] = useState<number[]>([])
+  /** When true: summary shows jewellery vault only; when false (default): vault + personal. */
+  const [jewelleryVaultOnlyView, setJewelleryVaultOnlyView] = useState(loadJewelleryOnlyPref)
   const basisInrRef = useRef<number | null>(null)
   const portfolioTabsRef = useRef<HTMLElement | null>(null)
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(PF_HOLDINGS_JEWELLERY_ONLY_KEY, jewelleryVaultOnlyView ? '1' : '0')
+    } catch {
+      /* private mode */
+    }
+  }, [jewelleryVaultOnlyView])
 
   const refresh = useCallback(async () => {
     setLoadErr('')
@@ -237,6 +261,72 @@ export function CustomerPortfolioPanel() {
     return estInr
   }, [unrealized?.market_value_inr, estInr])
 
+  const pt = wallet?.portfolio_totals
+
+  const vaultGramsPortfolio = useMemo(() => {
+    if (pt?.cridora_active_grams != null && String(pt.cridora_active_grams).trim() !== '') {
+      return parseG(pt.cridora_active_grams)
+    }
+    return heldGramsSum > 1e-9 ? heldGramsSum : totalGrams
+  }, [pt, heldGramsSum, totalGrams])
+
+  const personalGramsPortfolio = useMemo(() => safeMoneyStr(pt?.personal_grams ?? undefined), [pt])
+
+  const fullGramsPortfolio = useMemo(() => {
+    if (pt?.total_gold_grams != null && String(pt.total_gold_grams).trim() !== '') {
+      return parseG(pt.total_gold_grams)
+    }
+    return vaultGramsPortfolio + personalGramsPortfolio
+  }, [pt, vaultGramsPortfolio, personalGramsPortfolio])
+
+  const personalValueInrPortfolio = useMemo(() => safeMoneyStr(pt?.personal_estimated_value_inr), [pt])
+
+  const fullMarketValuePortfolio = useMemo(() => {
+    if (pt?.total_estimated_value_inr != null && String(pt.total_estimated_value_inr).trim() !== '') {
+      return safeMoneyStr(pt.total_estimated_value_inr)
+    }
+    return marketValueInr + personalValueInrPortfolio
+  }, [pt, marketValueInr, personalValueInrPortfolio])
+
+  const personalRecordedBasisInr = useMemo(() => safeMoneyStr(pt?.personal_recorded_cost_basis_inr), [pt])
+
+  const personalPnLInrPortfolio = useMemo(() => safeMoneyStr(pt?.personal_gain_on_recorded_cost_inr), [pt])
+
+  const fullAllocatedPortfolio = allocatedCost + personalRecordedBasisInr
+
+  const fullPnLPortfolio = pnlInr + personalPnLInrPortfolio
+
+  const fullPnLPctPortfolio = useMemo(() => {
+    if (fullAllocatedPortfolio <= 0) return NaN
+    return (fullPnLPortfolio / fullAllocatedPortfolio) * 100
+  }, [fullAllocatedPortfolio, fullPnLPortfolio])
+
+  const showCombinedHoldingsToggle =
+    pt != null &&
+    (personalGramsPortfolio > 0.000001 || personalValueInrPortfolio > 0.51 || personalRecordedBasisInr > 0.51)
+
+  const displayPortfolioGrams = jewelleryVaultOnlyView ? vaultGramsPortfolio : fullGramsPortfolio
+
+  const displayPortfolioMarketInr = jewelleryVaultOnlyView ? marketValueInr : fullMarketValuePortfolio
+
+  const displayPortfolioAllocated = jewelleryVaultOnlyView ? allocatedCost : fullAllocatedPortfolio
+
+  const displayPortfolioPnlInr = jewelleryVaultOnlyView ? pnlInr : fullPnLPortfolio
+
+  const displayPortfolioPnlPct = jewelleryVaultOnlyView
+    ? Number.isFinite(pnlPct)
+      ? pnlPct
+      : null
+    : Number.isFinite(fullPnLPctPortfolio)
+      ? fullPnLPctPortfolio
+      : null
+
+  useEffect(() => {
+    if (!showCombinedHoldingsToggle && jewelleryVaultOnlyView) {
+      setJewelleryVaultOnlyView(false)
+    }
+  }, [showCombinedHoldingsToggle, jewelleryVaultOnlyView])
+
   useEffect(() => {
     if (heldGramsSum <= 0) {
       setSessionValueSamples([])
@@ -267,7 +357,7 @@ export function CustomerPortfolioPanel() {
   }, [ledger])
 
   return (
-    <div className="dash-panel-max pf-scope">
+    <div className="dash-panel-max pf-scope pf-scope--portfolio-glow">
       {loadErr ? <p className="form-error">{loadErr}</p> : null}
 
       <div className="pf-groww-shell pf-stagger">
@@ -300,12 +390,17 @@ export function CustomerPortfolioPanel() {
               totals={wallet?.portfolio_totals ?? null}
               vaults={vaults}
               fractionalLedger={ledger}
-              marketValueInr={marketValueInr}
-              allocatedCost={allocatedCost}
-              totalGrams={totalGrams}
               heldGramsSum={heldGramsSum}
-              pnlInr={pnlInr}
-              pnlPct={Number.isFinite(pnlPct) ? pnlPct : null}
+              summaryGrams={displayPortfolioGrams}
+              summaryMarketValueInr={displayPortfolioMarketInr}
+              summaryAllocatedCost={displayPortfolioAllocated}
+              summaryPnlInr={displayPortfolioPnlInr}
+              summaryPnlPct={displayPortfolioPnlPct}
+              vaultGramsPortfolio={vaultGramsPortfolio}
+              personalGramsPortfolio={personalGramsPortfolio}
+              holdingsJewelleryVaultOnly={jewelleryVaultOnlyView}
+              onHoldingsJewelleryVaultOnlyChange={setJewelleryVaultOnlyView}
+              showHoldingsScopeToggle={showCombinedHoldingsToggle}
               masked={privacyMasked}
               sessionSamples={sessionValueSamples}
               kycVerified={user?.kyc_status === 'verified'}
@@ -316,12 +411,8 @@ export function CustomerPortfolioPanel() {
             <PortfolioLiveGoldPriceCard
               spot={spotPayload}
               tickerFallback={goldTickerFallback}
-              holdingsGrams={wallet?.portfolio_totals ? parseG(wallet.portfolio_totals.total_gold_grams ?? '0') : totalGrams}
-              holdingsValueInr={
-                wallet?.portfolio_totals
-                  ? parseInrNum(wallet.portfolio_totals.total_estimated_value_inr ?? '0')
-                  : marketValueInr
-              }
+              holdingsGrams={displayPortfolioGrams}
+              holdingsValueInr={displayPortfolioMarketInr}
               masked={privacyMasked}
             />
 
