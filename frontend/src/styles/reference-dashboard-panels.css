@@ -663,15 +663,36 @@ html[data-theme='dark'] .ref-dash-shell .dash-content .pf-holdings-scope-toggle_
   width: 34px;
   height: 34px;
   border-radius: 9px;
-  background: linear-gradient(135deg, var(--gold-hi), var(--gold-lo));
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.12);
   display: grid;
   place-items: center;
   flex-shrink: 0;
-  box-shadow: 0 3px 10px rgba(201, 168, 64, 0.35);
+  box-shadow: none;
+  box-sizing: border-box;
+  padding: 2px;
 }
 .ref-dash-shell .sb-mark svg {
-  width: 16px;
-  height: 16px;
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  display: block;
+}
+
+/* "aindia" in Cridoraindia — soft golden glow (sidebar + mobile top bar) */
+.ref-dash-shell .dash-brand-aindia {
+  font-weight: 800;
+  text-shadow: var(--gold-text-glow-soft);
+}
+.ref-dash-shell .sidebar .dash-brand-aindia {
+  color: var(--gold-hi);
+}
+.ref-dash-shell .topbar .tb-logo-name .dash-brand-aindia {
+  color: var(--gold-hi);
+}
+html[data-theme='light'] .ref-dash-shell .topbar .tb-logo-name .dash-brand-aindia {
+  color: var(--gold-lo);
 }
 .ref-dash-shell .sb-brand {
   line-height: 1.2;
@@ -709,11 +730,20 @@ html[data-theme='dark'] .ref-dash-shell .dash-content .pf-holdings-scope-toggle_
   color: inherit;
 }
 
+.ref-dash-shell .tb-logo-m .dash-tb-logo-mark.sb-mark,
+.ref-dash-shell .tb-logo-m .sb-mark.dash-tb-logo-mark {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  padding: 2px;
+}
+
 .ref-dash-shell .tb-logo-name {
   font-size: 0.82rem;
   font-weight: 800;
   letter-spacing: -0.02em;
   color: var(--ink);
+  white-space: nowrap;
 }
 
 .ref-dash-shell .tb-crumb .sep {

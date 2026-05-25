@@ -14,7 +14,9 @@ export function useRefLandingReveal(): void {
           ro.unobserve(entry.target)
         })
       },
-      { threshold: 0.12, rootMargin: '0px 0px -40px 0px' },
+      // threshold 0: tall blocks (e.g. #invest-methods-panel) can otherwise stay <12% visible
+      // and never get `.in`, leaving content at opacity:0.
+      { threshold: 0, rootMargin: '0px 0px -40px 0px' },
     )
     nodes.forEach((node) => ro.observe(node))
 

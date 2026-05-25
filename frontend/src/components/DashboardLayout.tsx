@@ -1,4 +1,4 @@
-import { type ReactNode, useCallback, useEffect, useMemo, useState } from 'react'
+import { type ReactNode, useCallback, useEffect, useId, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { DashboardMobileSubNav } from '@/components/DashboardMobileSubNav'
 import { NavHubIcon } from '@/components/NavHubIcon'
@@ -60,6 +60,9 @@ export function DashboardLayout({
   role,
   children,
 }: Props) {
+  const dashLogoGradBase = useId().replace(/:/g, '')
+  const dashLogoGradSidebar = `${dashLogoGradBase}-sb`
+  const dashLogoGradTopbar = `${dashLogoGradBase}-tb`
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -125,24 +128,33 @@ export function DashboardLayout({
             onClick={() => setMobileOpen(false)}
           >
             <div className="sb-mark" aria-hidden>
-              <svg viewBox="0 0 20 20" fill="none" width={16} height={16}>
-                <circle cx="10" cy="10" r="7.5" stroke="rgba(255,255,255,.5)" strokeWidth="1.2" />
+              <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="20" cy="20" r="18" stroke={`url(#${dashLogoGradSidebar})`} strokeWidth="2.5" />
                 <path
-                  d="M7.5 10.5C7.5 8.84 8.84 7.5 10.5 7.5"
-                  stroke="#fff"
-                  strokeWidth="1.7"
+                  d="M14 20C14 16.6863 16.6863 14 20 14"
+                  stroke="#d4a85c"
+                  strokeWidth="3"
                   strokeLinecap="round"
                 />
                 <path
-                  d="M12.5 9.5C12.5 11.16 11.16 12.5 9.5 12.5"
-                  stroke="rgba(255,255,255,.65)"
-                  strokeWidth="1.7"
+                  d="M26 20C26 23.3137 23.3137 26 20 26"
+                  stroke="#a67a28"
+                  strokeWidth="3"
                   strokeLinecap="round"
                 />
+                <defs>
+                  <linearGradient id={dashLogoGradSidebar} x1="2" y1="2" x2="38" y2="38" gradientUnits="userSpaceOnUse">
+                    <stop offset="0%" stopColor="#e0bc78" />
+                    <stop offset="55%" stopColor="#a67a28" />
+                    <stop offset="100%" stopColor="#5c2f0a" />
+                  </linearGradient>
+                </defs>
               </svg>
             </div>
             <div className="sb-brand">
-              <div className="sb-name">Cridora India</div>
+              <div className="sb-name">
+                Cridor<span className="dash-brand-aindia">aindia</span>
+              </div>
               <div className="sb-sub">{ROLE_SUB[role]}</div>
             </div>
           </Link>
@@ -229,14 +241,33 @@ export function DashboardLayout({
             </svg>
           </button>
           <Link className="tb-logo-m" to={dashHomeHref} title="Dashboard home">
-            <div className="sb-mark" style={{ width: 28, height: 28, borderRadius: 7 }}>
-              <svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden>
-                <circle cx="10" cy="10" r="7.5" stroke="rgba(255,255,255,.5)" strokeWidth="1.2" />
-                <path d="M7.5 10.5C7.5 8.84 8.84 7.5 10.5 7.5" stroke="#fff" strokeWidth="1.7" strokeLinecap="round" />
-                <path d="M12.5 9.5C12.5 11.16 11.16 12.5 9.5 12.5" stroke="rgba(255,255,255,.65)" strokeWidth="1.7" strokeLinecap="round" />
+            <div className="sb-mark dash-tb-logo-mark" aria-hidden>
+              <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="20" cy="20" r="18" stroke={`url(#${dashLogoGradTopbar})`} strokeWidth="2.5" />
+                <path
+                  d="M14 20C14 16.6863 16.6863 14 20 14"
+                  stroke="#d4a85c"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                />
+                <path
+                  d="M26 20C26 23.3137 23.3137 26 20 26"
+                  stroke="#a67a28"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                />
+                <defs>
+                  <linearGradient id={dashLogoGradTopbar} x1="2" y1="2" x2="38" y2="38" gradientUnits="userSpaceOnUse">
+                    <stop offset="0%" stopColor="#e0bc78" />
+                    <stop offset="55%" stopColor="#a67a28" />
+                    <stop offset="100%" stopColor="#5c2f0a" />
+                  </linearGradient>
+                </defs>
               </svg>
             </div>
-            <span className="tb-logo-name">Cridora</span>
+            <span className="tb-logo-name">
+              Cridor<span className="dash-brand-aindia">aindia</span>
+            </span>
           </Link>
 
           <div className="tb-crumb">

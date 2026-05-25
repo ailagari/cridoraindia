@@ -68,7 +68,7 @@ export function CridoraLogo({
             letterSpacing: '-0.02em',
           }}
         >
-          Cridora <span style={{ color: 'var(--gold-light)' }}>India</span>
+          Cridor<span className="cridora-logo__aindia">aindia</span>
         </span>
       ) : null}
     </span>

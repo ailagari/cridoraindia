@@ -107,7 +107,7 @@ export function HomePage() {
 
   const CTA_STATS = useMemo(
     () => [
-      ['₹100', t('idx.cta.stat1label')],
+      ['₹10', t('idx.cta.stat1label')],
       ['3 min', t('idx.cta.stat2label')],
       ['0%', t('idx.cta.stat3label')],
       ['42+', t('idx.cta.stat4label')],

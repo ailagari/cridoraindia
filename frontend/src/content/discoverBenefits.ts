@@ -3,7 +3,7 @@ export type DiscoverBenefit = { title: string; body: string }
 export const USER_REASONS: DiscoverBenefit[] = [
   {
     title: 'Buy gold in any amount',
-    body: 'Start from ₹100, ₹500, or ₹1,000 — no large lump sums required. Gold savings stay within reach.',
+    body: 'Start from ₹10, ₹500, or ₹1,000 — no large lump sums required. Gold savings stay within reach.',
   },
   { title: 'Real gold in grams', body: 'Hold actual quantity in grams, not abstract rewards. Value tracks live gold prices.' },
   {

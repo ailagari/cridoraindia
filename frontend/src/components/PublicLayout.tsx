@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useId, useState } from 'react'
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { CridoraLogo } from '@/components/CridoraLogo'
 import { PublicHeaderActions, PublicMobileChrome } from '@/components/PublicMobileChrome'
@@ -19,6 +19,7 @@ function PublicLayoutInner() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const { t } = usePublicLocale()
+  const footerMarkGradId = useId().replace(/:/g, '')
   const [drawerOpen, setDrawerOpen] = useState(false)
 
   const primaryNav = [
@@ -192,19 +193,31 @@ function PublicLayoutInner() {
           <div className="footer-brand">
             <Link to="/" className="nav-logo" onClick={() => setDrawerOpen(false)}>
               <div className="nav-mark-mini" aria-hidden>
-                <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
-                  <circle cx="10" cy="10" r="7.5" stroke="rgba(255,255,255,.55)" strokeWidth="1.2" />
-                  <path d="M7.5 10.5C7.5 8.84 8.84 7.5 10.5 7.5" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" />
+                <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="20" cy="20" r="18" stroke={`url(#${footerMarkGradId})`} strokeWidth="2.5" />
                   <path
-                    d="M12.5 9.5C12.5 11.16 11.16 12.5 9.5 12.5"
-                    stroke="rgba(255,255,255,.65)"
-                    strokeWidth="1.8"
+                    d="M14 20C14 16.6863 16.6863 14 20 14"
+                    stroke="#d4a85c"
+                    strokeWidth="3"
                     strokeLinecap="round"
                   />
+                  <path
+                    d="M26 20C26 23.3137 23.3137 26 20 26"
+                    stroke="#a67a28"
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                  />
+                  <defs>
+                    <linearGradient id={footerMarkGradId} x1="2" y1="2" x2="38" y2="38" gradientUnits="userSpaceOnUse">
+                      <stop offset="0%" stopColor="#e0bc78" />
+                      <stop offset="55%" stopColor="#a67a28" />
+                      <stop offset="100%" stopColor="#5c2f0a" />
+                    </linearGradient>
+                  </defs>
                 </svg>
               </div>
               <div className="nav-brand">
-                Cridora <span>India</span>
+                Cridor<span className="cridora-logo__aindia">aindia</span>
               </div>
             </Link>
             <p>

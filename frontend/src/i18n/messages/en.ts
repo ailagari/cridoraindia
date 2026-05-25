@@ -345,8 +345,8 @@ export const enMessages = {
   'idx.hero.h1': 'Gold savings.',
   'idx.hero.h1em': 'Finally done right.',
   'idx.hero.sub':
-    'Cridora links your gold to the verified jewellers you already trust — digital records, live board rates, and real redemption options. Start from ₹100.',
-  'idx.hero.pill1': 'Start from ₹100',
+    'Cridora links your gold to the verified jewellers you already trust — digital records, live board rates, and real redemption options. Start from ₹10.',
+  'idx.hero.pill1': 'Start from ₹10',
   'idx.hero.pill2': 'No lock-in period',
   'idx.hero.pill3': '916 BIS certified',
   'idx.hero.pill4': '0% interest loans',
@@ -362,7 +362,7 @@ export const enMessages = {
 
   // Feature strip
   'idx.fstrip.f1title': 'Fractional Gold',
-  'idx.fstrip.f1sub': 'Buy from ₹100. GST included. Credited instantly.',
+  'idx.fstrip.f1sub': 'Buy from ₹10. GST included. Credited instantly.',
   'idx.fstrip.f2title': 'Gold Deposit',
   'idx.fstrip.f2sub': 'Digitise physical gold you already own.',
   'idx.fstrip.f3title': 'CridoraPay',
@@ -414,7 +414,7 @@ export const enMessages = {
     'Browse the Cridora directory. Filter by city, trust score, buyback rate, or services offered. Every jeweller is KYB-verified.',
   'idx.how.s2title': 'Start saving digitally',
   'idx.how.s2desc':
-    'Buy fractional gold via UPI from ₹100 — or visit the store and pay at the counter. Gold is credited to your vault within minutes.',
+    'Buy fractional gold via UPI from ₹10 — or visit the store and pay at the counter. Gold is credited to your vault within minutes.',
   'idx.how.s3title': 'Track it live',
   'idx.how.s3desc':
     'Your dashboard shows live valuation, gram-by-gram history, unrealised P/L, and every transaction with an audit trail.',
@@ -433,7 +433,7 @@ export const enMessages = {
   'idx.inv.tab0lead':
     'Every route lands in one wallet: live board-rate valuation, gram history, P/L — no separate dashboards.',
   'idx.inv.tab1label': 'Fractional',
-  'idx.inv.tab1hint': 'UPI · from ₹100',
+  'idx.inv.tab1hint': 'UPI · from ₹10',
   'idx.inv.tab1lead':
     'Top up digitally or conclude at the counter — each buy posts with GST rolled into the gram quote and settles in minutes.',
   'idx.inv.tab2label': 'Deposit',
@@ -445,10 +445,10 @@ export const enMessages = {
   'idx.inv.tab3lead':
     'Jewellery paid through CridoraPay auto-builds lineage in your vault — hallmark, weight and partner stamps for audits.',
   'idx.inv.m1num': 'Method 01 — Fractional',
-  'idx.inv.m1title': 'Buy from ₹100, any time',
+  'idx.inv.m1title': 'Buy from ₹10, any time',
   'idx.inv.m1desc':
     'Choose a partner jeweller, enter any INR amount or gram weight. GST on gold is already included in the quote. Pay via UPI — or visit the counter and get an OTP. Grams are credited to your vault within minutes.',
-  'idx.inv.m1tag': 'Start from ₹100 · UPI or counter',
+  'idx.inv.m1tag': 'Start from ₹10 · UPI or counter',
   'idx.inv.m1h1': 'Jeweller-linked quote spells out INR, grams after GST — no spreadsheet math.',
   'idx.inv.m1h2': 'Remote UPI buys or OTP walk-throughs both route through the partner you chose.',
   'idx.inv.m1h3': 'Credits hit the unified vault tally used for transfers, loans, and sellbacks.',
@@ -490,9 +490,9 @@ export const enMessages = {
   'idx.india.c2title': 'You trust your jeweller more than a bank',
   'idx.india.c2desc':
     "We don't ask you to change that. Your verified local jeweller remains the physical custodian. Cridora adds digital records, rate transparency, and redemption infrastructure on top.",
-  'idx.india.c3title': 'Small savings matter — ₹100 at a time',
+  'idx.india.c3title': 'Small savings matter — ₹10 at a time',
   'idx.india.c3desc':
-    "No minimum holding period. No lock-in. No penalty for selling. Buy from ₹100. Add whenever you can. That's what a genuine savings tool looks like.",
+    "No minimum holding period. No lock-in. No penalty for selling. Buy from ₹10. Add whenever you can. That's what a genuine savings tool looks like.",
   'idx.india.c4title': 'Rate transparency is non-negotiable',
   'idx.india.c4desc':
     'Live 22K and 24K board rates on every screen. Buyback rates visible before you decide. Full gram-by-gram ledger. BIS 916 hallmarks recorded for every piece.',
@@ -565,4 +565,4 @@ export const enMessages = {
 } as const
 
 export type MessageKey = keyof typeof enMessages
-
+

@@ -893,10 +893,6 @@
   letter-spacing: -0.02em;
   color: var(--ink);
 }
-.pub-ref .ref-index-footer .nav-brand span {
-  color: var(--gold-hi);
-}
-
 .pub-ref .ref-index-footer {
   background: var(--s0);
   border-top: 1px solid var(--b0);
@@ -991,11 +987,20 @@
   width: 32px;
   height: 32px;
   border-radius: 9px;
-  background: linear-gradient(135deg, var(--gold-hi), var(--gold-lo));
+  background: transparent;
+  border: 1px solid var(--b0);
   display: grid;
   place-items: center;
-  box-shadow: 0 3px 12px rgba(201, 168, 64, 0.35);
+  box-shadow: none;
   flex-shrink: 0;
+  padding: 2px;
+  box-sizing: border-box;
+}
+
+.pub-ref .ref-index-footer .nav-mark-mini svg {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 
 @media (max-width: 1023px) {
