@@ -1,94 +1,123 @@
 import { Fragment, useCallback, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
+import { usePublicLocale } from '@/i18n/PublicLocaleProvider'
 import { useRefLandingReveal } from '@/hooks/useRefLandingReveal'
 import { dashboardLandingPath } from '@/lib/routes'
 
-const INVEST_TABS: ReadonlyArray<{
-  key: string
-  label: string
-  hint: string
-  lead: string
-}> = [
-  {
-    key: 'all',
-    label: 'All methods',
-    hint: 'Full comparison',
-    lead: 'Every route lands in one wallet: live board-rate valuation, gram history, P/L — no separate dashboards.',
-  },
-  {
-    key: 'fractional',
-    label: 'Fractional',
-    hint: 'UPI · from ₹100',
-    lead: 'Top up digitally or conclude at the counter — each buy posts with GST rolled into the gram quote and settles in minutes.',
-  },
-  {
-    key: 'deposit',
-    label: 'Deposit',
-    hint: 'Physical → vault',
-    lead: 'Carry ornaments or bullion into a verified counter. Weight and purity OTP confirmation credits deposit-class grams instantly.',
-  },
-  {
-    key: 'purchase',
-    label: 'Purchase-linked',
-    hint: 'Store invoices',
-    lead: 'Jewellery paid through CridoraPay auto-builds lineage in your vault — hallmark, weight and partner stamps for audits.',
-  },
-]
-
-const INVEST_METHODS = [
-  {
-    tabIndex: 1 as const,
-    num: 'Method 01 — Fractional',
-    title: 'Buy from ₹100, any time',
-    desc:
-      'Choose a partner jeweller, enter any INR amount or gram weight. GST on gold is already included in the quote. Pay via UPI — or visit the counter and get an OTP. Grams are credited to your vault within minutes.',
-    tag: 'Start from ₹100 · UPI or counter',
-    highlights: [
-      'Jeweller-linked quote spells out INR, grams after GST — no spreadsheet math.',
-      'Remote UPI buys or OTP walk-throughs both route through the partner you chose.',
-      'Credits hit the unified vault tally used for transfers, loans, and sellbacks.',
-    ] as const,
-  },
-  {
-    tabIndex: 2 as const,
-    num: 'Method 02 — Gold deposit',
-    title: 'Digitise gold you already own',
-    desc:
-      'Bring physical gold — coins, bars, or ornaments — to a verified partner jeweller. The counter records weight and purity. You confirm with a one-time OTP. Deposit-class grams appear in your vault immediately.',
-    tag: 'No cash moves · Deposit class grams',
-    highlights: [
-      'Custody stays with trusted jewellers; Cridora only digitises proofs and OTP trail.',
-      'Deposit grams stay tagged so auditors can reconcile physical vs vaulted metal.',
-      'Appears beside fractional rows — one portfolio instead of spreadsheets.',
-    ] as const,
-  },
-  {
-    tabIndex: 3 as const,
-    num: 'Method 03 — Purchase-linked',
-    title: 'Gold records from store purchases',
-    desc:
-      'When you buy jewellery at a partner store via CridoraPay, the purchase is automatically logged in your Gold Records vault — purity, weight, jeweller, date. Perfect for insurance and valuation tracking.',
-    tag: 'Auto-logged · Records vault',
-    highlights: [
-      'Invoices ingest hallmark, SKU, valuation — ready for insurer submissions.',
-      'Works even when fractional purchases already exist; everything rolls into one ledger.',
-      'Still redeemable downstream via sellbacks, transfers, or 0% loan pledges.',
-    ] as const,
-  },
-]
-
 export function HomePage() {
   const { user } = useAuth()
+  const { t } = usePublicLocale()
   useRefLandingReveal()
 
   const [investTab, setInvestTab] = useState(0)
-
   const goInvestTab = useCallback((i: number) => setInvestTab(i), [])
+
+  const INVEST_TABS = useMemo(
+    () => [
+      {
+        key: 'all',
+        label: t('idx.inv.tab0label'),
+        hint: t('idx.inv.tab0hint'),
+        lead: t('idx.inv.tab0lead'),
+      },
+      {
+        key: 'fractional',
+        label: t('idx.inv.tab1label'),
+        hint: t('idx.inv.tab1hint'),
+        lead: t('idx.inv.tab1lead'),
+      },
+      {
+        key: 'deposit',
+        label: t('idx.inv.tab2label'),
+        hint: t('idx.inv.tab2hint'),
+        lead: t('idx.inv.tab2lead'),
+      },
+      {
+        key: 'purchase',
+        label: t('idx.inv.tab3label'),
+        hint: t('idx.inv.tab3hint'),
+        lead: t('idx.inv.tab3lead'),
+      },
+    ],
+    [t],
+  )
+
+  const INVEST_METHODS = useMemo(
+    () => [
+      {
+        tabIndex: 1 as const,
+        num: t('idx.inv.m1num'),
+        title: t('idx.inv.m1title'),
+        desc: t('idx.inv.m1desc'),
+        tag: t('idx.inv.m1tag'),
+        highlights: [t('idx.inv.m1h1'), t('idx.inv.m1h2'), t('idx.inv.m1h3')] as const,
+      },
+      {
+        tabIndex: 2 as const,
+        num: t('idx.inv.m2num'),
+        title: t('idx.inv.m2title'),
+        desc: t('idx.inv.m2desc'),
+        tag: t('idx.inv.m2tag'),
+        highlights: [t('idx.inv.m2h1'), t('idx.inv.m2h2'), t('idx.inv.m2h3')] as const,
+      },
+      {
+        tabIndex: 3 as const,
+        num: t('idx.inv.m3num'),
+        title: t('idx.inv.m3title'),
+        desc: t('idx.inv.m3desc'),
+        tag: t('idx.inv.m3tag'),
+        highlights: [t('idx.inv.m3h1'), t('idx.inv.m3h2'), t('idx.inv.m3h3')] as const,
+      },
+    ],
+    [t],
+  )
+
+  const HOW_STEPS = useMemo(
+    () => [
+      { n: '1', title: t('idx.how.s1title'), desc: t('idx.how.s1desc') },
+      { n: '2', title: t('idx.how.s2title'), desc: t('idx.how.s2desc') },
+      { n: '3', title: t('idx.how.s3title'), desc: t('idx.how.s3desc') },
+      { n: '4', title: t('idx.how.s4title'), desc: t('idx.how.s4desc') },
+    ],
+    [t],
+  )
+
+  const TRUST_CELLS = useMemo(
+    () => [
+      { icon: '🪪', title: t('idx.trust.t1title'), desc: t('idx.trust.t1desc') },
+      { icon: '🏅', title: t('idx.trust.t2title'), desc: t('idx.trust.t2desc'), d: 'reveal-delay-1' },
+      { icon: '🏢', title: t('idx.trust.t3title'), desc: t('idx.trust.t3desc'), d: 'reveal-delay-2' },
+      { icon: '📋', title: t('idx.trust.t4title'), desc: t('idx.trust.t4desc'), d: 'reveal-delay-1' },
+      { icon: '🔑', title: t('idx.trust.t5title'), desc: t('idx.trust.t5desc'), d: 'reveal-delay-2' },
+      { icon: '📊', title: t('idx.trust.t6title'), desc: t('idx.trust.t6desc'), d: 'reveal-delay-3' },
+    ],
+    [t],
+  )
+
+  const JW_FEATURES = useMemo(
+    () => [
+      { icon: '💳', title: t('idx.jw.f1title'), desc: t('idx.jw.f1desc') },
+      { icon: '📦', title: t('idx.jw.f2title'), desc: t('idx.jw.f2desc') },
+      { icon: '👥', title: t('idx.jw.f3title'), desc: t('idx.jw.f3desc') },
+      { icon: '🏪', title: t('idx.jw.f4title'), desc: t('idx.jw.f4desc') },
+    ],
+    [t],
+  )
+
+  const CTA_STATS = useMemo(
+    () => [
+      ['₹100', t('idx.cta.stat1label')],
+      ['3 min', t('idx.cta.stat2label')],
+      ['0%', t('idx.cta.stat3label')],
+      ['42+', t('idx.cta.stat4label')],
+    ],
+    [t],
+  )
 
   const visibleInvestMethods = useMemo(
     () => (investTab === 0 ? INVEST_METHODS : INVEST_METHODS.filter((m) => m.tabIndex === investTab)),
-    [investTab],
+    [investTab, INVEST_METHODS],
   )
 
   const activeInvestLead = INVEST_TABS[investTab]?.lead ?? INVEST_TABS[0].lead
@@ -103,23 +132,20 @@ export function HomePage() {
           <div>
             <div className="eyebrow reveal">
               <div className="eyebrow-dot" aria-hidden />
-              {'India\'s gold savings infrastructure'}
+              {t('idx.hero.eyebrow')}
             </div>
             <h1 className="hero-h1 reveal reveal-delay-1">
-              Gold savings.
+              {t('idx.hero.h1')}
               <br />
-              <em>Finally done right.</em>
+              <em>{t('idx.hero.h1em')}</em>
             </h1>
-            <p className="hero-sub reveal reveal-delay-2">
-              Cridora links your gold to the verified jewellers you already trust — digital records, live board rates,
-              and real redemption options. Start from ₹100.
-            </p>
+            <p className="hero-sub reveal reveal-delay-2">{t('idx.hero.sub')}</p>
             <div className="hero-pills reveal reveal-delay-3">
-              <span className="hero-pill">Start from ₹100</span>
-              <span className="hero-pill">No lock-in period</span>
-              <span className="hero-pill">916 BIS certified</span>
-              <span className="hero-pill">0% interest loans</span>
-              <span className="hero-pill">OTP secured</span>
+              <span className="hero-pill">{t('idx.hero.pill1')}</span>
+              <span className="hero-pill">{t('idx.hero.pill2')}</span>
+              <span className="hero-pill">{t('idx.hero.pill3')}</span>
+              <span className="hero-pill">{t('idx.hero.pill4')}</span>
+              <span className="hero-pill">{t('idx.hero.pill5')}</span>
             </div>
             <div className="hero-btns reveal reveal-delay-4">
               <Link className="btn btn-primary btn-xl" to={startHref}>
@@ -127,21 +153,21 @@ export function HomePage() {
                   <circle cx="10" cy="10" r="8" />
                   <path d="M10 6v4l3 2" />
                 </svg>
-                Start saving
+                {t('idx.hero.cta1')}
               </Link>
               <Link className="btn btn-ghost btn-lg" to="/jeweller/apply">
-                Join as jeweller
+                {t('idx.hero.cta2')}
               </Link>
             </div>
           </div>
 
           <div className="hero-visual reveal reveal-delay-2">
             <div className="hv-card">
-              <div className="hv-card-eyebrow">Total Vaulted Gold</div>
+              <div className="hv-card-eyebrow">{t('idx.hero.vaultLabel')}</div>
               <div className="hv-grams tn">
                 14.820<span>g</span>
               </div>
-              <div className="hv-inr">≈ ₹1,05,932 at board rate</div>
+              <div className="hv-inr">{t('idx.hero.boardRateNote')}</div>
               <div className="hv-sparkrow">
                 <svg className="mini-spark" viewBox="0 0 300 48" preserveAspectRatio="none" style={{ height: 40, marginTop: 14 }}>
                   <defs>
@@ -166,11 +192,11 @@ export function HomePage() {
               </div>
               <div className="hv-stats">
                 <div className="hv-stat">
-                  <div className="hv-stat-lbl">Unrealised P/L</div>
+                  <div className="hv-stat-lbl">{t('idx.hero.unrealisedPL')}</div>
                   <div className="hv-stat-val text-ok tn">+₹11,332</div>
                 </div>
                 <div className="hv-stat">
-                  <div className="hv-stat-lbl">Redeemable</div>
+                  <div className="hv-stat-lbl">{t('idx.hero.redeemable')}</div>
                   <div className="hv-stat-val text-gold tn">12.340 g</div>
                 </div>
               </div>
@@ -185,7 +211,7 @@ export function HomePage() {
                 🟢
               </div>
               <div>
-                <div className="hv-sm-name">Fractional purchase</div>
+                <div className="hv-sm-name">{t('idx.hero.txn1')}</div>
                 <div className="hv-sm-detail">Malabar Gold, Kozhikode · FR-29481-05</div>
               </div>
               <div className="hv-sm-val">
@@ -200,7 +226,7 @@ export function HomePage() {
                 🏦
               </div>
               <div>
-                <div className="hv-sm-name">Gold deposit verified</div>
+                <div className="hv-sm-name">{t('idx.hero.txn2')}</div>
                 <div className="hv-sm-detail">Kalyan Jewellers, Thrissur · DP-18241</div>
               </div>
               <div className="hv-sm-val">
@@ -221,8 +247,8 @@ export function HomePage() {
               🪙
             </div>
             <div>
-              <div className="fs-title">Fractional Gold</div>
-              <div className="fs-sub">Buy from ₹100. GST included. Credited instantly.</div>
+              <div className="fs-title">{t('idx.fstrip.f1title')}</div>
+              <div className="fs-sub">{t('idx.fstrip.f1sub')}</div>
             </div>
           </div>
           <div className="fstrip-item reveal reveal-delay-1">
@@ -230,8 +256,8 @@ export function HomePage() {
               📦
             </div>
             <div>
-              <div className="fs-title">Gold Deposit</div>
-              <div className="fs-sub">Digitise physical gold you already own.</div>
+              <div className="fs-title">{t('idx.fstrip.f2title')}</div>
+              <div className="fs-sub">{t('idx.fstrip.f2sub')}</div>
             </div>
           </div>
           <div className="fstrip-item reveal reveal-delay-2">
@@ -239,8 +265,8 @@ export function HomePage() {
               💳
             </div>
             <div>
-              <div className="fs-title">CridoraPay</div>
-              <div className="fs-sub">Pay jeweller bills using vault gold + UPI.</div>
+              <div className="fs-title">{t('idx.fstrip.f3title')}</div>
+              <div className="fs-sub">{t('idx.fstrip.f3sub')}</div>
             </div>
           </div>
           <div className="fstrip-item reveal reveal-delay-3">
@@ -248,8 +274,8 @@ export function HomePage() {
               🔐
             </div>
             <div>
-              <div className="fs-title">0% Gold Loans</div>
-              <div className="fs-sub">Borrow against vault gold. Pay back, get gold.</div>
+              <div className="fs-title">{t('idx.fstrip.f4title')}</div>
+              <div className="fs-sub">{t('idx.fstrip.f4sub')}</div>
             </div>
           </div>
         </div>
@@ -261,31 +287,19 @@ export function HomePage() {
           <div className="center inner-narrow">
             <div className="eyebrow reveal">
               <div className="eyebrow-dot" aria-hidden />
-              Why Cridora
+              {t('idx.disc.eyebrow')}
             </div>
-            <h2 className="sh reveal reveal-delay-1">
-              Gold saving deserves
-              <br />
-              better infrastructure.
-            </h2>
-            <p className="sh-sub reveal reveal-delay-2">
-              India holds over 25,000 tonnes of household gold. Most of it sits idle, unleveraged, and un-traceable.
-              Cridora is the financial layer that finally makes that gold work — without moving it from jewellers you
-              trust.
-            </p>
+            <h2 className="sh reveal reveal-delay-1">{t('idx.disc.h2')}</h2>
+            <p className="sh-sub reveal reveal-delay-2">{t('idx.disc.sub')}</p>
           </div>
 
           <div className="feat-grid" style={{ marginTop: 56 }}>
             <div className="feat-card feat-card-large reveal">
               <div>
                 <div className="fc-ico">🏛️</div>
-                <h3 className="fc-title">Infrastructure, not a new wallet</h3>
-                <p className="fc-desc">
-                  Cridora doesn&apos;t hold your gold. Your verified local jeweller does — the same one your family has
-                  trusted for decades. We add digital records, live rates, and redemption tools on top of that
-                  relationship.
-                </p>
-                <span className="fc-tag">No new middleman · Your jeweller keeps the gold</span>
+                <h3 className="fc-title">{t('idx.disc.c1title')}</h3>
+                <p className="fc-desc">{t('idx.disc.c1desc')}</p>
+                <span className="fc-tag">{t('idx.disc.c1tag')}</span>
               </div>
               <div>
                 <div
@@ -306,7 +320,7 @@ export function HomePage() {
                       marginBottom: 10,
                     }}
                   >
-                    Your vault · Malabar Gold
+                    {t('idx.disc.vaultLabel')}
                   </div>
                   <div
                     style={{
@@ -358,7 +372,7 @@ export function HomePage() {
                           marginBottom: 3,
                         }}
                       >
-                        Fractional
+                        {t('idx.disc.fractionalLabel')}
                       </div>
                       <div style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--ink)', fontVariantNumeric: 'tabular-nums' }}>
                         9.340 g
@@ -382,7 +396,7 @@ export function HomePage() {
                           marginBottom: 3,
                         }}
                       >
-                        Deposit
+                        {t('idx.disc.depositLabel')}
                       </div>
                       <div style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--ink)', fontVariantNumeric: 'tabular-nums' }}>
                         5.000 g
@@ -397,46 +411,34 @@ export function HomePage() {
               <div className="fc-ico" style={{ background: 'rgba(35,197,94,.08)', borderColor: 'rgba(35,197,94,.18)' }}>
                 📈
               </div>
-              <h3 className="fc-title">Live board rates. Always.</h3>
-              <p className="fc-desc">
-                See the jeweller&apos;s actual board rate for every transaction. Compare buyback rates before you sell.
-                No guesswork, no &quot;come back tomorrow.&quot;
-              </p>
-              <span className="fc-tag">Transparent · Auditable</span>
+              <h3 className="fc-title">{t('idx.disc.c2title')}</h3>
+              <p className="fc-desc">{t('idx.disc.c2desc')}</p>
+              <span className="fc-tag">{t('idx.disc.c2tag')}</span>
             </div>
 
             <div className="feat-card reveal reveal-delay-2">
               <div className="fc-ico" style={{ background: 'rgba(59,158,255,.08)', borderColor: 'rgba(59,158,255,.18)' }}>
                 🔄
               </div>
-              <h3 className="fc-title">Three ways to redeem</h3>
-              <p className="fc-desc">
-                Sell back for cash, transfer grams to family members, or pledge gold as collateral for a 0% interest
-                loan. Your gold works for you.
-              </p>
-              <span className="fc-tag">No lock-in · Instant settlement</span>
+              <h3 className="fc-title">{t('idx.disc.c3title')}</h3>
+              <p className="fc-desc">{t('idx.disc.c3desc')}</p>
+              <span className="fc-tag">{t('idx.disc.c3tag')}</span>
             </div>
 
             <div className="feat-card reveal reveal-delay-1">
               <div className="fc-ico">💍</div>
-              <h3 className="fc-title">Buy jewellery online</h3>
-              <p className="fc-desc">
-                Browse the BIS 916 catalogue from verified jewellers. Pay using vault gold + UPI. Completed purchases
-                appear in your Gold Records vault.
-              </p>
-              <span className="fc-tag">Marketplace · CridoraPay</span>
+              <h3 className="fc-title">{t('idx.disc.c4title')}</h3>
+              <p className="fc-desc">{t('idx.disc.c4desc')}</p>
+              <span className="fc-tag">{t('idx.disc.c4tag')}</span>
             </div>
 
             <div className="feat-card reveal reveal-delay-2">
               <div className="fc-ico" style={{ background: 'rgba(240,71,71,.07)', borderColor: 'rgba(240,71,71,.15)' }}>
                 🛡️
               </div>
-              <h3 className="fc-title">OTP-secured every step</h3>
-              <p className="fc-desc">
-                Every physical transaction — deposit, sellback, or counter payment — requires a one-time code shared
-                only at the moment. Your vault can&apos;t be touched without your phone.
-              </p>
-              <span className="fc-tag">Zero-trust · Cryptographic verification</span>
+              <h3 className="fc-title">{t('idx.disc.c5title')}</h3>
+              <p className="fc-desc">{t('idx.disc.c5desc')}</p>
+              <span className="fc-tag">{t('idx.disc.c5tag')}</span>
             </div>
           </div>
         </div>
@@ -445,11 +447,8 @@ export function HomePage() {
       {/* QUOTE */}
       <div className="quote-banner">
         <div className="inner-mid">
-          <blockquote className="qb-text reveal">
-            &quot;Indian households hold more gold than the <em>entire reserves of the US Federal Reserve</em> — yet
-            most of it earns nothing, protects nothing, and can&apos;t be used as collateral without selling it.&quot;
-          </blockquote>
-          <div className="qb-source reveal reveal-delay-1">World Gold Council · Cridora Editorial</div>
+          <blockquote className="qb-text reveal">{t('idx.quote.text')}</blockquote>
+          <div className="qb-source reveal reveal-delay-1">{t('idx.quote.source')}</div>
         </div>
       </div>
 
@@ -459,42 +458,19 @@ export function HomePage() {
           <div className="center inner-narrow">
             <div className="eyebrow reveal">
               <div className="eyebrow-dot" aria-hidden />
-              How Cridora works
+              {t('idx.how.eyebrow')}
             </div>
-            <h2 className="sh reveal reveal-delay-1">Four steps to your first gram.</h2>
-            <p className="sh-sub reveal reveal-delay-2">
-              You don&apos;t need a new bank account. Your existing UPI app and your local jeweller are all you need.
-            </p>
+            <h2 className="sh reveal reveal-delay-1">{t('idx.how.h2')}</h2>
+            <p className="sh-sub reveal reveal-delay-2">{t('idx.how.sub')}</p>
           </div>
 
           <div className="idx-steps">
-            {[
-              {
-                n: '1',
-                t: 'Pick a verified jeweller',
-                d: 'Browse the Cridora directory. Filter by city, trust score, buyback rate, or services offered. Every jeweller is KYB-verified.',
-              },
-              {
-                n: '2',
-                t: 'Start saving digitally',
-                d: 'Buy fractional gold via UPI from ₹100 — or visit the store and pay at the counter. Gold is credited to your vault within minutes.',
-              },
-              {
-                n: '3',
-                t: 'Track it live',
-                d: 'Your dashboard shows live valuation, gram-by-gram history, unrealised P/L, and every transaction with an audit trail.',
-              },
-              {
-                n: '4',
-                t: 'Redeem on your terms',
-                d: 'Sell back for cash, transfer to family, take a 0% loan, or spend at the store via CridoraPay. No lock-in, no penalty.',
-              },
-            ].map((step, idx) => (
+            {HOW_STEPS.map((step, idx) => (
               <div key={step.n} className={`idx-step-card reveal${idx > 0 ? ` reveal-delay-${idx}` : ''}`}>
                 <div className="idx-step-num">{step.n}</div>
                 <div>
-                  <div className="idx-step-title">{step.t}</div>
-                  <div className="idx-step-desc">{step.d}</div>
+                  <div className="idx-step-title">{step.title}</div>
+                  <div className="idx-step-desc">{step.desc}</div>
                 </div>
               </div>
             ))}
@@ -508,24 +484,17 @@ export function HomePage() {
           <div className="inner-narrow">
             <div className="eyebrow reveal">
               <div className="eyebrow-dot" aria-hidden />
-              Three ways to invest
+              {t('idx.inv.eyebrow')}
             </div>
-            <h2 className="sh reveal reveal-delay-1">
-              Gold added three ways,
-              <br />
-              one unified vault.
-            </h2>
-            <p className="sh-sub reveal reveal-delay-2">
-              However you accumulate gold — buying small, depositing physical, or through purchases — every gram
-              appears in the same dashboard with live valuation.
-            </p>
+            <h2 className="sh reveal reveal-delay-1">{t('idx.inv.h2')}</h2>
+            <p className="sh-sub reveal reveal-delay-2">{t('idx.inv.sub')}</p>
           </div>
 
           <div className="invest-tabs-wrap reveal" style={{ marginTop: 36 }}>
-            <div className="invest-tabs" role="tablist" aria-label="Ways gold reaches your unified vault">
-              {INVEST_TABS.map((t, i) => (
+            <div className="invest-tabs" role="tablist" aria-label={t('idx.inv.ariaLabel')}>
+              {INVEST_TABS.map((tab, i) => (
                 <button
-                  key={t.key}
+                  key={tab.key}
                   type="button"
                   role="tab"
                   aria-selected={investTab === i}
@@ -535,8 +504,8 @@ export function HomePage() {
                   className={`it-btn${investTab === i ? ' on' : ''}`}
                   onClick={() => goInvestTab(i)}
                 >
-                  <span className="it-btn__label">{t.label}</span>
-                  <span className="it-btn__hint">{t.hint}</span>
+                  <span className="it-btn__label">{tab.label}</span>
+                  <span className="it-btn__hint">{tab.hint}</span>
                 </button>
               ))}
             </div>
@@ -566,19 +535,19 @@ export function HomePage() {
               </div>
             ))}
             <div className="invest-card invest-card--redemption" style={{ background: 'var(--s1)' }}>
-              <div className="invc-num">Redemption — Three Options</div>
-              <div className="invc-title">Use your gold, don&apos;t just hold it</div>
+              <div className="invc-num">{t('idx.inv.redNum')}</div>
+              <div className="invc-title">{t('idx.inv.redTitle')}</div>
               <div className="invc-desc">
-                <strong style={{ color: 'var(--ink)', display: 'block', marginBottom: 4 }}>Cash Sellback</strong>
-                Sell fractional grams back to the jeweller at buyback rate. OTP at counter or UPI payout.
+                <strong style={{ color: 'var(--ink)', display: 'block', marginBottom: 4 }}>{t('idx.inv.redCash')}</strong>
+                {t('idx.inv.redCashDesc')}
                 <br />
                 <br />
-                <strong style={{ color: 'var(--ink)', display: 'block', marginBottom: 4 }}>Gold Transfer</strong>
-                Send grams to any Cridora member by vault card — family, gifts, settlements.
+                <strong style={{ color: 'var(--ink)', display: 'block', marginBottom: 4 }}>{t('idx.inv.redTransfer')}</strong>
+                {t('idx.inv.redTransferDesc')}
                 <br />
                 <br />
-                <strong style={{ color: 'var(--ink)', display: 'block', marginBottom: 4 }}>0% Gold Loan</strong>
-                Pledge grams as collateral. Only 2% flat fee. Repay in parts; gold returns to vault on full repayment.
+                <strong style={{ color: 'var(--ink)', display: 'block', marginBottom: 4 }}>{t('idx.inv.redLoan')}</strong>
+                {t('idx.inv.redLoanDesc')}
               </div>
             </div>
           </div>
@@ -591,69 +560,46 @@ export function HomePage() {
           <div className="center inner-narrow">
             <div className="eyebrow reveal">
               <div className="eyebrow-dot" aria-hidden />
-              Built around real Indian gold behaviour
+              {t('idx.india.eyebrow')}
             </div>
-            <h2 className="sh reveal reveal-delay-1">
-              Every Indian saves gold.
-              <br />
-              Most can&apos;t use it.
-            </h2>
-            <p className="sh-sub reveal reveal-delay-2">
-              We built Cridora specifically around how gold actually moves in Indian households — not how Western
-              finance thinks it should.
-            </p>
+            <h2 className="sh reveal reveal-delay-1">{t('idx.india.h2')}</h2>
+            <p className="sh-sub reveal reveal-delay-2">{t('idx.india.sub')}</p>
           </div>
 
           <div className="landing-india-grid">
             <div className="landing-india-card wide reveal">
               <div className="ic-num">01</div>
               <div>
-                <div className="ic-title">You already own gold — it&apos;s just not working for you</div>
-                <div className="ic-desc">
-                  India&apos;s household gold stockpile exceeds 25,000 tonnes. Most of it earns zero returns, has no formal
-                  record, and can&apos;t be used as collateral without selling it at the wrong time. Cridora adds a financial
-                  layer without moving the gold.
-                </div>
+                <div className="ic-title">{t('idx.india.c1title')}</div>
+                <div className="ic-desc">{t('idx.india.c1desc')}</div>
               </div>
             </div>
             <div className="landing-india-card reveal reveal-delay-1">
               <div className="ic-num">02</div>
               <div>
-                <div className="ic-title">You trust your jeweller more than a bank</div>
-                <div className="ic-desc">
-                  We don&apos;t ask you to change that. Your verified local jeweller remains the physical custodian.
-                  Cridora adds digital records, rate transparency, and redemption infrastructure on top.
-                </div>
+                <div className="ic-title">{t('idx.india.c2title')}</div>
+                <div className="ic-desc">{t('idx.india.c2desc')}</div>
               </div>
             </div>
             <div className="landing-india-card reveal reveal-delay-2">
               <div className="ic-num">03</div>
               <div>
-                <div className="ic-title">Small savings matter — ₹100 at a time</div>
-                <div className="ic-desc">
-                  No minimum holding period. No lock-in. No penalty for selling. Buy from ₹100. Add whenever you can.
-                  That&apos;s what a genuine savings tool looks like.
-                </div>
+                <div className="ic-title">{t('idx.india.c3title')}</div>
+                <div className="ic-desc">{t('idx.india.c3desc')}</div>
               </div>
             </div>
             <div className="landing-india-card reveal reveal-delay-1">
               <div className="ic-num">04</div>
               <div>
-                <div className="ic-title">Rate transparency is non-negotiable</div>
-                <div className="ic-desc">
-                  Live 22K and 24K board rates on every screen. Buyback rates visible before you decide. Full gram-by-gram
-                  ledger. BIS 916 hallmarks recorded for every piece.
-                </div>
+                <div className="ic-title">{t('idx.india.c4title')}</div>
+                <div className="ic-desc">{t('idx.india.c4desc')}</div>
               </div>
             </div>
             <div className="landing-india-card reveal reveal-delay-2">
               <div className="ic-num">05</div>
               <div>
-                <div className="ic-title">Gold that earns, pays, and transfers</div>
-                <div className="ic-desc">
-                  0% loans. Peer-to-peer transfers. CridoraPay at the counter. Vault gold used for online marketplace
-                  purchases. Gold as active utility, not just a legacy asset.
-                </div>
+                <div className="ic-title">{t('idx.india.c5title')}</div>
+                <div className="ic-desc">{t('idx.india.c5desc')}</div>
               </div>
             </div>
           </div>
@@ -666,24 +612,13 @@ export function HomePage() {
           <div className="center inner-narrow">
             <div className="eyebrow reveal">
               <div className="eyebrow-dot" aria-hidden />
-              Trust &amp; transparency
+              {t('idx.trust.eyebrow')}
             </div>
-            <h2 className="sh reveal reveal-delay-1">
-              Six pillars of trust.
-              <br />
-              No exceptions.
-            </h2>
+            <h2 className="sh reveal reveal-delay-1">{t('idx.trust.h2')}</h2>
           </div>
 
           <div className="landing-trust-grid">
-            {[
-              { icon: '🪪', title: 'KYC verified accounts', desc: 'PAN, Aadhaar, and selfie verification before any transaction. Every user is a real person. No anonymous wallets.' },
-              { icon: '🏅', title: 'BIS 916 hallmarked gold', desc: 'Every gram deposited or purchased through Cridora is required to carry BIS 916 certification. Purity is recorded and auditable.', d: 'reveal-delay-1' },
-              { icon: '🏢', title: 'Jeweller KYB verification', desc: 'Every partner jeweller goes through Know Your Business checks — GST, shop registration, and physical inspection before listing.', d: 'reveal-delay-2' },
-              { icon: '📋', title: 'End-to-end audit trail', desc: 'Every transaction — purchase, deposit, transfer, sellback, or loan — is logged with timestamps, rates, and reference IDs. Immutable record.', d: 'reveal-delay-1' },
-              { icon: '🔑', title: 'OTP-secured physical actions', desc: 'Counter deposits, sellbacks, and CridoraPay transactions require a time-limited OTP. No action happens without your active confirmation.', d: 'reveal-delay-2' },
-              { icon: '📊', title: 'No hidden charges', desc: 'Platform fee: ₹0. GST: 3% (mandated by law, shown upfront). Loan fee: 2% flat. Sellback spread: visible before confirmation. No surprises.', d: 'reveal-delay-3' },
-            ].map((cell) => (
+            {TRUST_CELLS.map((cell) => (
               <div key={cell.title} className={`landing-trust-cell reveal ${cell.d ?? ''}`}>
                 <div className="tc-ico" aria-hidden>
                   {cell.icon}
@@ -715,15 +650,15 @@ export function HomePage() {
                 </div>
                 <div className="jm-rates">
                   <div className="jm-rate">
-                    <label>22K rate</label>
+                    <label>{t('idx.jw.mockRate22k')}</label>
                     <span className="tn">₹7,142/g</span>
                   </div>
                   <div className="jm-rate">
-                    <label>Buyback</label>
+                    <label>{t('idx.jw.mockBuyback')}</label>
                     <span className="gold tn">₹7,042/g</span>
                   </div>
                   <div className="jm-rate">
-                    <label>Making</label>
+                    <label>{t('idx.jw.mockMaking')}</label>
                     <span className="tn">₹480/g</span>
                   </div>
                 </div>
@@ -739,13 +674,13 @@ export function HomePage() {
                     marginBottom: 12,
                   }}
                 >
-                  Today&apos;s desk activity
+                  {t('idx.jw.mockDeskTitle')}
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                   {[
-                    ['Purchases', '14 txns'],
-                    ['Deposits', '3 txns'],
-                    ['CridoraPay bills', '₹2.4L'],
+                    [t('idx.jw.mockPurchases'), '14 txns'],
+                    [t('idx.jw.mockDeposits'), '3 txns'],
+                    [t('idx.jw.mockCridorapay'), '₹2.4L'],
                   ].map(([k, v]) => (
                     <div key={k} style={{ background: 'var(--s1)', border: '1px solid var(--b0)', borderRadius: 'var(--r1)', padding: '11px 13px' }}>
                       <div
@@ -782,7 +717,7 @@ export function HomePage() {
                         marginBottom: 4,
                       }}
                     >
-                      New customers
+                      {t('idx.jw.mockNewCustomers')}
                     </div>
                     <div style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--gold-hi)', fontVariantNumeric: 'tabular-nums' }}>+7 today</div>
                   </div>
@@ -793,26 +728,18 @@ export function HomePage() {
             <div>
               <div className="eyebrow reveal">
                 <div className="eyebrow-dot" aria-hidden />
-                For jewellers
+                {t('idx.jw.eyebrow')}
               </div>
-              <h2 className="sh-md reveal reveal-delay-1">Grow your business with digital gold infrastructure.</h2>
-              <p className="sh-sub reveal reveal-delay-2">
-                Cridora gives your showroom a modern digital layer — customer loyalty, recurring savings plans, and
-                real-time settlement — without replacing your existing workflow.
-              </p>
+              <h2 className="sh-md reveal reveal-delay-1">{t('idx.jw.h2')}</h2>
+              <p className="sh-sub reveal reveal-delay-2">{t('idx.jw.sub')}</p>
 
               <div className="jw-features">
-                {[
-                  { icon: '💳', t: 'CridoraPay desk billing', d: 'Create bills for walk-in customers. They pay with vault gold + UPI. You get settled instantly. No card machine or POS needed.' },
-                  { icon: '📦', t: 'Gold deposit management', d: 'Accept physical gold deposits from Cridora customers. Record weight and purity. OTP-verified. Digital grams credited automatically.' },
-                  { icon: '👥', t: 'Customer loyalty & recurring savings', d: 'Run golden schemes digitally. Your customers save fractional gold through your verified vault — trackable and auditable in real time.' },
-                  { icon: '🏪', t: 'Product marketplace listing', d: 'List your BIS 916 jewellery catalogue online. Reach Cridora savers who can pay using vault gold — a warm audience with existing gold balances.' },
-                ].map((item, ix) => (
-                  <div key={item.t} className={`jw-feat reveal reveal-delay-${ix + 1}`}>
+                {JW_FEATURES.map((item, ix) => (
+                  <div key={item.title} className={`jw-feat reveal reveal-delay-${ix + 1}`}>
                     <div className="jf-ico">{item.icon}</div>
                     <div>
-                      <div className="jf-title">{item.t}</div>
-                      <div className="jf-desc">{item.d}</div>
+                      <div className="jf-title">{item.title}</div>
+                      <div className="jf-desc">{item.desc}</div>
                     </div>
                   </div>
                 ))}
@@ -820,10 +747,10 @@ export function HomePage() {
 
               <div className="idx-row" style={{ marginTop: 28 }}>
                 <Link className="btn btn-primary btn-lg" to="/jeweller/apply">
-                  Apply as jeweller →
+                  {t('idx.jw.cta1')}
                 </Link>
                 <Link className="btn btn-ghost" to="/investors">
-                  Download info kit
+                  {t('idx.jw.cta2')}
                 </Link>
               </div>
             </div>
@@ -836,36 +763,30 @@ export function HomePage() {
         <div className="cta-inner">
           <div className="eyebrow reveal" style={{ margin: '0 auto 18px' }}>
             <div className="eyebrow-dot" aria-hidden />
-            Get early access
+            {t('idx.cta.eyebrow')}
           </div>
-          <h2 className="sh reveal reveal-delay-1">Start your gold vault today.</h2>
+          <h2 className="sh reveal reveal-delay-1">{t('idx.cta.h2')}</h2>
           <p className="sh-sub reveal reveal-delay-2" style={{ margin: '12px auto 0' }}>
-            Join thousands of Indian savers using Cridora to invest, track, and redeem gold through verified local
-            jewellers.
+            {t('idx.cta.sub')}
           </p>
 
           <div className="cta-input-row reveal reveal-delay-2">
             <label htmlFor="idx-cta-placeholder" className="sr-only">
-              Mobile or email (optional placeholder)
+              {t('idx.cta.placeholder')}
             </label>
-            <input id="idx-cta-placeholder" className="cta-input" type="tel" placeholder="+91 mobile number or email" />
+            <input id="idx-cta-placeholder" className="cta-input" type="tel" placeholder={t('idx.cta.placeholder')} />
             <Link className="btn btn-primary btn-lg" to="/signup">
-              Get started →
+              {t('idx.cta.btn')}
             </Link>
           </div>
-          <div className="cta-note reveal reveal-delay-3">No credit card. No minimum deposit. KYC takes under 3 minutes.</div>
+          <div className="cta-note reveal reveal-delay-3">{t('idx.cta.note')}</div>
 
           <div style={{ display: 'flex', justifyContent: 'center', gap: 24, marginTop: 40, flexWrap: 'wrap' }}>
-            {[
-              ['₹100', 'Minimum first purchase'],
-              ['3 min', 'To complete KYC'],
-              ['0%', 'Interest on gold loans'],
-              ['42+', 'Verified partner stores'],
-            ].map(([a, b], i, arr) => (
-              <Fragment key={a}>
+            {CTA_STATS.map(([val, label], i, arr) => (
+              <Fragment key={val}>
                 <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '1.6rem', fontWeight: 900, color: 'var(--gold-hi)', fontVariantNumeric: 'tabular-nums' }}>{a}</div>
-                  <div style={{ fontSize: '0.72rem', color: 'var(--ink2)', marginTop: 3 }}>{b}</div>
+                  <div style={{ fontSize: '1.6rem', fontWeight: 900, color: 'var(--gold-hi)', fontVariantNumeric: 'tabular-nums' }}>{val}</div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--ink2)', marginTop: 3 }}>{label}</div>
                 </div>
                 {i < arr.length - 1 ? (
                   <div style={{ width: 1, background: 'var(--b0)', flexShrink: 0 }} aria-hidden />
@@ -875,7 +796,6 @@ export function HomePage() {
           </div>
         </div>
       </section>
-
     </div>
   )
 }
