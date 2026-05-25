@@ -4982,11 +4982,8 @@ select.input {
 .pf-kpi__value--grams {
   font-size: 1.72rem;
   letter-spacing: -0.03em;
-  color: #fff6c8;
-  text-shadow:
-    0 0 8px rgba(253, 224, 71, 0.88),
-    0 0 18px rgba(245, 158, 11, 0.55),
-    0 0 30px rgba(217, 119, 6, 0.32);
+  color: var(--gold-portfolio-glow-fill);
+  text-shadow: var(--gold-text-glow-soft);
 }
 
 /* Customer vault cards (dashboard): grams glow + ₹ line */
@@ -4994,11 +4991,8 @@ select.input {
   margin: 0.2rem 0 0;
   font-size: 1.55rem;
   font-weight: 800;
-  color: #fff6c8;
-  text-shadow:
-    0 0 8px rgba(253, 224, 71, 0.9),
-    0 0 18px rgba(245, 158, 11, 0.6),
-    0 0 30px rgba(217, 119, 6, 0.35);
+  color: var(--gold-portfolio-glow-fill);
+  text-shadow: var(--gold-text-glow-soft);
 }
 
 .pf-vault-card__inr-value {
@@ -5691,10 +5685,11 @@ select.input {
   font-size: clamp(1.35rem, 3.8vw, 1.75rem);
   font-weight: 800;
   letter-spacing: -0.03em;
-  color: #fff6c8;
+  color: var(--gold-portfolio-glow-fill);
   text-shadow:
     0 0 10px rgba(253, 224, 71, 0.9),
-    0 0 24px rgba(245, 158, 11, 0.55);
+    0 0 24px rgba(245, 158, 11, 0.55),
+    0 0 36px rgba(217, 119, 6, 0.28);
 }
 
 .pf-groww-hero__portfolio-band-dot {
@@ -5908,13 +5903,13 @@ select.input {
   font-size: clamp(1.55rem, 4vw, 1.95rem);
   font-weight: 800;
   letter-spacing: -0.03em;
-  color: color-mix(in srgb, var(--gold-hi) 94%, #ffffff);
+  color: var(--gold-portfolio-glow-fill);
   text-shadow: var(--gold-text-glow);
 }
 
 /* Vault hero: grams use the same golden glow as headline metal emphasis */
 .pf-groww-hero__big--grams {
-  color: color-mix(in srgb, var(--gold-hi) 94%, #ffffff);
+  color: var(--gold-portfolio-glow-fill);
   text-shadow: var(--gold-text-glow);
 }
 
@@ -5983,8 +5978,8 @@ select.input {
   font-size: 1.12rem;
   font-weight: 800;
   letter-spacing: -0.02em;
-  color: #fff6c8;
-  text-shadow: 0 0 12px rgba(253, 224, 71, 0.35);
+  color: var(--gold-portfolio-glow-fill);
+  text-shadow: var(--gold-text-glow-soft);
 }
 
 .pf-groww-holdings__metric-val--inr {
@@ -6143,11 +6138,8 @@ select.input {
   font-weight: 800;
   letter-spacing: -0.02em;
   line-height: 1.2;
-  color: #fff6c8;
-  text-shadow:
-    0 0 8px rgba(253, 224, 71, 0.92),
-    0 0 16px rgba(245, 158, 11, 0.62),
-    0 0 28px rgba(217, 119, 6, 0.38);
+  color: var(--gold-portfolio-glow-fill);
+  text-shadow: var(--gold-text-glow-soft);
 }
 
 .pf-groww-holding-row__cur {
