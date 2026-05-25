@@ -103,6 +103,22 @@ export function CustomerPortfolioOverviewDash(props: {
   const chartValues =
     sessionSamples.length > 1 ? sessionSamples : sessionSamples.length === 1 ? [sessionSamples[0]!, sessionSamples[0]!] : []
 
+  const heroTrendValues = useMemo(() => {
+    if (chartValues.length > 0) {
+      const cap = 36
+      return chartValues.slice(-Math.min(chartValues.length, cap))
+    }
+    if (masked) {
+      return [98, 100, 99, 101, 102, 101.5, 102.2]
+    }
+    if (marketValueInr > 0) {
+      const jitter = Math.max(marketValueInr * 0.0045, 1)
+      const v = marketValueInr
+      return [v - jitter * 2.8, v - jitter * 1.2, v + jitter * 0.35, v - jitter * 0.65, v + jitter * 0.85, v]
+    }
+    return [1, 1, 1.01, 1]
+  }, [chartValues, marketValueInr, masked])
+
   const recentTx = [...fractionalLedger]
     .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at))
     .slice(0, 5)
@@ -145,31 +161,18 @@ export function CustomerPortfolioOverviewDash(props: {
           </div>
         </div>
 
-        <svg
-          className="spark"
-          viewBox="0 0 500 56"
-          preserveAspectRatio="none"
-          style={{ width: '100%', height: 48, marginTop: 18, marginBottom: 2 }}
-          aria-hidden
-        >
-          <defs>
-            <linearGradient id="cd-hero-sg" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#c9a840" stopOpacity="0.25" />
-              <stop offset="100%" stopColor="#c9a840" stopOpacity="0" />
-            </linearGradient>
-          </defs>
-          <path
-            d="M0,50 C30,45 50,38 80,32 S130,20 165,18 S215,22 250,14 S310,8 350,10 S410,6 450,4 S480,3 500,2 L500,56 L0,56 Z"
-            fill="url(#cd-hero-sg)"
-          />
-          <path
-            d="M0,50 C30,45 50,38 80,32 S130,20 165,18 S215,22 250,14 S310,8 350,10 S410,6 450,4 S480,3 500,2"
-            fill="none"
+        <div className="pf-hero-trend-wrap">
+          <PortfolioTrendChart
+            values={heroTrendValues}
             stroke="#c9a840"
-            strokeWidth="1.8"
-            strokeLinejoin="round"
+            fillId={`${chartGradId}_hero_sg`}
+            ariaLabel={
+              masked
+                ? 'Vault valuation trend (balances hidden)'
+                : 'Approximate vault valuation trend this session'
+            }
           />
-        </svg>
+        </div>
 
         <div className="hero-grid">
           <div className="hero-stat">
@@ -266,7 +269,7 @@ export function CustomerPortfolioOverviewDash(props: {
 
         <div className="card card-p">
           <div className="sec-title mb12">Allocation by jeweller</div>
-          <div className="row" style={{ alignItems: 'center', gap: 20 }}>
+            <div className="row wrap" style={{ alignItems: 'center', gap: 20 }}>
             <div className="dash-donut-slot" style={{ flexShrink: 0 }}>
               <PortfolioDonut segments={donutSegs} ariaLabel="Gram allocation by custodian jeweller" />
             </div>
@@ -294,7 +297,10 @@ export function CustomerPortfolioOverviewDash(props: {
             </div>
           </div>
           <div className="hr" />
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, fontSize: '0.72rem', textAlign: 'center' }}>
+          <div
+            className="pf-mini-gram-strip"
+            style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8, fontSize: '0.72rem', textAlign: 'center' }}
+          >
             <div>
               <div className="t-fa fw7" style={{ fontSize: '0.6rem', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>
                 Fractional

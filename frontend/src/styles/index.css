@@ -4988,6 +4988,9 @@ select.input {
   border: 1px solid rgba(147, 197, 253, 0.18);
   background: linear-gradient(160deg, rgba(59, 68, 120, 0.18), rgba(0, 12, 26, 0.72));
   box-shadow: var(--shadow-card);
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .pf-card__head {
@@ -5445,7 +5448,12 @@ select.input {
 .pf-live-gold__chart .pf-chart-svg {
   display: block;
   width: 100%;
-  height: 100%;
+  height: auto;
+  max-height: 88px;
+}
+
+.pf-live-gold__chart .pf-chart-svg.pf-chart-svg--trend {
+  max-height: 88px;
 }
 
 .pf-live-gold__chart-empty {
@@ -6190,6 +6198,18 @@ select.input {
   width: 100%;
   height: 100%;
   display: block;
+}
+
+/** Session trend + live gold charts: keep aspect ratio; avoid distorted strokes from preserveAspectRatio none */
+.pf-chart-svg.pf-chart-svg--trend {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 100 / 88;
+}
+
+.pf-card__viz:not(.pf-card__viz--mkt-board) .pf-chart-svg.pf-chart-svg--trend {
+  max-height: 156px;
+  margin-inline: auto;
 }
 
 .pf-spark {
@@ -7451,6 +7471,44 @@ select.input {
     max-width: none;
     margin-inline: 0;
     padding-inline: 0;
+  }
+
+  /* Portfolio (customer): charts + bars fit narrow viewports — no sideways spill */
+  .pf-scope .pf-grid,
+  .pf-scope .pf-groww-shell {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .pf-mkt-board__bar-track {
+    grid-template-columns: 44px minmax(0, 1fr) minmax(min-content, 5.75rem);
+    gap: 0.35rem 0.42rem;
+  }
+
+  .pf-mkt-board__bar-num {
+    min-width: 0;
+    max-width: 7.75rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .pf-mkt-board__hint,
+  .pf-mkt-board__chart-caption {
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    hyphens: auto;
+  }
+
+  .pf-groww-charts-grid {
+    width: 100%;
+    min-width: 0;
+    padding-inline: 0;
+  }
+
+  .pf-card__viz:not(.pf-card__viz--mkt-board) .pf-chart-svg.pf-chart-svg--trend {
+    max-height: 128px;
   }
 
   .dash-topbar {

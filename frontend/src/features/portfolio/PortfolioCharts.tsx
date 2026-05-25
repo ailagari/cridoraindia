@@ -101,9 +101,9 @@ export function PortfolioTrendChart({
 
   return (
     <svg
-      className="pf-chart-svg"
+      className="pf-chart-svg pf-chart-svg--trend"
       viewBox={`0 0 ${TREND_VIEW_W} ${height}`}
-      preserveAspectRatio="none"
+      preserveAspectRatio="xMidYMid meet"
       role="img"
       aria-label={ariaLabel}
     >
@@ -120,15 +120,16 @@ export function PortfolioTrendChart({
         d={dLine}
         fill="none"
         stroke={stroke}
-        strokeWidth={1.8}
+        strokeWidth={1.1}
+        vectorEffect="nonScalingStroke"
         strokeLinecap="round"
         strokeLinejoin="round"
         className="pf-line-draw pf-trend-line"
       />
       {endPt != null ? (
         <>
-          <circle cx={endPt.x} cy={endPt.y} r={7} fill={stroke} fillOpacity={0.2} />
-          <circle cx={endPt.x} cy={endPt.y} r={3.5} fill={stroke} />
+          <circle cx={endPt.x} cy={endPt.y} r={6} fill={stroke} fillOpacity={0.18} />
+          <circle cx={endPt.x} cy={endPt.y} r={3} fill={stroke} />
         </>
       ) : null}
     </svg>
@@ -191,7 +192,7 @@ export function PortfolioDonut({ segments, ariaLabel }: { segments: DonutSeg[]; 
               r={r}
               fill="none"
               stroke={s.color}
-              strokeWidth={14}
+              strokeWidth={11}
               strokeLinecap="round"
               strokeDasharray={`${arc} ${c - arc}`}
               transform={`rotate(${rot})`}
@@ -223,7 +224,8 @@ export function VaultTrendSparkline({ trend }: { trend: 'up' | 'down' | 'neutral
       <polyline
         fill="none"
         stroke={stroke}
-        strokeWidth={1.5}
+        strokeWidth={1.05}
+        vectorEffect="nonScalingStroke"
         strokeLinecap="round"
         strokeLinejoin="round"
         points={points}
@@ -238,7 +240,16 @@ export function PortfolioSparkRow({ points, stroke }: { points: number[]; stroke
   const d = linePath(pts, height)
   return (
     <svg className="pf-spark" viewBox={`0 0 100 ${height}`} preserveAspectRatio="none" aria-hidden="true">
-      <path pathLength={1} d={d} fill="none" stroke={stroke} strokeWidth={2} strokeLinecap="round" className="pf-line-draw" />
+      <path
+        pathLength={1}
+        d={d}
+        fill="none"
+        stroke={stroke}
+        strokeWidth={1.1}
+        vectorEffect="nonScalingStroke"
+        strokeLinecap="round"
+        className="pf-line-draw"
+      />
     </svg>
   )
 }
@@ -370,8 +381,9 @@ export function PortfolioLiveValueVsCostChart({
               y1={y}
               x2={geo.xmax}
               y2={y}
-              stroke="rgba(148, 163, 184, 0.12)"
+              stroke="rgba(148, 163, 184, 0.14)"
               strokeWidth={1}
+              vectorEffect="nonScalingStroke"
             />
           )
         })}
@@ -387,8 +399,9 @@ export function PortfolioLiveValueVsCostChart({
             y1={geo.baselineY}
             x2={geo.xmax}
             y2={geo.baselineY}
-            stroke="rgba(203,213,225,0.55)"
-            strokeWidth={1.35}
+            stroke="rgba(203,213,225,0.5)"
+            strokeWidth={1.1}
+            vectorEffect="nonScalingStroke"
             strokeDasharray="5 5"
           />
         ) : null}
@@ -399,8 +412,16 @@ export function PortfolioLiveValueVsCostChart({
             opacity={0.9}
           />
         ) : null}
-        <path d={geo.lineD} fill="none" stroke={stroke} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
-        <circle cx={geo.lastX} cy={geo.lastY} r={3.5} fill={stroke} />
+        <path
+          d={geo.lineD}
+          fill="none"
+          stroke={stroke}
+          strokeWidth={1.15}
+          vectorEffect="nonScalingStroke"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <circle cx={geo.lastX} cy={geo.lastY} r={3} fill={stroke} />
       </svg>
       <div className="pf-groww-pnl-chart__legend" aria-hidden>
         {investedInr > 0 ? (
@@ -584,9 +605,10 @@ export function PortfolioCostVsMarketBoard({
                 y1={gy}
                 x2={geo.pl + geo.cw}
                 y2={gy}
-                stroke="rgba(148, 163, 184, 0.14)"
+                stroke="rgba(148, 163, 184, 0.13)"
                 strokeWidth={1}
-                strokeDasharray="3 5"
+                vectorEffect="nonScalingStroke"
+                strokeDasharray="3 6"
               />
             ))}
             <text x="4" y="22" className="pf-mkt-board__axis-label" fontSize="9">
@@ -603,7 +625,8 @@ export function PortfolioCostVsMarketBoard({
                 d={geo.lineD}
                 fill="none"
                 stroke="#a5b4fc"
-                strokeWidth={2}
+                strokeWidth={1.1}
+                vectorEffect="nonScalingStroke"
                 strokeLinecap="square"
                 strokeLinejoin="round"
                 className="pf-line-draw"
@@ -615,11 +638,12 @@ export function PortfolioCostVsMarketBoard({
               x2={geo.pl + geo.cw}
               y2={mvY}
               stroke="#fcd34d"
-              strokeWidth={1.5}
-              strokeDasharray="5 4"
+              strokeWidth={1.05}
+              vectorEffect="nonScalingStroke"
+              strokeDasharray="5 5"
               opacity={0.95}
             />
-            <circle cx={geo.pl + geo.cw} cy={mvY} r={3.5} fill="#fcd34d" opacity={0.95} />
+            <circle cx={geo.pl + geo.cw} cy={mvY} r={3} fill="#fcd34d" opacity={0.95} />
           </svg>
           <div className="pf-mkt-board__legend">
             <span className="pf-mkt-board__lg">
