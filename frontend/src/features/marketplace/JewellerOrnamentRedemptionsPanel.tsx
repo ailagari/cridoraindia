@@ -68,7 +68,7 @@ export function JewellerOrnamentRedemptionsPanel() {
         <p style={{ color: 'var(--text-muted)' }}>No catalog ornament orders yet.</p>
       ) : (
         <div className="jeweller-purchases-wrap">
-          <table className="jeweller-purchases-table">
+          <table className="jeweller-purchases-table jeweller-purchases-table--compact-4">
             <thead>
               <tr>
                 <th scope="col">When</th>

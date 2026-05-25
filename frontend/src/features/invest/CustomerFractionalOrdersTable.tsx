@@ -64,6 +64,12 @@ function statusTone(status: string): 'success' | 'danger' | 'gold' | 'warning' {
   return 'warning'
 }
 
+function formatMethod(method: string): string {
+  if (method === 'upi') return 'UPI'
+  if (method === 'counter') return 'Counter'
+  return method.replace(/_/g, ' ')
+}
+
 function statusLabel(order: FractionalPurchaseDTO): string {
   if (order.status === 'on_hold') {
     return `On HOLD: Contact: ${(order.jeweller.business_name || 'JEWELLER').toUpperCase()}`
@@ -141,6 +147,7 @@ export function CustomerFractionalOrdersTable({
           <tr>
             <th scope="col">Order</th>
             <th scope="col">Jeweller</th>
+            <th scope="col">Gold</th>
             <th scope="col">Amount</th>
             <th scope="col">Method</th>
             <th scope="col">Status</th>
@@ -168,35 +175,55 @@ export function CustomerFractionalOrdersTable({
                       {o.reference}
                     </button>
                   </td>
-                  <td data-label="Jeweller">{o.jeweller.business_name}</td>
-                  <td data-label="Amount">
-                    <strong className="tabular">₹{formatInr(o.total_inr)}</strong>
+                  <td data-label="Jeweller">
+                    <strong>{o.jeweller.business_name}</strong>
+                    {o.jeweller.city ? (
+                      <span style={{ display: 'block', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                        {o.jeweller.city}
+                      </span>
+                    ) : null}
+                  </td>
+                  <td data-label="Gold">
+                    <strong className="tabular">{o.grams} g</strong>
                     <span style={{ display: 'block', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                      {o.grams} g
+                      @ ₹{formatInr(o.metal_rate_inr_per_gram)}/g
                     </span>
                   </td>
-                  <td data-label="Method">{o.payment_method}</td>
+                  <td data-label="Amount">
+                    <strong className="tabular">₹{formatInr(o.total_inr)}</strong>
+                    {o.gst_inr ? (
+                      <span style={{ display: 'block', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                        incl. GST ₹{formatInr(o.gst_inr)}
+                      </span>
+                    ) : null}
+                  </td>
+                  <td data-label="Method">{formatMethod(o.payment_method)}</td>
                   <td data-label="Status">
                     <Badge tone={statusTone(o.status)}>{statusLabel(o)}</Badge>
+                    {showMobileCancel ? (
+                      <div className="customer-orders-mobile-actions">
+                        {cancelErr ? <p className="form-error">{cancelErr}</p> : null}
+                        <MobileDashboardCancelButton
+                          block
+                          busy={busy}
+                          confirmMessage="Cancel this order? You can place a new one later if needed."
+                          onCancel={() => cancelOrder(o)}
+                        />
+                      </div>
+                    ) : null}
                   </td>
-                  <td data-label="When">{formatWhen(o.created_at)}</td>
+                  <td data-label="When">
+                    {formatWhen(o.created_at)}
+                    {o.jeweller_verified_at ? (
+                      <span style={{ display: 'block', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                        Done {formatWhen(o.jeweller_verified_at)}
+                      </span>
+                    ) : null}
+                  </td>
                 </tr>
-                {showMobileCancel ? (
-                  <tr className="customer-orders-mobile-cancel-row">
-                    <td colSpan={6}>
-                      {cancelErr ? <p className="form-error">{cancelErr}</p> : null}
-                      <MobileDashboardCancelButton
-                        block
-                        busy={busy}
-                        confirmMessage="Cancel this order? You can place a new one later if needed."
-                        onCancel={() => cancelOrder(o)}
-                      />
-                    </td>
-                  </tr>
-                ) : null}
                 {isOpen ? (
                   <tr className="customer-orders-detail-row">
-                    <td colSpan={6}>
+                    <td colSpan={7}>
                       <div className="customer-orders-detail">
                         {loadErr ? <p className="form-error">{loadErr}</p> : null}
 

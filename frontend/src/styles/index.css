@@ -3472,25 +3472,28 @@ select.input {
   padding: 0 !important;
 }
 
-/* Jeweller dashboard — fractional purchases queue: fits narrow viewports without horizontal scroll */
+/* Jeweller dashboard — shared table shell */
 .jeweller-purchases-wrap {
   width: 100%;
   max-width: 100%;
   margin-top: 0.35rem;
-  overflow-x: hidden;
+}
+
+.jeweller-purchases-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .jeweller-purchases-table {
   width: 100%;
-  max-width: 100%;
   border-collapse: collapse;
   font-size: 0.82rem;
-  table-layout: fixed;
+  table-layout: auto;
 }
 
 .jeweller-purchases-table th,
 .jeweller-purchases-table td {
-  padding: 0.65rem 0.55rem;
+  padding: 0.55rem 0.5rem;
   border-bottom: 1px solid var(--border-soft);
   vertical-align: top;
   word-wrap: break-word;
@@ -3505,22 +3508,73 @@ select.input {
   letter-spacing: 0.08em;
   color: var(--text-muted);
   background: rgba(165, 180, 252, 0.06);
+  white-space: nowrap;
 }
 
-.jeweller-purchases-table th:nth-child(1) {
+.jeweller-purchases-table--compact-4 {
+  table-layout: fixed;
+  max-width: 100%;
+}
+
+.jeweller-purchases-table--compact-4 th:nth-child(1) {
   width: 24%;
 }
 
-.jeweller-purchases-table th:nth-child(2) {
+.jeweller-purchases-table--compact-4 th:nth-child(2) {
   width: 18%;
 }
 
-.jeweller-purchases-table th:nth-child(3) {
+.jeweller-purchases-table--compact-4 th:nth-child(3) {
   width: 22%;
 }
 
-.jeweller-purchases-table th:nth-child(4) {
+.jeweller-purchases-table--compact-4 th:nth-child(4) {
   width: 36%;
+}
+
+.jeweller-purchases-table--wide {
+  min-width: 52rem;
+}
+
+.customer-orders-table-wrap {
+  overflow-x: auto;
+}
+
+.customer-orders-table {
+  min-width: 44rem;
+}
+
+.customer-orders-table th:nth-child(1) {
+  width: 8%;
+}
+
+.customer-orders-table th:nth-child(2) {
+  width: 20%;
+}
+
+.customer-orders-table th:nth-child(3) {
+  width: 12%;
+}
+
+.customer-orders-table th:nth-child(4) {
+  width: 12%;
+}
+
+.customer-orders-table th:nth-child(5) {
+  width: 10%;
+}
+
+.customer-orders-table th:nth-child(6) {
+  width: 18%;
+}
+
+.customer-orders-table th:nth-child(7) {
+  width: 12%;
+}
+
+.customer-orders-mobile-actions {
+  display: none;
+  margin-top: 0.55rem;
 }
 
 .jeweller-purchases-customer-stack,
@@ -3620,6 +3674,11 @@ select.input {
 }
 
 @media (max-width: 767px) {
+  .customer-orders-table,
+  .jeweller-purchases-table--wide {
+    min-width: 0;
+  }
+
   .jeweller-purchases-table thead {
     position: absolute;
     width: 1px;
@@ -3634,13 +3693,13 @@ select.input {
 
   .jeweller-purchases-table tbody tr {
     display: block;
-    padding: 0.85rem 0;
+    padding: 0.55rem 0;
     border-bottom: 1px solid var(--border-soft);
   }
 
   .jeweller-purchases-table tbody td {
     display: block;
-    padding: 0.35rem 0;
+    padding: 0.28rem 0;
     border: none;
     width: 100%;
     max-width: 100%;
@@ -3651,7 +3710,7 @@ select.input {
   .jeweller-purchases-table tbody td::before {
     content: attr(data-label);
     display: block;
-    margin-bottom: 0.28rem;
+    margin-bottom: 0.2rem;
     font-size: 0.58rem;
     font-weight: 800;
     letter-spacing: 0.08em;
@@ -3660,17 +3719,39 @@ select.input {
   }
 
   .jeweller-purchases-table tbody td.jeweller-purchases-otp-cell {
-    padding-top: 0.65rem;
-    margin-top: 0.35rem;
+    padding-top: 0.55rem;
+    margin-top: 0.25rem;
     border-radius: 14px;
     background: var(--veil-35);
     padding-inline: 0.65rem;
-    padding-bottom: 0.65rem;
+    padding-bottom: 0.55rem;
     border: 1px solid var(--border-soft);
   }
 
   .jeweller-purchases-table tbody td.jeweller-purchases-otp-cell::before {
-    margin-bottom: 0.45rem;
+    margin-bottom: 0.35rem;
+  }
+
+  .customer-orders-detail-row,
+  .customer-orders-detail-row td {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .customer-orders-detail-row td {
+    padding: 0.35rem 0 0.55rem;
+    border-bottom: 1px solid var(--border-soft);
+    background: var(--veil);
+  }
+
+  .customer-orders-detail-row td::before {
+    content: none;
+    display: none;
+  }
+
+  .customer-orders-mobile-actions {
+    display: block;
   }
 
   .jeweller-purchases-table tbody tr > td:last-child {
@@ -9420,6 +9501,7 @@ select.input {
 
 .customer-orders-table-wrap {
   margin-top: 0.35rem;
+  overflow-x: auto;
 }
 
 .customer-orders-detail {
@@ -9585,10 +9667,6 @@ select.input {
   width: 100%;
 }
 
-.customer-orders-mobile-cancel-row {
-  display: none;
-}
-
 @media (max-width: 767px) {
   .dash-mobile-cancel-btn {
     display: inline-flex;
@@ -9598,17 +9676,6 @@ select.input {
 
   .dash-mobile-cancel-btn--block {
     display: flex;
-  }
-
-  .customer-orders-mobile-cancel-row {
-    display: table-row;
-  }
-
-  .customer-orders-mobile-cancel-row td {
-    padding-top: 0;
-    padding-bottom: 0.65rem;
-    border-bottom: 1px solid var(--border-soft);
-    background: var(--veil);
   }
 }
 

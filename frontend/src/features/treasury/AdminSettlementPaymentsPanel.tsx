@@ -99,10 +99,12 @@ export function AdminSettlementPaymentsPanel() {
         ariaLabel="Payment filter"
       />
 
-      <table className="jeweller-purchases-table" style={{ marginTop: '1rem' }}>
+      <div className="jeweller-purchases-wrap jeweller-purchases-scroll" style={{ marginTop: '1rem' }}>
+      <table className="jeweller-purchases-table jeweller-purchases-table--wide">
         <thead>
           <tr>
             <th>When</th>
+            <th>Reference</th>
             <th>Jeweller</th>
             <th>Direction</th>
             <th>Method</th>
@@ -115,19 +117,24 @@ export function AdminSettlementPaymentsPanel() {
         <tbody>
           {filtered.length === 0 ? (
             <tr>
-              <td colSpan={8}>No payment records.</td>
+              <td colSpan={9}>No payment records.</td>
             </tr>
           ) : (
             filtered.map((r) => (
               <tr key={r.id}>
-                <td>{r.created_at.slice(0, 16).replace('T', ' ')}</td>
-                <td>{r.jeweller_name}</td>
-                <td>{r.direction.replace(/_/g, ' ')}</td>
-                <td>{r.payment_method.toUpperCase()}</td>
-                <td className="tabular">₹{formatInr(r.amount_inr)}</td>
-                <td>{r.status}</td>
-                <td>{proofCell(r)}</td>
-                <td>
+                <td data-label="When">{r.created_at.slice(0, 16).replace('T', ' ')}</td>
+                <td data-label="Reference" className="tabular">
+                  SET-{r.id}
+                </td>
+                <td data-label="Jeweller">{r.jeweller_name}</td>
+                <td data-label="Direction">{r.direction.replace(/_/g, ' ')}</td>
+                <td data-label="Method">{r.payment_method.toUpperCase()}</td>
+                <td data-label="Amount" className="tabular">
+                  ₹{formatInr(r.amount_inr)}
+                </td>
+                <td data-label="Status">{r.status.replace(/_/g, ' ')}</td>
+                <td data-label="Proof">{proofCell(r)}</td>
+                <td data-label="Actions">
                   {r.payment_method === 'upi' &&
                   r.status === 'submitted' &&
                   r.direction === 'jeweller_to_platform' ? (
@@ -202,6 +209,7 @@ export function AdminSettlementPaymentsPanel() {
           )}
         </tbody>
       </table>
+      </div>
     </div>
   )
 }

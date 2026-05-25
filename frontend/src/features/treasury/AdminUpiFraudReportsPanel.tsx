@@ -56,7 +56,7 @@ export function AdminUpiFraudReportsPanel() {
         <p style={{ color: 'var(--text-muted)' }}>No open fraud reports.</p>
       ) : (
         <div className="jeweller-purchases-wrap">
-          <table className="jeweller-purchases-table">
+          <table className="jeweller-purchases-table jeweller-purchases-table--compact-4">
             <thead>
               <tr>
                 <th scope="col">When</th>

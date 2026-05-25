@@ -61,10 +61,12 @@ export function JewellerSettlementPaymentsPanel() {
           {err}
         </p>
       ) : null}
-      <table className="jeweller-purchases-table">
+      <div className="jeweller-purchases-wrap jeweller-purchases-scroll">
+        <table className="jeweller-purchases-table jeweller-purchases-table--wide">
         <thead>
           <tr>
             <th>When</th>
+            <th>Reference</th>
             <th>Direction</th>
             <th>Method</th>
             <th>Amount</th>
@@ -75,22 +77,28 @@ export function JewellerSettlementPaymentsPanel() {
         <tbody>
           {rows.length === 0 ? (
             <tr>
-              <td colSpan={6}>No payments yet.</td>
+              <td colSpan={7}>No payments yet.</td>
             </tr>
           ) : (
             rows.map((r) => (
               <tr key={r.id}>
-                <td>{r.created_at.slice(0, 16).replace('T', ' ')}</td>
-                <td>{r.direction.replace(/_/g, ' ')}</td>
-                <td>{r.payment_method.toUpperCase()}</td>
-                <td className="tabular">₹{formatInr(r.amount_inr)}</td>
-                <td>{r.status}</td>
-                <td>{proofCell(r)}</td>
+                <td data-label="When">{r.created_at.slice(0, 16).replace('T', ' ')}</td>
+                <td data-label="Reference" className="tabular">
+                  SET-{r.id}
+                </td>
+                <td data-label="Direction">{r.direction.replace(/_/g, ' ')}</td>
+                <td data-label="Method">{r.payment_method.toUpperCase()}</td>
+                <td data-label="Amount" className="tabular">
+                  ₹{formatInr(r.amount_inr)}
+                </td>
+                <td data-label="Status">{r.status.replace(/_/g, ' ')}</td>
+                <td data-label="Proof">{proofCell(r)}</td>
               </tr>
             ))
           )}
         </tbody>
       </table>
+      </div>
     </div>
   )
 }

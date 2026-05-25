@@ -141,8 +141,8 @@ export function JewellerSettlementsPanel() {
           <p style={{ margin: '0 0 0.75rem', fontSize: '0.88rem', color: 'var(--text-muted)' }}>
             Each row is a completed transaction and the platform fee it added to your settlement balance.
           </p>
-          <div className="jeweller-purchases-wrap">
-            <table className="jeweller-purchases-table">
+          <div className="jeweller-purchases-wrap jeweller-purchases-scroll">
+            <table className="jeweller-purchases-table jeweller-purchases-table--wide">
               <thead>
                 <tr>
                   <th>When</th>
@@ -162,18 +162,26 @@ export function JewellerSettlementsPanel() {
                 ) : (
                   ledger.results.map((r) => (
                     <tr key={`${r.reference}-${r.when}`}>
-                      <td>{r.when.slice(0, 16).replace('T', ' ')}</td>
-                      <td>
+                      <td data-label="When">{r.when.slice(0, 16).replace('T', ' ')}</td>
+                      <td data-label="Type">
                         {r.feature_label}
                         <span style={{ display: 'block', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
                           {r.fee_kind_label}
                         </span>
                       </td>
-                      <td className="tabular">{r.reference}</td>
-                      <td>{r.customer || '—'}</td>
-                      <td className="tabular">₹{formatInr(r.transaction_amount_inr)}</td>
-                      <td className="tabular">₹{formatInr(r.jeweller_revenue_inr)}</td>
-                      <td className="tabular">₹{formatInr(r.platform_fee_inr)}</td>
+                      <td data-label="Reference" className="tabular">
+                        {r.reference}
+                      </td>
+                      <td data-label="Customer">{r.customer || '—'}</td>
+                      <td data-label="Transaction" className="tabular">
+                        ₹{formatInr(r.transaction_amount_inr)}
+                      </td>
+                      <td data-label="Your revenue" className="tabular">
+                        ₹{formatInr(r.jeweller_revenue_inr)}
+                      </td>
+                      <td data-label="Cridora fee" className="tabular">
+                        ₹{formatInr(r.platform_fee_inr)}
+                      </td>
                     </tr>
                   ))
                 )}
