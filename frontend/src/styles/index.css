@@ -13,7 +13,7 @@
 
   /* Dark fallbacks (pre-hydration; reference-tokens.css overrides via [data-theme]) */
   --gold: #c9a840;
-  --gold-hi: #e2c870;
+  --gold-hi: #ffd400;
   --gold-lo: #8a6e20;
   --gold-bg: rgba(201, 168, 64, 0.08);
   --gold-border: rgba(201, 168, 64, 0.18);
