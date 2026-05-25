@@ -217,7 +217,7 @@ function PublicLayoutInner() {
                 </svg>
               </div>
               <div className="nav-brand">
-                Cridor<span className="cridora-logo__aindia">aindia</span>
+                Cridora<span className="cridora-logo__aindia">India</span>
               </div>
             </Link>
             <p>

@@ -680,18 +680,18 @@ html[data-theme='dark'] .ref-dash-shell .dash-content .pf-holdings-scope-toggle_
   display: block;
 }
 
-/* "aindia" in Cridoraindia — soft golden glow (sidebar + mobile top bar) */
-.ref-dash-shell .dash-brand-aindia {
+/* "India" in Cridoraindia — soft golden glow (sidebar + mobile top bar) */
+.ref-dash-shell .dash-brand-India {
   font-weight: 800;
   text-shadow: var(--gold-text-glow-soft);
 }
-.ref-dash-shell .sidebar .dash-brand-aindia {
+.ref-dash-shell .sidebar .dash-brand-India {
   color: var(--gold-hi);
 }
-.ref-dash-shell .topbar .tb-logo-name .dash-brand-aindia {
+.ref-dash-shell .topbar .tb-logo-name .dash-brand-India {
   color: var(--gold-hi);
 }
-html[data-theme='light'] .ref-dash-shell .topbar .tb-logo-name .dash-brand-aindia {
+html[data-theme='light'] .ref-dash-shell .topbar .tb-logo-name .dash-brand-India {
   color: var(--gold-lo);
 }
 .ref-dash-shell .sb-brand {

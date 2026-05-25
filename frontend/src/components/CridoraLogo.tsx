@@ -68,7 +68,7 @@ export function CridoraLogo({
             letterSpacing: '-0.02em',
           }}
         >
-          Cridor<span className="cridora-logo__aindia">aindia</span>
+          Cridora<span className="cridora-logo__aindia">India</span>
         </span>
       ) : null}
     </span>

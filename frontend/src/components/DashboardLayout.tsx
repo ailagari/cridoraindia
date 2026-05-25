@@ -153,7 +153,7 @@ export function DashboardLayout({
             </div>
             <div className="sb-brand">
               <div className="sb-name">
-                Cridor<span className="dash-brand-aindia">aindia</span>
+                Cridora<span className="dash-brand-India">India</span>
               </div>
               <div className="sb-sub">{ROLE_SUB[role]}</div>
             </div>
@@ -266,7 +266,7 @@ export function DashboardLayout({
               </svg>
             </div>
             <span className="tb-logo-name">
-              Cridor<span className="dash-brand-aindia">aindia</span>
+              Cridora<span className="dash-brand-India">India</span>
             </span>
           </Link>
 
