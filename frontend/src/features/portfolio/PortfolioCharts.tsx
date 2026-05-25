@@ -173,7 +173,7 @@ export function PortfolioBarChart({
         return (
           <g key={labels[i] ?? i}>
             <rect x={x} y={y} width={barW} height={h} rx={3} fill={colors[i % colors.length]} className="pf-bar-rect" style={{ animationDelay: `${i * 0.07}s` }} />
-            <text x={x + barW / 2} y="66" textAnchor="middle" className="pf-bar-label" fontSize="5">
+            <text x={x + barW / 2} y="66" textAnchor="middle" className="pf-bar-label pf-chart-micro-tick">
               {labels[i]}
             </text>
           </g>
@@ -669,15 +669,19 @@ export function PortfolioHistoryValuationChart({
           />
         ) : null}
 
-        <text x="10" y="13" fill="rgba(226,232,240,0.55)" fontSize="9" className="pf-history-valuation__axis-y">
+        <text
+          x="10"
+          y="13"
+          fill="rgba(226,232,240,0.55)"
+          className="pf-history-valuation__axis-y pf-history-valuation__tick"
+        >
           {`${axisInrTxt(geo.maxV, masked)}${masked ? '' : ' · j=max'}`}
         </text>
         <text
           x="10"
           y={geo.pt + geo.ch / 2 + 3}
           fill="rgba(226,232,240,0.45)"
-          fontSize="8.5"
-          className="pf-history-valuation__axis-y"
+          className="pf-history-valuation__axis-y pf-history-valuation__tick"
         >
           {`${axisInrTxt(midV, masked)}${masked ? '' : ' · j=mid'}`}
         </text>
@@ -685,8 +689,7 @@ export function PortfolioHistoryValuationChart({
           x="10"
           y={geo.innerBottom - 4}
           fill="rgba(226,232,240,0.55)"
-          fontSize="9"
-          className="pf-history-valuation__axis-y"
+          className="pf-history-valuation__axis-y pf-history-valuation__tick"
         >
           {`${axisInrTxt(geo.minV, masked)}${masked ? '' : ' · j=min'}`}
         </text>
@@ -696,7 +699,7 @@ export function PortfolioHistoryValuationChart({
           y={svgH - 5}
           textAnchor="middle"
           fill="rgba(148,163,184,0.78)"
-          fontSize="8.5"
+          className="pf-history-valuation__axis-x pf-history-valuation__tick"
         >
           {!masked
             ? `${formatHistoryXLabel(points[geo.firstIdx]!.iso, granularity)} · i=${geo.firstIdx + 1}`
@@ -708,7 +711,7 @@ export function PortfolioHistoryValuationChart({
             y={svgH - 5}
             textAnchor="middle"
             fill="rgba(148,163,184,0.78)"
-            fontSize="8.5"
+            className="pf-history-valuation__axis-x pf-history-valuation__tick"
           >
             {!masked
               ? `${formatHistoryXLabel(points[geo.midIdx]!.iso, granularity)} · i=${geo.midIdx + 1}`
@@ -721,7 +724,7 @@ export function PortfolioHistoryValuationChart({
             y={svgH - 5}
             textAnchor="middle"
             fill="rgba(148,163,184,0.78)"
-            fontSize="8.5"
+            className="pf-history-valuation__axis-x pf-history-valuation__tick"
           >
             {!masked
               ? `${formatHistoryXLabel(points[geo.lastIdx]!.iso, granularity)} · i=${geo.lastIdx + 1}`
@@ -862,15 +865,19 @@ export function GoldSpotHistoryThinChart({
           />
         ) : null}
 
-        <text x="10" y="13" fill="rgba(226,232,240,0.55)" fontSize="9" className="pf-history-valuation__axis-y">
+        <text
+          x="10"
+          y="13"
+          fill="rgba(226,232,240,0.55)"
+          className="pf-history-valuation__axis-y pf-history-valuation__tick"
+        >
           {`${axisInrTxt(geo.maxV, masked)}${masked ? '' : ' · j=max · /g'}`}
         </text>
         <text
           x="10"
           y={geo.pt + geo.ch / 2 + 3}
           fill="rgba(226,232,240,0.45)"
-          fontSize="8.5"
-          className="pf-history-valuation__axis-y"
+          className="pf-history-valuation__axis-y pf-history-valuation__tick"
         >
           {`${axisInrTxt(midV, masked)}${masked ? '' : ' · j=mid · /g'}`}
         </text>
@@ -878,8 +885,7 @@ export function GoldSpotHistoryThinChart({
           x="10"
           y={geo.innerBottom - 4}
           fill="rgba(226,232,240,0.55)"
-          fontSize="9"
-          className="pf-history-valuation__axis-y"
+          className="pf-history-valuation__axis-y pf-history-valuation__tick"
         >
           {`${axisInrTxt(geo.minV, masked)}${masked ? '' : ' · j=min · /g'}`}
         </text>
@@ -889,7 +895,7 @@ export function GoldSpotHistoryThinChart({
           y={svgH - 5}
           textAnchor="middle"
           fill="rgba(148,163,184,0.78)"
-          fontSize="8.5"
+          className="pf-history-valuation__axis-x pf-history-valuation__tick"
         >
           {!masked
             ? `${formatHistoryXLabel(points[geo.firstIdx]!.iso, granularity)} · i=${geo.firstIdx + 1}`
@@ -901,7 +907,7 @@ export function GoldSpotHistoryThinChart({
             y={svgH - 5}
             textAnchor="middle"
             fill="rgba(148,163,184,0.78)"
-            fontSize="8.5"
+            className="pf-history-valuation__axis-x pf-history-valuation__tick"
           >
             {!masked
               ? `${formatHistoryXLabel(points[geo.midIdx]!.iso, granularity)} · i=${geo.midIdx + 1}`
@@ -914,7 +920,7 @@ export function GoldSpotHistoryThinChart({
             y={svgH - 5}
             textAnchor="middle"
             fill="rgba(148,163,184,0.78)"
-            fontSize="8.5"
+            className="pf-history-valuation__axis-x pf-history-valuation__tick"
           >
             {!masked
               ? `${formatHistoryXLabel(points[geo.lastIdx]!.iso, granularity)} · i=${geo.lastIdx + 1}`
@@ -1021,10 +1027,10 @@ export function PortfolioLiveValueVsCostChart({
             />
           )
         })}
-        <text x="8" y="14" fill="rgba(226,232,240,0.55)" fontSize="9">
+        <text x="8" y="14" fill="rgba(226,232,240,0.55)" className="pf-groww-pnl-chart__tick">
           {formatInrAxis(geo.ymax)}
         </text>
-        <text x="8" y={svgH - 4} fill="rgba(226,232,240,0.55)" fontSize="9">
+        <text x="8" y={svgH - 4} fill="rgba(226,232,240,0.55)" className="pf-groww-pnl-chart__tick">
           {formatInrAxis(geo.ymin)}
         </text>
         {investedInr > 0 ? (
@@ -1245,10 +1251,10 @@ export function PortfolioCostVsMarketBoard({
                 strokeDasharray="3 6"
               />
             ))}
-            <text x="4" y="22" className="pf-mkt-board__axis-label" fontSize="9">
+            <text x="4" y="22" className="pf-mkt-board__axis-label">
               {fmtInrBoard(ymaxChart)}
             </text>
-            <text x="4" y={geo.baselineY - 4} className="pf-mkt-board__axis-label" fontSize="9">
+            <text x="4" y={geo.baselineY - 4} className="pf-mkt-board__axis-label">
               ₹0
             </text>
             {geo.areaD ? (

@@ -180,6 +180,8 @@ export function PortfolioLiveGoldPriceCard({
         </div>
       </div>
 
+      <div className="pf-live-gold__rule" aria-hidden />
+
       <div className="pf-live-gold__chart">
         {pricePoints.length >= 2 ? (
           <GoldSpotHistoryThinChart
