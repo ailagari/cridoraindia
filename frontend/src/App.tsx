@@ -38,6 +38,7 @@ import '@/styles/tokens.css'
 import '@/styles/ds.css'
 import '@/styles/reference-dashboard-panels.css'
 import '@/styles/reference-index-landing.css'
+import '@/styles/malayalam-locale.css'
 
 const useHashRouter =
   import.meta.env.VITE_CAPACITOR_BUILD === 'true' || isNativePlatform()

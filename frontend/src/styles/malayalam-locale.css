@@ -1,7 +1,7 @@
-/* Malayalam locale — Noto Sans Malayalam with relaxed public-page typography */
+/* Malayalam locale — Google Fonts: Noto Sans Malayalam (linked in index.html) */
 
 html[lang='ml'] {
-  --font: 'Noto Sans Malayalam', 'Noto Sans', sans-serif;
+  --font: 'Noto Sans Malayalam', ui-sans-serif, system-ui, sans-serif;
   --ml-body-lh: 1.72;
   --ml-heading-lh: 1.4;
   --ml-section-pad-y: 3.5rem;
