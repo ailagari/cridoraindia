@@ -134,13 +134,13 @@ export function CustomerPortfolioOverviewDash(props: {
         <p>Live valuation, P&amp;L, and transaction history across all partner jewellers.</p>
       </div>
 
-      <div className="hero mb20 pf-portfolio-summary--glow">
+      <div className="hero mb20">
         <div className="row row-b wrap" style={{ justifyContent: 'space-between', alignItems: 'flex-start', gap: 16 }}>
           <div>
             <div className="hero-eyebrow">
               {holdingsJewelleryVaultOnly ? 'Jewellery vault gold' : 'Total gold holdings'}
             </div>
-            <div className="hero-grams">
+            <div className="hero-grams pf-portfolio-grams--gold-glow">
               {fmtGramsMasked(summaryGrams, masked, 3)}
               <span className="unit">g</span>
             </div>

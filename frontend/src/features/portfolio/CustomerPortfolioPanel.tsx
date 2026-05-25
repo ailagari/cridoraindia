@@ -401,7 +401,7 @@ export function CustomerPortfolioPanel() {
   }, [ledger])
 
   return (
-    <div className="dash-panel-max pf-scope pf-scope--portfolio-glow">
+    <div className="dash-panel-max pf-scope">
       {loadErr ? <p className="form-error">{loadErr}</p> : null}
 
       <div className="pf-groww-shell pf-stagger">
