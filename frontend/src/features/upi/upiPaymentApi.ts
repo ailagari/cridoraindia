@@ -1,6 +1,6 @@
 import { apiUrl, authFetch, authUpload, extractApiDetail } from '@/lib/api'
 import { customerCridoraPayCancel } from '@/lib/cridorapayApi'
-import { fractionalCancelUpiOrder } from '@/lib/fractionalPurchaseApi'
+import { fractionalCancelCounterOrder, fractionalCancelUpiOrder } from '@/lib/fractionalPurchaseApi'
 import { postGoldLoanRepaymentCancel } from '@/lib/goldLoanApi'
 import { customerCancelSellbackUpi } from '@/lib/goldTransferApi'
 import { isValidUtr, utrValidationHint } from '@/lib/utrNormalize'
@@ -214,6 +214,26 @@ export const UPI_PROOF_REJECTED = 'proof_rejected'
 export const UPI_ON_HOLD = 'on_hold'
 
 export const UPI_AUTO_CANCEL_STATUSES = new Set(['pending_payment', 'signal_received'])
+
+export const FRACTIONAL_COUNTER_CANCEL_STATUSES = new Set(['awaiting_counter'])
+
+export async function cancelFractionalOrder(
+  orderId: number,
+  paymentMethod: string,
+  status: string,
+): Promise<ApiResult<{ detail: string }>> {
+  if (paymentMethod === 'upi' && UPI_AUTO_CANCEL_STATUSES.has(status)) {
+    const out = await fractionalCancelUpiOrder(orderId)
+    if (!out.ok) return out
+    return { ok: true, data: { detail: 'Order cancelled.' } }
+  }
+  if (paymentMethod === 'counter' && FRACTIONAL_COUNTER_CANCEL_STATUSES.has(status)) {
+    const out = await fractionalCancelCounterOrder(orderId)
+    if (!out.ok) return out
+    return { ok: true, data: { detail: 'Order cancelled.' } }
+  }
+  return { ok: false, detail: 'This order cannot be cancelled.' }
+}
 
 export async function cancelUpiPayment(
   kind: UpiPaymentKind,

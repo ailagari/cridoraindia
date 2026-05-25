@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { CridoraPayPastTable } from '@/features/corridorapay/CridoraPayPastTable'
 import {
   customerCridoraPayAccept,
+  customerCridoraPayCancel,
   customerCridoraPayIssueVaultOtp,
   customerCridoraPayList,
   customerCridoraPayQuote,
@@ -18,6 +19,7 @@ import { useCounterOtpCountdown } from '@/features/invest/useCounterOtpCountdown
 import { LIVE_BALANCE_POLL_MS } from '@/lib/liveDeskIntervals'
 import { useLivePoll } from '@/lib/useLivePoll'
 import { UpiPaymentStep } from '@/features/upi/UpiPaymentStep'
+import { MobileDashboardCancelButton } from '@/features/dashboard/MobileDashboardCancelButton'
 
 function formatInr(s: string): string {
   const n = Number.parseFloat(s)
@@ -71,6 +73,8 @@ function OtpLive({ otp, expiresAt }: { otp: string; expiresAt: string }) {
 }
 
 type PayMode = 'vault' | 'upi'
+
+const CRIDORAPAY_CANCEL_STATUSES = new Set(['awaiting_customer', 'upi_pending', 'vault_otp_pending'])
 
 export function CustomerCridoraPayPanel() {
   const { user } = useAuth()
@@ -147,6 +151,22 @@ export function CustomerCridoraPayPanel() {
         if (out.quote) setQuoteById((m) => ({ ...m, [bill.id]: out.quote! }))
         return
       }
+      await load()
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  const cancelBill = async (billId: number) => {
+    setMsg('')
+    setBusyId(billId)
+    try {
+      const out = await customerCridoraPayCancel(billId)
+      if (!out.ok) {
+        setMsg(out.detail)
+        return
+      }
+      if (otpReveal?.billId === billId) setOtpReveal(null)
       await load()
     } finally {
       setBusyId(null)
@@ -338,6 +358,18 @@ export function CustomerCridoraPayPanel() {
                     <p style={{ color: 'var(--gold-light)', fontWeight: 650 }}>
                       Pay ₹{formatInr(r.cash_payable_inr)} at the counter. Jeweller will mark complete.
                     </p>
+                  ) : null}
+
+                  {CRIDORAPAY_CANCEL_STATUSES.has(r.status) ? (
+                    <div style={{ marginTop: '0.75rem' }}>
+                      <MobileDashboardCancelButton
+                        block
+                        busy={busyId === r.id}
+                        label="Cancel bill"
+                        confirmMessage="Cancel this bill? The jeweller can send a new one if needed."
+                        onCancel={() => cancelBill(r.id)}
+                      />
+                    </div>
                   ) : null}
                 </div>
               </article>

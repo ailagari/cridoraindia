@@ -12,6 +12,7 @@ import {
 } from '@/lib/fractionalPurchaseApi'
 import { DashSegmentPair } from '@/components/DashSegmentPair'
 import { UpiPaymentStep } from '@/features/upi/UpiPaymentStep'
+import { cancelFractionalOrder } from '@/features/upi/upiPaymentApi'
 import { FractionalJewellerPicker } from '@/features/invest/FractionalJewellerPicker'
 import { CustomerFractionalOrdersTable } from '@/features/invest/CustomerFractionalOrdersTable'
 import {
@@ -26,6 +27,7 @@ import { fetchGoldWallet, type GoldWalletDTO } from '@/lib/goldTransferApi'
 import { LIVE_BALANCE_POLL_MS } from '@/lib/liveDeskIntervals'
 import { useLivePoll } from '@/lib/useLivePoll'
 import { formatJewellerMetalRateAsOf } from '@/features/marketplace/productPricing'
+import { MobileDashboardCancelButton } from '@/features/dashboard/MobileDashboardCancelButton'
 import { Button, Card, CardHeader, Input } from '@/components/ui'
 import { fetchPlatformFeatures, isFeatureEnabled } from '@/lib/platformFeatures'
 
@@ -246,6 +248,28 @@ export function FractionalPurchasePanel() {
   )
 
   const resumePaymentCountdown = useCounterOtpCountdown(resumeUpiOrder?.payment_expires_at ?? null)
+
+  const cancelResumeUpiOrder = useCallback(async () => {
+    if (!resumeUpiOrder) return
+    setBusy(true)
+    setOrderMsg('')
+    try {
+      const out = await cancelFractionalOrder(
+        resumeUpiOrder.id,
+        resumeUpiOrder.payment_method,
+        resumeUpiOrder.status,
+      )
+      if (!out.ok) {
+        setOrderMsg(out.detail)
+        return
+      }
+      setActiveUpiOrder(null)
+      setSuccessToast(out.data.detail)
+      await refreshOrders()
+    } finally {
+      setBusy(false)
+    }
+  }, [refreshOrders, resumeUpiOrder])
 
   const scrollToUpiPayment = useCallback(() => {
     if (resumeUpiOrder && (!activeUpiOrder || activeUpiOrder.id !== resumeUpiOrder.id)) {
@@ -538,6 +562,33 @@ export function FractionalPurchasePanel() {
                     ? 'OTP active — use timer below'
                     : 'Generate verification OTP'}
               </Button>
+              <MobileDashboardCancelButton
+                block
+                busy={busy}
+                label="Cancel order"
+                confirmMessage="Cancel this counter order? You can place a new one later if needed."
+                onCancel={async () => {
+                  setBusy(true)
+                  setOrderMsg('')
+                  try {
+                    const out = await cancelFractionalOrder(
+                      lastOrder.id,
+                      lastOrder.payment_method,
+                      lastOrder.status,
+                    )
+                    if (!out.ok) {
+                      setOrderMsg(out.detail)
+                      return
+                    }
+                    setLastOrder(null)
+                    setOtpReveal(null)
+                    setSuccessToast(out.data.detail)
+                    await refreshOrders()
+                  } finally {
+                    setBusy(false)
+                  }
+                }}
+              />
             </div>
           ) : null}
 
@@ -609,9 +660,18 @@ export function FractionalPurchasePanel() {
               ₹{formatInr(resumeUpiOrder.total_inr)} · {resumePaymentCountdown.labelMmSs} left
             </p>
           </div>
-          <Button type="button" variant="primary" disabled={busy} onClick={scrollToUpiPayment}>
-            Continue payment
-          </Button>
+          <div className="upi-continue-payment-bar__actions">
+            <Button type="button" variant="primary" disabled={busy} onClick={scrollToUpiPayment}>
+              Continue payment
+            </Button>
+            <MobileDashboardCancelButton
+              block
+              busy={busy}
+              label="Cancel payment"
+              confirmMessage="Cancel this payment? You can start a new one later if needed."
+              onCancel={() => cancelResumeUpiOrder()}
+            />
+          </div>
         </div>
       ) : null}
     </div>

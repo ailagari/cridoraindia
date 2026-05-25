@@ -176,6 +176,20 @@ export async function fractionalCancelUpiOrder(
   return { ok: true, data: data as FractionalPurchaseDTO }
 }
 
+export async function fractionalCancelCounterOrder(
+  orderId: number,
+): Promise<{ ok: true; data: FractionalPurchaseDTO } | { ok: false; detail: string }> {
+  const res = await authFetch(`/api/v1/fractional/orders/${orderId}/cancel-counter/`, {
+    method: 'POST',
+    jsonBody: {},
+  })
+  const data = (await res.json().catch(() => ({}))) as FractionalPurchaseDTO & { detail?: string }
+  if (!res.ok) {
+    return { ok: false, detail: data.detail != null ? String(data.detail) : 'Could not cancel order' }
+  }
+  return { ok: true, data: data as FractionalPurchaseDTO }
+}
+
 export async function fractionalListOrders(): Promise<FractionalPurchaseDTO[]> {
   const res = await authFetch('/api/v1/fractional/orders/')
   if (!res.ok) return []

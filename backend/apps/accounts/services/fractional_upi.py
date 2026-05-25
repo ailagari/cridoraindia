@@ -212,6 +212,16 @@ def cancel_upi_order(purchase: FractionalGoldPurchase) -> tuple[bool, str]:
     return True, "Order cancelled."
 
 
+def cancel_counter_order(purchase: FractionalGoldPurchase) -> tuple[bool, str]:
+    if purchase.payment_method != FractionalGoldPurchase.PAY_COUNTER:
+        return False, "This order is not a counter purchase."
+    if purchase.status != FractionalGoldPurchase.AWAITING_COUNTER:
+        return False, "Only awaiting counter orders can be cancelled."
+    purchase.status = FractionalGoldPurchase.CANCELLED
+    purchase.save(update_fields=["status", "updated_at"])
+    return True, "Order cancelled."
+
+
 def submit_utr(purchase: FractionalGoldPurchase, raw_utr: str) -> tuple[bool, str]:
     if purchase.payment_method != FractionalGoldPurchase.PAY_UPI:
         return False, "This order is not an online UPI purchase."

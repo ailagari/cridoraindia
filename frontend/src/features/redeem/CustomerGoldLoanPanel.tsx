@@ -22,6 +22,7 @@ import { LIVE_BALANCE_POLL_MS } from '@/lib/liveDeskIntervals'
 import { useLivePoll } from '@/lib/useLivePoll'
 import { fetchPlatformFeatures, isFeatureEnabled } from '@/lib/platformFeatures'
 import { UpiPaymentStep } from '@/features/upi/UpiPaymentStep'
+import { MobileDashboardCancelButton } from '@/features/dashboard/MobileDashboardCancelButton'
 
 function parseG(s: string): number {
   const n = Number.parseFloat(s)
@@ -676,6 +677,15 @@ export function CustomerGoldLoanPanel() {
                 <li key={r.id} style={{ marginBottom: '0.35rem' }}>
                   <strong className="tabular">{r.reference}</strong> · {r.loan_reference} · ₹
                   {fmtInr(r.amount_inr)} · {repaymentStatusHint(r.status)}
+                  <div style={{ marginTop: '0.45rem' }}>
+                    <MobileDashboardCancelButton
+                      block
+                      busy={busyRepayId === r.id}
+                      label="Cancel repayment"
+                      confirmMessage="Cancel this repayment request?"
+                      onCancel={() => onCancelRepayment(r.id)}
+                    />
+                  </div>
                 </li>
               ))}
             </ul>

@@ -176,6 +176,34 @@ export function UpiPaymentStep({
   }
 
   const canSubmit = state?.can_submit_proof ?? false
+  const canCancelPayment =
+    Boolean(state?.status && UPI_AUTO_CANCEL_STATUSES.has(state.status)) && !paymentExpired && !isResubmit
+
+  const handleCancel = async () => {
+    if (
+      !window.confirm(
+        'Cancel this payment? You have not completed it yet. You can start a new payment later if needed.',
+      )
+    ) {
+      return
+    }
+    setActionErr('')
+    setBusy(true)
+    try {
+      const out = await cancelUpiPayment(kind, paymentId)
+      if (!out.ok) {
+        setActionErr(out.detail)
+        onError?.(out.detail)
+        return
+      }
+      onSuccess?.(out.data.detail)
+      onExpired?.()
+      onSubmitted?.()
+      await refresh()
+    } finally {
+      setBusy(false)
+    }
+  }
 
   const handleSubmit = async () => {
     if (!canSubmitProof) {
@@ -340,6 +368,17 @@ export function UpiPaymentStep({
             </button>
             {actionErr ? <p className="form-error">{actionErr}</p> : null}
           </div>
+
+          {canCancelPayment ? (
+            <button
+              type="button"
+              className="btn btn-ghost btn--block fractional-upi-pay__cancel"
+              disabled={busy}
+              onClick={() => void handleCancel()}
+            >
+              Cancel payment
+            </button>
+          ) : null}
         </>
       ) : null}
     </div>

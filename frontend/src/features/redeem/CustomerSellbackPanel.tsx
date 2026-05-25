@@ -3,6 +3,7 @@ import {
   fetchCustomerPayoutUpiProfile,
   fetchGoldWallet,
   fetchSellbackOutstanding,
+  customerCancelSellbackUpi,
   postGoldSellbackConfirm,
   postGoldSellbackQuote,
   postSellbackOtpRegenerate,
@@ -15,6 +16,7 @@ import { UpiProofReviewActions } from '@/features/upi/UpiProofReviewActions'
 import { LIVE_BALANCE_POLL_MS } from '@/lib/liveDeskIntervals'
 import { useLivePoll } from '@/lib/useLivePoll'
 import { fetchPlatformFeatures, isFeatureEnabled } from '@/lib/platformFeatures'
+import { MobileDashboardCancelButton } from '@/features/dashboard/MobileDashboardCancelButton'
 
 function parseG(s: string): number {
   const n = Number.parseFloat(s)
@@ -283,6 +285,21 @@ export function CustomerSellbackPanel() {
     setSuccessMsg('New OTP issued. Previous code is invalid.')
   }
 
+  const cancelSellback = async (sellbackId: number) => {
+    setConfirmErr('')
+    setBusyUpi(true)
+    const out = await customerCancelSellbackUpi(sellbackId)
+    setBusyUpi(false)
+    if (!out.ok) {
+      setConfirmErr(out.detail)
+      return
+    }
+    if (otpBanner?.sellbackId === sellbackId) setOtpBanner(null)
+    setSuccessMsg('Sellback cancelled.')
+    await refreshOutstanding()
+    await refreshWallet()
+  }
+
   const showOtpBlock =
     otpBanner != null &&
     outstanding.some(
@@ -385,6 +402,17 @@ export function CustomerSellbackPanel() {
                   <strong className="tabular">{o.reference}</strong> · {o.jeweller_label} ·{' '}
                   <span className="tabular">{o.grams} g</span> · est. ₹{fmtInr(o.cash_estimate_inr)} ·{' '}
                   <span style={{ color: 'var(--text)' }}>{statusHint(o.status, o.payment_method)}</span>
+                  {o.payment_method === 'upi' && o.status === 'pending_jeweller' ? (
+                    <div style={{ marginTop: '0.45rem' }}>
+                      <MobileDashboardCancelButton
+                        block
+                        busy={busyUpi}
+                        label="Cancel sellback"
+                        confirmMessage="Cancel this sellback request?"
+                        onCancel={() => cancelSellback(o.id)}
+                      />
+                    </div>
+                  ) : null}
                   {o.status === 'pending_jeweller' && !showOtpBlock ? (
                     <span style={{ display: 'block', marginTop: '0.25rem', fontSize: '0.72rem' }}>
                       Open this page after confirming to see your OTP, or regenerate while still pending.

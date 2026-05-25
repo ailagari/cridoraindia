@@ -4,13 +4,17 @@ import { UpiOnHoldNotice } from '@/features/upi/UpiOnHoldNotice'
 import { UpiPaymentStep } from '@/features/upi/UpiPaymentStep'
 import { UpiProofTableCell } from '@/features/upi/UpiProofTableCell'
 import {
+  cancelFractionalOrder,
   fetchUpiPayment,
+  FRACTIONAL_COUNTER_CANCEL_STATUSES,
+  UPI_AUTO_CANCEL_STATUSES,
   UPI_ON_HOLD,
   UPI_PENDING_REVIEW,
   UPI_PROOF_REJECTED,
   type UpiPaymentState,
 } from '@/features/upi/upiPaymentApi'
 import type { FractionalPurchaseDTO } from '@/lib/fractionalPurchaseApi'
+import { MobileDashboardCancelButton } from '@/features/dashboard/MobileDashboardCancelButton'
 
 type Props = {
   orders: FractionalPurchaseDTO[]
@@ -37,6 +41,12 @@ function formatInr(s: string): string {
   const n = Number.parseFloat(s)
   if (!Number.isFinite(n)) return s
   return n.toLocaleString('en-IN', { maximumFractionDigits: 2 })
+}
+
+function canCancelFractionalOrder(order: FractionalPurchaseDTO): boolean {
+  if (order.payment_method === 'upi' && UPI_AUTO_CANCEL_STATUSES.has(order.status)) return true
+  if (order.payment_method === 'counter' && FRACTIONAL_COUNTER_CANCEL_STATUSES.has(order.status)) return true
+  return false
 }
 
 function formatWhen(iso: string | null | undefined): string {
@@ -78,6 +88,26 @@ export function CustomerFractionalOrdersTable({
   const [expanded, setExpanded] = useState<Set<number>>(() => new Set())
   const [upiStateById, setUpiStateById] = useState<Record<number, UpiPaymentState>>({})
   const [loadErrById, setLoadErrById] = useState<Record<number, string>>({})
+  const [cancelErrById, setCancelErrById] = useState<Record<number, string>>({})
+
+  const cancelOrder = useCallback(
+    async (order: FractionalPurchaseDTO) => {
+      setCancelErrById((m) => ({ ...m, [order.id]: '' }))
+      setBusy(true)
+      try {
+        const out = await cancelFractionalOrder(order.id, order.payment_method, order.status)
+        if (!out.ok) {
+          setCancelErrById((m) => ({ ...m, [order.id]: out.detail }))
+          return
+        }
+        onSuccess?.(out.data.detail)
+        await onRefreshOrders()
+      } finally {
+        setBusy(false)
+      }
+    },
+    [onRefreshOrders, onSuccess, setBusy],
+  )
 
   const loadUpiDetail = useCallback(async (orderId: number) => {
     setLoadErrById((m) => ({ ...m, [orderId]: '' }))
@@ -123,6 +153,8 @@ export function CustomerFractionalOrdersTable({
             const upiState = upiStateById[o.id]
             const loadErr = loadErrById[o.id]
             const rejections = rejectedSubmissions(upiState)
+            const cancelErr = cancelErrById[o.id]
+            const showMobileCancel = canCancelFractionalOrder(o)
             return (
               <Fragment key={o.id}>
                 <tr className={isOpen ? 'customer-orders-row--open' : undefined}>
@@ -149,6 +181,19 @@ export function CustomerFractionalOrdersTable({
                   </td>
                   <td data-label="When">{formatWhen(o.created_at)}</td>
                 </tr>
+                {showMobileCancel ? (
+                  <tr className="customer-orders-mobile-cancel-row">
+                    <td colSpan={6}>
+                      {cancelErr ? <p className="form-error">{cancelErr}</p> : null}
+                      <MobileDashboardCancelButton
+                        block
+                        busy={busy}
+                        confirmMessage="Cancel this order? You can place a new one later if needed."
+                        onCancel={() => cancelOrder(o)}
+                      />
+                    </td>
+                  </tr>
+                ) : null}
                 {isOpen ? (
                   <tr className="customer-orders-detail-row">
                     <td colSpan={6}>

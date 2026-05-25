@@ -9382,6 +9382,7 @@ select.input {
   width: 48px;
   height: 48px;
   flex-shrink: 0;
+  object-fit: contain;
 }
 
 .upi-proof-review__actions {
@@ -9565,6 +9566,50 @@ select.input {
   margin: 0.15rem 0 0;
   font-size: 0.74rem;
   color: var(--text-muted);
+}
+
+.upi-continue-payment-bar__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  flex-shrink: 0;
+  min-width: 7.5rem;
+}
+
+.dash-mobile-cancel-btn {
+  display: none;
+  color: var(--text-muted);
+}
+
+.dash-mobile-cancel-btn--block {
+  width: 100%;
+}
+
+.customer-orders-mobile-cancel-row {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .dash-mobile-cancel-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .dash-mobile-cancel-btn--block {
+    display: flex;
+  }
+
+  .customer-orders-mobile-cancel-row {
+    display: table-row;
+  }
+
+  .customer-orders-mobile-cancel-row td {
+    padding-top: 0;
+    padding-bottom: 0.65rem;
+    border-bottom: 1px solid var(--border-soft);
+    background: var(--veil);
+  }
 }
 
 @media (min-width: 768px) {

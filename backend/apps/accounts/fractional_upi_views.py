@@ -15,6 +15,7 @@ from .platform_features import FeatureGatedViewMixin
 from .fractional_views import _ser_purchase
 from .models import FractionalGoldPurchase
 from .services.fractional_upi import (
+    cancel_counter_order,
     cancel_upi_order,
     jeweller_upi_vpa,
     normalize_upi_vpa,
@@ -120,6 +121,38 @@ class FractionalOrderCancelUpiView(FractionalUpiInflightBypassMixin, APIView):
         except FractionalGoldPurchase.DoesNotExist:
             return Response(
                 {"detail": "UPI order not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        return Response(_ser_purchase(purchase))
+
+
+class FractionalOrderCancelCounterView(FractionalUpiInflightBypassMixin, APIView):
+    """Customer cancels a counter fractional order before OTP settlement."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk: int):
+        if request.user.user_type != User.CUSTOMER:
+            return Response(
+                {"detail": "Customers only."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        try:
+            with transaction.atomic():
+                purchase = FractionalGoldPurchase.objects.select_for_update().get(
+                    pk=pk,
+                    customer=request.user,
+                    payment_method=FractionalGoldPurchase.PAY_COUNTER,
+                )
+                ok, detail = cancel_counter_order(purchase)
+                if not ok:
+                    return Response(
+                        {"detail": detail},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+        except FractionalGoldPurchase.DoesNotExist:
+            return Response(
+                {"detail": "Counter order not found."},
                 status=status.HTTP_404_NOT_FOUND,
             )
         return Response(_ser_purchase(purchase))
