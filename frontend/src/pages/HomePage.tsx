@@ -132,26 +132,6 @@ export function HomePage() {
         </div>
       </section>
 
-      {/* STATS */}
-      <div className="stats-row">
-        <div className="stat-col reveal">
-          <div className="sc-val">₹4.2Cr+</div>
-          <div className="sc-lbl">Gold vaulted on platform</div>
-        </div>
-        <div className="stat-col reveal reveal-delay-1">
-          <div className="sc-val">1,800+</div>
-          <div className="sc-lbl">Active savers</div>
-        </div>
-        <div className="stat-col reveal reveal-delay-2">
-          <div className="sc-val">42</div>
-          <div className="sc-lbl">Verified partner jewellers</div>
-        </div>
-        <div className="stat-col reveal reveal-delay-3">
-          <div className="sc-val">0%</div>
-          <div className="sc-lbl">Interest on gold loans</div>
-        </div>
-      </div>
-
       {/* FEATURE STRIP */}
       <div className="fstrip">
         <div className="fstrip-inner">
