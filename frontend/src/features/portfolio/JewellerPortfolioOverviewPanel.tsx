@@ -1,18 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth } from '@/context/AuthContext'
 import { authFetch } from '@/lib/api'
-import {
-  fetchJewellerPortfolioSnapshot,
-  type JewellerPortfolioSnapshot,
-} from '@/lib/jewellerPortfolioSnapshot'
+import { fetchJewellerPortfolioSnapshot, type JewellerPortfolioSnapshot } from '@/lib/jewellerPortfolioSnapshot'
 import { LIVE_BALANCE_POLL_MS, LIVE_PROFILE_POLL_MS } from '@/lib/liveDeskIntervals'
 import { useLivePoll } from '@/lib/useLivePoll'
 import { PortfolioBarChart, PortfolioDonut, PortfolioSparkRow } from './PortfolioCharts'
 import { JewellerPortfolioPanel } from './JewellerPortfolioPanel'
-import { LiabilityCreditsMiniList } from './LiabilityCreditsMiniList'
-import { DashboardActions } from '@/components/ui'
 
-const DONUT_COLORS = ['#fbbf24', '#d4a85c', '#67e8f9', '#a78bfa']
+const DONUT_COLORS = ['#c9a840', '#3b9eff', '#67e8f9', '#a78bfa']
 
 type TabId = 'overview' | 'queues'
 
@@ -26,6 +21,17 @@ function fmtInr(n: number): string {
 
 function fmtG(n: number): string {
   return `${n.toFixed(4)} g`
+}
+
+function fmtCreditWhen(iso: string): string {
+  const t = Date.parse(iso)
+  if (Number.isNaN(t)) return iso.slice(0, 10)
+  return new Date(t).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+}
+
+function parseCG(s: string): number {
+  const n = Number.parseFloat(s)
+  return Number.isFinite(n) ? n : 0
 }
 
 export function JewellerPortfolioOverviewPanel({ onNavigate }: Props) {
@@ -59,8 +65,7 @@ export function JewellerPortfolioOverviewPanel({ onNavigate }: Props) {
   useLivePoll(refresh, LIVE_BALANCE_POLL_MS, true)
   useLivePoll(refreshMe, LIVE_PROFILE_POLL_MS, true)
 
-  const kybTone =
-    user?.kyc_status === 'verified' ? 'ok' : user?.kyc_status === 'rejected' ? 'bad' : 'wait'
+  const kybTone = user?.kyc_status === 'verified' ? 'ok' : user?.kyc_status === 'rejected' ? 'bad' : 'wait'
 
   const gramsBar = useMemo(() => {
     if (!snap) return { values: [] as number[], labels: [] as string[] }
@@ -96,166 +101,292 @@ export function JewellerPortfolioOverviewPanel({ onNavigate }: Props) {
       .map((c) => Number.parseFloat(c.grams) || 0)
   }, [snap])
 
+  const kybBadgeClass =
+    kybTone === 'ok' ? 'bdg bdg-ok' : kybTone === 'bad' ? 'bdg bdg-err' : 'bdg bdg-grey'
+
   return (
-    <div className="dash-panel-max pf-scope">
-      <div className="pf-groww-shell pf-stagger">
-        <header className="pf-jeweller-hero pf-stagger">
-          <div>
-            <p className="pf-groww-footnote" style={{ margin: '0 0 0.35rem' }}>
-              {me?.city ? `${me.city} · ` : ''}
-              GSTIN {me?.gstin ?? '—'}
-            </p>
-            <h2 className="pf-jeweller-hero__title">{me?.business_name ?? 'Your showroom'}</h2>
-            <p className="pf-jeweller-hero__sub">Today’s actions first.</p>
-          </div>
-          <span className={`pf-jeweller-kyb pf-jeweller-kyb--${kybTone}`}>{user?.kyc_status ?? 'pending'}</span>
-        </header>
+    <div className="dash-panel-max">
+      <div className="ph">
+        <h1>{me?.business_name ?? 'Your showroom'}</h1>
+        <p>
+          {me?.city ? `${me.city} · ` : ''}
+          GSTIN {me?.gstin ?? '—'}
+          {' · '}Counter custody, pipelines, and open queues at a glance.
+        </p>
+      </div>
 
-        <DashboardActions
-          actions={[
-            { label: 'Verify purchases', description: `${snap?.pendingPurchases ?? 0} waiting`, tone: 'primary', onClick: () => onNavigate('txn_purchases') },
-            { label: 'Check deposits', description: `${snap?.pendingDeposits ?? 0} open`, onClick: () => onNavigate('txn_deposits') },
-            { label: 'Manage catalogue', description: 'Products and rates', onClick: () => onNavigate('mkt_products') },
-          ]}
-          aside={snap ? `${snap.pendingTotal} open` : undefined}
-        />
-
-        <nav className="pf-groww-tabs" aria-label="Portfolio views">
-          <button
-            type="button"
-            className={`pf-groww-tab${tab === 'overview' ? ' pf-groww-tab--active' : ''}`}
-            onClick={() => setTab('overview')}
-          >
-            Overview
+      <div className="row row-b wrap mb20" style={{ alignItems: 'center', gap: 12 }}>
+        <span className={kybBadgeClass} style={{ textTransform: 'capitalize', padding: '4px 10px' }}>
+          KYB {user?.kyc_status ?? 'pending'}
+        </span>
+        <div className="row wrap" style={{ gap: 8 }}>
+          <button type="button" className="btn btn-primary btn-sm" onClick={() => onNavigate('txn_purchases')}>
+            Verify purchases ({snap?.pendingPurchases ?? 0})
           </button>
-          <button
-            type="button"
-            className={`pf-groww-tab${tab === 'queues' ? ' pf-groww-tab--active' : ''}`}
-            onClick={() => setTab('queues')}
-          >
-            Queues
-            {snap && snap.pendingTotal > 0 ? (
-              <span className="dash-nav-badge" style={{ marginLeft: 6 }}>
-                {snap.pendingTotal > 99 ? '99+' : snap.pendingTotal}
-              </span>
-            ) : null}
+          <button type="button" className="btn btn-ghost btn-sm" onClick={() => onNavigate('txn_deposits')}>
+            Deposits ({snap?.pendingDeposits ?? 0})
           </button>
-        </nav>
+          <button type="button" className="btn btn-ghost btn-sm" onClick={() => onNavigate('mkt_products')}>
+            Catalogue
+          </button>
+          <button type="button" className="btn btn-ghost btn-sm" onClick={() => onNavigate('txn_ops')}>
+            Ops inbox
+          </button>
+        </div>
+      </div>
 
-        {loadErr ? <p className="form-error">{loadErr}</p> : null}
+      <nav className="tabs" aria-label="Portfolio views">
+        <button type="button" className={`tab-btn${tab === 'overview' ? ' on' : ''}`} onClick={() => setTab('overview')}>
+          Overview
+        </button>
+        <button type="button" className={`tab-btn${tab === 'queues' ? ' on' : ''}`} onClick={() => setTab('queues')}>
+          Queues
+          {snap && snap.pendingTotal > 0 ? (
+            <span className="dash-nav-badge" style={{ marginLeft: 6 }}>
+              {snap.pendingTotal > 99 ? '99+' : snap.pendingTotal}
+            </span>
+          ) : null}
+        </button>
+      </nav>
 
-        {tab === 'overview' && snap ? (
-          <>
-            <div className="pf-grid pf-grid--kpis pf-stagger">
-              <div className="pf-kpi pf-kpi--shimmer pf-kpi--gold">
-                <span className="pf-kpi__eyebrow">Custody value</span>
-                <p className="pf-kpi__value tabular">₹{fmtInr(snap.custodyValueInr)}</p>
-                <span className="pf-kpi__hint">{snap.customerCount} customers</span>
+      {loadErr ? <p className="form-error">{loadErr}</p> : null}
+
+      {tab === 'overview' && snap ? (
+        <>
+          <div className="hero mb20">
+            <div className="row row-b wrap" style={{ justifyContent: 'space-between', alignItems: 'flex-start', gap: 16 }}>
+              <div>
+                <div className="hero-eyebrow">Total vaulted at counter</div>
+                <div className="hero-grams">
+                  {snap.custodyGrams.toFixed(3)}
+                  <span className="unit">g</span>
+                </div>
+                <div className="hero-inr" style={{ marginTop: 6 }}>
+                  ≈ ₹{fmtInr(snap.custodyValueInr)} marked across customer vault rows
+                </div>
               </div>
-              <div className="pf-kpi pf-kpi--pulse pf-kpi--ocean">
-                <span className="pf-kpi__eyebrow">Total vaulted</span>
-                <p className="pf-kpi__value tabular">{fmtG(snap.custodyGrams)}</p>
-                <span className="pf-kpi__hint">Vaulted</span>
-              </div>
-              <div className="pf-kpi pf-kpi--shimmer pf-kpi--mint">
-                <span className="pf-kpi__eyebrow">Recorded revenue</span>
-                <p className="pf-kpi__value tabular">₹{fmtInr(snap.ledgerRevenueInr)}</p>
-                <span className="pf-kpi__hint">Ledger total</span>
-              </div>
-              <div className="pf-kpi pf-kpi--pulse pf-kpi--mint">
-                <span className="pf-kpi__eyebrow">Loans outstanding</span>
-                <p className="pf-kpi__value tabular">₹{fmtInr(snap.loanOutstandingInr)}</p>
-                <span className="pf-kpi__hint">
-                  {snap.activeLoanCount} active · {snap.pendingLoanCount} pending
+              <div className="row wrap" style={{ alignSelf: 'flex-start', gap: 8 }}>
+                <span className="bdg bdg-info" style={{ padding: '4px 10px' }}>
+                  {snap.pendingTotal} open action{snap.pendingTotal === 1 ? '' : 's'}
                 </span>
               </div>
-              <div className="pf-kpi pf-kpi--pulse pf-kpi--iris">
-                <span className="pf-kpi__eyebrow">Counter pipeline</span>
-                <p className="pf-kpi__value tabular">₹{fmtInr(snap.investmentSalesInr)}</p>
-                <span className="pf-kpi__hint">Pipeline</span>
+            </div>
+            <svg
+              className="spark"
+              viewBox="0 0 500 56"
+              preserveAspectRatio="none"
+              style={{ width: '100%', height: 48, marginTop: 18, marginBottom: 2 }}
+              aria-hidden
+            >
+              <defs>
+                <linearGradient id="jw-hero-sg" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#c9a840" stopOpacity="0.25" />
+                  <stop offset="100%" stopColor="#c9a840" stopOpacity="0" />
+                </linearGradient>
+              </defs>
+              <path
+                d="M0,52 C35,46 58,42 90,38 S148,34 185,26 S238,22 278,14 S336,18 382,11 S438,14 500,8 L500,56 L0,56 Z"
+                fill="url(#jw-hero-sg)"
+              />
+              <path
+                d="M0,52 C35,46 58,42 90,38 S148,34 185,26 S238,22 278,14 S336,18 382,11 S438,14 500,8"
+                fill="none"
+                stroke="#c9a840"
+                strokeWidth="1.8"
+                strokeLinejoin="round"
+              />
+            </svg>
+            <div className="hero-grid">
+              <div className="hero-stat">
+                <div className="hs-lbl">Custody value</div>
+                <div className="hs-val tn c-gold">₹{fmtInr(snap.custodyValueInr)}</div>
               </div>
-              <div className="pf-kpi pf-kpi--shimmer pf-kpi--rose">
-                <span className="pf-kpi__eyebrow">Deposits (gold)</span>
-                <p className="pf-kpi__value tabular">{fmtG(snap.depositGrams)}</p>
-                <span className="pf-kpi__hint">Deposits</span>
+              <div className="hero-stat">
+                <div className="hs-lbl">Custodial liability</div>
+                <div className="hs-val tn">{fmtG(snap.liabilityGrams)}</div>
               </div>
-              <div className="pf-kpi pf-kpi--pulse pf-kpi--gold">
-                <span className="pf-kpi__eyebrow">Investments</span>
-                <p className="pf-kpi__value tabular">{fmtG(snap.fractionalGrams)}</p>
-                <span className="pf-kpi__hint">Fractional</span>
+              <div className="hero-stat">
+                <div className="hs-lbl">Wallet balance</div>
+                <div className="hs-val tn c-ok">{fmtG(snap.vaultGrams)}</div>
               </div>
-              <div className="pf-kpi pf-kpi--shimmer pf-kpi--rose">
-                <span className="pf-kpi__eyebrow">Custodial liability</span>
-                <p className="pf-kpi__value tabular">{fmtG(snap.liabilityGrams)}</p>
-                <span className="pf-kpi__hint">Liability</span>
-              </div>
-              <div className="pf-kpi pf-kpi--pulse pf-kpi--ocean">
-                <span className="pf-kpi__eyebrow">Pending actions</span>
-                <p className="pf-kpi__value tabular">{snap.pendingTotal}</p>
-                <span className="pf-kpi__hint">Needs action</span>
+              <div className="hero-stat">
+                <div className="hs-lbl">Active customers</div>
+                <div className="hs-val tn">{snap.customerCount}</div>
               </div>
             </div>
+          </div>
 
-            <details className="dash-disclosure">
-              <summary>Analytics</summary>
-              <div className="dash-disclosure__body pf-grid pf-grid--charts-compact pf-stagger">
-              <article className="pf-card pf-card--lift pf-card--chart-compact">
-                <h3 className="pf-card__title">Gold in custody</h3>
-                <p className="pf-card__meta">By product type</p>
-                {gramsBar.values.length > 0 ? (
-                  <div className="pf-card__viz pf-card__viz--sm">
+          <div className="stat-row mb20">
+            <div className="stat a">
+              <div className="stat-lbl">Fractional grams</div>
+              <div className="stat-val c-gold tn">{fmtG(snap.fractionalGrams)}</div>
+              <div className="stat-sub">Vault fractional class</div>
+            </div>
+            <div className="stat b">
+              <div className="stat-lbl">Deposit grams</div>
+              <div className="stat-val c-ok tn">{fmtG(snap.depositGrams)}</div>
+              <div className="stat-sub">Digitised holdings</div>
+            </div>
+            <div className="stat c">
+              <div className="stat-lbl">Schemes</div>
+              <div className="stat-val tn" style={{ color: 'var(--info)' }}>
+                {fmtG(snap.schemeGrams)}
+              </div>
+              <div className="stat-sub">Golden scheme grams</div>
+            </div>
+            <div className="stat d">
+              <div className="stat-lbl">Recorded revenue</div>
+              <div className="stat-val c-gold tn">₹{fmtInr(snap.ledgerRevenueInr)}</div>
+              <div className="stat-sub">Ledger total</div>
+            </div>
+          </div>
+
+          <div className="stat-row mb20">
+            <div className="stat a">
+              <div className="stat-lbl">Loans outstanding</div>
+              <div className="stat-val tn">₹{fmtInr(snap.loanOutstandingInr)}</div>
+              <div className="stat-sub">
+                {snap.activeLoanCount} active · {snap.pendingLoanCount} pending
+              </div>
+            </div>
+            <div className="stat b">
+              <div className="stat-lbl">Investment pipeline</div>
+              <div className="stat-val tn">₹{fmtInr(snap.investmentSalesInr)}</div>
+              <div className="stat-sub">Open purchase desk</div>
+            </div>
+            <div className="stat c">
+              <div className="stat-lbl">Ornament sales</div>
+              <div className="stat-val tn">₹{fmtInr(snap.ornamentRevenueInr)}</div>
+              <div className="stat-sub">Vault shop</div>
+            </div>
+            <div className="stat d">
+              <div className="stat-lbl">Combined revenue</div>
+              <div className="stat-val c-gold tn">₹{fmtInr(snap.totalSalesInr)}</div>
+              <div className="stat-sub">Pipeline + ornament</div>
+            </div>
+          </div>
+
+          <div className="g2 mb20">
+            <div className="card card-p">
+              <div className="sec-title mb12">Gold in custody · by product</div>
+              {gramsBar.values.length > 0 ? (
+                <div style={{ paddingTop: 4 }}>
                   <PortfolioBarChart
                     values={gramsBar.values}
                     labels={gramsBar.labels}
                     colors={gramsBar.labels.map((_, i) => DONUT_COLORS[i % DONUT_COLORS.length]!)}
                     ariaLabel="Grams in custody by product type"
                   />
-                  </div>
-                ) : (
-                  <p className="pf-groww-footnote">No vaulted balances yet.</p>
-                )}
-              </article>
-              <article className="pf-card pf-card--lift pf-card--chart-compact">
-                <h3 className="pf-card__title">Open queues</h3>
-                <p className="pf-card__meta">Needs action</p>
-                {pendingDonut.length > 0 ? (
-                  <div className="pf-donut-wrap--chart-inline">
-                    <PortfolioDonut segments={pendingDonut} ariaLabel="Open queue breakdown" />
-                    <ul className="pf-donut-legend pf-donut-legend--tight">
-                      {pendingDonut.map((s) => (
-                        <li key={s.label} className="pf-donut-legend__row">
-                          <span className="pf-swatch" style={{ background: s.color }} />
-                          <span>{s.label}</span>
-                          <strong>{Math.round(s.pct * 100)}%</strong>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ) : (
-                  <p className="pf-groww-footnote">All queues clear.</p>
-                )}
-              </article>
-              <article className="pf-card pf-card--lift pf-card--chart-compact">
-                <h3 className="pf-card__title">Liability credits</h3>
-                <p className="pf-card__meta">Recent grams posted</p>
-                {creditTrend.length > 0 ? (
-                  <div className="pf-card__viz pf-card__viz--sm">
-                    <PortfolioSparkRow points={creditTrend} stroke="var(--gold-light)" />
-                  </div>
-                ) : null}
-                <LiabilityCreditsMiniList rows={snap.recentCredits} limit={4} />
-              </article>
-              </div>
-            </details>
-          </>
-        ) : null}
+                </div>
+              ) : (
+                <p className="t-fa fs11" style={{ margin: 0 }}>
+                  No vaulted balances yet.
+                </p>
+              )}
+            </div>
 
-        {tab === 'queues' ? (
-          <div className="pf-stagger" style={{ marginTop: '0.5rem' }}>
-            <JewellerPortfolioPanel embedded />
+            <div className="card card-p">
+              <div className="sec-title mb12">Open queues</div>
+              {pendingDonut.length > 0 ? (
+                <div className="row" style={{ alignItems: 'center', gap: 18 }}>
+                  <div className="dash-donut-slot" style={{ flexShrink: 0 }}>
+                    <PortfolioDonut segments={pendingDonut} ariaLabel="Pending work breakdown" />
+                  </div>
+                  <div className="stack" style={{ gap: 8, fontSize: '0.76rem', flex: 1 }}>
+                    {pendingDonut.map((s) => (
+                      <div key={s.label} className="row" style={{ alignItems: 'center', gap: 8 }}>
+                        <span
+                          style={{
+                            width: 9,
+                            height: 9,
+                            borderRadius: 3,
+                            background: s.color,
+                            flexShrink: 0,
+                          }}
+                          aria-hidden
+                        />
+                        <span className="t-mu">
+                          {s.label}
+                          <br />
+                          <strong className="tn" style={{ color: s.color }}>
+                            {Math.round(s.pct * 100)}%
+                          </strong>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <p className="t-fa fs11" style={{ margin: 0 }}>
+                  All queues clear.
+                </p>
+              )}
+            </div>
           </div>
-        ) : null}
-      </div>
+
+          <div className="card mb20">
+            <div className="row-b" style={{ padding: '16px 20px 8px', alignItems: 'flex-start' }}>
+              <div>
+                <div className="sec-title">Liability credits</div>
+                <div className="sec-sub t-fa">Recent grams credited to custody</div>
+              </div>
+            </div>
+            {creditTrend.length > 0 ? (
+              <div style={{ padding: '0 20px 12px' }}>
+                <PortfolioSparkRow points={creditTrend} stroke="var(--gold-hi)" />
+              </div>
+            ) : null}
+            <div className="tbl-wrap">
+              {snap.recentCredits.length === 0 ? (
+                <div className="empty" style={{ border: 'none', margin: 16 }}>
+                  <div className="empty-ico" aria-hidden>
+                    ⚖️
+                  </div>
+                  <h3>No recent credits</h3>
+                  <p>Fractional confirmations will appear here.</p>
+                </div>
+              ) : (
+                <table className="tbl tbl-sm">
+                  <thead>
+                    <tr>
+                      <th>When</th>
+                      <th>Customer</th>
+                      <th>Reference</th>
+                      <th className="tn">Grams</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {snap.recentCredits.slice(0, 8).map((row, idx) => (
+                      <tr key={`${row.purchase_reference ?? ''}-${idx}-${row.created_at}`}>
+                        <td className="tx">{fmtCreditWhen(row.created_at)}</td>
+                        <td>{row.customer_label ?? row.customer_member_id ?? '—'}</td>
+                        <td className="tn">{row.purchase_reference ?? '—'}</td>
+                        <td className="tn c-gold">+{parseCG(row.grams).toFixed(4)} g</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
+        </>
+      ) : null}
+
+      {tab === 'overview' && !snap && !loadErr ? (
+        <div className="empty mt16">
+          <div className="empty-ico" aria-hidden>
+            ⏳
+          </div>
+          <h3>Loading desk snapshot…</h3>
+          <p>If this persists, refresh after checking connectivity.</p>
+        </div>
+      ) : null}
+
+      {tab === 'queues' ? (
+        <div className="mt12">
+          <JewellerPortfolioPanel embedded />
+        </div>
+      ) : null}
     </div>
   )
 }

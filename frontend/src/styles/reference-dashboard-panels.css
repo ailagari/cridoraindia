@@ -234,6 +234,14 @@
   color: var(--ink);
   font-weight: 600;
 }
+.ref-dash-shell .dash-content .tbl.tbl-sm th {
+  padding: 7px 10px;
+  font-size: 0.56rem;
+}
+.ref-dash-shell .dash-content .tbl.tbl-sm td {
+  padding: 8px 10px;
+  font-size: 0.76rem;
+}
 
 .ref-dash-shell .dash-content .bdg {
   display: inline-flex;
@@ -276,6 +284,21 @@
   background: rgba(245, 158, 11, 0.09);
   color: var(--warn);
   border: 1px solid rgba(245, 158, 11, 0.18);
+}
+
+.ref-dash-shell .dash-content .notice {
+  border-radius: var(--r1);
+  padding: 10px 14px;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  border: 1px solid var(--b0);
+  background: var(--s1);
+  color: var(--ink2);
+}
+.ref-dash-shell .dash-content .notice.n-info {
+  background: rgba(59, 158, 255, 0.08);
+  border-color: rgba(59, 158, 255, 0.22);
+  color: var(--ink);
 }
 
 .ref-dash-shell .dash-content .tabs {

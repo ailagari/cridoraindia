@@ -14,7 +14,6 @@ import { AdminFestivalBroadcastPanel } from '@/features/admin/AdminFestivalBroad
 import { AdminGoldTickerPanel, AdminMarketplaceCatalogSetupPanel } from '@/features/marketplace/AdminMarketplaceSection'
 import { AdminTreasuryPanel } from '@/features/treasury/AdminTreasuryPanel'
 import { AdminUpiFraudReportsPanel } from '@/features/treasury/AdminUpiFraudReportsPanel'
-import { DashboardActions } from '@/components/ui'
 
 import { ADMIN_DEFAULT_SECTION, ADMIN_NAV_GROUPS, normalizeAdminSection } from '@/lib/mobileNav/adminNav'
 
@@ -261,6 +260,16 @@ function formatDocTimeline(d: DocInfo): string | null {
   return chunks.length ? chunks.join(' · ') : null
 }
 
+function adminPipelineStatusBadgeClass(status: string): string {
+  const s = String(status ?? '')
+    .toLowerCase()
+    .replace(/_/g, ' ')
+  if (/(complete|completed|filled|paid|success|credited)/.test(s)) return 'bdg bdg-ok'
+  if (/(cancel|fail|reject|void|expired)/.test(s)) return 'bdg bdg-grey'
+  if (/(pending|progress|review|queued|processing|otp|await)/.test(s)) return 'bdg bdg-warn'
+  return 'bdg bdg-info'
+}
+
 export function AdminDashboardPage() {
   const { refreshProfile } = useAuth()
   const [params, setParams] = useSearchParams()
@@ -500,203 +509,243 @@ export function AdminDashboardPage() {
 
         {active === 'ops_overview' && data ? (
           <>
-            <DashboardActions
-              actions={[
-                {
-                  label: 'Review KYC / KYB',
-                  description: `${data.stats.kyc_review_queue_count + data.stats.kyb_review_queue_count} waiting`,
-                  tone: 'primary',
-                  onClick: () => setSection('users_kyc_kyb'),
-                },
-                {
-                  label: 'Check portfolio',
-                  description: 'Vault and liability totals',
-                  onClick: () => setSection('ops_portfolio'),
-                },
-                {
-                  label: 'Update gold ticker',
-                  description: 'Rates and platform fees',
-                  onClick: () => setSection('plat_gold'),
-                },
-                {
-                  label: 'Fractional markup',
-                  description: 'Platform markup on fractional gold buys',
-                  onClick: () => setSection('plat_gold'),
-                },
-              ]}
-              aside={`${data.stats.total_users} users`}
-            />
+            <div className="ph">
+              <h1>Operations overview</h1>
+              <p>Live posture across users, verification queues, vaulted metal, and order intake.</p>
+            </div>
 
-            <div className="admin-dash-widgets">
-              <div className="admin-dash-stat admin-dash-stat--emerald">
-                <span className="admin-dash-stat__eyebrow">Total users</span>
-                <p className="admin-dash-stat__value">{data.stats.total_users}</p>
-                <p className="admin-dash-stat__sub">
+            <div className="row wrap mb20" style={{ gap: 8 }}>
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                onClick={() => setSection('users_kyc_kyb')}
+              >
+                Review KYC / KYB (
+                {(data.stats.kyc_review_queue_count ?? 0) + (data.stats.kyb_review_queue_count ?? 0)})
+              </button>
+              <button type="button" className="btn btn-ghost btn-sm" onClick={() => setSection('ops_portfolio')}>
+                Portfolio metrics
+              </button>
+              <button type="button" className="btn btn-ghost btn-sm" onClick={() => setSection('plat_gold')}>
+                Gold ticker
+              </button>
+              <button type="button" className="btn btn-ghost btn-sm" onClick={() => setSection('plat_control')}>
+                Fractional OTP policy
+              </button>
+            </div>
+
+            <p className="t-fa fs11 mb20" style={{ marginBottom: 18 }}>
+              Platform total:{' '}
+              <strong className="tn">{data.stats.total_users}</strong> accounts
+            </p>
+
+            {data.stats.ledger_note ? <div className="notice n-info mb20">{data.stats.ledger_note}</div> : null}
+
+            <div className="stat-row mb20">
+              <div className="stat a">
+                <div className="stat-lbl">Total users</div>
+                <div className="stat-val tn">{data.stats.total_users}</div>
+                <div className="stat-sub">
                   {data.stats.total_customers} customers · {data.stats.total_jewellers} jewellers
-                </p>
+                </div>
               </div>
-              <div className="admin-dash-stat admin-dash-stat--amber">
-                <span className="admin-dash-stat__eyebrow">KYC queue</span>
-                <p className="admin-dash-stat__value">{data.stats.kyc_review_queue_count}</p>
-                <p className="admin-dash-stat__sub">Customers not yet verified (uploads optional)</p>
+              <div className="stat b">
+                <div className="stat-lbl">KYC queue</div>
+                <div className="stat-val tn">{data.stats.kyc_review_queue_count}</div>
+                <div className="stat-sub">Customers awaiting review</div>
               </div>
-              <div className="admin-dash-stat admin-dash-stat--iris">
-                <span className="admin-dash-stat__eyebrow">KYB queue</span>
-                <p className="admin-dash-stat__value">{data.stats.kyb_review_queue_count}</p>
-                <p className="admin-dash-stat__sub">Jewellers not yet KYB-verified</p>
+              <div className="stat c">
+                <div className="stat-lbl">KYB queue</div>
+                <div className="stat-val tn">{data.stats.kyb_review_queue_count}</div>
+                <div className="stat-sub">Jewellers awaiting review</div>
               </div>
-              <div className="admin-dash-stat admin-dash-stat--cyan">
-                <span className="admin-dash-stat__eyebrow">Identity pending</span>
-                <p className="admin-dash-stat__value">
+              <div className="stat d">
+                <div className="stat-lbl">Identity pending</div>
+                <div className="stat-val tn">
                   {data.stats.pending_kyc_identity} / {data.stats.pending_kyb_identity}
-                </p>
-                <p className="admin-dash-stat__sub">Customer / jeweller accounts not yet verified</p>
+                </div>
+                <div className="stat-sub">Customer / jeweller</div>
               </div>
             </div>
 
-            <details className="dash-disclosure">
-              <summary>Platform balances</summary>
-              <div className="dash-disclosure__body admin-dash-widgets">
-                <div className="admin-dash-stat admin-dash-stat--emerald">
-                  <span className="admin-dash-stat__eyebrow">Customer vault grams</span>
-                  <p className="admin-dash-stat__value">{fmtStatGrams(data.stats.customer_fractional_grams_total)}</p>
-                </div>
-                <div className="admin-dash-stat admin-dash-stat--iris">
-                  <span className="admin-dash-stat__eyebrow">Jeweller liability grams</span>
-                  <p className="admin-dash-stat__value">{fmtStatGrams(data.stats.jeweller_custodial_liability_grams_total)}</p>
-                </div>
-                <div className="admin-dash-stat admin-dash-stat--amber">
-                  <span className="admin-dash-stat__eyebrow">Counter pending</span>
-                  <p className="admin-dash-stat__value">{data.stats.fractional_orders_pending_counter ?? 0}</p>
-                </div>
-                <div className="admin-dash-stat admin-dash-stat--amber">
-                  <span className="admin-dash-stat__eyebrow">UPI in flight</span>
-                  <p className="admin-dash-stat__value">{data.stats.fractional_orders_pending_upi ?? 0}</p>
-                </div>
-                <div className="admin-dash-stat admin-dash-stat--iris">
-                  <span className="admin-dash-stat__eyebrow">Awaiting jeweller review</span>
-                  <p className="admin-dash-stat__value">{data.stats.fractional_orders_pending_review ?? 0}</p>
-                </div>
-                <div className="admin-dash-stat admin-dash-stat--cyan">
-                  <span className="admin-dash-stat__eyebrow">Fractional completed</span>
-                  <p className="admin-dash-stat__value">{data.stats.fractional_orders_completed ?? 0}</p>
-                </div>
-                <div className="admin-dash-stat admin-dash-stat--rose">
-                  <span className="admin-dash-stat__eyebrow">Fractional cancelled</span>
-                  <p className="admin-dash-stat__value">{data.stats.fractional_orders_cancelled ?? 0}</p>
-                </div>
-                <div className="admin-dash-stat admin-dash-stat--amber">
-                  <span className="admin-dash-stat__eyebrow">Deposit OTP pending</span>
-                  <p className="admin-dash-stat__value">{data.stats.gold_deposit_pending_otp ?? 0}</p>
-                </div>
-                <div className="admin-dash-stat admin-dash-stat--emerald">
-                  <span className="admin-dash-stat__eyebrow">Deposits completed</span>
-                  <p className="admin-dash-stat__value">{data.stats.gold_deposit_completed ?? 0}</p>
+            <div className="stat-row mb20">
+              <div className="stat a">
+                <div className="stat-lbl">Customer vault grams</div>
+                <div className="stat-val tn c-gold">{fmtStatGrams(data.stats.customer_fractional_grams_total)}</div>
+              </div>
+              <div className="stat b">
+                <div className="stat-lbl">Jeweller liability grams</div>
+                <div className="stat-val tn">{fmtStatGrams(data.stats.jeweller_custodial_liability_grams_total)}</div>
+              </div>
+              <div className="stat c">
+                <div className="stat-lbl">Counter pending buys</div>
+                <div className="stat-val tn">{data.stats.fractional_orders_pending_counter ?? 0}</div>
+              </div>
+              <div className="stat d">
+                <div className="stat-lbl">UPI in flight</div>
+                <div className="stat-val tn">{data.stats.fractional_orders_pending_upi ?? 0}</div>
+              </div>
+            </div>
+
+            <div className="stat-row mb20">
+              <div className="stat a">
+                <div className="stat-lbl">Awaiting jeweller review</div>
+                <div className="stat-val tn">{data.stats.fractional_orders_pending_review ?? 0}</div>
+              </div>
+              <div className="stat b">
+                <div className="stat-lbl">Fractional completed</div>
+                <div className="stat-val tn">{data.stats.fractional_orders_completed ?? 0}</div>
+              </div>
+              <div className="stat c">
+                <div className="stat-lbl">Fractional cancelled</div>
+                <div className="stat-val tn">{data.stats.fractional_orders_cancelled ?? 0}</div>
+              </div>
+              <div className="stat d">
+                <div className="stat-lbl">Gold deposits</div>
+                <div className="stat-val tn">{data.stats.gold_deposit_completed ?? 0}</div>
+                <div className="stat-sub">{data.stats.gold_deposit_pending_otp ?? 0} OTP pending</div>
+              </div>
+            </div>
+
+            <div className="g2 mb20">
+              <div className="card">
+                <div className="card-p">
+                  <div className="sec-hd">
+                    <div>
+                      <div className="sec-title">Recent fractional orders</div>
+                      <div className="sec-sub">Latest buy flow and settlement signals</div>
+                    </div>
+                  </div>
+                  {data.recent_fractional_orders && data.recent_fractional_orders.length > 0 ? (
+                    <div className="tbl-wrap">
+                      <table className="tbl tbl-sm">
+                        <thead>
+                          <tr>
+                            <th>Reference</th>
+                            <th>Status</th>
+                            <th>Method</th>
+                            <th>Amount</th>
+                            <th>UTR / Score</th>
+                            <th>Customer</th>
+                            <th>Jeweller</th>
+                            <th>Created</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {data.recent_fractional_orders.map((o) => {
+                            const inrAmt = Number.parseFloat(o.total_inr)
+                            const inrLabel = Number.isFinite(inrAmt)
+                              ? inrAmt.toLocaleString('en-IN')
+                              : fmtDisplay(o.total_inr)
+                            return (
+                              <tr key={o.id}>
+                                <td className="tx tabular">
+                                  {o.reference}
+                                  {o.order_reference ? (
+                                    <span className="t-mu" style={{ display: 'block', marginTop: 4 }}>
+                                      {o.order_reference}
+                                    </span>
+                                  ) : null}
+                                </td>
+                                <td>
+                                  <span className={adminPipelineStatusBadgeClass(o.status)}>
+                                    {o.status.replace(/_/g, ' ')}
+                                  </span>
+                                </td>
+                                <td>{o.payment_method}</td>
+                                <td className="tabular">
+                                  ₹{inrLabel}
+                                  <span className="t-mu" style={{ display: 'block', marginTop: 4 }}>
+                                    {o.grams} g
+                                  </span>
+                                </td>
+                                <td>
+                                  {o.upi_utr || '—'}
+                                  {o.reconciliation_score != null ? (
+                                    <span className="t-mu" style={{ display: 'block', marginTop: 4 }}>
+                                      {o.reconciliation_score}%
+                                    </span>
+                                  ) : null}
+                                </td>
+                                <td>
+                                  {o.customer_email}
+                                  {o.customer_member_id ? (
+                                    <span className="t-mu" style={{ display: 'block', marginTop: 4 }}>
+                                      {o.customer_member_id}
+                                    </span>
+                                  ) : null}
+                                </td>
+                                <td>{o.jeweller_business}</td>
+                                <td>{fmtDateTime(o.created_at)}</td>
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div className="empty">
+                      <p>No recent fractional orders.</p>
+                    </div>
+                  )}
                 </div>
               </div>
-            </details>
 
-            {data.recent_gold_deposits && data.recent_gold_deposits.length > 0 ? (
-              <details className="dash-disclosure">
-                <summary>Recent gold deposit intakes</summary>
-                <div className="dash-table-scroll card">
-                  <table className="admin-user-table">
-                    <thead>
-                      <tr>
-                        <th>Reference</th>
-                        <th>Status</th>
-                        <th>Grams</th>
-                        <th>Customer</th>
-                        <th>Jeweller</th>
-                        <th>Created</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {data.recent_gold_deposits.map((d) => (
-                        <tr key={d.id}>
-                          <td className="tabular">{d.reference}</td>
-                          <td>{d.status.replace(/_/g, ' ')}</td>
-                          <td className="tabular">{d.grams}</td>
-                          <td>
-                            {d.customer_email}
-                            {d.customer_member_id ? (
-                              <span style={{ display: 'block', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                                {d.customer_member_id}
-                              </span>
-                            ) : null}
-                          </td>
-                          <td>{d.jeweller_business}</td>
-                          <td>{fmtDateTime(d.created_at)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+              <div className="card">
+                <div className="card-p">
+                  <div className="sec-hd">
+                    <div>
+                      <div className="sec-title">Recent gold deposit intakes</div>
+                      <div className="sec-sub">In-person deposit references and custody handoffs</div>
+                    </div>
+                  </div>
+                  {data.recent_gold_deposits && data.recent_gold_deposits.length > 0 ? (
+                    <div className="tbl-wrap">
+                      <table className="tbl tbl-sm">
+                        <thead>
+                          <tr>
+                            <th>Reference</th>
+                            <th>Status</th>
+                            <th>Grams</th>
+                            <th>Customer</th>
+                            <th>Jeweller</th>
+                            <th>Created</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {data.recent_gold_deposits.map((d) => (
+                            <tr key={d.id}>
+                              <td className="tx tabular">{d.reference}</td>
+                              <td>
+                                <span className={adminPipelineStatusBadgeClass(d.status)}>
+                                  {d.status.replace(/_/g, ' ')}
+                                </span>
+                              </td>
+                              <td className="tabular">{d.grams}</td>
+                              <td>
+                                {d.customer_email}
+                                {d.customer_member_id ? (
+                                  <span className="t-mu" style={{ display: 'block', marginTop: 4 }}>
+                                    {d.customer_member_id}
+                                  </span>
+                                ) : null}
+                              </td>
+                              <td>{d.jeweller_business}</td>
+                              <td>{fmtDateTime(d.created_at)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div className="empty">
+                      <p>No recent gold deposits.</p>
+                    </div>
+                  )}
                 </div>
-              </details>
-            ) : null}
-
-            {data.recent_fractional_orders && data.recent_fractional_orders.length > 0 ? (
-              <details className="dash-disclosure" open>
-                <summary>Recent fractional orders</summary>
-                <div className="dash-table-scroll card">
-                  <table className="admin-user-table">
-                    <thead>
-                      <tr>
-                        <th>Reference</th>
-                        <th>Status</th>
-                        <th>Method</th>
-                        <th>Amount</th>
-                        <th>UTR / Score</th>
-                        <th>Customer</th>
-                        <th>Jeweller</th>
-                        <th>Created</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {data.recent_fractional_orders.map((o) => (
-                        <tr key={o.id}>
-                          <td className="tabular">
-                            {o.reference}
-                            {o.order_reference ? (
-                              <span style={{ display: 'block', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                                {o.order_reference}
-                              </span>
-                            ) : null}
-                          </td>
-                          <td>{o.status.replace(/_/g, ' ')}</td>
-                          <td>{o.payment_method}</td>
-                          <td className="tabular">
-                            ₹{Number.parseFloat(o.total_inr).toLocaleString('en-IN')}
-                            <span style={{ display: 'block', fontSize: '0.78rem' }}>{o.grams} g</span>
-                          </td>
-                          <td>
-                            {o.upi_utr || '—'}
-                            {o.reconciliation_score != null ? (
-                              <span style={{ display: 'block', fontSize: '0.78rem' }}>{o.reconciliation_score}%</span>
-                            ) : null}
-                          </td>
-                          <td>
-                            {o.customer_email}
-                            {o.customer_member_id ? (
-                              <span style={{ display: 'block', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                                {o.customer_member_id}
-                              </span>
-                            ) : null}
-                          </td>
-                          <td>{o.jeweller_business}</td>
-                          <td>{fmtDateTime(o.created_at)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </details>
-            ) : null}
+              </div>
+            </div>
           </>
-        ) : null}
-
-        {active === 'ops_overview' && data?.stats.ledger_note ? (
-          <p className="dash-footnote">{data.stats.ledger_note}</p>
         ) : null}
 
         {active === 'ops_personal_vault' ? <AdminPersonalHoldingsPanel /> : null}
