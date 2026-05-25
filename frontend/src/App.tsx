@@ -17,7 +17,6 @@ import { JewellerPublicPage } from '@/pages/JewellerPublicPage'
 import { LoginPage } from '@/pages/LoginPage'
 import { SignupPage } from '@/pages/SignupPage'
 import { JewellerApplyPage } from '@/pages/JewellerApplyPage'
-import { UpiOpenPage } from '@/pages/UpiOpenPage'
 import { DiscoverPage } from '@/pages/DiscoverPage'
 import { ShopHubPage } from '@/pages/ShopHubPage'
 import { JoinHubPage } from '@/pages/JoinHubPage'
@@ -68,7 +67,6 @@ export default function App() {
               <Route path="login" element={<LoginPage />} />
               <Route path="signup" element={<SignupPage />} />
               <Route path="jeweller/apply" element={<JewellerApplyPage />} />
-              <Route path="upi/open" element={<UpiOpenPage />} />
             </Route>
 
             <Route path="dashboard" element={<DashboardIndexRedirect />} />

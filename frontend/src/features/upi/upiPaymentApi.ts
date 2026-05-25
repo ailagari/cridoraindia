@@ -1,4 +1,8 @@
 import { apiUrl, authFetch, authUpload, extractApiDetail } from '@/lib/api'
+import { customerCridoraPayCancel } from '@/lib/cridorapayApi'
+import { fractionalCancelUpiOrder } from '@/lib/fractionalPurchaseApi'
+import { postGoldLoanRepaymentCancel } from '@/lib/goldLoanApi'
+import { customerCancelSellbackUpi } from '@/lib/goldTransferApi'
 import { isValidUtr, utrValidationHint } from '@/lib/utrNormalize'
 
 export type UpiPaymentKind =
@@ -208,6 +212,39 @@ export function upiProofImageUrl(url: string): string {
 export const UPI_PENDING_REVIEW = 'pending_review'
 export const UPI_PROOF_REJECTED = 'proof_rejected'
 export const UPI_ON_HOLD = 'on_hold'
+
+export const UPI_AUTO_CANCEL_STATUSES = new Set(['pending_payment', 'signal_received'])
+
+export async function cancelUpiPayment(
+  kind: UpiPaymentKind,
+  id: number,
+): Promise<ApiResult<{ detail: string }>> {
+  try {
+    if (kind === 'fractional') {
+      const out = await fractionalCancelUpiOrder(id)
+      if (!out.ok) return out
+      return { ok: true, data: { detail: 'Order cancelled.' } }
+    }
+    if (kind === 'loan_repayment') {
+      const out = await postGoldLoanRepaymentCancel(id)
+      if (!out.ok) return out
+      return { ok: true, data: { detail: out.detail } }
+    }
+    if (kind === 'sellback') {
+      const out = await customerCancelSellbackUpi(id)
+      if (!out.ok) return out
+      return { ok: true, data: { detail: 'Sellback cancelled.' } }
+    }
+    if (kind === 'cridorapay') {
+      const out = await customerCridoraPayCancel(id)
+      if (!out.ok) return out
+      return { ok: true, data: { detail: 'Bill cancelled.' } }
+    }
+    return { ok: false, detail: 'Cannot cancel this payment type.' }
+  } catch (e) {
+    return { ok: false, detail: e instanceof Error ? e.message : 'Network error.' }
+  }
+}
 
 export function onHoldMessage(kind: UpiPaymentKind, contactName?: string): string {
   if (contactName?.trim()) {

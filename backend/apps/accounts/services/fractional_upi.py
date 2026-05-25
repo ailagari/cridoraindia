@@ -71,8 +71,6 @@ def payment_note_for(purchase_id: int) -> str:
 
 # NPCI MCC: jewellery / watch / silverware retail (merchant QR + intent classification).
 UPI_MCC_JEWELLER = "5944"
-# Juspay / NPCI merchant intent sample uses mode 00 (default txn), not gallery QR mode 01.
-UPI_INTENT_MODE = "00"
 
 
 def build_upi_pay_query(

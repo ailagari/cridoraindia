@@ -9377,27 +9377,6 @@ select.input {
   border-color: var(--border);
 }
 
-.fractional-upi-pay__app-icon-btn--open {
-  min-height: 6rem;
-  width: 100%;
-  max-width: 12rem;
-  margin: 0 auto;
-}
-
-.fractional-upi-pay__manual-fallback {
-  margin-top: 1rem;
-  padding-top: 0.85rem;
-  border-top: 1px solid var(--border-soft);
-}
-
-.fractional-upi-pay__manual-steps {
-  margin: 0.35rem 0 0.75rem;
-  padding-left: 1.15rem;
-  font-size: 0.78rem;
-  color: var(--text-muted);
-  line-height: 1.45;
-}
-
 .fractional-upi-pay__app-icon {
   display: block;
   width: 48px;
@@ -9551,6 +9530,47 @@ select.input {
 
 .fractional-upi-pay__cancel:hover:not(:disabled) {
   color: var(--text);
+}
+
+.upi-continue-payment-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(4.35rem + env(safe-area-inset-bottom, 0px));
+  z-index: 45;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem max(0.85rem, env(safe-area-inset-left, 0px))
+    0.65rem max(0.85rem, env(safe-area-inset-right, 0px));
+  border-top: 1px solid rgba(245, 158, 11, 0.35);
+  background: rgba(15, 23, 42, 0.96);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.28);
+}
+
+.upi-continue-payment-bar__copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.upi-continue-payment-bar__title {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--gold-light);
+}
+
+.upi-continue-payment-bar__meta {
+  margin: 0.15rem 0 0;
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+
+@media (min-width: 768px) {
+  .upi-continue-payment-bar {
+    display: none;
+  }
 }
 
 .fractional-upi-utr-display {

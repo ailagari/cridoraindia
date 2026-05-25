@@ -21,6 +21,7 @@ import {
   resolveKnownFractionalJewellers,
 } from '@/features/invest/fractionalJewellerSelect'
 import { useCounterOtpCountdown } from '@/features/invest/useCounterOtpCountdown'
+import { usePublicLayoutMax767 } from '@/hooks/usePublicLayoutMax767'
 import { fetchGoldWallet, type GoldWalletDTO } from '@/lib/goldTransferApi'
 import { LIVE_BALANCE_POLL_MS } from '@/lib/liveDeskIntervals'
 import { useLivePoll } from '@/lib/useLivePoll'
@@ -48,6 +49,10 @@ const INFLIGHT_UPI_STATUSES = new Set([
   'proof_rejected',
   'on_hold',
 ])
+
+const RESUMABLE_UPI_STATUSES = new Set(['pending_payment', 'signal_received', 'proof_rejected'])
+
+const UPI_PAYMENT_SECTION_ID = 'fractional-upi-payment-step'
 
 export function FractionalPurchasePanel() {
   const [params] = useSearchParams()
@@ -78,6 +83,8 @@ export function FractionalPurchasePanel() {
   const [successToast, setSuccessToast] = useState('')
   const [activeUpiOrder, setActiveUpiOrder] = useState<FractionalPurchaseDTO | null>(null)
   const [featureFlags, setFeatureFlags] = useState<Record<string, boolean> | null>(null)
+  const narrow = usePublicLayoutMax767()
+  const upiPaymentRef = useRef<HTMLDivElement>(null)
 
   const fractionalUpiEnabled = isFeatureEnabled(featureFlags, 'fractional_upi_reconciliation')
   const fractionalCounterEnabled = isFeatureEnabled(featureFlags, 'fractional_counter')
@@ -221,6 +228,35 @@ export function FractionalPurchasePanel() {
     const row = orders.find((x) => x.id === activeUpiOrder.id)
     if (row) setActiveUpiOrder(row)
   }, [orders, activeUpiOrder?.id])
+
+  useEffect(() => {
+    if (!ordersLoaded || activeUpiOrder) return
+    const pending = orders.find(
+      (o) => o.payment_method === 'upi' && RESUMABLE_UPI_STATUSES.has(o.status),
+    )
+    if (pending) setActiveUpiOrder(pending)
+  }, [activeUpiOrder, orders, ordersLoaded])
+
+  const resumeUpiOrder = useMemo(
+    () =>
+      orders.find(
+        (o) => o.payment_method === 'upi' && RESUMABLE_UPI_STATUSES.has(o.status),
+      ) ?? null,
+    [orders],
+  )
+
+  const resumePaymentCountdown = useCounterOtpCountdown(resumeUpiOrder?.payment_expires_at ?? null)
+
+  const scrollToUpiPayment = useCallback(() => {
+    if (resumeUpiOrder && (!activeUpiOrder || activeUpiOrder.id !== resumeUpiOrder.id)) {
+      setActiveUpiOrder(resumeUpiOrder)
+    }
+    window.requestAnimationFrame(() => {
+      const target =
+        upiPaymentRef.current ?? document.getElementById(UPI_PAYMENT_SECTION_ID)
+      target?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
+  }, [activeUpiOrder, resumeUpiOrder])
 
   useLivePoll(refreshOrders, LIVE_BALANCE_POLL_MS, !busy)
   useLivePoll(refreshWalletHint, LIVE_BALANCE_POLL_MS, !busy)
@@ -469,15 +505,22 @@ export function FractionalPurchasePanel() {
           {orderMsg ? <p className="ds-feedback ds-feedback--success" role="status">{orderMsg}</p> : null}
 
           {activeUpiOrder && INFLIGHT_UPI_STATUSES.has(activeUpiOrder.status) ? (
-            <UpiPaymentStep
-              kind="fractional"
-              paymentId={activeUpiOrder.id}
-              busy={busy}
-              setBusy={setBusy}
-              onSubmitted={() => void refreshOrders()}
-              onSuccess={(msg) => setSuccessToast(msg)}
-              onError={(msg) => setOrderMsg(msg)}
-            />
+            <div ref={upiPaymentRef}>
+              <UpiPaymentStep
+                kind="fractional"
+                paymentId={activeUpiOrder.id}
+                busy={busy}
+                setBusy={setBusy}
+                sectionId={UPI_PAYMENT_SECTION_ID}
+                onSubmitted={() => void refreshOrders()}
+                onExpired={() => {
+                  setActiveUpiOrder(null)
+                  void refreshOrders()
+                }}
+                onSuccess={(msg) => setSuccessToast(msg)}
+                onError={(msg) => setOrderMsg(msg)}
+              />
+            </div>
           ) : null}
 
           {lastOrder && lastOrder.payment_method === 'counter' && lastOrder.status === 'awaiting_counter' ? (
@@ -555,6 +598,20 @@ export function FractionalPurchasePanel() {
       {successToast ? (
         <div className="gold-transfer-mobile-toast fractional-buy-toast" role="status" aria-live="polite">
           {successToast}
+        </div>
+      ) : null}
+
+      {narrow && resumeUpiOrder && !resumePaymentCountdown.expired ? (
+        <div className="upi-continue-payment-bar" role="region" aria-label="Pending UPI payment">
+          <div className="upi-continue-payment-bar__copy">
+            <p className="upi-continue-payment-bar__title">{resumeUpiOrder.reference}</p>
+            <p className="upi-continue-payment-bar__meta tabular">
+              ₹{formatInr(resumeUpiOrder.total_inr)} · {resumePaymentCountdown.labelMmSs} left
+            </p>
+          </div>
+          <Button type="button" variant="primary" disabled={busy} onClick={scrollToUpiPayment}>
+            Continue payment
+          </Button>
         </div>
       ) : null}
     </div>

@@ -1,12 +1,15 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import QRCode from 'qrcode'
 import { Input } from '@/components/ui'
 import { UpiMobilePayLinks } from '@/features/upi/UpiMobilePayLinks'
 import { UpiPayMethodNotice } from '@/components/UpiPayMethodNotice'
 import { UpiOnHoldNotice } from '@/features/upi/UpiOnHoldNotice'
+import { useCounterOtpCountdown } from '@/features/invest/useCounterOtpCountdown'
 import {
+  cancelUpiPayment,
   fetchUpiPayment,
   submitUpiPaymentProof,
+  UPI_AUTO_CANCEL_STATUSES,
   UPI_ON_HOLD,
   UPI_PENDING_REVIEW,
   UPI_PROOF_REJECTED,
@@ -26,6 +29,8 @@ type Props = {
   onSubmitted?: () => void
   onSuccess?: (message: string) => void
   onError?: (message: string) => void
+  onExpired?: () => void
+  sectionId?: string
 }
 
 function formatInr(s: string | undefined): string {
@@ -33,16 +38,6 @@ function formatInr(s: string | undefined): string {
   const n = Number.parseFloat(s)
   if (!Number.isFinite(n)) return s
   return n.toLocaleString('en-IN', { maximumFractionDigits: 2 })
-}
-
-function manualPayClipboardText(state: UpiPaymentState): string {
-  const lines = [
-    state.payee_vpa ? `UPI ID: ${state.payee_vpa}` : '',
-    state.amount_inr ? `Amount: ₹${formatInr(state.amount_inr)}` : '',
-    state.reference ? `Reference: ${state.reference}` : '',
-    state.payee_name ? `Payee: ${state.payee_name}` : '',
-  ].filter(Boolean)
-  return lines.join('\n')
 }
 
 export function UpiPaymentStep({
@@ -53,14 +48,22 @@ export function UpiPaymentStep({
   onSubmitted,
   onSuccess,
   onError,
+  onExpired,
+  sectionId,
 }: Props) {
   const narrow = usePublicLayoutMax767()
   const [state, setState] = useState<UpiPaymentState | null>(null)
   const [loadErr, setLoadErr] = useState('')
   const [actionErr, setActionErr] = useState('')
+  const [expiryMsg, setExpiryMsg] = useState('')
   const [utrInput, setUtrInput] = useState('')
   const [screenshotFile, setScreenshotFile] = useState<File | null>(null)
   const [qrSrc, setQrSrc] = useState('')
+  const autoCancelStarted = useRef(false)
+
+  const paymentCountdown = useCounterOtpCountdown(state?.expires_at ?? null)
+  const autoCancelEligible =
+    Boolean(state?.status && UPI_AUTO_CANCEL_STATUSES.has(state.status)) && Boolean(state?.expires_at)
 
   const refresh = useCallback(async () => {
     setLoadErr('')
@@ -77,7 +80,42 @@ export function UpiPaymentStep({
     void refresh()
   }, [refresh])
 
-  useLivePoll(refresh, LIVE_BALANCE_POLL_MS, !busy && state?.status === UPI_PENDING_REVIEW)
+  useEffect(() => {
+    autoCancelStarted.current = false
+    setExpiryMsg('')
+  }, [kind, paymentId])
+
+  useEffect(() => {
+    if (!autoCancelEligible || !paymentCountdown.expired || autoCancelStarted.current || busy) return
+    autoCancelStarted.current = true
+    setBusy(true)
+    void cancelUpiPayment(kind, paymentId)
+      .then((out) => {
+        if (out.ok) {
+          setExpiryMsg('Payment window expired — order cancelled automatically.')
+          onSuccess?.('Payment window expired — order cancelled.')
+          onExpired?.()
+          onSubmitted?.()
+        } else {
+          setExpiryMsg(out.detail)
+          onError?.(out.detail)
+        }
+        return refresh()
+      })
+      .finally(() => setBusy(false))
+  }, [
+    autoCancelEligible,
+    busy,
+    kind,
+    onError,
+    onExpired,
+    onSubmitted,
+    onSuccess,
+    paymentCountdown.expired,
+    paymentId,
+    refresh,
+    setBusy,
+  ])
 
   const qrSize = 180
 
@@ -96,6 +134,10 @@ export function UpiPaymentStep({
     }
   }, [state?.upi_uri, narrow])
 
+  useLivePoll(refresh, LIVE_BALANCE_POLL_MS, !busy && state?.status === UPI_PENDING_REVIEW)
+
+  const paymentExpired =
+    Boolean(state?.expired) || (autoCancelEligible && paymentCountdown.expired)
   const utrHint = useMemo(() => utrValidationHint(utrInput), [utrInput])
   const utrReady = isValidUtr(utrInput)
   const canSubmitProof = utrReady || Boolean(screenshotFile)
@@ -171,7 +213,7 @@ export function UpiPaymentStep({
   }
 
   return (
-    <div className="fractional-upi-pay card">
+    <div className="fractional-upi-pay card" id={sectionId}>
       <p className="fractional-upi-pay__title">{isResubmit ? 'Resubmit payment proof' : 'Pay with UPI'}</p>
       {isResubmit ? (
         <div className="upi-proof-rejected-notice" role="alert">
@@ -219,9 +261,19 @@ export function UpiPaymentStep({
       )}
 
       {loadErr ? <p className="form-error">{loadErr}</p> : null}
-      {state?.expired ? <p className="form-error">This payment window expired.</p> : null}
+      {expiryMsg ? <p className="form-error">{expiryMsg}</p> : null}
+      {paymentExpired && !expiryMsg ? <p className="form-error">This payment window expired.</p> : null}
+      {state?.expires_at && !paymentExpired ? (
+        <p
+          className="fractional-upi-pay__timer tabular"
+          style={{ margin: '0 0 0.75rem', fontSize: '0.82rem', color: 'var(--text-muted)' }}
+        >
+          Complete payment within{' '}
+          <strong style={{ color: 'var(--gold-light)' }}>{paymentCountdown.labelMmSs}</strong>
+        </p>
+      ) : null}
 
-      {state && !state.expired ? (
+      {state && !paymentExpired ? (
         <>
           {!isResubmit ? <UpiPayMethodNotice compact={narrow} /> : null}
 
@@ -241,20 +293,6 @@ export function UpiPaymentStep({
               <p className="fractional-upi-pay__meta">
                 {state.payee_name} · {state.reference}
               </p>
-              {narrow ? (
-                <button
-                  type="button"
-                  className="btn btn-secondary btn--block"
-                  disabled={busy}
-                  onClick={() => {
-                    void navigator.clipboard.writeText(manualPayClipboardText(state)).then(() => {
-                      onSuccess?.('Payment details copied. Pay manually in your UPI app if the button fails.')
-                    })
-                  }}
-                >
-                  Copy payment details
-                </button>
-              ) : null}
             </div>
           ) : null}
 
@@ -300,9 +338,8 @@ export function UpiPaymentStep({
             >
               {isResubmit ? 'Resubmit payment proof' : 'Submit payment proof'}
             </button>
+            {actionErr ? <p className="form-error">{actionErr}</p> : null}
           </div>
-
-          {actionErr ? <p className="form-error">{actionErr}</p> : null}
         </>
       ) : null}
     </div>

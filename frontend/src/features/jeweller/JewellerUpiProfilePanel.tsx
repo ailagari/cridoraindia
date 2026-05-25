@@ -67,16 +67,17 @@ export function JewellerUpiProfilePanel() {
         Online UPI (fractional gold)
       </h2>
       <p className="dash-panel-lead" style={{ margin: 0 }}>
-        Customers pay you directly via GPay / PhonePe using this UPI ID. They paste the UTR from their receipt; you
-        confirm under <strong>Ops → Purchase → Online UPI</strong>.
+        Use your <strong>merchant / business UPI ID</strong> (PhonePe for Business, Paytm for Business, BharatPe,
+        etc.) — not a personal UPI ID. Customers pay via GPay / PhonePe; they paste the UTR from their receipt and
+        you confirm under <strong>Ops → Purchase → Online UPI</strong>.
       </p>
       <div className="field">
-        <label htmlFor="jeweller-upi-vpa">UPI ID (VPA)</label>
+        <label htmlFor="jeweller-upi-vpa">Merchant UPI ID (VPA)</label>
         <input
           id="jeweller-upi-vpa"
           value={upiVpa}
           onChange={(e) => setUpiVpa(e.target.value)}
-          placeholder="shopname@okicici"
+          placeholder="shopname@okbizaxis"
           autoComplete="off"
         />
       </div>

@@ -191,7 +191,7 @@ class FractionalOrdersView(APIView):
             if not jeweller_upi_vpa(jeweller):
                 return Response(
                     {
-                        "detail": "This jeweller has not configured online UPI yet. Use counter or choose another jeweller.",
+                        "detail": "This jeweller has not configured a merchant UPI ID yet. Use counter or choose another jeweller.",
                     },
                     status=status.HTTP_400_BAD_REQUEST,
                 )
