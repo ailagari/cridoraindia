@@ -37,6 +37,8 @@ class FractionalUpiServiceTests(APITestCase):
         self.assertIn("pa=shop%40okicici", uri)
         self.assertIn("am=515.00", uri)
         self.assertIn("tr=FR-42", uri)
+        self.assertIn("mc=5944", uri)
+        self.assertIn("tid=", uri)
 
 
 class FractionalUpiApiTests(APITestCase):

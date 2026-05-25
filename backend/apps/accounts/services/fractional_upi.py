@@ -69,6 +69,39 @@ def payment_note_for(purchase_id: int) -> str:
     return f"Cridora {order_reference_cr(purchase_id)}"
 
 
+# NPCI MCC: jewellery / watch / silverware retail (merchant QR + intent classification).
+UPI_MCC_JEWELLER = "5944"
+# Juspay / NPCI merchant intent sample uses mode 00 (default txn), not gallery QR mode 01.
+UPI_INTENT_MODE = "00"
+
+
+def build_upi_pay_query(
+    *,
+    vpa: str,
+    payee_name: str,
+    amount_inr: Decimal,
+    transaction_ref: str,
+    payment_note: str,
+    transaction_id: str | None = None,
+    initiation_mode: str | None = None,
+) -> str:
+    amount = format(amount_inr.quantize(Decimal("0.01")), "f")
+    tid = (transaction_id or transaction_ref.replace("-", ""))[:35]
+    parts = [
+        f"pa={quote(vpa)}",
+        f"pn={quote(payee_name[:80])}",
+        f"mc={UPI_MCC_JEWELLER}",
+        f"tr={quote(transaction_ref)}",
+        f"tid={quote(tid)}",
+        f"am={amount}",
+        f"cu=INR",
+        f"tn={quote(payment_note)}",
+    ]
+    if initiation_mode:
+        parts.append(f"mode={initiation_mode}")
+    return "&".join(parts)
+
+
 def build_upi_pay_uri(
     *,
     vpa: str,
@@ -80,14 +113,15 @@ def build_upi_pay_uri(
 ) -> str:
     ref = transaction_ref or payment_reference(purchase_id)
     note = payment_note or payment_note_for(purchase_id)
-    amount = format(amount_inr.quantize(Decimal("0.01")), "f")
-    query = (
-        f"pa={quote(vpa)}"
-        f"&pn={quote(payee_name[:80])}"
-        f"&am={amount}"
-        f"&cu=INR"
-        f"&tn={quote(note)}"
-        f"&tr={quote(ref)}"
+    ts = int(timezone.now().timestamp())
+    tid = f"CR{ref.replace('-', '')}{ts}"[:35]
+    query = build_upi_pay_query(
+        vpa=vpa,
+        payee_name=payee_name,
+        amount_inr=amount_inr,
+        transaction_ref=ref,
+        payment_note=note,
+        transaction_id=tid,
     )
     return f"upi://pay?{query}"
 

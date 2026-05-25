@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 from decimal import Decimal
-from urllib.parse import quote
 
 from django.utils import timezone
 
 from ..models import GoldSellbackRequest, User
 from .fractional_upi import (
+    build_upi_pay_query,
     default_payment_expires_at,
     normalize_upi_vpa,
     normalize_utr,
@@ -41,14 +41,14 @@ def build_sellback_payout_uri(
 ) -> str:
     ref = payout_reference(sellback_id)
     note = payout_note_for(sellback_id)
-    amount = format(amount_inr.quantize(Decimal("0.01")), "f")
-    query = (
-        f"pa={quote(vpa)}"
-        f"&pn={quote(payee_name[:80])}"
-        f"&am={amount}"
-        f"&cu=INR"
-        f"&tn={quote(note)}"
-        f"&tr={quote(ref)}"
+    tid = f"SB{sellback_id}{int(timezone.now().timestamp())}"[:35]
+    query = build_upi_pay_query(
+        vpa=vpa,
+        payee_name=payee_name,
+        amount_inr=amount_inr,
+        transaction_ref=ref,
+        payment_note=note,
+        transaction_id=tid,
     )
     return f"upi://pay?{query}"
 
