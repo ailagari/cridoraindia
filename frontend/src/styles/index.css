@@ -7190,6 +7190,19 @@ select.input {
   color: var(--gold-light);
 }
 
+.notif-item-btn--priority-high {
+  border-left: 3px solid #c45c4a;
+}
+
+.notif-item-btn--priority-low {
+  opacity: 0.92;
+}
+
+.notif-chip--active {
+  border-color: var(--gold, #c9a227);
+  color: var(--gold-light, #e8c547);
+}
+
 .notif-item-btn:hover .notif-item-title {
   text-decoration: underline;
 }

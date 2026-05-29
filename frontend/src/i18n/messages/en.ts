@@ -321,6 +321,7 @@ export const enMessages = {
   'notifications.noAlerts': 'No alerts yet.',
   'notifications.noMatch': 'No alerts match this view.',
   'notifications.allCaughtUp': "You're all caught up — nothing unread.",
+  'notifications.signInForAlerts': 'Sign in to see your alerts, or enable push for gold rate updates.',
   'notifications.noBroadcasts': 'No broadcasts yet. After an admin sends one, it will show here.',
   'notifications.promo': 'Promo',
   'notifications.turnOn': 'Turn on device notifications',

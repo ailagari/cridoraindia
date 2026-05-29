@@ -19,6 +19,7 @@ import { JewellerOrnamentRedemptionsPanel } from '@/features/marketplace/Jewelle
 import { JewellerSettlementsPanel } from '@/features/treasury/JewellerSettlementsPanel'
 import { JewellerSettlementPaymentsPanel } from '@/features/treasury/JewellerSettlementPaymentsPanel'
 import { ChangePasswordPanel } from '@/features/auth/ChangePasswordPanel'
+import { NotificationSettingsPanel } from '@/features/settings/NotificationSettingsPanel'
 import { useAuth } from '@/context/AuthContext'
 import { LIVE_PROFILE_POLL_MS } from '@/lib/liveDeskIntervals'
 import { useLivePoll } from '@/lib/useLivePoll'
@@ -154,6 +155,12 @@ export function JewellerDashboardPage() {
         <div className="dash-panel-max">
           <JewellerKybWorkflow />
         </div>
+      ) : null}
+      {active === 'prof_notifications' ? (
+        <NotificationSettingsPanel
+          title="Notifications"
+          description="Manage push delivery and operational alerts for your jeweller account."
+        />
       ) : null}
       {active === 'prof_security' ? (
         <ChangePasswordPanel />

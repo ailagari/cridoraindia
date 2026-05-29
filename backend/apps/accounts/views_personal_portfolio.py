@@ -205,7 +205,10 @@ class PortfolioUserNotificationsListView(APIView):
         except ValueError:
             limit = 40
         limit = max(1, min(limit, 100))
-        qs = PortfolioUserNotification.objects.filter(user=request.user).order_by("-created_at")[:limit]
+        qs = (
+            PortfolioUserNotification.objects.filter(user=request.user, read_at__isnull=True)
+            .order_by("-created_at")[:limit]
+        )
         rows = [
             {
                 "id": n.id,
@@ -213,12 +216,12 @@ class PortfolioUserNotificationsListView(APIView):
                 "title": n.title,
                 "body": n.body,
                 "link_path": n.link_path,
-                "read_at": n.read_at.isoformat() if n.read_at else None,
+                "read_at": None,
                 "created_at": n.created_at.isoformat(),
             }
             for n in qs
         ]
-        unread = sum(1 for n in qs if n.read_at is None)
+        unread = len(rows)
         return Response({"results": rows, "unread_count": unread})
 
 
@@ -260,19 +263,29 @@ class PortfolioUserNotificationsMarkReadView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
+        from apps.accounts.services.notification_ack import ack_portfolio_notifications
+
         mark_all = bool(request.data.get("all"))
         ids = request.data.get("notification_ids")
-        base = PortfolioUserNotification.objects.filter(user=request.user)
-        if mark_all:
-            base.filter(read_at__isnull=True).update(read_at=timezone.now())
-        elif isinstance(ids, list) and ids:
-            base.filter(id__in=ids[:200], read_at__isnull=True).update(read_at=timezone.now())
-        else:
+        if not mark_all and not (isinstance(ids, list) and ids):
             return Response(
                 {"detail": "Provide notification_ids (array) or all=true."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        return Response({"ok": True})
+        id_list = None
+        if isinstance(ids, list):
+            id_list = []
+            for x in ids[:200]:
+                try:
+                    id_list.append(int(x))
+                except (TypeError, ValueError):
+                    continue
+        deleted = ack_portfolio_notifications(
+            request.user,
+            notification_ids=id_list,
+            mark_all=mark_all,
+        )
+        return Response({"ok": True, "deleted": deleted})
 
 
 class PersonalHoldingsListCreateView(APIView):

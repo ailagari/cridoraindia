@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { useOptionalPublicLocale } from '@/i18n/PublicLocaleProvider'
 import type { MessageKey } from '@/i18n/messages/en'
-import { hydrateMockNotificationsForAccount, hydrateMockNotificationsForGuest, persistAllMockNotificationsRead, persistMockNotificationReadIds, type AppNotification } from '@/lib/mockNotifications'
+import type { AppNotification } from '@/lib/mockNotifications'
 import { useAuth } from '@/context/AuthContext'
 import { authFetch } from '@/lib/api'
 import {
@@ -53,14 +53,59 @@ function formatNotifyTime(iso: string, t?: (key: MessageKey, vars?: Record<strin
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 }
 
-type ApiPortfolioNotification = {
-  id: number
+type ApiInboxRow = {
+  id: string
+  source?: string
   kind: string
+  category?: string
   title: string
   body: string
   link_path: string
   created_at: string
-  read_at: string | null
+  priority?: string
+  branding_label?: string
+}
+
+function mapInboxApiRow(
+  r: ApiInboxRow,
+  t?: (key: MessageKey, vars?: Record<string, string | number>) => string,
+): AppNotification {
+  const cat = (r.category || '').toLowerCase()
+  const kind: AppNotification['kind'] =
+    cat === 'transaction' || cat === 'loan'
+      ? 'transaction'
+      : cat === 'security'
+        ? 'kyc'
+        : cat === 'promo' || r.kind === 'festival_broadcast_sent'
+          ? 'promo'
+          : 'alert'
+  const pri = r.priority === 'high' || r.priority === 'low' ? r.priority : 'medium'
+  return {
+    id: r.id,
+    title: r.title,
+    body: r.branding_label ? `${r.branding_label}\n${r.body}` : r.body,
+    time: formatNotifyTime(r.created_at, t),
+    read: false,
+    kind,
+    link_path: r.link_path,
+    priority: pri,
+    apiCategory: cat || r.category || '',
+  }
+}
+
+function priorityClass(p?: AppNotification['priority']): string {
+  if (p === 'high') return ' notif-item-btn--priority-high'
+  if (p === 'low') return ' notif-item-btn--priority-low'
+  return ''
+}
+
+type InboxCategoryFilter = '' | 'portfolio' | 'transaction' | 'security' | 'promo'
+
+function settingsPathForRole(role: Props['role']): string | null {
+  if (role === 'customer') return '/userdashboard?section=profile_notifications'
+  if (role === 'jeweller') return '/jewellerdashboard?section=prof_notifications'
+  if (role === 'admin') return '/admindashboard?section=plat_account'
+  return null
 }
 
 function mapAdminApiRow(
@@ -79,23 +124,6 @@ function mapAdminApiRow(
     body: r.body,
     time: formatNotifyTime(r.created_at, t),
     read: !r.unread,
-    kind,
-    link_path: r.link_path,
-  }
-}
-
-function mapPortfolioApiRow(
-  r: ApiPortfolioNotification,
-  t?: (key: MessageKey, vars?: Record<string, string | number>) => string,
-): AppNotification {
-  const kind: AppNotification['kind'] =
-    r.kind === 'holding_added' || r.kind === 'jeweller_added_holding' ? 'transaction' : 'alert'
-  return {
-    id: `portfolio-${r.id}`,
-    title: r.title,
-    body: r.body,
-    time: formatNotifyTime(r.created_at, t),
-    read: Boolean(r.read_at),
     kind,
     link_path: r.link_path,
   }
@@ -122,7 +150,7 @@ export function NotificationBell({
   const { user } = useAuth()
   const navigate = useNavigate()
   const publicUi = localeScope === 'public'
-  const { t, locale } = useOptionalPublicLocale()
+  const { t } = useOptionalPublicLocale()
   const uiT = publicUi ? t : undefined
   const useAdminFeed = role === 'admin' && user?.user_type === 'admin'
   const usePlatformFeed = Boolean(user && !useAdminFeed)
@@ -130,10 +158,8 @@ export function NotificationBell({
   const hidePushRowInBell = Boolean(hidePushControls) || (usePlatformFeed && suppressPushRow)
 
   const [open, setOpen] = useState(false)
-  const [showHistory, setShowHistory] = useState(false)
-  const [mockItems, setMockItems] = useState<AppNotification[]>(() =>
-    hydrateMockNotificationsForGuest(publicUi ? locale : undefined),
-  )
+  const [categoryFilter, setCategoryFilter] = useState<InboxCategoryFilter>('')
+  const [badgeCount, setBadgeCount] = useState(0)
   const [adminItems, setAdminItems] = useState<AppNotification[]>([])
   const [platformItems, setPlatformItems] = useState<AppNotification[]>([])
   const [adminFeedError, setAdminFeedError] = useState('')
@@ -147,30 +173,37 @@ export function NotificationBell({
   const rootRef = useRef<HTMLDivElement>(null)
   /** Bottom sheet on narrow viewports (PWA / mobile dashboards). */
   const [useSheetLayout, setUseSheetLayout] = useState(false)
-  const prevMockItemsRef = useRef<AppNotification[]>([])
-
-  const mergeFeedWithPriorRead = useCallback(
-    (rows: AppNotification[], prev: AppNotification[]): AppNotification[] => {
-      const wasRead = new Map(prev.map((x) => [x.id, x.read]))
-      return rows.map((r) => ({ ...r, read: r.read || wasRead.get(r.id) === true }))
-    },
-    [],
-  )
 
   const setupHint = pushSetupHint()
+  const settingsPath = settingsPathForRole(role)
 
   const items = useMemo(() => {
     if (useAdminFeed) return adminItems
     if (usePlatformFeed) return platformItems
-    return mockItems
-  }, [useAdminFeed, usePlatformFeed, adminItems, platformItems, mockItems])
+    return []
+  }, [useAdminFeed, usePlatformFeed, adminItems, platformItems])
 
-  const unread = useMemo(() => items.filter((i) => !i.read).length, [items])
-  const readCount = useMemo(() => items.filter((i) => i.read).length, [items])
-  const displayItems = useMemo(
-    () => (showHistory ? items : items.filter((i) => !i.read)),
-    [showHistory, items],
-  )
+  const unread = usePlatformFeed && !open ? badgeCount : items.length
+  const displayItems = useMemo(() => {
+    if (!categoryFilter) return items
+    return items.filter((i) => {
+      const c = (i.apiCategory || '').toLowerCase()
+      if (categoryFilter === 'transaction') return c === 'transaction' || c === 'loan' || i.kind === 'transaction'
+      if (categoryFilter === 'portfolio') return c === 'portfolio' || i.kind === 'transaction'
+      if (categoryFilter === 'security') return c === 'security' || i.kind === 'kyc'
+      if (categoryFilter === 'promo') return c === 'promo' || i.kind === 'promo'
+      return true
+    })
+  }, [items, categoryFilter])
+
+  const loadUnreadCount = useCallback(async () => {
+    if (!usePlatformFeed) return
+    const res = await authFetch('/api/v1/inbox/unread-count/', { cache: 'no-store' })
+    const body = (await res.json().catch(() => ({}))) as { unread_count?: number }
+    if (res.ok && typeof body.unread_count === 'number') {
+      setBadgeCount(body.unread_count)
+    }
+  }, [usePlatformFeed])
 
   const loadAdminFeed = useCallback(async () => {
     if (!useAdminFeed) return
@@ -186,54 +219,41 @@ export function NotificationBell({
     }
     const rows = Array.isArray(body.results) ? body.results.map((r) => mapAdminApiRow(r, uiT)) : []
     setAdminItems((prev) => {
-      const merged = mergeFeedWithPriorRead(rows, prev)
       if (prev.length === 0) {
-        seedTrayNotifiedIds(merged.filter((x) => !x.read).map((x) => x.id))
+        seedTrayNotifiedIds(rows.map((x) => x.id))
       } else {
-        notifyBellFeedUpdates(prev, merged)
+        notifyBellFeedUpdates(prev, rows)
       }
-      return merged
+      return rows
     })
-  }, [useAdminFeed, mergeFeedWithPriorRead, uiT])
+  }, [useAdminFeed, uiT])
 
   const loadPlatformFeed = useCallback(async () => {
     if (!usePlatformFeed) return
     setPlatformFeedError('')
-    const [platformRes, portfolioRes] = await Promise.all([
-      authFetch('/api/v1/notifications/?limit=40', { cache: 'no-store' }),
-      user?.user_type === 'customer'
-        ? authFetch('/api/v1/portfolio/notifications/?limit=40', { cache: 'no-store' })
-        : Promise.resolve(null),
-    ])
-    const body = (await platformRes.json().catch(() => ({}))) as {
+    const catQ = categoryFilter ? `&category=${encodeURIComponent(categoryFilter)}` : ''
+    const res = await authFetch(`/api/v1/inbox/?limit=40${catQ}`, { cache: 'no-store' })
+    const body = (await res.json().catch(() => ({}))) as {
       detail?: string
-      results?: ApiAdminNotification[]
+      results?: ApiInboxRow[]
     }
-    if (!platformRes.ok) {
+    if (!res.ok) {
       setPlatformFeedError(body.detail ?? 'Could not load alerts.')
       return
     }
-    const platformRows = Array.isArray(body.results) ? body.results.map((r) => mapAdminApiRow(r, uiT)) : []
-    let portfolioRows: AppNotification[] = []
-    if (portfolioRes) {
-      const pBody = (await portfolioRes.json().catch(() => ({}))) as {
-        results?: ApiPortfolioNotification[]
-      }
-      if (portfolioRes.ok && Array.isArray(pBody.results)) {
-        portfolioRows = pBody.results.map((r) => mapPortfolioApiRow(r, uiT))
-      }
+    const rows = Array.isArray(body.results) ? body.results.map((r) => mapInboxApiRow(r, uiT)) : []
+    if (typeof (body as { unread_count?: number }).unread_count === 'number') {
+      setBadgeCount((body as { unread_count: number }).unread_count)
     }
-    const rows = [...portfolioRows, ...platformRows]
     setPlatformItems((prev) => {
-      const merged = mergeFeedWithPriorRead(rows, prev)
       if (prev.length === 0) {
-        seedTrayNotifiedIds(merged.filter((x) => !x.read).map((x) => x.id))
+        seedTrayNotifiedIds(rows.map((x) => x.id))
       } else {
-        notifyBellFeedUpdates(prev, merged)
+        notifyBellFeedUpdates(prev, rows)
       }
-      return merged
+      return rows
     })
-  }, [usePlatformFeed, mergeFeedWithPriorRead, user?.user_type, uiT])
+  }, [usePlatformFeed, uiT, categoryFilter])
 
   const refreshPushState = useCallback(async () => {
     if (!pushNotificationsSupported()) {
@@ -251,18 +271,11 @@ export function NotificationBell({
 
   useEffect(() => {
     if (!open) return
-    void refreshPushState().then(() => {
-      if (!nativePushNotificationsSupported() || useLiveFeed) return
-      void getBrowserPushActive().then((active) => {
-        if (!active) return
-        notifyBellFeedUpdates([], mockItems)
-      })
-    })
-  }, [open, refreshPushState, useLiveFeed, mockItems])
+    void refreshPushState()
+  }, [open, refreshPushState])
 
   useEffect(() => {
     if (!open) {
-      setShowHistory(false)
       return
     }
     let cancelled = false
@@ -318,17 +331,23 @@ export function NotificationBell({
   useEffect(() => {
     if (!usePlatformFeed || !user) return
     void loadPlatformFeed()
-  }, [usePlatformFeed, user, loadPlatformFeed])
+    void loadUnreadCount()
+  }, [usePlatformFeed, user, loadPlatformFeed, loadUnreadCount])
 
   useEffect(() => {
     if (!useLiveFeed || !user) return
     const periodMs = open ? FEED_POLL_MS_PANEL_OPEN : FEED_POLL_MS_BACKGROUND
     const id = window.setInterval(() => {
-      void loadAdminFeed()
-      void loadPlatformFeed()
+      if (open) {
+        void loadAdminFeed()
+        void loadPlatformFeed()
+      } else {
+        void loadUnreadCount()
+        if (useAdminFeed) void loadAdminFeed()
+      }
     }, periodMs)
     return () => window.clearInterval(id)
-  }, [useLiveFeed, user, open, loadAdminFeed, loadPlatformFeed])
+  }, [useLiveFeed, user, open, loadAdminFeed, loadPlatformFeed, loadUnreadCount, useAdminFeed, usePlatformFeed])
 
   useEffect(() => {
     if (!useLiveFeed || !user) return
@@ -369,21 +388,6 @@ export function NotificationBell({
     void loadPlatformFeed()
   }, [open, usePlatformFeed, loadPlatformFeed])
 
-  useEffect(() => {
-    if (useAdminFeed || usePlatformFeed) return
-    if (user?.id != null) {
-      setMockItems(hydrateMockNotificationsForAccount(user.id, publicUi ? locale : undefined))
-    } else {
-      setMockItems(hydrateMockNotificationsForGuest(publicUi ? locale : undefined))
-    }
-  }, [useAdminFeed, usePlatformFeed, user?.id, publicUi, locale])
-
-  useEffect(() => {
-    if (useAdminFeed || usePlatformFeed) return
-    notifyBellFeedUpdates(prevMockItemsRef.current, mockItems)
-    prevMockItemsRef.current = mockItems
-  }, [useAdminFeed, usePlatformFeed, mockItems])
-
   const enablePush = useCallback(async () => {
     setPushBusy(true)
     setPushError('')
@@ -395,7 +399,7 @@ export function NotificationBell({
     } finally {
       setPushBusy(false)
     }
-  }, [useAdminFeed, usePlatformFeed, adminItems, platformItems, mockItems])
+  }, [])
 
   const sendAdminTestPush = useCallback(async () => {
     setPushTestBusy(true)
@@ -427,113 +431,85 @@ export function NotificationBell({
 
   const pushSupported = pushNotificationsSupported()
   const browserNotifPerm = browserNotificationPermission()
-  const mockAccountId = user?.id ?? null
-
-  const setItemsReadLocal = useCallback(
+  const removeItemsLocal = useCallback(
     (ids?: string[]) => {
       const markAll = ids == null
       const idSet = markAll ? null : new Set(ids)
       const apply = (prev: AppNotification[]) =>
-        prev.map((x) => (markAll || idSet?.has(x.id) ? { ...x, read: true } : x))
-      if (useAdminFeed) {
-        setAdminItems(apply)
-      } else if (usePlatformFeed) {
-        setPlatformItems(apply)
-      } else {
-        if (markAll) {
-          persistAllMockNotificationsRead(mockAccountId)
-        } else if (ids?.length) {
-          persistMockNotificationReadIds(mockAccountId, ids)
-        }
-        setMockItems(apply)
-      }
+        markAll ? [] : prev.filter((x) => !idSet?.has(x.id))
+      if (useAdminFeed) setAdminItems(apply)
+      else if (usePlatformFeed) setPlatformItems(apply)
     },
-    [useAdminFeed, usePlatformFeed, mockAccountId],
+    [useAdminFeed, usePlatformFeed],
   )
 
   const markAllRead = useCallback(async () => {
     if (useAdminFeed) {
-      setItemsReadLocal()
+      removeItemsLocal()
       const res = await authFetch('/api/v1/admin/notifications/mark-read/', {
         method: 'POST',
         jsonBody: { all: true },
       })
       if (!res.ok) {
         const body = (await res.json().catch(() => ({}))) as { detail?: string }
-        setAdminFeedError(body.detail ?? `Could not mark read (${res.status}).`)
+        setAdminFeedError(body.detail ?? `Could not clear alerts (${res.status}).`)
         await loadAdminFeed()
         return
       }
-      setShowHistory(false)
       await loadAdminFeed()
       return
     }
     if (usePlatformFeed) {
-      setItemsReadLocal()
-      const res = await authFetch('/api/v1/notifications/mark-read/', {
+      removeItemsLocal()
+      const res = await authFetch('/api/v1/inbox/ack/', {
         method: 'POST',
         jsonBody: { all: true },
       })
       if (!res.ok) {
         const body = (await res.json().catch(() => ({}))) as { detail?: string }
-        setPlatformFeedError(body.detail ?? `Could not mark read (${res.status}).`)
+        setPlatformFeedError(body.detail ?? `Could not clear alerts (${res.status}).`)
         await loadPlatformFeed()
         return
       }
-      setShowHistory(false)
       await loadPlatformFeed()
-      return
     }
-    setItemsReadLocal()
-    setShowHistory(false)
-  }, [useAdminFeed, usePlatformFeed, loadAdminFeed, loadPlatformFeed, setItemsReadLocal])
+  }, [useAdminFeed, usePlatformFeed, loadAdminFeed, loadPlatformFeed, removeItemsLocal])
 
   const onFeedItemActivate = useCallback(
     async (n: AppNotification) => {
-      if (!useLiveFeed) {
-        if (!n.read) {
-          setItemsReadLocal([n.id])
-        }
-        return
-      }
-      if (!n.read) {
-        setItemsReadLocal([n.id])
-      }
-      const portfolioMatch = /^portfolio-(\d+)$/.exec(n.id)
-      const adminMatch = /^admin-(\d+)$/.exec(n.id)
-      const legacyId = Number.parseInt(n.id, 10)
-      const nid = adminMatch ? Number.parseInt(adminMatch[1], 10) : legacyId
-      if (portfolioMatch) {
-        const pid = Number.parseInt(portfolioMatch[1], 10)
-        if (!Number.isNaN(pid)) {
-          await authFetch('/api/v1/portfolio/notifications/mark-read/', {
-            method: 'POST',
-            jsonBody: { notification_ids: [pid] },
-          })
-        }
-      } else if (!Number.isNaN(nid)) {
-        const url = useAdminFeed
-          ? '/api/v1/admin/notifications/mark-read/'
-          : '/api/v1/notifications/mark-read/'
-        const res = await authFetch(url, {
+      if (!useLiveFeed) return
+      removeItemsLocal([n.id])
+      if (usePlatformFeed) {
+        const res = await authFetch('/api/v1/inbox/ack/', {
           method: 'POST',
-          jsonBody: { notification_ids: [nid] },
+          jsonBody: { notification_ids: [n.id] },
         })
         if (!res.ok) {
           const body = (await res.json().catch(() => ({}))) as { detail?: string }
-          const msg = body.detail ?? `Could not mark read (${res.status}).`
-          if (useAdminFeed) setAdminFeedError(msg)
-          else setPlatformFeedError(msg)
+          setPlatformFeedError(body.detail ?? `Could not clear alert (${res.status}).`)
+          await loadPlatformFeed()
         }
+      } else {
+        const adminMatch = /^admin-(\d+)$/.exec(n.id)
+        const nid = adminMatch ? Number.parseInt(adminMatch[1], 10) : NaN
+        if (!Number.isNaN(nid)) {
+          const res = await authFetch('/api/v1/admin/notifications/mark-read/', {
+            method: 'POST',
+            jsonBody: { notification_ids: [nid] },
+          })
+          if (!res.ok) {
+            const body = (await res.json().catch(() => ({}))) as { detail?: string }
+            setAdminFeedError(body.detail ?? `Could not clear alert (${res.status}).`)
+          }
+        }
+        await loadAdminFeed()
       }
-      if (useAdminFeed) await loadAdminFeed()
-      else if (usePlatformFeed) await loadPlatformFeed()
       if (n.link_path) {
         navigate(n.link_path)
         setOpen(false)
       }
     },
-    [navigate, useLiveFeed, useAdminFeed, loadAdminFeed, loadPlatformFeed, setItemsReadLocal, user?.id],
+    [navigate, useLiveFeed, useAdminFeed, usePlatformFeed, loadAdminFeed, loadPlatformFeed, removeItemsLocal],
   )
 
   const hintPrimary = useAdminFeed ? (
@@ -549,11 +525,12 @@ export function NotificationBell({
     pushServerReady === false ? (
       <strong>Tray alerts unavailable</strong>
     ) : null
+  ) : !user ? (
+    publicUi
+      ? t('notifications.signInForAlerts')
+      : 'Sign in to see your alerts, or enable push for gold rate updates on the public site.'
   ) : pushServerReady === false ? (
-    <>
-      <strong>{publicUi ? t('notifications.unavailable') : 'Unavailable on this deployment.'}</strong>{' '}
-      {publicUi ? t('notifications.previewOnly') : 'Sample alerts below are for UI preview only.'}
-    </>
+    <strong>{publicUi ? t('notifications.unavailable') : 'Push alerts unavailable on this deployment.'}</strong>
   ) : null
 
   const showPushEnableToggle =
@@ -592,15 +569,30 @@ export function NotificationBell({
               </span>
             </button>
           ) : null}
-          {(useLiveFeed || user?.id != null) && unread > 0 ? (
+          {useLiveFeed && unread > 0 ? (
             <button type="button" className="btn btn-ghost notif-panel-clear" onClick={() => void markAllRead()}>
-              {publicUi ? t('notifications.markRead') : 'Mark read'}
+              {publicUi ? t('notifications.markRead') : 'Clear all'}
             </button>
           ) : null}
         </div>
       </div>
       {setupHint ? <p className="notif-panel-hint notif-panel-hint--setup">{setupHint}</p> : null}
       {hintPrimary ? <p className="notif-panel-hint">{hintPrimary}</p> : null}
+      {usePlatformFeed ? (
+        <div className="notif-category-chips" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginTop: '0.5rem' }}>
+          {(['', 'portfolio', 'transaction', 'security', 'promo'] as InboxCategoryFilter[]).map((c) => (
+            <button
+              key={c || 'all'}
+              type="button"
+              className={`btn btn-ghost notif-panel-clear${categoryFilter === c ? ' notif-chip--active' : ''}`}
+              style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem' }}
+              onClick={() => setCategoryFilter(c)}
+            >
+              {c === '' ? 'All' : c === 'promo' ? 'Offers' : c.charAt(0).toUpperCase() + c.slice(1)}
+            </button>
+          ))}
+        </div>
+      ) : null}
       {showPushBlockedHint ? (
         <p className="notif-panel-hint">
           {publicUi ? t('notifications.blocked') : 'Notifications blocked — allow them in your browser or system settings.'}
@@ -627,21 +619,7 @@ export function NotificationBell({
       ) : null}
       {displayItems.length === 0 ? (
         <p className="notif-panel-hint" style={{ marginTop: '0.75rem' }}>
-          {items.length === 0
-            ? usePlatformFeed
-              ? publicUi
-                ? t('notifications.noBroadcasts')
-                : 'No broadcasts yet. After an admin sends one, it will show here.'
-              : publicUi
-                ? t('notifications.noAlerts')
-                : 'No alerts yet.'
-            : showHistory
-              ? publicUi
-                ? t('notifications.noMatch')
-                : 'No alerts match this view.'
-              : publicUi
-                ? t('notifications.allCaughtUp')
-                : "You're all caught up — nothing unread."}
+          {publicUi ? t('notifications.allCaughtUp') : "You're all caught up."}
         </p>
       ) : null}
       <ul className="notif-list">
@@ -670,7 +648,7 @@ export function NotificationBell({
             <li key={n.id}>
               <button
                 type="button"
-                className={`notif-item-btn${n.read ? '' : ' notif-item-btn--unread'}`}
+                className={`notif-item-btn${n.read ? '' : ' notif-item-btn--unread'}${priorityClass(n.priority)}`}
                 onClick={() => void onFeedItemActivate(n)}
               >
                 <span className={kindClass(n.kind)}>{n.kind}</span>
@@ -690,12 +668,19 @@ export function NotificationBell({
           ),
         )}
       </ul>
-      {readCount > 0 ? (
-        <div className="notif-panel-hint" style={{ marginTop: '0.5rem' }}>
-          <button type="button" className="btn btn-ghost notif-panel-clear" onClick={() => setShowHistory((h) => !h)}>
-            {showHistory ? 'Show unread only' : `Past alerts (${readCount})`}
+      {settingsPath && user && localeScope === 'dashboard' ? (
+        <p className="notif-panel-hint" style={{ marginTop: '0.75rem' }}>
+          <button
+            type="button"
+            className="btn btn-ghost notif-panel-clear"
+            onClick={() => {
+              navigate(settingsPath)
+              setOpen(false)
+            }}
+          >
+            Notification settings
           </button>
-        </div>
+        </p>
       ) : null}
     </>
   )

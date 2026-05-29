@@ -150,6 +150,16 @@ from .views_festival_broadcast import (
     AdminFestivalBroadcastCancelView,
     AdminFestivalBroadcastListCreateView,
 )
+from .views_notification_admin import (
+    AdminNotificationStatsView,
+    AdminNotificationTemplatesView,
+)
+from .views_inbox import (
+    InboxAckView,
+    InboxNotificationsListView,
+    InboxPreferencesView,
+    InboxUnreadCountView,
+)
 from .views_platform_notifications import (
     PlatformNotificationsListView,
     PlatformNotificationsMarkReadView,
@@ -243,6 +253,8 @@ urlpatterns = [
         "admin/personal-holdings/<int:holding_pk>/documents/<int:doc_pk>/remove/",
         AdminPersonalDocumentRemoveView.as_view(),
     ),
+    path("admin/notification-templates/", AdminNotificationTemplatesView.as_view()),
+    path("admin/notification-stats/", AdminNotificationStatsView.as_view()),
     path("admin/festival-broadcasts/", AdminFestivalBroadcastListCreateView.as_view()),
     path(
         "admin/festival-broadcasts/<int:pk>/cancel/",
@@ -254,6 +266,10 @@ urlpatterns = [
     path("push/native-status/", NativePushStatusView.as_view()),
     path("push/native-subscribe/", NativePushSubscribeView.as_view()),
     path("push/native-unsubscribe/", NativePushUnsubscribeView.as_view()),
+    path("inbox/", InboxNotificationsListView.as_view()),
+    path("inbox/unread-count/", InboxUnreadCountView.as_view()),
+    path("inbox/ack/", InboxAckView.as_view()),
+    path("inbox/preferences/", InboxPreferencesView.as_view()),
     path("notifications/", PlatformNotificationsListView.as_view()),
     path("notifications/mark-read/", PlatformNotificationsMarkReadView.as_view()),
     path("admin/push/test/", WebPushAdminSelfTestView.as_view()),

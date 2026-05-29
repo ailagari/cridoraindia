@@ -104,6 +104,22 @@ class GoldTickerConfig(models.Model):
         default="",
         help_text="Optional image URL shown on automated gold price alerts (HTTPS recommended).",
     )
+    portfolio_gain_threshold_inr = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        default=Decimal("500"),
+        help_text="Notify customers when portfolio value gain vs cost basis exceeds this ₹ amount.",
+    )
+    portfolio_gain_threshold_percent = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        default=Decimal("2"),
+        help_text="Or when gain percentage exceeds this value (whichever triggers first).",
+    )
+    enable_fun_notifications = models.BooleanField(
+        default=False,
+        help_text="Allow occasional fun/time-of-day notification copy (max 1/day per user).",
+    )
     gold_deposit_yield_apr_percent = models.DecimalField(
         max_digits=8,
         decimal_places=3,
@@ -629,6 +645,36 @@ class MarketplaceProduct(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class GoldRateHistory(models.Model):
+    """Jeweller manual gold rate changes for customer notifications."""
+
+    jeweller = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="gold_rate_history",
+        limit_choices_to={"user_type": "jeweller"},
+    )
+    previous_rate = models.DecimalField(max_digits=12, decimal_places=2)
+    new_rate = models.DecimalField(max_digits=12, decimal_places=2)
+    difference = models.DecimalField(max_digits=12, decimal_places=2)
+    difference_percentage = models.DecimalField(max_digits=8, decimal_places=2, default=Decimal("0"))
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+    )
+    effective_from = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"GoldRateHistory(j={self.jeweller_id}, {self.previous_rate}->{self.new_rate})"
 
 
 def get_or_create_ticker() -> GoldTickerConfig:

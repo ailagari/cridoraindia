@@ -508,7 +508,11 @@ class FestivalBroadcastNotificationSerializer(serializers.ModelSerializer):
             "title",
             "body",
             "image_url",
+            "logo_url",
             "scheduled_at",
+            "expires_at",
+            "target_type",
+            "target_metadata",
             "status",
             "sent_at",
             "push_recipient_count",
@@ -525,19 +529,36 @@ class FestivalBroadcastNotificationCreateSerializer(serializers.Serializer):
     )
     body = serializers.CharField(max_length=2000, min_length=1)
     image_url = serializers.URLField(required=False, allow_blank=True, max_length=512)
+    logo_url = serializers.URLField(required=False, allow_blank=True, max_length=512)
     scheduled_at = serializers.DateTimeField()
+    expires_at = serializers.DateTimeField(required=False, allow_null=True)
+    target_type = serializers.ChoiceField(
+        choices=FestivalBroadcastNotification.TARGET_CHOICES,
+        required=False,
+        default=FestivalBroadcastNotification.TARGET_ALL_USERS,
+    )
+    target_metadata = serializers.JSONField(required=False, default=dict)
 
     def create(self, validated_data):
         request = self.context["request"]
         title = (validated_data.get("title") or "").strip() or "Cridora"
         body = validated_data["body"].strip()
         image_url = (validated_data.get("image_url") or "").strip()
+        logo_url = (validated_data.get("logo_url") or "").strip()
         scheduled_at = validated_data["scheduled_at"]
+        meta = validated_data.get("target_metadata") or {}
+        if not isinstance(meta, dict):
+            meta = {}
         return FestivalBroadcastNotification.objects.create(
             title=title,
             body=body,
             image_url=image_url,
+            logo_url=logo_url,
             scheduled_at=scheduled_at,
+            expires_at=validated_data.get("expires_at"),
+            target_type=validated_data.get("target_type")
+            or FestivalBroadcastNotification.TARGET_ALL_USERS,
+            target_metadata=meta,
             created_by=request.user,
         )
 

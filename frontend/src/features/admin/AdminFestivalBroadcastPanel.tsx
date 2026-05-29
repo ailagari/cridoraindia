@@ -44,12 +44,18 @@ function fmtWhen(iso: string): string {
   return new Date(t).toLocaleString()
 }
 
-export function AdminFestivalBroadcastPanel() {
+type HubTab = 'campaigns' | 'gold'
+
+export function AdminFestivalBroadcastPanel({ tab }: { tab?: HubTab }) {
+  const showGold = tab == null || tab === 'gold'
+  const showCampaigns = tab == null || tab === 'campaigns'
   const [rows, setRows] = useState<FestivalRow[]>([])
   const [loadErr, setLoadErr] = useState('')
   const [title, setTitle] = useState('Cridora')
   const [body, setBody] = useState('')
   const [festImageUrl, setFestImageUrl] = useState('')
+  const [targetType, setTargetType] = useState('ALL_USERS')
+  const [targetJewellerId, setTargetJewellerId] = useState('')
   const [scheduledLocal, setScheduledLocal] = useState('')
   const [saveErr, setSaveErr] = useState('')
   const [busy, setBusy] = useState(false)
@@ -174,6 +180,13 @@ export function AdminFestivalBroadcastPanel() {
     }
     setBusy(true)
     try {
+      const meta: Record<string, unknown> = {}
+      if (
+        (targetType === 'DEFAULT_JEWELLER_USERS' || targetType === 'SPECIFIC_JEWELLER_USERS') &&
+        targetJewellerId.trim()
+      ) {
+        meta.jeweller_id = Number.parseInt(targetJewellerId.trim(), 10)
+      }
       const res = await authFetch('/api/v1/admin/festival-broadcasts/', {
         method: 'POST',
         jsonBody: {
@@ -181,6 +194,8 @@ export function AdminFestivalBroadcastPanel() {
           body: b,
           image_url: festImageUrl.trim(),
           scheduled_at: when.toISOString(),
+          target_type: targetType,
+          target_metadata: meta,
         },
       })
       const data = (await res.json().catch(() => ({}))) as { detail?: string }
@@ -217,13 +232,19 @@ export function AdminFestivalBroadcastPanel() {
 
   return (
     <div className="dash-panel-max">
-      <h2 className="dash-table-title">Pushes &amp; alerts</h2>
-      <p className="dash-footnote" style={{ marginBottom: '1.25rem', maxWidth: 720 }}>
-        Manage automated gold-rate alerts and scheduled festival broadcasts. All pushes go to devices that tapped{' '}
-        <strong>Enable</strong> in the notification bell (Web Push + Android FCM). Reference price is the same public{' '}
-        <strong>22K</strong> rate shown on the homepage ticker.
-      </p>
+      {tab == null ? (
+        <>
+          <h2 className="dash-table-title">Pushes &amp; alerts</h2>
+          <p className="dash-footnote" style={{ marginBottom: '1.25rem', maxWidth: 720 }}>
+            Manage automated gold-rate alerts and scheduled festival broadcasts. All pushes go to devices that tapped{' '}
+            <strong>Enable</strong> in the notification bell (Web Push + Android FCM). Reference price is the same public{' '}
+            <strong>22K</strong> rate shown on the homepage ticker.
+          </p>
+        </>
+      ) : null}
 
+      {showGold ? (
+        <>
       <h3 className="dash-table-title" style={{ fontSize: '1.05rem' }}>
         Automated gold alerts
       </h3>
@@ -325,7 +346,11 @@ export function AdminFestivalBroadcastPanel() {
           {goldBusy ? 'Saving…' : 'Save gold alert settings'}
         </button>
       </div>
+        </>
+      ) : null}
 
+      {showCampaigns ? (
+        <>
       <h3 className="dash-table-title" style={{ fontSize: '1.05rem' }}>
         Festival &amp; manual broadcasts
       </h3>
@@ -348,6 +373,33 @@ export function AdminFestivalBroadcastPanel() {
             maxLength={120}
           />
         </div>
+        <div className="field">
+          <label htmlFor="fest-target">Audience</label>
+          <select
+            id="fest-target"
+            value={targetType}
+            disabled={busy}
+            onChange={(e) => setTargetType(e.target.value)}
+          >
+            <option value="ALL_USERS">All customers</option>
+            <option value="ALL_APP_INSTALLS">All push subscribers</option>
+            <option value="DEFAULT_JEWELLER_USERS">Default jeweller customers</option>
+            <option value="SPECIFIC_JEWELLER_USERS">Jeweller customers (purchases)</option>
+          </select>
+        </div>
+        {(targetType === 'DEFAULT_JEWELLER_USERS' || targetType === 'SPECIFIC_JEWELLER_USERS') ? (
+          <div className="field">
+            <label htmlFor="fest-jeweller-id">Jeweller user ID</label>
+            <input
+              id="fest-jeweller-id"
+              type="number"
+              value={targetJewellerId}
+              disabled={busy}
+              onChange={(e) => setTargetJewellerId(e.target.value)}
+              placeholder="Numeric jeweller account ID"
+            />
+          </div>
+        ) : null}
         <div className="field">
           <label htmlFor="fest-body">Message</label>
           <textarea
@@ -447,6 +499,8 @@ export function AdminFestivalBroadcastPanel() {
           </tbody>
         </table>
       </div>
+        </>
+      ) : null}
     </div>
   )
 }

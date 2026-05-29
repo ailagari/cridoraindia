@@ -13,10 +13,8 @@ from apps.accounts.models import (
     GoldSellbackRequest,
     PortfolioUserNotification,
 )
-from apps.accounts.push_payload import build_push_payload
-from apps.accounts.services.portfolio_user_notify import create_portfolio_notification
+from apps.accounts.services.inbox_notify import notify_inbox
 from apps.accounts.services.push_deep_links import customer_dashboard, jeweller_dashboard
-from apps.accounts.webpush_service import push_delivery_configured, send_push_to_user
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -41,24 +39,23 @@ def notify_user_activity(
     tag: str,
     kind: str = PortfolioUserNotification.KIND_VERIFICATION_UPDATED,
     image_url: str | None = None,
-) -> int:
-    """In-app portfolio feed row (customers) + push to this user's devices only."""
-    if user.user_type == User.CUSTOMER:
-        create_portfolio_notification(
-            user=user,
-            kind=kind,
-            title=title,
-            body=body,
-            link_path=link_path,
-            send_push=False,
-        )
-    return notify_user_push(
+    category: str = PortfolioUserNotification.CATEGORY_TRANSACTION,
+    priority: str = PortfolioUserNotification.PRIORITY_MEDIUM,
+    jeweller_id: int | None = None,
+) -> PortfolioUserNotification:
+    """In-app inbox row for any role + push."""
+    return notify_inbox(
         user,
+        kind=kind,
         title=title,
         body=body,
-        url=link_path,
-        tag=tag,
+        link_path=link_path,
+        category=category,
+        priority=priority,
+        send_push=True,
         image_url=image_url,
+        jeweller_id=jeweller_id,
+        tag=tag,
     )
 
 
@@ -70,18 +67,23 @@ def notify_user_push(
     url: str,
     tag: str,
     image_url: str | None = None,
-) -> int:
-    if not push_delivery_configured():
-        return 0
+    kind: str = PortfolioUserNotification.KIND_SYSTEM,
+    category: str = PortfolioUserNotification.CATEGORY_TRANSACTION,
+    priority: str = PortfolioUserNotification.PRIORITY_HIGH,
+) -> PortfolioUserNotification:
     path = url if url.startswith("/") else f"/{url}" if url else "/"
-    try:
-        return send_push_to_user(
-            user,
-            build_push_payload(title=title, body=body, url=path, tag=tag, image_url=image_url),
-        )
-    except Exception:
-        logger.exception("notify_user_push failed user_id=%s tag=%s", user.pk, tag)
-        return 0
+    return notify_inbox(
+        user,
+        kind=kind,
+        title=title,
+        body=body,
+        link_path=path,
+        category=category,
+        priority=priority,
+        send_push=True,
+        image_url=image_url,
+        tag=tag,
+    )
 
 
 # --- OTP workflow (never include OTP digits in push body) ---
@@ -97,6 +99,8 @@ def notify_fractional_counter_otp_issued(purchase: FractionalGoldPurchase) -> No
         body=f"{_display_name(customer)} generated a verification code for {grams_s} g — open Purchases to enter it.",
         url=jeweller_dashboard("txn_purchases"),
         tag=f"otp-frac-j-{purchase.pk}",
+        kind=PortfolioUserNotification.KIND_OTP,
+        category=PortfolioUserNotification.CATEGORY_SECURITY,
     )
     notify_user_activity(
         customer,
@@ -104,6 +108,8 @@ def notify_fractional_counter_otp_issued(purchase: FractionalGoldPurchase) -> No
         body=f"Show your code to {jeweller.business_name or 'the jeweller'} after paying {grams_s} g at the counter.",
         link_path=customer_dashboard("invest_fractional"),
         tag=f"otp-frac-c-{purchase.pk}",
+        kind=PortfolioUserNotification.KIND_OTP,
+        category=PortfolioUserNotification.CATEGORY_SECURITY,
     )
 
 
@@ -115,6 +121,7 @@ def notify_gold_deposit_intake_created(intake: GoldDepositIntake) -> None:
         body=f"{intake.jeweller.business_name or 'Your jeweller'} logged {grams_s} g. Generate your OTP in the app to complete the deposit.",
         link_path=customer_dashboard("invest_deposit"),
         tag=f"otp-dep-intake-c-{intake.pk}",
+        kind=PortfolioUserNotification.KIND_DEPOSIT,
     )
 
 
@@ -126,6 +133,8 @@ def notify_gold_deposit_counter_otp_issued(intake: GoldDepositIntake) -> None:
         body=f"{_display_name(intake.customer)} shared a verification code for {grams_s} g deposit — open Deposits to verify.",
         url=jeweller_dashboard("txn_deposits"),
         tag=f"otp-dep-j-{intake.pk}",
+        kind=PortfolioUserNotification.KIND_OTP,
+        category=PortfolioUserNotification.CATEGORY_SECURITY,
     )
     notify_user_activity(
         intake.customer,
@@ -133,6 +142,8 @@ def notify_gold_deposit_counter_otp_issued(intake: GoldDepositIntake) -> None:
         body="Show your code to the jeweller. Open Deposits if you need to view it again.",
         link_path=customer_dashboard("invest_deposit"),
         tag=f"otp-dep-c-ready-{intake.pk}",
+        kind=PortfolioUserNotification.KIND_OTP,
+        category=PortfolioUserNotification.CATEGORY_SECURITY,
     )
 
 
@@ -144,6 +155,7 @@ def notify_sellback_pending_jeweller(row: GoldSellbackRequest) -> None:
         body=f"{_display_name(row.customer)} requested cash sellback for {grams_s} g — review in Redemption.",
         url=jeweller_dashboard("txn_ops"),
         tag=f"sellback-pending-j-{row.pk}",
+        kind=PortfolioUserNotification.KIND_SELLBACK,
     )
 
 
@@ -154,6 +166,8 @@ def notify_sellback_awaiting_otp_customer(row: GoldSellbackRequest) -> None:
         body="Jeweller accepted your sellback. Open Cash sell and share your OTP after you receive payment.",
         link_path=customer_dashboard("redeem_cash"),
         tag=f"sellback-otp-c-{row.pk}",
+        kind=PortfolioUserNotification.KIND_OTP,
+        category=PortfolioUserNotification.CATEGORY_SECURITY,
     )
 
 
@@ -169,6 +183,8 @@ def notify_loan_pending_jeweller(row) -> None:
         body=f"{_display_name(row.customer)} requested a loan on {grams_s} g collateral — review in Redemption.",
         url=jeweller_dashboard("txn_ops"),
         tag=f"loan-pending-j-{row.pk}",
+        kind=PortfolioUserNotification.KIND_LOAN,
+        category=PortfolioUserNotification.CATEGORY_LOAN,
     )
 
 
@@ -183,6 +199,8 @@ def notify_loan_awaiting_otp_customer(row) -> None:
         body="Jeweller accepted your loan. Open Loan and share your OTP after you receive cash.",
         link_path=customer_dashboard("redeem_loan"),
         tag=f"loan-otp-c-{row.pk}",
+        kind=PortfolioUserNotification.KIND_OTP,
+        category=PortfolioUserNotification.CATEGORY_SECURITY,
     )
 
 
@@ -201,6 +219,8 @@ def notify_loan_repayment_pending_jeweller(req) -> None:
         ),
         url=jeweller_dashboard("txn_ops"),
         tag=f"loan-repay-pending-j-{req.pk}",
+        kind=PortfolioUserNotification.KIND_LOAN,
+        category=PortfolioUserNotification.CATEGORY_LOAN,
     )
 
 
@@ -215,6 +235,8 @@ def notify_loan_repayment_awaiting_otp_customer(req) -> None:
         body="Jeweller accepted your repayment. Pay cash at the counter, then share your OTP.",
         link_path=customer_dashboard("redeem_loan"),
         tag=f"loan-repay-otp-c-{req.pk}",
+        kind=PortfolioUserNotification.KIND_OTP,
+        category=PortfolioUserNotification.CATEGORY_SECURITY,
     )
 
 
@@ -230,6 +252,7 @@ def notify_cross_redemption_pending_source(req) -> None:
         body=f"Customer needs {grams_s} g moved to {req.destination_jeweller.business_name or 'destination'} — open Redemption inbox.",
         url=jeweller_dashboard("txn_ops"),
         tag=f"cr-src-j-{req.pk}",
+        kind=PortfolioUserNotification.KIND_CROSS_REDEMPTION,
     )
     notify_user_push(
         req.destination_jeweller,
@@ -237,6 +260,7 @@ def notify_cross_redemption_pending_source(req) -> None:
         body=f"{grams_s} g cross-shop request pending source approval — track in Redemption inbox.",
         url=jeweller_dashboard("txn_ops"),
         tag=f"cr-dst-j-{req.pk}",
+        kind=PortfolioUserNotification.KIND_CROSS_REDEMPTION,
     )
     notify_user_activity(
         req.user,
@@ -244,28 +268,34 @@ def notify_cross_redemption_pending_source(req) -> None:
         body=f"Request {req.public_reference or req.pk} is awaiting source jeweller approval.",
         link_path=customer_dashboard("redeem_emergency"),
         tag=f"cr-c-{req.pk}",
+        kind=PortfolioUserNotification.KIND_CROSS_REDEMPTION,
     )
 
 
 def notify_fractional_purchase_completed(purchase: FractionalGoldPurchase) -> None:
     grams_s = _format_grams(purchase.grams)
-    create_portfolio_notification(
-        user=purchase.customer,
+    notify_inbox(
+        purchase.customer,
         kind=PortfolioUserNotification.KIND_HOLDING_ADDED,
         title="Fractional gold credited",
         body=f"{grams_s} g added to your vault at {purchase.jeweller.business_name or 'your jeweller'}.",
         link_path=customer_dashboard("portfolio_holdings"),
+        category=PortfolioUserNotification.CATEGORY_PORTFOLIO,
+        jeweller_id=purchase.jeweller_id,
+        tag=f"frac-done-c-{purchase.pk}",
     )
 
 
 def notify_gold_deposit_completed(intake: GoldDepositIntake) -> None:
     grams_s = _format_grams(intake.grams)
-    create_portfolio_notification(
-        user=intake.customer,
+    notify_inbox(
+        intake.customer,
         kind=PortfolioUserNotification.KIND_HOLDING_ADDED,
         title="Gold deposit credited",
         body=f"{grams_s} g deposit vault credit is complete.",
         link_path=customer_dashboard("portfolio_holdings"),
+        category=PortfolioUserNotification.CATEGORY_PORTFOLIO,
+        tag=f"dep-done-c-{intake.pk}",
     )
 
 
@@ -277,6 +307,8 @@ def notify_corridorapay_bill_created(bill: CridoraPayBill) -> None:
         body=f"{bill.jeweller.business_name or 'A jeweller'} sent a bill for ₹{total} — confirm and pay in CridoraPay.",
         link_path=customer_dashboard("invest_cridorapay"),
         tag=f"cp-bill-c-{bill.pk}",
+        kind=PortfolioUserNotification.KIND_CORRIDORAPAY,
+        jeweller_id=bill.jeweller_id,
     )
 
 
@@ -290,6 +322,10 @@ def notify_corridorapay_customer_reminder(bill: CridoraPayBill) -> None:
         ),
         link_path=customer_dashboard("invest_cridorapay"),
         tag=f"cp-remind-c-{bill.pk}",
+        kind=PortfolioUserNotification.KIND_CORRIDORAPAY,
+        category=PortfolioUserNotification.CATEGORY_PROMO,
+        priority=PortfolioUserNotification.PRIORITY_LOW,
+        jeweller_id=bill.jeweller_id,
     )
 
 
@@ -300,6 +336,7 @@ def notify_corridorapay_upi_selected(bill: CridoraPayBill) -> None:
         body=f"{_display_name(bill.customer)} will pay {bill.reference} (₹{bill.total_inr}) outside the app — mark paid when received.",
         url=jeweller_dashboard("txn_cridorapay"),
         tag=f"cp-upi-j-{bill.pk}",
+        kind=PortfolioUserNotification.KIND_CORRIDORAPAY,
     )
 
 
@@ -310,6 +347,7 @@ def notify_corridorapay_vault_selected(bill: CridoraPayBill) -> None:
         body=f"{_display_name(bill.customer)} chose vault for {bill.reference}. Enter their OTP when ready.",
         url=jeweller_dashboard("txn_cridorapay"),
         tag=f"cp-vault-j-{bill.pk}",
+        kind=PortfolioUserNotification.KIND_CORRIDORAPAY,
     )
 
 
@@ -320,6 +358,8 @@ def notify_corridorapay_otp_issued(bill: CridoraPayBill) -> None:
         body=f"{_display_name(bill.customer)} generated a vault OTP for {bill.reference}.",
         url=jeweller_dashboard("txn_cridorapay"),
         tag=f"cp-otp-j-{bill.pk}",
+        kind=PortfolioUserNotification.KIND_OTP,
+        category=PortfolioUserNotification.CATEGORY_SECURITY,
     )
 
 
@@ -331,6 +371,7 @@ def notify_corridorapay_cash_pending(bill: CridoraPayBill) -> None:
         body=f"Vault applied for {bill.reference}. Pay ₹{cash} at the shop to complete.",
         link_path=customer_dashboard("invest_cridorapay"),
         tag=f"cp-cash-c-{bill.pk}",
+        kind=PortfolioUserNotification.KIND_CORRIDORAPAY,
     )
     notify_user_push(
         bill.jeweller,
@@ -338,6 +379,7 @@ def notify_corridorapay_cash_pending(bill: CridoraPayBill) -> None:
         body=f"Vault debited for {bill.reference}. Collect ₹{cash} from {_display_name(bill.customer)}.",
         url=jeweller_dashboard("txn_cridorapay"),
         tag=f"cp-cash-j-{bill.pk}",
+        kind=PortfolioUserNotification.KIND_CORRIDORAPAY,
     )
 
 
@@ -350,4 +392,6 @@ def notify_corridorapay_completed(bill: CridoraPayBill) -> None:
         link_path=customer_dashboard("portfolio_overview", portfolio_tab="personal"),
         tag=f"cp-done-c-{bill.pk}",
         kind=PortfolioUserNotification.KIND_JEWELLER_ADDED_HOLDING,
+        category=PortfolioUserNotification.CATEGORY_PORTFOLIO,
+        jeweller_id=bill.jeweller_id,
     )

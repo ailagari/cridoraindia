@@ -222,10 +222,25 @@ class JewellerPricingProfileView(APIView):
         if err:
             return err
         profile = jeweller_profile_for(request.user)
+        prev_manual = (
+            profile.manual_gold_rate_inr_per_gram
+            if profile.gold_rate_source == profile.GOLD_RATE_MANUAL
+            else None
+        )
         ser = JewellerPricingProfileSerializer(profile, data=request.data, partial=True)
         if not ser.is_valid():
             return Response(ser.errors, status=status.HTTP_400_BAD_REQUEST)
         ser.save()
+        profile.refresh_from_db()
+        if profile.gold_rate_source == profile.GOLD_RATE_MANUAL and profile.manual_gold_rate_inr_per_gram:
+            from .jeweller_gold_rate_notify import maybe_notify_jeweller_gold_rate_change
+
+            maybe_notify_jeweller_gold_rate_change(
+                profile,
+                previous_rate=prev_manual,
+                new_rate=profile.manual_gold_rate_inr_per_gram,
+                updated_by=request.user,
+            )
         return Response(JewellerPricingProfileSerializer(profile).data)
 
 

@@ -7,9 +7,15 @@ from django.db import transaction
 from django.db.models import Count
 from django.utils import timezone
 
+from django.contrib.auth import get_user_model
+
 from apps.accounts.models import AdminNotification, FestivalBroadcastNotification, WebPushSubscription
 from apps.accounts.push_payload import build_push_payload
-from apps.accounts.webpush_service import send_push_broadcast
+from apps.accounts.services.campaign_audience import resolve_campaign_user_ids
+from apps.accounts.services.notification_preferences import get_or_create_preferences, should_send_push
+from apps.accounts.webpush_service import send_push_broadcast, send_push_to_user
+
+User = get_user_model()
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +24,23 @@ MAX_RETAINED_FESTIVAL_FEED_ROWS = 3
 
 _ZERO_DEVICE_SUFFIX = "Sent to 0 devices — check VAPID env vars and user subscriptions."
 _SENT_COUNT_SUFFIX_RE = re.compile(r"(?:\r?\n){2}Sent to \d+ subscribed device\(s\)\.\s*\Z")
+
+
+def _deliver_campaign_push(row: FestivalBroadcastNotification, payload: dict) -> int:
+    if row.target_type == FestivalBroadcastNotification.TARGET_ALL_APP_INSTALLS:
+        return send_push_broadcast(payload)
+
+    total = 0
+    for uid in resolve_campaign_user_ids(row.target_type, row.target_metadata):
+        user = User.objects.filter(pk=uid, is_active=True).first()
+        if user is None:
+            continue
+        pref = get_or_create_preferences(user)
+        if not pref.allow_festival_alerts and not pref.allow_promotional:
+            continue
+        if should_send_push(user, category="promo", priority="low"):
+            total += send_push_to_user(user, payload)
+    return total
 
 
 def strip_festival_broadcast_feed_body(text: str) -> str:
@@ -120,15 +143,14 @@ def process_due_festival_broadcasts(*, limit: int = 50) -> int:
                         "festival_broadcast id=%s subscription stats log failed; continuing send",
                         row.pk,
                     )
-                n = send_push_broadcast(
-                    build_push_payload(
-                        title=row.title.strip() or "Cridora",
-                        body=row.body.strip(),
-                        url="/",
-                        tag=f"cridora-festival-{row.pk}",
-                        image_url=(row.image_url or "").strip() or None,
-                    )
+                payload = build_push_payload(
+                    title=row.title.strip() or "Cridora",
+                    body=row.body.strip(),
+                    url="/",
+                    tag=f"cridora-festival-{row.pk}",
+                    image_url=(row.image_url or "").strip() or (row.logo_url or "").strip() or None,
                 )
+                n = _deliver_campaign_push(row, payload)
                 row.status = FestivalBroadcastNotification.STATUS_SENT
                 row.sent_at = now
                 row.push_recipient_count = n

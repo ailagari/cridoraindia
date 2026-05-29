@@ -478,47 +478,50 @@ class AdminNotificationsListView(APIView):
             limit = 40
         limit = max(1, min(limit, 100))
 
+        from apps.accounts.services.notification_ack import admin_compliance_unread_queryset
+
         process_due_festival_broadcasts()
 
-        rows = list(AdminNotification.objects.all()[:limit])
-        ids = [n.id for n in rows]
-        read_ids = set(
-            AdminNotificationRead.objects.filter(
-                user=request.user, notification_id__in=ids
-            ).values_list("notification_id", flat=True)
-        )
-        unread_in_feed = sum(1 for pk in ids if pk not in read_ids)
+        rows = list(admin_compliance_unread_queryset(request.user).order_by("-created_at")[:limit])
         ser = AdminNotificationSerializer(
             rows,
             many=True,
-            context={"request": request, "read_ids": read_ids},
+            context={"request": request, "read_ids": set()},
         )
-        return Response({"results": ser.data, "unread_in_feed": unread_in_feed})
+        return Response({"results": ser.data, "unread_in_feed": len(rows)})
 
 
 class AdminNotificationsMarkReadView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
+        from apps.accounts.services.notification_ack import ack_shared_admin_notifications
+
         err = _require_admin(request)
         if err:
             return err
         mark_all = bool(request.data.get("all"))
         ids = request.data.get("notification_ids")
-        if mark_all:
-            qs = AdminNotification.objects.all().order_by("-id")[:500]
-        elif isinstance(ids, list) and ids:
-            qs = AdminNotification.objects.filter(id__in=ids[:200])
-        else:
+        if not mark_all and not (isinstance(ids, list) and ids):
             return Response(
                 {"detail": "Provide notification_ids (array) or all=true."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        for notif in qs.iterator(chunk_size=100):
-            AdminNotificationRead.objects.get_or_create(
-                user=request.user, notification=notif
-            )
-        return Response({"ok": True})
+        id_list = None
+        if isinstance(ids, list):
+            id_list = []
+            for x in ids[:200]:
+                try:
+                    id_list.append(int(x))
+                except (TypeError, ValueError):
+                    continue
+        deleted = ack_shared_admin_notifications(
+            request.user,
+            notification_ids=id_list,
+            mark_all=mark_all,
+            exclude_festival=True,
+        )
+        return Response({"ok": True, "deleted": deleted})
 
 
 class AdminFreezeUserView(APIView):

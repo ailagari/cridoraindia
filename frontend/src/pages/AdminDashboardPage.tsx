@@ -10,7 +10,8 @@ import { AdminPersonalHoldingsPanel } from '@/features/portfolio/AdminPersonalHo
 import { AdminFractionalOtpPolicyPanel } from '@/features/admin/AdminFractionalOtpPolicyPanel'
 import { AdminFeatureRolloutPanel } from '@/features/admin/AdminFeatureRolloutPanel'
 import { ChangePasswordPanel } from '@/features/auth/ChangePasswordPanel'
-import { AdminFestivalBroadcastPanel } from '@/features/admin/AdminFestivalBroadcastPanel'
+import { AdminNotificationsHubPanel } from '@/features/admin/AdminNotificationsHubPanel'
+import { NotificationSettingsPanel } from '@/features/settings/NotificationSettingsPanel'
 import { AdminGoldTickerPanel, AdminMarketplaceCatalogSetupPanel } from '@/features/marketplace/AdminMarketplaceSection'
 import { AdminTreasuryPanel } from '@/features/treasury/AdminTreasuryPanel'
 import { AdminUpiFraudReportsPanel } from '@/features/treasury/AdminUpiFraudReportsPanel'
@@ -736,7 +737,7 @@ export function AdminDashboardPage() {
           </div>
         ) : null}
 
-        {active === 'plat_festival' ? <AdminFestivalBroadcastPanel /> : null}
+        {active === 'plat_festival' ? <AdminNotificationsHubPanel /> : null}
 
         {active === 'plat_control' ? <AdminFractionalOtpPolicyPanel /> : null}
 
@@ -747,12 +748,10 @@ export function AdminDashboardPage() {
         ) : null}
 
         {active === 'plat_account' ? (
-          <div className="dash-coming dash-coming--payments">
-            <h2 className="dash-coming__title">Account settings</h2>
-            <p className="dash-coming__text">
-              Admin profile, notification preferences, and team access settings will appear here.
-            </p>
-          </div>
+          <NotificationSettingsPanel
+            title="Account settings"
+            description="Notification preferences for your admin account. To send campaigns or configure system gold alerts, open Pushes & alerts."
+          />
         ) : null}
       </div>
 

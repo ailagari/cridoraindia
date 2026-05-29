@@ -9,6 +9,8 @@ export type AppNotification = {
   read: boolean
   kind: 'transaction' | 'kyc' | 'alert' | 'promo'
   link_path?: string
+  priority?: 'high' | 'medium' | 'low'
+  apiCategory?: string
 }
 
 function baseMockRows(locale = readStoredPublicLocale()): AppNotification[] {

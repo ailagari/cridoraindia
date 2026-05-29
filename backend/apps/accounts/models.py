@@ -2133,6 +2133,19 @@ class AdminNotificationRead(models.Model):
 class FestivalBroadcastNotification(models.Model):
     """Admin-scheduled Web Push broadcast (e.g. festival message) to all subscribed devices."""
 
+    TARGET_ALL_USERS = "ALL_USERS"
+    TARGET_ALL_APP_INSTALLS = "ALL_APP_INSTALLS"
+    TARGET_SPECIFIC_JEWELLER_USERS = "SPECIFIC_JEWELLER_USERS"
+    TARGET_DEFAULT_JEWELLER_USERS = "DEFAULT_JEWELLER_USERS"
+    TARGET_SPECIFIC_USERS = "SPECIFIC_USERS"
+    TARGET_CHOICES = [
+        (TARGET_ALL_USERS, "All customers"),
+        (TARGET_ALL_APP_INSTALLS, "All app installs"),
+        (TARGET_SPECIFIC_JEWELLER_USERS, "Jeweller customers"),
+        (TARGET_DEFAULT_JEWELLER_USERS, "Default jeweller customers"),
+        (TARGET_SPECIFIC_USERS, "Specific users"),
+    ]
+
     STATUS_PENDING = "pending"
     STATUS_SENT = "sent"
     STATUS_CANCELLED = "cancelled"
@@ -2159,6 +2172,22 @@ class FestivalBroadcastNotification(models.Model):
     scheduled_at = models.DateTimeField(
         db_index=True,
         help_text="When to send (UTC in DB; use aware datetimes from the API).",
+    )
+    expires_at = models.DateTimeField(null=True, blank=True)
+    target_type = models.CharField(
+        max_length=32,
+        choices=TARGET_CHOICES,
+        default=TARGET_ALL_USERS,
+    )
+    target_metadata = models.JSONField(default=dict, blank=True)
+    logo_url = models.URLField(max_length=512, blank=True, default="")
+    created_by_jeweller = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="jeweller_campaign_broadcasts",
+        limit_choices_to={"user_type": User.JEWELLER},
     )
     status = models.CharField(
         max_length=16,
@@ -2402,11 +2431,51 @@ class PortfolioUserNotification(models.Model):
     KIND_JEWELLER_ADDED_HOLDING = "jeweller_added_holding"
     KIND_DOCUMENT_UPLOADED = "document_uploaded"
     KIND_VERIFICATION_UPDATED = "verification_updated"
+    KIND_FRACTIONAL = "fractional"
+    KIND_DEPOSIT = "deposit"
+    KIND_SELLBACK = "sellback"
+    KIND_LOAN = "loan"
+    KIND_CORRIDORAPAY = "corridorapay"
+    KIND_CROSS_REDEMPTION = "cross_redemption"
+    KIND_OTP = "otp"
+    KIND_SYSTEM = "system"
     KIND_CHOICES = [
         (KIND_HOLDING_ADDED, "Holding added"),
         (KIND_JEWELLER_ADDED_HOLDING, "Jeweller added holding"),
         (KIND_DOCUMENT_UPLOADED, "Document uploaded"),
         (KIND_VERIFICATION_UPDATED, "Verification updated"),
+        (KIND_FRACTIONAL, "Fractional gold"),
+        (KIND_DEPOSIT, "Gold deposit"),
+        (KIND_SELLBACK, "Sellback"),
+        (KIND_LOAN, "Loan"),
+        (KIND_CORRIDORAPAY, "CridoraPay"),
+        (KIND_CROSS_REDEMPTION, "Cross redemption"),
+        (KIND_OTP, "OTP workflow"),
+        (KIND_SYSTEM, "System"),
+    ]
+
+    CATEGORY_TRANSACTION = "transaction"
+    CATEGORY_PORTFOLIO = "portfolio"
+    CATEGORY_SECURITY = "security"
+    CATEGORY_PROMO = "promo"
+    CATEGORY_LOAN = "loan"
+    CATEGORY_SYSTEM = "system"
+    CATEGORY_CHOICES = [
+        (CATEGORY_TRANSACTION, "Transaction"),
+        (CATEGORY_PORTFOLIO, "Portfolio"),
+        (CATEGORY_SECURITY, "Security"),
+        (CATEGORY_PROMO, "Promo"),
+        (CATEGORY_LOAN, "Loan"),
+        (CATEGORY_SYSTEM, "System"),
+    ]
+
+    PRIORITY_HIGH = "high"
+    PRIORITY_MEDIUM = "medium"
+    PRIORITY_LOW = "low"
+    PRIORITY_CHOICES = [
+        (PRIORITY_HIGH, "High"),
+        (PRIORITY_MEDIUM, "Medium"),
+        (PRIORITY_LOW, "Low"),
     ]
 
     user = models.ForeignKey(
@@ -2415,10 +2484,33 @@ class PortfolioUserNotification(models.Model):
         related_name="portfolio_notifications",
     )
     kind = models.CharField(max_length=32, choices=KIND_CHOICES)
+    category = models.CharField(
+        max_length=24,
+        choices=CATEGORY_CHOICES,
+        default=CATEGORY_PORTFOLIO,
+    )
+    priority = models.CharField(
+        max_length=16,
+        choices=PRIORITY_CHOICES,
+        default=PRIORITY_MEDIUM,
+    )
+    notification_type = models.CharField(max_length=32, blank=True, default="")
     title = models.CharField(max_length=180)
     body = models.TextField()
     link_path = models.CharField(max_length=512, blank=True)
+    jeweller = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+        limit_choices_to={"user_type": User.JEWELLER},
+    )
+    image_url = models.URLField(max_length=512, blank=True, default="")
+    logo_url = models.URLField(max_length=512, blank=True, default="")
     read_at = models.DateTimeField(null=True, blank=True)
+    delivered_at = models.DateTimeField(null=True, blank=True)
+    clicked_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -2427,6 +2519,81 @@ class PortfolioUserNotification(models.Model):
 
     def __str__(self):
         return f"PortfolioUserNotification({self.kind}, {self.user_id})"
+
+
+class NotificationTemplate(models.Model):
+    """Reusable notification copy for admin campaigns."""
+
+    name = models.CharField(max_length=120, unique=True)
+    category = models.CharField(max_length=24, default="promo")
+    tone = models.CharField(max_length=24, blank=True, default="")
+    title_template = models.CharField(max_length=180)
+    body_template = models.TextField()
+    variables = models.JSONField(default=list, blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
+class NotificationEventLog(models.Model):
+    """Append-only delivery/click analytics (survives inbox delete-on-read)."""
+
+    EVENT_DELIVERED = "delivered"
+    EVENT_CLICKED = "clicked"
+    EVENT_CHOICES = [
+        (EVENT_DELIVERED, "Delivered"),
+        (EVENT_CLICKED, "Clicked"),
+    ]
+
+    user = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="notification_events",
+    )
+    event_type = models.CharField(max_length=16, choices=EVENT_CHOICES)
+    category = models.CharField(max_length=24, blank=True, default="")
+    kind = models.CharField(max_length=32, blank=True, default="")
+    title = models.CharField(max_length=180, blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["event_type", "created_at"]),
+            models.Index(fields=["user", "event_type"]),
+        ]
+
+
+class NotificationPreference(models.Model):
+    """Per-user notification delivery preferences."""
+
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name="notification_preference",
+    )
+    allow_promotional = models.BooleanField(default=True)
+    allow_gold_alerts = models.BooleanField(default=True)
+    allow_portfolio_alerts = models.BooleanField(default=True)
+    allow_jeweller_campaigns = models.BooleanField(default=True)
+    allow_festival_alerts = models.BooleanField(default=True)
+    allow_push_notifications = models.BooleanField(default=True)
+    allow_sound = models.BooleanField(default=True)
+    quiet_hours_start = models.TimeField(null=True, blank=True)
+    quiet_hours_end = models.TimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"NotificationPreference(user={self.user_id})"
 
 
 class UpiPaymentProofSubmission(models.Model):

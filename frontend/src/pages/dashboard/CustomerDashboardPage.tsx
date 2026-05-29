@@ -8,6 +8,7 @@ import { GoldTransferPanel } from '@/features/gold/GoldTransferPanel'
 import { CustomerDepositInfoPanel } from '@/features/invest/CustomerDepositInfoPanel'
 import { FractionalPurchasePanel } from '@/features/invest/FractionalPurchasePanel'
 import { CustomerAccountDetailsPanel } from '@/features/customer/CustomerAccountDetailsPanel'
+import { NotificationSettingsPanel } from '@/features/settings/NotificationSettingsPanel'
 import { CustomerKycWorkflow } from '@/features/customer/CustomerKycWorkflow'
 import { ChangePasswordPanel } from '@/features/auth/ChangePasswordPanel'
 import { ComingSoonPanel } from '@/components/ui'
@@ -139,6 +140,9 @@ export function CustomerDashboardPage() {
       {active === 'profile_cridora_id' || active === 'profile_qr' ? <CustomerVaultAddressesPanel /> : null}
       {active === 'profile_security' ? <ChangePasswordPanel /> : null}
       {active === 'profile_personal' ? <CustomerAccountDetailsPanel /> : null}
+      {active === 'profile_notifications' ? (
+        <NotificationSettingsPanel title="Notifications" description="Manage push delivery and the types of alerts you receive." />
+      ) : null}
       {active === 'profile_kyc' ? (
         <div className="dash-panel-max">
           <CustomerKycWorkflow />

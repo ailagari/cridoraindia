@@ -22,6 +22,17 @@ def resolve_push_image_url(raw: str | None) -> str | None:
     return f"{base}{url}"
 
 
+def truncate_push_copy(title: str, body: str) -> tuple[str, str]:
+    """Spec limits: title 45 chars, body 120 chars."""
+    t = (title or "").strip()
+    b = (body or "").strip()
+    if len(t) > 45:
+        t = t[:42] + "..."
+    if len(b) > 120:
+        b = b[:117] + "..."
+    return t, b
+
+
 def build_push_payload(
     *,
     title: str,
@@ -31,6 +42,7 @@ def build_push_payload(
     image_url: str | None = None,
     notification_id: str | None = None,
 ) -> dict:
+    title, body = truncate_push_copy(title, body)
     payload: dict = {
         "title": title,
         "body": body,

@@ -325,6 +325,7 @@ export const mlMessages: Record<MessageKey, string> = {
   'notifications.noAlerts': 'ഇതുവരെ അലർട്ടുകൾ ഇല്ല.',
   'notifications.noMatch': 'ഈ view-യിൽ അലർട്ടുകൾ ഒന്നുമില്ല.',
   'notifications.allCaughtUp': 'എല്ലാം caught up — unread ഒന്നുമില്ല.',
+  'notifications.signInForAlerts': 'അലർട്ടുകൾ കാണാൻ സൈൻ ഇൻ ചെയ്യുക, അല്ലെങ്കിൽ ഗോൾഡ് റേറ്റ് പുഷ് ഓണാക്കുക.',
   'notifications.noBroadcasts': 'broadcasts ഇതുവരെ ഇല്ല. admin അയച്ചാൽ ഇവിടെ കാണാം.',
   'notifications.promo': 'Promo',
   'notifications.turnOn': 'device notifications ഓൺ ചെയ്യുക',

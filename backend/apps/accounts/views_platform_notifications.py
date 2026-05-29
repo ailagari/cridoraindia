@@ -5,13 +5,16 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.accounts.models import AdminNotification, AdminNotificationRead
 from apps.accounts.serializers import AdminNotificationSerializer
 from apps.accounts.services.festival_broadcast import prune_festival_broadcast_feed_notifications
+from apps.accounts.services.notification_ack import (
+    ack_shared_admin_notifications,
+    festival_unread_queryset,
+)
 
 
 class PlatformNotificationsListView(APIView):
-    """Festival / broadcast receipts visible to every signed-in role."""
+    """Festival / broadcast receipts visible to every signed-in role (unread only)."""
 
     permission_classes = [IsAuthenticated]
 
@@ -24,23 +27,15 @@ class PlatformNotificationsListView(APIView):
 
         prune_festival_broadcast_feed_notifications()
 
-        qs = AdminNotification.objects.filter(
-            kind=AdminNotification.KIND_FESTIVAL_BROADCAST_SENT,
-        ).order_by("-created_at")[:limit]
+        qs = festival_unread_queryset(request.user).order_by("-created_at")[:limit]
         rows = list(qs)
         ids = [n.id for n in rows]
-        read_ids = set(
-            AdminNotificationRead.objects.filter(
-                user=request.user, notification_id__in=ids
-            ).values_list("notification_id", flat=True)
-        )
-        unread_in_feed = sum(1 for pk in ids if pk not in read_ids)
         ser = AdminNotificationSerializer(
             rows,
             many=True,
-            context={"request": request, "read_ids": read_ids},
+            context={"request": request, "read_ids": set()},
         )
-        return Response({"results": ser.data, "unread_in_feed": unread_in_feed})
+        return Response({"results": ser.data, "unread_in_feed": len(rows)})
 
 
 class PlatformNotificationsMarkReadView(APIView):
@@ -49,20 +44,23 @@ class PlatformNotificationsMarkReadView(APIView):
     def post(self, request):
         mark_all = bool(request.data.get("all"))
         ids = request.data.get("notification_ids")
-        base = AdminNotification.objects.filter(
-            kind=AdminNotification.KIND_FESTIVAL_BROADCAST_SENT,
-        )
-        if mark_all:
-            qs = base.order_by("-id")[:500]
-        elif isinstance(ids, list) and ids:
-            qs = base.filter(id__in=ids[:200])
-        else:
+        if not mark_all and not (isinstance(ids, list) and ids):
             return Response(
                 {"detail": "Provide notification_ids (array) or all=true."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        for notif in qs.iterator(chunk_size=100):
-            AdminNotificationRead.objects.get_or_create(
-                user=request.user, notification=notif
-            )
-        return Response({"ok": True})
+        id_list = None
+        if isinstance(ids, list):
+            id_list = []
+            for x in ids[:200]:
+                try:
+                    id_list.append(int(x))
+                except (TypeError, ValueError):
+                    continue
+        deleted = ack_shared_admin_notifications(
+            request.user,
+            notification_ids=id_list,
+            mark_all=mark_all,
+            festival_only=True,
+        )
+        return Response({"ok": True, "deleted": deleted})
