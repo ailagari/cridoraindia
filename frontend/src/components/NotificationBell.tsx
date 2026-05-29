@@ -9,13 +9,17 @@ import { authFetch } from '@/lib/api'
 import {
   fetchWebPushServerStatus,
   getBrowserPushActive,
-  browserNotificationPermission,
+  getPushDeliveryLabel,
+  isPushPermissionDenied,
+  openNativeNotificationSettings,
   pushNotificationsSupported,
+  pushPermissionBlockedHint,
   pushSetupHint,
   registerWebPushSubscription,
 } from '@/lib/webPushApi'
+import { nativePushNotificationsSupported } from '@/lib/nativeNotifications'
 import { CRIDORA_PUSH_REFRESH_MESSAGE_TYPE } from '@/lib/cridoraSwMessages'
-import { notifyBellFeedUpdates, nativePushNotificationsSupported, seedTrayNotifiedIds } from '@/lib/nativeNotifications'
+import { notifyBellFeedUpdates, seedTrayNotifiedIds } from '@/lib/nativeNotifications'
 
 /** Faster poll while panel open so badges/lists stay fresh without reloading the page. */
 const FEED_POLL_MS_PANEL_OPEN = 2000
@@ -170,11 +174,14 @@ export function NotificationBell({
   const [pushServerReady, setPushServerReady] = useState<boolean | null>(null)
   const [pushTestBusy, setPushTestBusy] = useState(false)
   const [pushTestMsg, setPushTestMsg] = useState('')
+  const [pushPermissionBlocked, setPushPermissionBlocked] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
   /** Bottom sheet on narrow viewports (PWA / mobile dashboards). */
   const [useSheetLayout, setUseSheetLayout] = useState(false)
 
   const setupHint = pushSetupHint()
+  const blockedHint = pushPermissionBlockedHint()
+  const deliveryLabel = getPushDeliveryLabel()
   const settingsPath = settingsPathForRole(role)
 
   const items = useMemo(() => {
@@ -258,14 +265,17 @@ export function NotificationBell({
   const refreshPushState = useCallback(async () => {
     if (!pushNotificationsSupported()) {
       setPushActive(false)
+      setPushPermissionBlocked(false)
       return
     }
     try {
       setPushError('')
-      const on = await getBrowserPushActive()
+      const [on, denied] = await Promise.all([getBrowserPushActive(), isPushPermissionDenied()])
       setPushActive(on)
+      setPushPermissionBlocked(denied)
     } catch {
       setPushActive(false)
+      setPushPermissionBlocked(false)
     }
   }, [])
 
@@ -394,12 +404,22 @@ export function NotificationBell({
     try {
       await registerWebPushSubscription()
       setPushActive(true)
+      setPushPermissionBlocked(false)
     } catch (e) {
       setPushError(e instanceof Error ? e.message : 'Could not enable push.')
+      const denied = await isPushPermissionDenied().catch(() => false)
+      setPushPermissionBlocked(denied)
     } finally {
       setPushBusy(false)
     }
   }, [])
+
+  const openPushSettings = useCallback(async () => {
+    const opened = await openNativeNotificationSettings()
+    if (!opened && blockedHint) {
+      setPushError(blockedHint)
+    }
+  }, [blockedHint])
 
   const sendAdminTestPush = useCallback(async () => {
     setPushTestBusy(true)
@@ -429,8 +449,6 @@ export function NotificationBell({
     }
   }, [])
 
-  const pushSupported = pushNotificationsSupported()
-  const browserNotifPerm = browserNotificationPermission()
   const removeItemsLocal = useCallback(
     (ids?: string[]) => {
       const markAll = ids == null
@@ -533,18 +551,11 @@ export function NotificationBell({
     <strong>{publicUi ? t('notifications.unavailable') : 'Push alerts unavailable on this deployment.'}</strong>
   ) : null
 
-  const showPushEnableToggle =
-    !hidePushRowInBell &&
-    pushSupported &&
-    !pushActive &&
-    pushServerReady === true &&
-    (nativePushNotificationsSupported() || browserNotifPerm !== 'denied')
-
-  const showPushBlockedHint =
-    !hidePushRowInBell &&
-    pushSupported &&
-    !nativePushNotificationsSupported() &&
-    browserNotifPerm === 'denied'
+  const showTrayPushRow = !hidePushRowInBell && pushServerReady === true
+  const pushSupported = pushNotificationsSupported()
+  const canEnableTrayPush =
+    pushSupported && !pushActive && !pushPermissionBlocked
+  const showTrayInstallHint = showTrayPushRow && !pushActive && !pushSupported && Boolean(setupHint)
 
   const feedError = adminFeedError || platformFeedError
 
@@ -555,20 +566,6 @@ export function NotificationBell({
           {publicUi ? t('notifications.alerts') : 'Alerts'}
         </h2>
         <div className="notif-panel-head-actions">
-          {showPushEnableToggle ? (
-            <button
-              type="button"
-              className="notif-push-toggle"
-              disabled={pushBusy}
-              aria-label={publicUi ? t('notifications.turnOn') : 'Turn on device notifications'}
-              title={publicUi ? t('notifications.turnOn') : 'Device notifications'}
-              onClick={() => void enablePush()}
-            >
-              <span className="notif-push-toggle-track" aria-hidden="true">
-                <span className="notif-push-toggle-knob" />
-              </span>
-            </button>
-          ) : null}
           {useLiveFeed && unread > 0 ? (
             <button type="button" className="btn btn-ghost notif-panel-clear" onClick={() => void markAllRead()}>
               {publicUi ? t('notifications.markRead') : 'Clear all'}
@@ -576,7 +573,72 @@ export function NotificationBell({
           ) : null}
         </div>
       </div>
-      {setupHint ? <p className="notif-panel-hint notif-panel-hint--setup">{setupHint}</p> : null}
+      {showTrayPushRow ? (
+        <div className="notif-push-row" role="region" aria-label={publicUi ? t('notifications.trayRegion') : 'Device notification tray'}>
+          {pushActive ? (
+            <>
+              <span className="notif-push-label">
+                {publicUi ? t('notifications.trayOn') : 'Tray notifications on'}
+              </span>
+              <span className="notif-push-status notif-push-status--on">
+                {publicUi ? t('notifications.trayOnDetail') : 'Alerts appear in your phone or system notification tray.'}
+              </span>
+              <span className="notif-push-detail">{deliveryLabel}</span>
+            </>
+          ) : pushPermissionBlocked ? (
+            <>
+              <span className="notif-push-label">
+                {publicUi ? t('notifications.trayBlocked') : 'Tray notifications blocked'}
+              </span>
+              <p className="notif-push-detail notif-push-err">
+                {publicUi ? t('notifications.blocked') : blockedHint}
+              </p>
+              {nativePushNotificationsSupported() ? (
+                <button
+                  type="button"
+                  className="btn btn-primary notif-push-btn"
+                  onClick={() => void openPushSettings()}
+                >
+                  {publicUi ? t('notifications.openSettings') : 'Open app settings'}
+                </button>
+              ) : null}
+            </>
+          ) : canEnableTrayPush ? (
+            <>
+              <span className="notif-push-label">
+                {publicUi ? t('notifications.trayOff') : 'Notification tray'}
+              </span>
+              <p className="notif-push-detail">{deliveryLabel}</p>
+              <button
+                type="button"
+                className="btn btn-primary notif-push-btn"
+                disabled={pushBusy}
+                onClick={() => void enablePush()}
+              >
+                {pushBusy
+                  ? publicUi
+                    ? t('notifications.turningOn')
+                    : 'Turning on…'
+                  : publicUi
+                    ? t('notifications.turnOnTray')
+                    : 'Turn on tray notifications'}
+              </button>
+            </>
+          ) : showTrayInstallHint ? (
+            <>
+              <span className="notif-push-label">
+                {publicUi ? t('notifications.trayOff') : 'Notification tray'}
+              </span>
+              <p className="notif-panel-hint notif-panel-hint--setup" style={{ margin: 0 }}>
+                {setupHint}
+              </p>
+            </>
+          ) : null}
+        </div>
+      ) : null}
+      {setupHint && !showTrayInstallHint ? (
+        <p className="notif-panel-hint notif-panel-hint--setup">{setupHint}</p>
+      ) : null}
       {hintPrimary ? <p className="notif-panel-hint">{hintPrimary}</p> : null}
       {usePlatformFeed ? (
         <div className="notif-category-chips" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginTop: '0.5rem' }}>
@@ -592,11 +654,6 @@ export function NotificationBell({
             </button>
           ))}
         </div>
-      ) : null}
-      {showPushBlockedHint ? (
-        <p className="notif-panel-hint">
-          {publicUi ? t('notifications.blocked') : 'Notifications blocked — allow them in your browser or system settings.'}
-        </p>
       ) : null}
       {pushError ? <p className="form-error notif-panel-hint">{pushError}</p> : null}
       {feedError ? <p className="form-error notif-panel-hint">{feedError}</p> : null}

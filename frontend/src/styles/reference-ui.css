@@ -410,6 +410,15 @@ html[data-theme='light'] .pub-ref .tt-k {
     gap: 0.2rem;
   }
 
+  .pub-ref .nav.nav--signed-in {
+    grid-template-columns: auto 1fr;
+  }
+
+  .pub-ref .nav.nav--signed-in .nav-end {
+    grid-column: 2;
+    justify-self: end;
+  }
+
   .pub-ref .public-hub-tabs {
     display: flex;
   }

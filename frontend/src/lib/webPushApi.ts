@@ -3,10 +3,15 @@ import { readStoredPublicLocale } from '@/i18n/engine'
 import {
   claimNativePushForLoggedInUser,
   getNativePushActive,
+  isNativeFcmEnabled,
+  isNativePushPermissionDenied,
   nativePushNotificationsSupported,
   nativePushSetupHint,
+  openNativeNotificationSettings,
   registerNativePushSubscription,
 } from '@/lib/nativeNotifications'
+
+export { openNativeNotificationSettings }
 
 async function postPushSubscribe(jsonBody: Record<string, unknown>): Promise<Response> {
   const body = { ...jsonBody, preferred_locale: readStoredPublicLocale() }
@@ -112,6 +117,37 @@ export function pushSetupHint(): string | null {
   return null
 }
 
+/** Guidance when permission was denied and the user must fix it in OS / browser settings. */
+export function pushPermissionBlockedHint(): string | null {
+  if (nativePushNotificationsSupported()) {
+    return 'Notifications are blocked for Cridora. Open app settings and turn on Notifications.'
+  }
+  if (likelyIosMobile()) {
+    if (displayModeStandalone()) {
+      return 'Notifications are blocked. Open Settings → Notifications → Cridora and allow alerts.'
+    }
+    return 'On iPhone/iPad, install the app from Safari (Share → Add to Home Screen), then allow notifications when prompted.'
+  }
+  return 'Notifications are blocked. In Chrome or Edge: site settings → Notifications → Allow. You can also enable them in your system notification settings.'
+}
+
+/** Short label for how tray delivery works on this device (shown in the bell). */
+export function getPushDeliveryLabel(): string {
+  if (nativePushNotificationsSupported()) {
+    if (isNativeFcmEnabled()) {
+      return 'Android app · alerts appear in your phone notification tray.'
+    }
+    return 'Android app · tray alerts (enable server push via google-services.json for background delivery).'
+  }
+  if (likelyIosMobile()) {
+    if (displayModeStandalone()) {
+      return 'Installed app · Web Push to your notification tray (iOS 16.4+).'
+    }
+    return 'Add to Home Screen from Safari to enable tray alerts on iOS.'
+  }
+  return 'Browser / installed PWA · Web Push to your system notification tray.'
+}
+
 async function refreshServiceWorkerRegistration(): Promise<ServiceWorkerRegistration> {
   const reg =
     (await navigator.serviceWorker.getRegistration()) ?? (await navigator.serviceWorker.ready)
@@ -197,4 +233,12 @@ export async function getBrowserPushActive(): Promise<boolean> {
   const reg = await navigator.serviceWorker.ready
   const sub = await reg.pushManager.getSubscription()
   return sub !== null
+}
+
+/** Whether notification permission is denied on this device (browser or native shell). */
+export async function isPushPermissionDenied(): Promise<boolean> {
+  if (nativePushNotificationsSupported()) {
+    return isNativePushPermissionDenied()
+  }
+  return browserNotificationPermission() === 'denied'
 }

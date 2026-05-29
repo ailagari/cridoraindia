@@ -2,9 +2,15 @@ import { useCallback, useEffect, useState } from 'react'
 import {
   fetchWebPushServerStatus,
   getBrowserPushActive,
+  getPushDeliveryLabel,
+  isPushPermissionDenied,
+  openNativeNotificationSettings,
   pushNotificationsSupported,
+  pushPermissionBlockedHint,
+  pushSetupHint,
   registerWebPushSubscription,
 } from '@/lib/webPushApi'
+import { nativePushNotificationsSupported } from '@/lib/nativeNotifications'
 import {
   fetchInboxPreferences,
   patchInboxPreferences,
@@ -28,6 +34,7 @@ export function NotificationSettingsPanel({
   const [pushBusy, setPushBusy] = useState(false)
   const [pushErr, setPushErr] = useState('')
   const [serverReady, setServerReady] = useState<boolean | null>(null)
+  const [pushBlocked, setPushBlocked] = useState(false)
 
   const load = useCallback(async () => {
     setLoadErr('')
@@ -44,6 +51,7 @@ export function NotificationSettingsPanel({
     void fetchWebPushServerStatus().then((s) => setServerReady(s.configured))
     if (pushNotificationsSupported()) {
       void getBrowserPushActive().then(setPushActive)
+      void isPushPermissionDenied().then(setPushBlocked)
     }
   }, [load])
 
@@ -115,17 +123,38 @@ export function NotificationSettingsPanel({
       </div>
 
       <div className="card">
-        <h3 style={{ marginTop: 0 }}>Push delivery</h3>
+        <h3 style={{ marginTop: 0 }}>Notification tray (device)</h3>
+        <p style={{ margin: '0 0 0.75rem', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+          {getPushDeliveryLabel()}
+        </p>
         {serverReady === false ? (
           <p className="form-error">Push is not configured on this server.</p>
         ) : pushActive ? (
-          <p style={{ margin: 0, color: 'var(--text-muted)' }}>Push is enabled on this device.</p>
+          <p style={{ margin: 0, color: 'var(--text-muted)' }}>Tray notifications are on for this device.</p>
+        ) : pushBlocked ? (
+          <>
+            <p className="form-error" style={{ marginTop: 0 }}>
+              {pushPermissionBlockedHint()}
+            </p>
+            {nativePushNotificationsSupported() ? (
+              <button
+                type="button"
+                className="btn btn-primary"
+                style={{ marginTop: '0.5rem' }}
+                onClick={() => void openNativeNotificationSettings()}
+              >
+                Open app settings
+              </button>
+            ) : null}
+          </>
         ) : pushNotificationsSupported() ? (
           <button type="button" className="btn btn-primary" disabled={pushBusy} onClick={() => void enablePush()}>
-            {pushBusy ? 'Enabling…' : 'Enable push on this device'}
+            {pushBusy ? 'Turning on…' : 'Turn on tray notifications'}
           </button>
+        ) : pushSetupHint() ? (
+          <p style={{ margin: 0, color: 'var(--text-muted)' }}>{pushSetupHint()}</p>
         ) : (
-          <p style={{ margin: 0, color: 'var(--text-muted)' }}>Push is not supported in this browser.</p>
+          <p style={{ margin: 0, color: 'var(--text-muted)' }}>Tray alerts are not supported in this browser.</p>
         )}
         {pushErr ? <p className="form-error">{pushErr}</p> : null}
       </div>

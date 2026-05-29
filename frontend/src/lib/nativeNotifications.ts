@@ -1,3 +1,4 @@
+import { App } from '@capacitor/app'
 import { Capacitor } from '@capacitor/core'
 import { LocalNotifications } from '@capacitor/local-notifications'
 import { PushNotifications } from '@capacitor/push-notifications'
@@ -370,4 +371,34 @@ export function nativePushSetupHint(): string | null {
 
 export function nativePushNotificationsSupported(): boolean {
   return isNativeAndroid() && Capacitor.isPluginAvailable('LocalNotifications')
+}
+
+/** True when the user has permanently denied notification permission on the native shell. */
+export async function isNativePushPermissionDenied(): Promise<boolean> {
+  if (!isNativeAndroid()) return false
+  try {
+    if (isNativeFcmEnabled()) {
+      const status = await PushNotifications.checkPermissions()
+      return status.receive === 'denied'
+    }
+    const status = await LocalNotifications.checkPermissions()
+    return status.display === 'denied'
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Opens Android application settings (user can enable Notifications for Cridora).
+ * Uses package: URI (supported from the Capacitor WebView on Android).
+ */
+export async function openNativeNotificationSettings(): Promise<boolean> {
+  if (!isNativeAndroid() || !Capacitor.isPluginAvailable('App')) return false
+  try {
+    const { id } = await App.getInfo()
+    window.location.href = `package:${id}`
+    return true
+  } catch {
+    return false
+  }
 }

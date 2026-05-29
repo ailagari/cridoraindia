@@ -7,16 +7,11 @@ import { GoldTickerStrip } from '@/components/GoldTickerStrip'
 import { PublicMobileSegmentBar } from '@/components/PublicMobileSegmentBar'
 import { MarketplaceCartNavIcon } from '@/components/MarketplaceCartNavIcon'
 import { ThemeToggle } from '@/components/ThemeToggle'
-import { useAuth, type AuthUser } from '@/context/AuthContext'
+import { useAuth } from '@/context/AuthContext'
 import { useMarketplaceCartBadgeCount } from '@/hooks/useMarketplaceCartBadgeCount'
 import { LanguageSwitcher, PublicLocaleProvider, usePublicLocale } from '@/i18n/PublicLocaleProvider'
 import { dashboardLandingPath } from '@/lib/routes'
 import { marketplaceListingCartHref } from '@/lib/marketplaceCartStorage'
-
-function publicDisplayName(user: AuthUser): string {
-  const name = [user.first_name, user.last_name].filter(Boolean).join(' ').trim()
-  return name || user.email
-}
 
 function PublicLayoutInner() {
   const { user, logout } = useAuth()
@@ -34,7 +29,6 @@ function PublicLayoutInner() {
 
   const dashboardHref = user ? dashboardLandingPath(user) : '/'
   const guestLabel = t('nav.guest')
-  const mobileTitle = user ? publicDisplayName(user) : guestLabel
   const marketplaceCartCount = useMarketplaceCartBadgeCount()
   const location = useLocation()
   const cartLinkTo = useMemo(
@@ -44,7 +38,7 @@ function PublicLayoutInner() {
 
   return (
     <div className="pub-ref app-shell">
-      <header className="nav" role="banner">
+      <header className={`nav${user ? ' nav--signed-in' : ''}`} role="banner">
         <Link to="/" className="nav-logo" style={{ textDecoration: 'none', color: 'inherit' }}>
           <CridoraLogo size="sm" />
         </Link>
@@ -57,12 +51,9 @@ function PublicLayoutInner() {
           ))}
         </nav>
 
-        <span
-          className="public-mobile-username"
-          title={mobileTitle !== guestLabel ? mobileTitle : undefined}
-        >
-          {mobileTitle}
-        </span>
+        {!user ? (
+          <span className="public-mobile-username">{guestLabel}</span>
+        ) : null}
 
         <div className="nav-end public-header-end">
           {user ? (
