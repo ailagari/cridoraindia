@@ -7,6 +7,7 @@ from .views import (
     CustomerRegisterView,
     HealthView,
     JewellerApplyView,
+    JewellerReferralPreviewView,
     JewellerBusinessProfileView,
     KYDocumentListView,
     KYDocumentUploadView,
@@ -276,6 +277,10 @@ urlpatterns = [
     path("health/", HealthView.as_view()),
     path("auth/login/", LoginView.as_view()),
     path("auth/register/", CustomerRegisterView.as_view()),
+    path(
+        "public/jeweller-referral/<str:code>/",
+        JewellerReferralPreviewView.as_view(),
+    ),
     path("auth/jeweller/apply/", JewellerApplyView.as_view()),
     path("auth/me/", MeView.as_view()),
     path("auth/profile-photo/", ProfilePhotoView.as_view()),

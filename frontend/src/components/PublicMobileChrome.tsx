@@ -1,6 +1,7 @@
 import { NavLink, useLocation } from 'react-router-dom'
 import { NotificationBell } from '@/components/NotificationBell'
 import { PublicTabIcon } from '@/components/PublicTabIcon'
+import { useAuth } from '@/context/AuthContext'
 import { useMarketplaceCartBadgeCount } from '@/hooks/useMarketplaceCartBadgeCount'
 import { marketplaceListingCartHref } from '@/lib/marketplaceCartStorage'
 import { usePublicLocale } from '@/i18n/PublicLocaleProvider'
@@ -10,6 +11,7 @@ function topForPath(
   search: string,
   t: (key: string) => string,
   marketplaceCartCount: number,
+  loggedIn: boolean,
 ): { to: string; label: string }[] {
   if (pathname === '/') {
     return [
@@ -28,12 +30,15 @@ function topForPath(
   if (pathname.startsWith('/shop') || pathname.startsWith('/jewellers') || pathname.startsWith('/marketplace')) {
     const cartLbl =
       marketplaceCartCount > 0 ? `${t('nav.cart')} · ${marketplaceCartCount}` : t('nav.cart')
-    return [
+    const pills = [
       { to: '/shop', label: t('mobile.hub') },
       { to: '/jewellers', label: t('nav.jewellers') },
       { to: '/marketplace', label: t('nav.products') },
-      { to: marketplaceListingCartHref(pathname, search), label: cartLbl },
     ]
+    if (loggedIn) {
+      pills.push({ to: marketplaceListingCartHref(pathname, search), label: cartLbl })
+    }
+    return pills
   }
   if (pathname.startsWith('/join') || pathname.startsWith('/signup') || pathname.startsWith('/jeweller/apply')) {
     return [
@@ -49,14 +54,35 @@ function topForPath(
       { to: '/waitlist', label: t('nav.waitlist') },
     ]
   }
+  if (pathname.startsWith('/login')) {
+    return [
+      { to: '/login', label: t('nav.login') },
+      { to: '/signup', label: t('nav.signUp') },
+      { to: '/join', label: t('mobile.hub') },
+    ]
+  }
+  if (pathname.startsWith('/waitlist')) {
+    return [
+      { to: '/', label: t('mobile.overview') },
+      { to: '/waitlist', label: t('nav.waitlist') },
+      { to: '/how-it-works', label: t('mobile.flow') },
+    ]
+  }
   return []
 }
 
 export function PublicMobileChrome() {
   const { pathname, search } = useLocation()
+  const { user } = useAuth()
   const { t } = usePublicLocale()
   const marketplaceCartCount = useMarketplaceCartBadgeCount()
-  const pills = topForPath(pathname, search, (key) => t(key as Parameters<typeof t>[0]), marketplaceCartCount)
+  const pills = topForPath(
+    pathname,
+    search,
+    (key) => t(key as Parameters<typeof t>[0]),
+    marketplaceCartCount,
+    Boolean(user),
+  )
 
   const isShopPath =
     pathname.startsWith('/shop') ||

@@ -55,7 +55,30 @@ class CustomerRegisterView(APIView):
         if not ser.is_valid():
             return Response(ser.errors, status=status.HTTP_400_BAD_REQUEST)
         user = ser.save()
-        return Response(user_auth_payload(user), status=status.HTTP_201_CREATED)
+        payload = user_auth_payload(user)
+        warning = getattr(ser, "referral_warning", None)
+        if warning:
+            payload["referral_warning"] = warning
+        if getattr(ser, "onboarding_jeweller_applied", False):
+            payload["onboarding_jeweller_applied"] = True
+        return Response(payload, status=status.HTTP_201_CREATED)
+
+
+class JewellerReferralPreviewView(APIView):
+    """Public lookup: validate a 6-digit jeweller referral code before signup."""
+
+    permission_classes = [AllowAny]
+
+    def get(self, request, code: str):
+        from .services.jeweller_referral import referral_preview_payload
+
+        payload = referral_preview_payload(code)
+        if not payload:
+            return Response(
+                {"valid": False, "detail": "Referral code not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        return Response(payload)
 
 
 class JewellerApplyView(APIView):

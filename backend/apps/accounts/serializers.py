@@ -85,6 +85,12 @@ class CustomerRegisterSerializer(serializers.Serializer):
     first_name = serializers.CharField(max_length=150)
     last_name = serializers.CharField(max_length=150)
     phone = serializers.CharField(max_length=20, required=False, allow_blank=True)
+    referral_code = serializers.CharField(
+        max_length=12, required=False, allow_blank=True
+    )
+    onboarding_jeweller_id = serializers.IntegerField(
+        required=False, allow_null=True
+    )
 
     def validate_email(self, value):
         if User.objects.filter(email__iexact=value.strip()).exists():
@@ -93,9 +99,24 @@ class CustomerRegisterSerializer(serializers.Serializer):
             )
         return value.lower().strip()
 
+    def validate_onboarding_jeweller_id(self, value):
+        if value in (None, ""):
+            return None
+        try:
+            jid = int(value)
+        except (TypeError, ValueError):
+            raise serializers.ValidationError("Must be a jeweller id.")
+        if jid <= 0:
+            return None
+        return jid
+
     def create(self, validated_data):
+        from .services.jeweller_referral import apply_customer_onboarding_jeweller
+
+        referral_raw = (validated_data.pop("referral_code", None) or "").strip()
+        jeweller_id = validated_data.pop("onboarding_jeweller_id", None)
         email = validated_data["email"]
-        return User.objects.create_user(
+        user = User.objects.create_user(
             username=email,
             email=email,
             password=validated_data["password"],
@@ -104,6 +125,16 @@ class CustomerRegisterSerializer(serializers.Serializer):
             phone=(validated_data.get("phone") or "").strip(),
             user_type=User.CUSTOMER,
         )
+        warning = apply_customer_onboarding_jeweller(
+            user,
+            referral_code=referral_raw or None,
+            jeweller_id=jeweller_id,
+        )
+        self.referral_warning = warning
+        self.onboarding_jeweller_applied = bool(
+            user.default_jeweller_id and not warning
+        )
+        return user
 
 
 class JewellerApplySerializer(serializers.Serializer):
@@ -290,7 +321,9 @@ class UserMeSerializer(serializers.ModelSerializer):
             "gold_upi",
             "gold_handle_local",
             "jeweller_code",
+            "jeweller_referral_code",
             "default_jeweller",
+            "onboarded_by_jeweller",
             "jeweller_pref_nearby",
             "jeweller_pref_ornament",
             "jeweller_pref_redemption",
@@ -313,7 +346,9 @@ class UserMeSerializer(serializers.ModelSerializer):
             "gold_upi",
             "gold_handle_local",
             "jeweller_code",
+            "jeweller_referral_code",
             "default_jeweller",
+            "onboarded_by_jeweller",
             "jeweller_pref_nearby",
             "jeweller_pref_ornament",
             "jeweller_pref_redemption",
@@ -372,6 +407,11 @@ class UserMeSerializer(serializers.ModelSerializer):
         portfolio_totals = (
             customer_portfolio_totals_payload(obj) if obj.user_type == User.CUSTOMER else {}
         )
+        secondary_ids: list[int] = []
+        if obj.user_type == User.CUSTOMER:
+            from .services.jeweller_referral import customer_secondary_jeweller_ids
+
+            secondary_ids = customer_secondary_jeweller_ids(obj)
         data = {
             "cridora_member_id": obj.cridora_member_id or "",
             "cridora_global_id": cridora_primary,
@@ -380,6 +420,7 @@ class UserMeSerializer(serializers.ModelSerializer):
             "gold_handle_local": obj.gold_handle_local or "",
             "jeweller_code": obj.jeweller_code or "",
             "default_jeweller_id": obj.default_jeweller_id,
+            "secondary_jeweller_ids": secondary_ids,
             "jeweller_pref_nearby_id": obj.jeweller_pref_nearby_id,
             "jeweller_pref_ornament_id": obj.jeweller_pref_ornament_id,
             "jeweller_pref_redemption_id": obj.jeweller_pref_redemption_id,
@@ -435,6 +476,9 @@ class GoldWalletSerializer(serializers.Serializer):
     gold_handle_local = serializers.CharField(allow_blank=True)
     jeweller_code = serializers.CharField(allow_blank=True)
     default_jeweller_id = serializers.IntegerField(allow_null=True)
+    secondary_jeweller_ids = serializers.ListField(
+        child=serializers.IntegerField(), required=False, default=list
+    )
     jeweller_pref_nearby_id = serializers.IntegerField(allow_null=True)
     jeweller_pref_ornament_id = serializers.IntegerField(allow_null=True)
     jeweller_pref_redemption_id = serializers.IntegerField(allow_null=True)

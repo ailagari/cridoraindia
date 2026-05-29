@@ -362,6 +362,9 @@ class AdminJewellerKYBActionView(APIView):
             user.kyc_status = User.KYC_VERIFIED
             user.kyc_verified_at = now
             user.save(update_fields=["kyc_status", "kyc_verified_at"])
+            from apps.accounts.services.jeweller_referral import ensure_jeweller_referral_code
+
+            ensure_jeweller_referral_code(user)
             KYDocument.objects.filter(user=user, status=KYDocument.DOC_PENDING).update(
                 status=KYDocument.DOC_VERIFIED,
                 reviewed_at=now,

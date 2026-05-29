@@ -97,19 +97,19 @@ export function resolveKnownFractionalJewellers(
   return out
 }
 
-/** Most recently completed (paid) fractional order jeweller, else wallet default among known IDs. */
+/** Primary default jeweller, else last completed order, else single known custodian. */
 export function preferredPaidFractionalJewellerId(
   orders: FractionalPurchaseDTO[],
   wallet: GoldWalletDTO | null,
   knownIds: number[],
 ): number | null {
   const known = new Set(knownIds)
+  const defaultId = wallet?.default_jeweller_id
+  if (defaultId != null && known.has(defaultId)) return defaultId
   const completed = orders
     .filter((o) => o.status === 'completed' && known.has(o.jeweller.id))
     .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at))
   if (completed[0]) return completed[0].jeweller.id
-  const defaultId = wallet?.default_jeweller_id
-  if (defaultId != null && known.has(defaultId)) return defaultId
   if (knownIds.length === 1) return knownIds[0]
   return knownIds[0] ?? null
 }

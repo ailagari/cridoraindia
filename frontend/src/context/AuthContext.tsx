@@ -34,7 +34,9 @@ type AuthContextValue = {
   user: AuthUser | null
   loading: boolean
   login: (email: string, password: string) => Promise<AuthUser>
-  registerCustomer: (payload: Record<string, string>) => Promise<AuthUser>
+  registerCustomer: (
+    payload: Record<string, string>,
+  ) => Promise<{ user: AuthUser; referralWarning?: string }>
   registerJeweller: (payload: Record<string, string>) => Promise<AuthUser>
   logout: () => Promise<void>
   refreshProfile: () => Promise<void>
@@ -145,7 +147,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!res.ok) {
         throw new Error(extractApiMessage(data, 'Registration failed'))
       }
-      return persistSession(data)
+      const u = persistSession(data)
+      const warn = data.referral_warning
+      return {
+        user: u,
+        referralWarning: typeof warn === 'string' && warn ? warn : undefined,
+      }
     },
     [persistSession],
   )

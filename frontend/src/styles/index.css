@@ -7465,38 +7465,10 @@ select.input {
 
   .public-main {
     padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
-  }
-
-  .public-footer {
-    padding-bottom: calc(6rem + env(safe-area-inset-bottom, 0px));
-  }
-
-  .public-sticky-stack__header-inner {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
-    gap: 0.45rem 0.55rem;
-    padding: 0.72rem 0;
-    flex-wrap: nowrap;
-  }
-
-  .public-mobile-username {
-    display: block;
+    width: 100%;
+    max-width: 100%;
     min-width: 0;
-    justify-self: center;
-    text-align: center;
-    font-size: 0.76rem;
-    font-weight: 700;
-    letter-spacing: 0.03em;
-    color: var(--text-muted);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    padding: 0 0.15rem;
-  }
-
-  .public-header-end {
-    margin-left: 0;
-    justify-self: end;
+    overflow-x: clip;
   }
 
   header .container nav.public-nav-desktop {
@@ -7517,8 +7489,8 @@ select.input {
     display: none !important;
   }
 
-  .public-hub-tabs {
-    display: none !important;
+  .pub-ref .public-hub-tabs {
+    display: flex !important;
   }
 
   .public-mobile-segment-bar {

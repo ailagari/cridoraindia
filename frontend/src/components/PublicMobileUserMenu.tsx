@@ -64,9 +64,22 @@ export function PublicMobileUserMenu() {
               {t('nav.dashboard')}
             </Link>
           ) : (
-            <Link to="/login" role="menuitem" className="public-mobile-user-menu__item" onClick={() => setOpen(false)}>
-              {t('mobile.logIn')}
-            </Link>
+            <>
+              <Link to="/login" role="menuitem" className="public-mobile-user-menu__item" onClick={() => setOpen(false)}>
+                {t('mobile.logIn')}
+              </Link>
+              <Link to="/signup" role="menuitem" className="public-mobile-user-menu__item" onClick={() => setOpen(false)}>
+                {t('nav.signUp')}
+              </Link>
+              <Link
+                to="/jeweller/apply"
+                role="menuitem"
+                className="public-mobile-user-menu__item"
+                onClick={() => setOpen(false)}
+              >
+                {t('nav.applyJeweller')}
+              </Link>
+            </>
           )}
           {user ? (
             <button

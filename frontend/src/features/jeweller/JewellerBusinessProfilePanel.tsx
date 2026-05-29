@@ -4,6 +4,7 @@ import { useAuth } from '@/context/AuthContext'
 import { FormSubmitFoot } from '@/components/ui/FormSubmitFoot'
 import { JewellerSellingPuritiesPanel } from '@/features/jeweller/JewellerSellingPuritiesPanel'
 import { JewellerStorefrontCardPanel } from '@/features/jeweller/JewellerStorefrontCardPanel'
+import { JewellerReferralPanel } from '@/features/jeweller/JewellerReferralPanel'
 import { JewellerUpiProfilePanel } from '@/features/jeweller/JewellerUpiProfilePanel'
 
 function formatApiErrorPayload(data: Record<string, unknown>): string {
@@ -113,6 +114,7 @@ export function JewellerBusinessProfilePanel() {
 
   return (
     <div className="dash-panel-max">
+      <JewellerReferralPanel />
       <JewellerStorefrontCardPanel />
       <JewellerUpiProfilePanel />
       <JewellerSellingPuritiesPanel />

@@ -1,4 +1,4 @@
-import { type ReactNode, useCallback, useEffect, useId, useMemo, useState } from 'react'
+import { type ReactNode, useCallback, useId, useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { DashboardMobileSubNav } from '@/components/DashboardMobileSubNav'
 import { NavHubIcon } from '@/components/NavHubIcon'
@@ -65,7 +65,6 @@ export function DashboardLayout({
   const dashLogoGradTopbar = `${dashLogoGradBase}-tb`
   const { user, logout } = useAuth()
   const navigate = useNavigate()
-  const [mobileOpen, setMobileOpen] = useState(false)
   const meta = ROLE_META[role]
 
   const activeGroup = useMemo(
@@ -76,13 +75,11 @@ export function DashboardLayout({
   const handleLogout = useCallback(async () => {
     await logout()
     navigate('/')
-    setMobileOpen(false)
   }, [logout, navigate])
 
   const pickSection = useCallback(
     (key: string) => {
       onSectionChange(key)
-      setMobileOpen(false)
     },
     [onSectionChange],
   )
@@ -95,15 +92,6 @@ export function DashboardLayout({
     [pickSection],
   )
 
-  useEffect(() => {
-    if (!mobileOpen) return
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setMobileOpen(false)
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [mobileOpen])
-
   const crumbPieces = title.split(' · ')
   const crumbLead = crumbPieces[0] ?? title
   const crumbRest = crumbPieces.length >= 2 ? crumbPieces.slice(1).join(' · ') : null
@@ -111,22 +99,9 @@ export function DashboardLayout({
 
   return (
     <div className="ref-dash-shell shell">
-      {mobileOpen ? (
-        <button
-          type="button"
-          className="overlay is-open"
-          aria-label="Close menu"
-          onClick={() => setMobileOpen(false)}
-        />
-      ) : null}
-
-      <aside className={`sidebar${mobileOpen ? ' is-open' : ''}`}>
+      <aside className="sidebar">
         <div className="sb-logo">
-          <Link
-            to="/"
-            className="sb-logo-dash-link"
-            onClick={() => setMobileOpen(false)}
-          >
+          <Link to="/" className="sb-logo-dash-link">
             <div className="sb-mark" aria-hidden>
               <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <circle cx="20" cy="20" r="18" stroke={`url(#${dashLogoGradSidebar})`} strokeWidth="2.5" />
@@ -158,13 +133,6 @@ export function DashboardLayout({
               <div className="sb-sub">{ROLE_SUB[role]}</div>
             </div>
           </Link>
-          {mobileOpen ? (
-            <button type="button" className="sb-close-btn" onClick={() => setMobileOpen(false)} aria-label="Close menu">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" />
-              </svg>
-            </button>
-          ) : null}
         </div>
 
         <div className="sb-user">
@@ -230,16 +198,6 @@ export function DashboardLayout({
 
       <div className="col">
         <header className="topbar">
-          <button
-            type="button"
-            className="tb-burger"
-            aria-label="Open menu"
-            onClick={() => setMobileOpen(true)}
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M3 6h18M3 12h18M3 18h18" strokeLinecap="round" />
-            </svg>
-          </button>
           <Link className="tb-logo-m" to={dashHomeHref} title="Dashboard home">
             <div className="sb-mark dash-tb-logo-mark" aria-hidden>
               <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">

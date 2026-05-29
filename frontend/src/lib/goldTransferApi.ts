@@ -76,6 +76,7 @@ export type GoldWalletDTO = {
   gold_handle_local: string
   jeweller_code: string
   default_jeweller_id: number | null
+  secondary_jeweller_ids?: number[]
   jeweller_pref_nearby_id?: number | null
   jeweller_pref_ornament_id?: number | null
   jeweller_pref_redemption_id?: number | null

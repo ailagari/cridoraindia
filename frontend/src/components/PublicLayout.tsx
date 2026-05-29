@@ -1,11 +1,11 @@
-import { useEffect, useId, useMemo, useState } from 'react'
+import { useId, useMemo } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { CridoraLogo } from '@/components/CridoraLogo'
 import { PublicHeaderActions, PublicMobileChrome } from '@/components/PublicMobileChrome'
 import { PublicMobileUserMenu } from '@/components/PublicMobileUserMenu'
 import { GoldTickerStrip } from '@/components/GoldTickerStrip'
 import { PublicMobileSegmentBar } from '@/components/PublicMobileSegmentBar'
-import { MarketplaceCartDrawerLink, MarketplaceCartNavIcon } from '@/components/MarketplaceCartNavIcon'
+import { MarketplaceCartNavIcon } from '@/components/MarketplaceCartNavIcon'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { useAuth, type AuthUser } from '@/context/AuthContext'
 import { useMarketplaceCartBadgeCount } from '@/hooks/useMarketplaceCartBadgeCount'
@@ -23,7 +23,6 @@ function PublicLayoutInner() {
   const navigate = useNavigate()
   const { t } = usePublicLocale()
   const footerMarkGradId = useId().replace(/:/g, '')
-  const [drawerOpen, setDrawerOpen] = useState(false)
 
   const primaryNav = [
     { to: '/', label: t('nav.home') },
@@ -43,19 +42,10 @@ function PublicLayoutInner() {
     [location.pathname, location.search],
   )
 
-  useEffect(() => {
-    if (!drawerOpen) return
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setDrawerOpen(false)
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [drawerOpen])
-
   return (
     <div className="pub-ref app-shell">
       <header className="nav" role="banner">
-        <Link to="/" className="nav-logo" style={{ textDecoration: 'none', color: 'inherit' }} onClick={() => setDrawerOpen(false)}>
+        <Link to="/" className="nav-logo" style={{ textDecoration: 'none', color: 'inherit' }}>
           <CridoraLogo size="sm" />
         </Link>
 
@@ -75,7 +65,9 @@ function PublicLayoutInner() {
         </span>
 
         <div className="nav-end public-header-end">
-          <MarketplaceCartNavIcon to={cartLinkTo} count={marketplaceCartCount} label={t('nav.cart')} />
+          {user ? (
+            <MarketplaceCartNavIcon to={cartLinkTo} count={marketplaceCartCount} label={t('nav.cart')} />
+          ) : null}
           <LanguageSwitcher />
           <ThemeToggle />
           <div className="public-mobile-actions">
@@ -117,84 +109,8 @@ function PublicLayoutInner() {
               </>
             )}
           </nav>
-          <button
-            type="button"
-            className="nav-burger"
-            aria-label={drawerOpen ? 'Close menu' : 'Open menu'}
-            aria-expanded={drawerOpen}
-            onClick={() => setDrawerOpen((o) => !o)}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              {drawerOpen ? (
-                <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" />
-              ) : (
-                <path d="M3 6h18M3 12h18M3 18h18" strokeLinecap="round" />
-              )}
-            </svg>
-          </button>
         </div>
       </header>
-
-      {drawerOpen ? (
-        <button
-          type="button"
-          className="nav-drawer__backdrop is-open"
-          aria-label="Close menu"
-          onClick={() => setDrawerOpen(false)}
-        />
-      ) : null}
-
-      <div className={`nav-drawer${drawerOpen ? ' is-open' : ''}`} id="pub-nav-drawer">
-        {primaryNav.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            end={item.to === '/'}
-            className="drawer-link"
-            onClick={() => setDrawerOpen(false)}
-          >
-            {item.label}
-          </NavLink>
-        ))}
-        <MarketplaceCartDrawerLink
-          to={cartLinkTo}
-          count={marketplaceCartCount}
-          label={t('nav.cart')}
-          onNavigate={() => setDrawerOpen(false)}
-        />
-        <div className="drawer-divider" />
-        {user ? (
-          <>
-            <NavLink to={dashboardHref} className="drawer-link" onClick={() => setDrawerOpen(false)}>
-              {t('nav.dashboard')}
-            </NavLink>
-            <button
-              type="button"
-              className="drawer-link"
-              style={{ border: 'none', background: 'none', width: '100%', textAlign: 'left', cursor: 'pointer' }}
-              onClick={async () => {
-                setDrawerOpen(false)
-                await logout()
-                navigate('/')
-              }}
-            >
-              {t('nav.logOut')}
-            </button>
-          </>
-        ) : (
-          <>
-            <NavLink to="/login" className="drawer-link" onClick={() => setDrawerOpen(false)}>
-              {t('nav.login')}
-            </NavLink>
-            <NavLink to="/signup" className="drawer-link" onClick={() => setDrawerOpen(false)}>
-              {t('nav.signUp')}
-            </NavLink>
-            <NavLink to="/jeweller/apply" className="drawer-link" onClick={() => setDrawerOpen(false)}>
-              {t('nav.applyJeweller')}
-            </NavLink>
-          </>
-        )}
-      </div>
 
       <div className="pub-ref__ticker-sticky">
         <GoldTickerStrip variant="public" />
@@ -207,7 +123,7 @@ function PublicLayoutInner() {
       <footer className="pub-footer ref-index-footer">
         <div className="footer-grid">
           <div className="footer-brand">
-            <Link to="/" className="nav-logo" onClick={() => setDrawerOpen(false)}>
+            <Link to="/" className="nav-logo">
               <div className="nav-mark-mini" aria-hidden>
                 <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <circle cx="20" cy="20" r="18" stroke={`url(#${footerMarkGradId})`} strokeWidth="2.5" />

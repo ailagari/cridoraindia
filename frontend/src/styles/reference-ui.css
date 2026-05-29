@@ -38,6 +38,8 @@
   min-height: 100dvh;
   padding-top: var(--nav-h);
   background: var(--page);
+  overflow-x: clip;
+  max-width: 100%;
 }
 
 .pub-ref .nav {
@@ -347,8 +349,14 @@ html[data-theme='light'] .pub-ref .tt-k {
   background: var(--s1);
   padding: 6px max(5vw, env(safe-area-inset-right)) 6px max(5vw, env(safe-area-inset-left));
   gap: 6px;
-  display: flex;
-  flex-wrap: wrap;
+  display: none;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.pub-ref .public-hub-tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .pub-ref .public-hub-pill {
@@ -382,9 +390,30 @@ html[data-theme='light'] .pub-ref .tt-k {
 }
 
 @media (max-width: 767px) {
-  .pub-ref .nav-burger {
-    display: inline-flex;
+  .pub-ref .nav {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    padding: 0 max(0.65rem, env(safe-area-inset-left)) 0 max(0.65rem, env(safe-area-inset-right));
+    gap: 0.35rem;
+    min-width: 0;
   }
+
+  .pub-ref .nav-logo {
+    justify-self: start;
+    min-width: 0;
+  }
+
+  .pub-ref .nav-end {
+    justify-self: end;
+    min-width: 0;
+    gap: 0.2rem;
+  }
+
+  .pub-ref .public-hub-tabs {
+    display: flex;
+  }
+
   .pub-ref .public-nav-desktop {
     display: none !important;
   }
@@ -992,18 +1021,22 @@ html[data-theme='light'] .ref-dash-shell .tt-knob {
     width: 100%;
   }
   .ref-dash-shell .sidebar {
-    transform: translateX(-100%);
-    z-index: 310;
-  }
-  .ref-dash-shell .sidebar.is-open {
-    transform: translateX(0);
-  }
-  .ref-dash-shell .tb-burger {
-    display: inline-flex;
+    display: none;
   }
   .ref-dash-shell .tb-crumb {
     display: none;
   }
+  .ref-dash-shell .topbar {
+    padding: 0 max(0.65rem, env(safe-area-inset-left)) 0 max(0.65rem, env(safe-area-inset-right));
+    gap: 0.45rem;
+    min-width: 0;
+  }
+
+  .ref-dash-shell .tb-end {
+    min-width: 0;
+    flex-shrink: 1;
+  }
+
   .ref-dash-shell .main.dash-content {
     padding: 16px 12px calc(var(--bh) + env(safe-area-inset-bottom, 0px) + 16px);
   }

@@ -88,6 +88,11 @@ def _wallet_payload(user: User) -> dict:
     jeweller_portfolio = {}
     if user.user_type == User.JEWELLER:
         jeweller_portfolio = jeweller_portfolio_ledger_payload(user, ledger_filter="all")
+    secondary_jeweller_ids: list[int] = []
+    if user.user_type == User.CUSTOMER:
+        from .services.jeweller_referral import customer_secondary_jeweller_ids
+
+        secondary_jeweller_ids = customer_secondary_jeweller_ids(user)
     return GoldWalletSerializer(
         {
             "cridora_member_id": user.cridora_member_id or "",
@@ -97,6 +102,7 @@ def _wallet_payload(user: User) -> dict:
             "gold_handle_local": user.gold_handle_local or "",
             "jeweller_code": user.jeweller_code or "",
             "default_jeweller_id": user.default_jeweller_id,
+            "secondary_jeweller_ids": secondary_jeweller_ids,
             "jeweller_pref_nearby_id": user.jeweller_pref_nearby_id,
             "jeweller_pref_ornament_id": user.jeweller_pref_ornament_id,
             "jeweller_pref_redemption_id": user.jeweller_pref_redemption_id,

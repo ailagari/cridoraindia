@@ -89,6 +89,14 @@ class User(AbstractUser):
         blank=True,
         help_text="Public storefront slug for KYB-verified jewellers (GoldUPI suffix).",
     )
+    jeweller_referral_code = models.CharField(
+        max_length=6,
+        unique=True,
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text="6-digit code for customer signup onboarding (verified jewellers only).",
+    )
     default_jeweller = models.ForeignKey(
         "self",
         null=True,
@@ -97,6 +105,15 @@ class User(AbstractUser):
         related_name="default_for_customers",
         limit_choices_to={"user_type": JEWELLER},
         help_text="Primary default jeweller (routing, transfers, marketplace).",
+    )
+    onboarded_by_jeweller = models.ForeignKey(
+        "self",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="onboarded_customers",
+        limit_choices_to={"user_type": JEWELLER},
+        help_text="Jeweller who referred or onboarded this customer at signup.",
     )
     jeweller_pref_nearby = models.ForeignKey(
         "self",

@@ -58,8 +58,10 @@ def ensure_vault(owner: User, custodian: User) -> GoldVault:
 
 
 def sync_default_jeweller_if_single_vault(customer: User) -> bool:
-    """When a customer has exactly one vault custodian, that jeweller becomes primary."""
+    """When default is unset and customer has exactly one vault custodian, set primary."""
     if customer.user_type != User.CUSTOMER:
+        return False
+    if customer.default_jeweller_id is not None:
         return False
     custodian_ids = list(
         GoldVault.objects.filter(owner=customer)
