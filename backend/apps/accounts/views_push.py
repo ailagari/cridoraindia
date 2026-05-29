@@ -8,6 +8,7 @@ from rest_framework.views import APIView
 from .models import WebPushSubscription, NativePushToken
 from .locale_utils import normalize_preferred_locale
 from .services.admin_access import user_is_platform_admin
+from .vapid_utils import vapid_signer_ready
 from .webpush_service import send_push_to_user, webpush_configured
 from . import fcm_service
 
@@ -30,9 +31,17 @@ class WebPushVapidPublicKeyView(APIView):
 
     def get(self, request):
         key = (getattr(settings, "WEB_PUSH_VAPID_PUBLIC_KEY", "") or "").strip()
+        priv = (getattr(settings, "WEB_PUSH_VAPID_PRIVATE_KEY", "") or "").strip()
         if not key:
-            return Response({"public_key": None, "configured": False})
-        return Response({"public_key": key, "configured": True})
+            return Response({"public_key": None, "configured": False, "signing_ready": False})
+        signing_ready = bool(priv and vapid_signer_ready(key, priv))
+        return Response(
+            {
+                "public_key": key,
+                "configured": signing_ready,
+                "signing_ready": signing_ready,
+            }
+        )
 
 
 class WebPushSubscribeView(APIView):

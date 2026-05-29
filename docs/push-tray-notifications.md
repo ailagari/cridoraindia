@@ -65,6 +65,16 @@ The app picks the channel automatically (`registerWebPushSubscription` in `front
 - **Inbox + push:** `notify_inbox()` in `backend/apps/accounts/services/inbox_notify.py` creates inbox rows and calls push when preferences allow.
 - **Preferences:** `NotificationPreference.allow_push_notifications` and per-category flags gate delivery.
 
+### VAPID private key format (important)
+
+`generate_vapid_keys` outputs a **PEM** private key. The server must load it with `Vapid.from_pem`, not `Vapid.from_string` (which only accepts raw/DER). Cridora uses `apps/accounts/vapid_utils.py` for this. Verify on the server:
+
+```bash
+python manage.py test_vapid_keys
+```
+
+If sends fail with `Invalid base64-encoded string`, redeploy after the PEM loader fix or re-paste keys from `generate_vapid_keys`.
+
 ### Environment (Railway / production)
 
 | Variable | Purpose |

@@ -8,6 +8,7 @@ from pywebpush import WebPushException, webpush
 
 from .models import WebPushSubscription
 from .locale_utils import DEFAULT_PUBLIC_LOCALE, normalize_preferred_locale
+from .vapid_utils import load_vapid_private_key, vapid_signer_ready
 from . import fcm_service
 
 logger = logging.getLogger(__name__)
@@ -19,7 +20,7 @@ _WEB_PUSH_TTL_SECONDS = 86_400
 def webpush_configured() -> bool:
     pub = (getattr(settings, "WEB_PUSH_VAPID_PUBLIC_KEY", "") or "").strip()
     priv = (getattr(settings, "WEB_PUSH_VAPID_PRIVATE_KEY", "") or "").strip()
-    return bool(pub and priv)
+    return bool(pub and priv and vapid_signer_ready(pub, priv))
 
 
 def push_delivery_configured() -> bool:
@@ -27,10 +28,13 @@ def push_delivery_configured() -> bool:
     return webpush_configured() or fcm_service.fcm_configured()
 
 
+def _vapid_signer():
+    return load_vapid_private_key((settings.WEB_PUSH_VAPID_PRIVATE_KEY or "").strip())
+
+
 def send_push_payload(subscription: WebPushSubscription, payload: dict[str, Any]) -> None:
     if not webpush_configured():
         return
-    private_key = settings.WEB_PUSH_VAPID_PRIVATE_KEY.strip().replace("\\n", "\n")
     info = {
         "endpoint": subscription.endpoint,
         "keys": {"p256dh": subscription.p256dh, "auth": subscription.auth},
@@ -38,7 +42,7 @@ def send_push_payload(subscription: WebPushSubscription, payload: dict[str, Any]
     webpush(
         subscription_info=info,
         data=json.dumps(payload),
-        vapid_private_key=private_key,
+        vapid_private_key=_vapid_signer(),
         vapid_claims={"sub": settings.WEB_PUSH_VAPID_CONTACT.strip()},
         ttl=_WEB_PUSH_TTL_SECONDS,
     )

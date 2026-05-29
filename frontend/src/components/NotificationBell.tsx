@@ -551,7 +551,8 @@ export function NotificationBell({
     <strong>{publicUi ? t('notifications.unavailable') : 'Push alerts unavailable on this deployment.'}</strong>
   ) : null
 
-  const showTrayPushRow = !hidePushRowInBell && pushServerReady === true
+  const showTrayPushRow =
+    !hidePushRowInBell && pushServerReady === true && !pushActive
   const pushSupported = pushNotificationsSupported()
   const canEnableTrayPush =
     pushSupported && !pushActive && !pushPermissionBlocked
@@ -575,17 +576,7 @@ export function NotificationBell({
       </div>
       {showTrayPushRow ? (
         <div className="notif-push-row" role="region" aria-label={publicUi ? t('notifications.trayRegion') : 'Device notification tray'}>
-          {pushActive ? (
-            <>
-              <span className="notif-push-label">
-                {publicUi ? t('notifications.trayOn') : 'Tray notifications on'}
-              </span>
-              <span className="notif-push-status notif-push-status--on">
-                {publicUi ? t('notifications.trayOnDetail') : 'Alerts appear in your phone or system notification tray.'}
-              </span>
-              <span className="notif-push-detail">{deliveryLabel}</span>
-            </>
-          ) : pushPermissionBlocked ? (
+          {pushPermissionBlocked ? (
             <>
               <span className="notif-push-label">
                 {publicUi ? t('notifications.trayBlocked') : 'Tray notifications blocked'}
