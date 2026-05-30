@@ -151,9 +151,13 @@ from .views_festival_broadcast import (
     AdminFestivalBroadcastCancelView,
     AdminFestivalBroadcastListCreateView,
 )
+from .views_jeweller_campaigns import JewellerCampaignListCreateView
 from .views_notification_admin import (
     AdminNotificationStatsView,
+    AdminNotificationTemplateDetailView,
+    AdminNotificationTemplatePreviewView,
     AdminNotificationTemplatesView,
+    AdminNotificationVariablesView,
 )
 from .views_inbox import (
     InboxAckView,
@@ -245,6 +249,7 @@ urlpatterns = [
         "portfolio/personal-holdings/<int:holding_pk>/documents/<int:doc_pk>/download/",
         PersonalHoldingDocumentDownloadView.as_view(),
     ),
+    path("jeweller/campaigns/", JewellerCampaignListCreateView.as_view()),
     path("jeweller/customers/lookup/", JewellerCustomerLookupView.as_view()),
     path("jeweller/personal-holdings/", JewellerPersonalHoldingCreateView.as_view()),
     path("admin/personal-holdings/", AdminPersonalHoldingsListView.as_view()),
@@ -255,6 +260,15 @@ urlpatterns = [
         AdminPersonalDocumentRemoveView.as_view(),
     ),
     path("admin/notification-templates/", AdminNotificationTemplatesView.as_view()),
+    path(
+        "admin/notification-templates/preview/",
+        AdminNotificationTemplatePreviewView.as_view(),
+    ),
+    path(
+        "admin/notification-templates/<int:pk>/",
+        AdminNotificationTemplateDetailView.as_view(),
+    ),
+    path("admin/notification-variables/", AdminNotificationVariablesView.as_view()),
     path("admin/notification-stats/", AdminNotificationStatsView.as_view()),
     path("admin/festival-broadcasts/", AdminFestivalBroadcastListCreateView.as_view()),
     path(

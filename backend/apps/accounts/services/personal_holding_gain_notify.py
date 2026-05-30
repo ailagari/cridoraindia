@@ -14,8 +14,10 @@ from apps.accounts.models import (
     PersonalHoldingNotificationState,
     PortfolioUserNotification,
 )
-from apps.accounts.services.inbox_notify import notify_inbox
-from apps.accounts.services.notification_copy import format_holding_gain, resolve_jeweller_push_branding
+from apps.accounts.services.deliver_engagement import deliver_engagement
+from apps.accounts.services.engagement_constants import MOMENT_HOLDING_APPRECIATION
+from apps.accounts.services.engagement_context import resolve_engagement_context
+from apps.accounts.services.notification_copy import resolve_jeweller_push_branding
 from apps.accounts.services.notification_rate_limits import gold_alert_allowed, record_gold_alert
 from apps.accounts.services.personal_holdings import calculate_holding_value_inr, reference_gold_rate_inr_per_gram
 from apps.marketplace.models import get_or_create_ticker, jeweller_profile_for
@@ -45,7 +47,11 @@ def _get_or_init_state(holding: PersonalGoldHolding, new_value: Decimal) -> Pers
     return state
 
 
-def notify_personal_holdings_after_rate_change(*, jeweller_id: int | None = None) -> int:
+def notify_personal_holdings_after_rate_change(
+    *,
+    jeweller_id: int | None = None,
+    defer_push: bool = False,
+) -> int:
     """
     After a platform or jeweller rate move, notify customers per holding when gain exceeds threshold.
     Gain-only; max one alert per holding per 24h.
@@ -78,20 +84,14 @@ def notify_personal_holdings_after_rate_change(*, jeweller_id: int | None = None
             continue
 
         branding = resolve_jeweller_push_branding(holding.jeweller_id) if holding.jeweller_id else {}
-        title = "Portfolio value update"
-        if branding.get("title_prefix"):
-            title = f"{branding['title_prefix']}: {title}"
-
-        body = format_holding_gain(
-            title=holding.title,
-            gain_inr=gain,
-            new_value_inr=new_value,
-        )
-        notify_inbox(
+        ctx = resolve_engagement_context(user)
+        row = deliver_engagement(
             user,
-            kind=PortfolioUserNotification.KIND_SYSTEM,
-            title=title[:180],
-            body=body,
+            moment=MOMENT_HOLDING_APPRECIATION,
+            context=ctx,
+            holding=holding,
+            gain_inr=gain,
+            value_inr=new_value,
             link_path="/userdashboard?section=portfolio_holdings",
             category=PortfolioUserNotification.CATEGORY_PORTFOLIO,
             priority=PortfolioUserNotification.PRIORITY_LOW,
@@ -100,7 +100,10 @@ def notify_personal_holdings_after_rate_change(*, jeweller_id: int | None = None
             logo_url=branding.get("logo_url") or None,
             image_url=branding.get("logo_url") or None,
             tag=f"hold-gain-{holding.pk}",
+            defer_push=defer_push,
         )
+        if not row:
+            continue
         state.last_notified_value_inr = new_value
         state.last_notified_at = now
         state.save(update_fields=["last_notified_value_inr", "last_notified_at"])

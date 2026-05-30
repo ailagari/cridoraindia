@@ -1,22 +1,29 @@
 from django.core.management.base import BaseCommand
 
-from apps.marketplace.gold_hourly_push import run_hourly_gold_price_push_digest
-
 
 class Command(BaseCommand):
     help = (
-        "Broadcast hourly gold 22K reference Web Push vs prior snapshot. "
-        "Schedule every hour on your host (e.g. Railway Cron): "
-        "`python manage.py run_hourly_gold_push` from /app/backend with DATABASE_URL set."
+        "Deprecated: hourly digest is evaluated on GoldPriceUpdated ingest. "
+        "Use --replay for a one-off manual broadcast from current reference."
     )
 
     def add_arguments(self, parser):
         parser.add_argument(
-            "--force",
+            "--replay",
             action="store_true",
-            help="Bypass the short duplicate-run lock (for manual retries).",
+            help="Run hourly digest evaluation once (recovery only).",
         )
 
     def handle(self, *args, **options):
-        out = run_hourly_gold_price_push_digest(force=bool(options.get("force")))
-        self.stdout.write(str(out))
+        if not options.get("replay"):
+            self.stderr.write(
+                self.style.WARNING(
+                    "Skipped: run_hourly_gold_push is not for Railway cron. "
+                    "Hourly digest runs when platform price is ingested and ≥1h elapsed."
+                )
+            )
+            return
+        from apps.marketplace.gold_hourly_push import run_hourly_gold_price_push_digest
+
+        out = run_hourly_gold_price_push_digest(force=True)
+        self.stdout.write(self.style.SUCCESS(str(out)))

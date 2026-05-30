@@ -17,12 +17,19 @@ MESSAGES = [
 
 
 class Command(BaseCommand):
-    help = "Send at most one fun notification per eligible customer (platform flag)."
+    help = (
+        "Deprecated: use enable_educational_engagement on gold ingest. "
+        "Retained for manual replay only."
+    )
 
     def handle(self, *args, **options):
         ticker = get_or_create_ticker()
-        if not ticker.enable_fun_notifications:
-            self.stdout.write("Fun notifications disabled on ticker config.")
+        if not ticker.enable_fun_notifications and not getattr(
+            ticker, "enable_educational_engagement", False
+        ):
+            self.stdout.write(
+                "Fun/educational engagement disabled on ticker (enable_educational_engagement)."
+            )
             return
         title, body = MESSAGES[0]
         sent = 0

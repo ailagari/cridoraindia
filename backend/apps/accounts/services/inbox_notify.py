@@ -36,6 +36,7 @@ def notify_inbox(
     logo_url: str | None = None,
     jeweller_id: int | None = None,
     tag: str | None = None,
+    defer_push: bool = False,
 ) -> PortfolioUserNotification:
     if category == PortfolioUserNotification.CATEGORY_PROMO and jeweller_id:
         if not promotional_allowed_for_jeweller(jeweller_id):
@@ -79,18 +80,25 @@ def notify_inbox(
         user, category=category, priority=priority, notification_type=ntype
     ):
         path = link_path if link_path.startswith("/") else f"/{link_path}" if link_path else "/"
-        try:
-            send_push_to_user(
-                user,
-                build_push_payload(
-                    title=title,
-                    body=body,
-                    url=path,
-                    tag=tag or f"inbox-{kind}-{row.pk}",
-                    image_url=push_image or None,
-                    notification_id=str(row.pk),
-                ),
-            )
-        except Exception:
-            logger.exception("notify_inbox push failed user_id=%s row=%s", user.pk, row.pk)
+        payload = build_push_payload(
+            title=title,
+            body=body,
+            url=path,
+            tag=tag or f"inbox-{kind}-{row.pk}",
+            image_url=push_image or None,
+            notification_id=str(row.pk),
+        )
+
+        def _deliver_push() -> None:
+            try:
+                send_push_to_user(user, payload)
+            except Exception:
+                logger.exception("notify_inbox push failed user_id=%s row=%s", user.pk, row.pk)
+
+        if defer_push:
+            from apps.accounts.services.notification_push_queue import enqueue_push_delivery
+
+            enqueue_push_delivery(_deliver_push)
+        else:
+            _deliver_push()
     return row

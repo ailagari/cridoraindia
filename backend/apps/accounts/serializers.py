@@ -557,6 +557,12 @@ class FestivalBroadcastNotificationSerializer(serializers.ModelSerializer):
             "expires_at",
             "target_type",
             "target_metadata",
+            "engagement_context",
+            "engagement_moment",
+            "festival_name",
+            "festival_message",
+            "personalize_per_user",
+            "store_in_inbox",
             "status",
             "sent_at",
             "push_recipient_count",
@@ -582,6 +588,12 @@ class FestivalBroadcastNotificationCreateSerializer(serializers.Serializer):
         default=FestivalBroadcastNotification.TARGET_ALL_USERS,
     )
     target_metadata = serializers.JSONField(required=False, default=dict)
+    engagement_context = serializers.CharField(required=False, allow_blank=True, max_length=32)
+    engagement_moment = serializers.CharField(required=False, allow_blank=True, max_length=32)
+    festival_name = serializers.CharField(required=False, allow_blank=True, max_length=120)
+    festival_message = serializers.CharField(required=False, allow_blank=True, max_length=500)
+    personalize_per_user = serializers.BooleanField(required=False, default=False)
+    store_in_inbox = serializers.BooleanField(required=False, default=False)
 
     def create(self, validated_data):
         request = self.context["request"]
@@ -603,6 +615,12 @@ class FestivalBroadcastNotificationCreateSerializer(serializers.Serializer):
             target_type=validated_data.get("target_type")
             or FestivalBroadcastNotification.TARGET_ALL_USERS,
             target_metadata=meta,
+            engagement_context=(validated_data.get("engagement_context") or "")[:32],
+            engagement_moment=(validated_data.get("engagement_moment") or "")[:32],
+            festival_name=(validated_data.get("festival_name") or "")[:120],
+            festival_message=(validated_data.get("festival_message") or "")[:500],
+            personalize_per_user=bool(validated_data.get("personalize_per_user")),
+            store_in_inbox=bool(validated_data.get("store_in_inbox")),
             created_by=request.user,
         )
 

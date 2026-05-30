@@ -116,16 +116,44 @@ Android APK also needs `google-services.json` in the Capacitor Android project (
 
 ---
 
-## Automated engines (gold & portfolio)
+## Automated engines (gold & portfolio) — event-driven
+
+Live alerts are **not** driven by Railway cron. On each platform or jeweller price ingest, the app publishes `GoldPriceUpdated`, recalculates holdings, evaluates rules, enqueues tray pushes, and flushes the queue.
 
 | Engine | Trigger | Delivery |
 |--------|---------|----------|
-| **Platform 22K** | Live spot refresh, `run_gold_rate_alerts`, admin ticker save | Public broadcast + inbox/tray for customers with holdings (`allow_gold_alerts`) |
-| **Jeweller manual rate** | Jeweller pricing profile PATCH | Inbox + tray for default-jeweller customers; jeweller `logo_url` on push when HTTPS |
-| **Personal holding gain** | After platform or jeweller rate move | Gain-only per item; `holding_gain_threshold_inr` on gold ticker |
-| **Portfolio aggregate** | `run_portfolio_gain_notifications` cron | Deduped vs `UserPortfolioNotificationState`; `allow_portfolio_alerts` |
+| **Platform 22K** | Spot ingest, gold ticker API, admin ticker PATCH | Threshold broadcast + inbox/tray (`allow_gold_alerts`) |
+| **Jeweller manual rate** | Jeweller pricing profile PATCH | Inbox + tray + jeweller `logo_url` when HTTPS |
+| **Personal holding gain** | Same ingest pipeline | Gain-only per item |
+| **Portfolio aggregate** | Same ingest pipeline | Deduped vs `UserPortfolioNotificationState` |
+| **Hourly digest** | Ingest when ≥1h since hourly baseline | Broadcast (not a separate cron) |
 
-Copy helpers: `backend/apps/accounts/services/notification_copy.py`. Admin manual send (no baseline change): `POST /api/v1/admin/gold-ticker/send-price-notification/`.
+Code: `backend/apps/marketplace/gold_price_events.py`, `gold_price_notification_pipeline.py`.  
+Cron policy: `docs/RAILWAY_CRON.md` (housekeeping only).
+
+---
+
+## Engagement Engine (templates)
+
+Marketing copy lives in **`NotificationTemplate`** rows: **moment** (`category`) + **context** + **locale**. Business logic builds **facts** (portfolio value, holding gain, `festival_name`, `years_held`, monthly storytelling aggregates); rendering substitutes `{{variables}}` safely.
+
+| Moment | Typical trigger |
+|--------|-----------------|
+| `portfolio_growth` | `GoldPriceUpdated` ingest |
+| `portfolio_milestone` | Portfolio value crosses ticker thresholds |
+| `holding_appreciation` | Per-holding gain (gain-only) |
+| `holding_milestone` | Holding value crosses threshold |
+| `market_awareness` | Gold rate move / educational (ingest) |
+
+Contexts: `default`, `festival` (use `{{festival_name}}`), `jeweller_campaign`, `educational`.  
+**Not** separate contexts per holiday (Vishu/Onam are fact values).
+
+- Seed defaults: `python manage.py seed_engagement_templates`
+- Admin API: `/api/v1/admin/notification-templates/`, preview, variables catalog
+- Jeweller campaigns: `POST /api/v1/jeweller/campaigns/` (same `FestivalBroadcastNotification` processor)
+- Delivery unchanged: `notify_inbox` → `PortfolioUserNotification` + tray push
+
+Code: `backend/apps/accounts/services/engagement_*.py`, `deliver_engagement.py`.
 
 ---
 

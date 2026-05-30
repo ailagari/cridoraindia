@@ -10,10 +10,10 @@ from django.db.models import Exists, OuterRef, Q
 from django.utils import timezone
 
 from apps.accounts.models import GoldDepositIntake, PersonalGoldHolding, PortfolioUserNotification
-from apps.accounts.services.inbox_notify import notify_inbox
-from apps.accounts.services.notification_copy import format_gold_rate_standard
+from apps.accounts.services.deliver_engagement import deliver_engagement
+from apps.accounts.services.engagement_constants import MOMENT_MARKET_AWARENESS
+from apps.accounts.services.engagement_context import resolve_engagement_context
 from apps.accounts.services.notification_rate_limits import gold_alert_allowed, record_gold_alert
-from apps.marketplace.gold_rate_alerts import maybe_notify_gold_rate_move
 from apps.marketplace.models import GoldRateHistory
 
 logger = logging.getLogger(__name__)
@@ -68,81 +68,45 @@ def notify_customers_platform_gold_move(
     link: str,
     image_url: str,
     body: str | None = None,
+    defer_push: bool = False,
 ) -> int:
     """Inbox + tray for customers with holdings (preferences + daily cap)."""
-    msg = body or format_gold_rate_standard(previous_rate=baseline, new_rate=current)
     sent = 0
     for user in _customers_with_holdings_qs().iterator(chunk_size=100):
         if not gold_alert_allowed(user.pk):
             continue
-        notify_inbox(
+        ctx = resolve_engagement_context(user)
+        row = deliver_engagement(
             user,
-            kind=PortfolioUserNotification.KIND_SYSTEM,
-            title=title[:120],
-            body=msg,
+            moment=MOMENT_MARKET_AWARENESS,
+            context=ctx,
+            previous_rate=baseline,
+            new_rate=current,
+            title_override=title[:120] if title else None,
             link_path=link,
             category=PortfolioUserNotification.CATEGORY_PORTFOLIO,
             priority=PortfolioUserNotification.PRIORITY_MEDIUM,
             notification_type="gold_rate",
             image_url=image_url or None,
             tag="cridora-gold-rate-inbox",
+            defer_push=defer_push,
         )
-        record_gold_alert(user.pk)
-        sent += 1
+        if body and row:
+            row.body = body
+            row.save(update_fields=["body"])
+        if row:
+            record_gold_alert(user.pk)
+            sent += 1
     return sent
 
 
 def run_platform_gold_rate_notifications(*, force: bool = False) -> dict:
-    """
-    Run threshold broadcast (existing) then customer inbox + holding gain hooks.
-    """
-    result = maybe_notify_gold_rate_move(force=force)
-    if not result.get("sent"):
-        return result
+    """Deprecated: ingest via gold_price_events.ingest_platform_gold_price instead."""
+    from .gold_price_events import ingest_platform_gold_price
+    from .spot_prices import resolve_cridora_base_22k_inr
 
-    current = Decimal(str(result.get("current_inr") or "0"))
-    if result.get("baseline_inr"):
-        baseline = Decimal(str(result["baseline_inr"]))
-    else:
-        delta = Decimal(str(result.get("delta_inr") or "0"))
-        baseline = (current - delta).quantize(Decimal("0.01"))
-    if baseline <= 0 or current <= 0:
-        return result
-
-    from apps.marketplace.models import get_or_create_ticker
-
-    ticker = get_or_create_ticker()
-    title = (ticker.rate_move_alert_title or "Gold rate alert").strip() or "Gold rate alert"
-    link = (ticker.rate_move_alert_link or "/marketplace").strip() or "/marketplace"
-    image_url = (ticker.gold_push_image_url or "").strip()
-
-    try:
-        record_platform_gold_rate_history(previous_rate=baseline, new_rate=current)
-    except Exception:
-        logger.exception("platform GoldRateHistory insert failed")
-
-    try:
-        result["customer_inbox_sent"] = notify_customers_platform_gold_move(
-            baseline=baseline,
-            current=current,
-            title=title,
-            link=link,
-            image_url=image_url,
-        )
-    except Exception:
-        logger.exception("platform gold customer inbox failed")
-        result["customer_inbox_sent"] = 0
-
-    try:
-        from apps.accounts.services.personal_holding_gain_notify import (
-            notify_personal_holdings_after_rate_change,
-        )
-
-        result["holding_alerts_sent"] = notify_personal_holdings_after_rate_change(
-            jeweller_id=None,
-        )
-    except Exception:
-        logger.exception("holding gain after platform rate failed")
-        result["holding_alerts_sent"] = 0
-
-    return result
+    base, src = resolve_cridora_base_22k_inr()
+    out = ingest_platform_gold_price(base=base, source=src)
+    out["deprecated"] = True
+    out["force_ignored"] = force
+    return out

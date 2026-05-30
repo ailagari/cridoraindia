@@ -70,23 +70,17 @@ class MarketplaceGoldTickerPublicView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
-        try:
-            from .platform_gold_notify import run_platform_gold_rate_notifications
-
-            run_platform_gold_rate_notifications()
-        except Exception:
-            logger.exception("Gold rate alert check failed")
         ticker = get_or_create_ticker()
         try:
             from decimal import Decimal
 
-            from .gold_ticker_history import persist_ticker_final_price
+            from .gold_price_events import ingest_platform_gold_price
             from .spot_prices import resolve_cridora_base_22k_inr
 
             base, src = resolve_cridora_base_22k_inr()
-            persist_ticker_final_price(base=base.quantize(Decimal("0.01")), source=src)
+            ingest_platform_gold_price(base=base.quantize(Decimal("0.01")), source=src)
         except Exception:
-            logger.exception("Gold ticker daily history update failed")
+            logger.exception("Gold ticker ingest failed")
         return Response(GoldTickerPublicSerializer(ticker).data)
 
 
@@ -435,11 +429,19 @@ class AdminGoldTickerView(APIView):
         ticker.refresh_from_db()
         invalidate_spot_price_cache()
         try:
-            from .platform_gold_notify import run_platform_gold_rate_notifications
+            from decimal import Decimal
 
-            run_platform_gold_rate_notifications(force=True)
+            from .gold_price_events import ingest_platform_gold_price
+            from .spot_prices import resolve_cridora_base_22k_inr
+
+            base, src = resolve_cridora_base_22k_inr()
+            ingest_platform_gold_price(
+                base=base.quantize(Decimal("0.01")),
+                source=src,
+                updated_by=request.user,
+            )
         except Exception:
-            logger.exception("Gold rate alert check failed after ticker save")
+            logger.exception("Gold price ingest failed after ticker save")
         return Response(GoldTickerReadSerializer(ticker).data)
 
 

@@ -1,9 +1,10 @@
 import { useState } from 'react'
+import { AdminEngagementTemplatesPanel } from '@/features/admin/AdminEngagementTemplatesPanel'
 import { AdminFestivalBroadcastPanel } from '@/features/admin/AdminFestivalBroadcastPanel'
 import { AdminNotificationStatsPanel } from '@/features/admin/AdminNotificationStatsPanel'
 import { NotificationSettingsPanel } from '@/features/settings/NotificationSettingsPanel'
 
-type Tab = 'campaigns' | 'gold' | 'prefs' | 'stats'
+type Tab = 'campaigns' | 'gold' | 'templates' | 'prefs' | 'stats'
 
 export function AdminNotificationsHubPanel() {
   const [tab, setTab] = useState<Tab>('campaigns')
@@ -34,6 +35,13 @@ export function AdminNotificationsHubPanel() {
           </button>
           <button
             type="button"
+            className={`btn${tab === 'templates' ? ' btn-primary' : ' btn-ghost'}`}
+            onClick={() => setTab('templates')}
+          >
+            Templates
+          </button>
+          <button
+            type="button"
             className={`btn${tab === 'prefs' ? ' btn-primary' : ' btn-ghost'}`}
             onClick={() => setTab('prefs')}
           >
@@ -55,6 +63,7 @@ export function AdminNotificationsHubPanel() {
           description="Control KYC/KYB tray alerts and optional promotional pushes sent to your admin account."
         />
       ) : null}
+      {tab === 'templates' ? <AdminEngagementTemplatesPanel /> : null}
       {tab === 'campaigns' || tab === 'gold' ? <AdminFestivalBroadcastPanel tab={tab} /> : null}
     </div>
   )

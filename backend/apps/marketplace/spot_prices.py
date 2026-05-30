@@ -252,11 +252,11 @@ def _finalize_spot_payload(payload: dict, *, include_live_raw: bool) -> dict:
     payload["platform_base_inr_per_gram_22k"] = str(base)
     payload["cridora_base_source"] = src
     try:
-        from .gold_ticker_history import persist_ticker_final_price
+        from .gold_price_events import ingest_platform_gold_price
 
-        persist_ticker_final_price(base=base, source=src)
+        ingest_platform_gold_price(base=base, source=src)
     except Exception:
-        logger.exception("gold reference history sample failed")
+        logger.exception("gold price ingest failed")
     return payload
 
 
@@ -363,12 +363,6 @@ def public_spot_prices_payload(*, include_live_raw: bool = False) -> dict:
     cache.set(_CACHE_KEY_INR, data, timeout=_CACHE_TTL)
     cache.set(_CACHE_KEY_LAST_GOOD, data, timeout=_CACHE_TTL_LAST_GOOD)
     payload_out = apply_live_adjustments_to_spot_payload(data, ticker)
-    try:
-        from .platform_gold_notify import run_platform_gold_rate_notifications
-
-        run_platform_gold_rate_notifications()
-    except Exception:
-        logger.exception("Gold rate alert check failed after spot refresh")
     return _finalize_spot_payload(payload_out, include_live_raw=include_live_raw)
 
 

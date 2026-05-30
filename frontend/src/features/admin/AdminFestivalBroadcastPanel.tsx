@@ -91,6 +91,13 @@ export function AdminFestivalBroadcastPanel({ tab }: { tab?: HubTab }) {
   const [portfolioGainPct, setPortfolioGainPct] = useState('2')
   const [sendPushBusy, setSendPushBusy] = useState(false)
   const [sendPushMsg, setSendPushMsg] = useState('')
+  const [festEngagementContext, setFestEngagementContext] = useState('')
+  const [festEngagementMoment, setFestEngagementMoment] = useState('')
+  const [festFestivalName, setFestFestivalName] = useState('')
+  const [festPersonalize, setFestPersonalize] = useState(false)
+  const [activeEngagementContext, setActiveEngagementContext] = useState('default')
+  const [activeFestivalName, setActiveFestivalName] = useState('')
+  const [enableEducational, setEnableEducational] = useState(false)
 
   const loadFestivals = useCallback(async () => {
     setLoadErr('')
@@ -129,6 +136,14 @@ export function AdminFestivalBroadcastPanel({ tab }: { tab?: HubTab }) {
     setMaxGoldAlertsDay(String(data.max_gold_alerts_per_day ?? 3))
     setPortfolioGainInr(data.portfolio_gain_threshold_inr ?? '500')
     setPortfolioGainPct(data.portfolio_gain_threshold_percent ?? '2')
+    const ext = data as GoldAlertSettings & {
+      active_engagement_context?: string
+      active_festival_name?: string
+      enable_educational_engagement?: boolean
+    }
+    setActiveEngagementContext(ext.active_engagement_context?.trim() || 'default')
+    setActiveFestivalName(ext.active_festival_name?.trim() || '')
+    setEnableEducational(Boolean(ext.enable_educational_engagement))
   }, [])
 
   useEffect(() => {
@@ -172,6 +187,9 @@ export function AdminFestivalBroadcastPanel({ tab }: { tab?: HubTab }) {
           max_gold_alerts_per_day: Number.parseInt(maxGoldAlertsDay.trim(), 10) || 3,
           portfolio_gain_threshold_inr: portfolioGainInr.trim(),
           portfolio_gain_threshold_percent: portfolioGainPct.trim(),
+          active_engagement_context: activeEngagementContext.trim() || 'default',
+          active_festival_name: activeFestivalName.trim(),
+          enable_educational_engagement: enableEducational,
         },
       })
       const data = (await res.json().catch(() => ({}))) as { detail?: string }
@@ -246,6 +264,10 @@ export function AdminFestivalBroadcastPanel({ tab }: { tab?: HubTab }) {
           scheduled_at: when.toISOString(),
           target_type: targetType,
           target_metadata: meta,
+          engagement_context: festEngagementContext.trim(),
+          engagement_moment: festEngagementMoment.trim(),
+          festival_name: festFestivalName.trim(),
+          personalize_per_user: festPersonalize,
         },
       })
       const data = (await res.json().catch(() => ({}))) as { detail?: string }
@@ -299,10 +321,11 @@ export function AdminFestivalBroadcastPanel({ tab }: { tab?: HubTab }) {
         Automated gold alerts
       </h3>
       <p className="dash-footnote" style={{ marginBottom: '0.75rem', maxWidth: 720 }}>
-        Schedule cron on Railway: <code className="tabular">run_hourly_gold_push</code> every hour;{' '}
-        <code className="tabular">run_gold_rate_alerts</code> every 1–5 minutes;{' '}
-        <code className="tabular">run_portfolio_gain_notifications</code> daily or hourly. Threshold moves also run a
-        public broadcast plus customer inbox for users with holdings (prefs + daily cap).
+        Live gold alerts are <strong>event-driven</strong> when the public 22K reference is ingested (spot refresh,
+        ticker API, admin save) — do not schedule <code className="tabular">run_gold_rate_alerts</code> or{' '}
+        <code className="tabular">run_hourly_gold_push</code> on Railway cron. Use cron only for housekeeping (see{' '}
+        <code className="tabular">docs/RAILWAY_CRON.md</code>). Threshold moves send a public broadcast plus customer
+        inbox for users with holdings (prefs + daily cap).
       </p>
       {goldLoadErr ? <p className="form-error">{goldLoadErr}</p> : null}
       <div className="card" style={{ maxWidth: 640, padding: '1.25rem', marginBottom: '1.5rem' }}>
@@ -430,6 +453,40 @@ export function AdminFestivalBroadcastPanel({ tab }: { tab?: HubTab }) {
             onChange={(e) => setPortfolioGainPct(e.target.value)}
           />
         </div>
+        <div className="field" style={{ marginBottom: '1rem' }}>
+          <label htmlFor="active-engagement-context">Active engagement context (ingest)</label>
+          <select
+            id="active-engagement-context"
+            value={activeEngagementContext}
+            onChange={(e) => setActiveEngagementContext(e.target.value)}
+          >
+            <option value="default">default</option>
+            <option value="festival">festival</option>
+            <option value="educational">educational</option>
+          </select>
+        </div>
+        {activeEngagementContext === 'festival' ? (
+          <div className="field" style={{ marginBottom: '1rem' }}>
+            <label htmlFor="active-festival-name">Festival name (for templates)</label>
+            <input
+              id="active-festival-name"
+              type="text"
+              value={activeFestivalName}
+              onChange={(e) => setActiveFestivalName(e.target.value)}
+              placeholder="Vishu, Onam, …"
+            />
+          </div>
+        ) : null}
+        <div className="field" style={{ marginBottom: '1rem' }}>
+          <label>
+            <input
+              type="checkbox"
+              checked={enableEducational}
+              onChange={(e) => setEnableEducational(e.target.checked)}
+            />{' '}
+            Educational market awareness on ingest (monthly cap per user)
+          </label>
+        </div>
 
         <div className="field" style={{ marginBottom: '1rem' }}>
           <label htmlFor="gold-image">Image for gold alerts (optional HTTPS URL)</label>
@@ -520,6 +577,50 @@ export function AdminFestivalBroadcastPanel({ tab }: { tab?: HubTab }) {
             />
           </div>
         ) : null}
+        <div className="field">
+          <label htmlFor="fest-ctx">Engagement context (optional)</label>
+          <input
+            id="fest-ctx"
+            type="text"
+            value={festEngagementContext}
+            disabled={busy}
+            onChange={(e) => setFestEngagementContext(e.target.value)}
+            placeholder="festival, jeweller_campaign, or blank for static body"
+          />
+        </div>
+        <div className="field">
+          <label htmlFor="fest-moment">Engagement moment (with personalize)</label>
+          <input
+            id="fest-moment"
+            type="text"
+            value={festEngagementMoment}
+            disabled={busy}
+            onChange={(e) => setFestEngagementMoment(e.target.value)}
+            placeholder="holding_appreciation, portfolio_growth, …"
+          />
+        </div>
+        <div className="field">
+          <label htmlFor="fest-name">Festival name (for {'{{festival_name}}'})</label>
+          <input
+            id="fest-name"
+            type="text"
+            value={festFestivalName}
+            disabled={busy}
+            onChange={(e) => setFestFestivalName(e.target.value)}
+            placeholder="Vishu, Onam, …"
+          />
+        </div>
+        <div className="field">
+          <label>
+            <input
+              type="checkbox"
+              checked={festPersonalize}
+              disabled={busy}
+              onChange={(e) => setFestPersonalize(e.target.checked)}
+            />{' '}
+            Personalize per user (template + facts)
+          </label>
+        </div>
         <div className="field">
           <label htmlFor="fest-body">Message</label>
           <textarea

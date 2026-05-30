@@ -128,7 +128,48 @@ class GoldTickerConfig(models.Model):
     )
     enable_fun_notifications = models.BooleanField(
         default=False,
-        help_text="Allow occasional fun/time-of-day notification copy (max 1/day per user).",
+        help_text="Deprecated: use enable_educational_engagement on ingest.",
+    )
+    enable_educational_engagement = models.BooleanField(
+        default=False,
+        help_text="On gold ingest, allow one educational market_awareness message per user per period.",
+    )
+    enable_monthly_storytelling_push = models.BooleanField(
+        default=False,
+        help_text="When on, future monthly digest pushes may send (facts always computed in v1).",
+    )
+    active_engagement_context = models.CharField(
+        max_length=32,
+        blank=True,
+        default="default",
+        help_text="Platform-wide template context for ingest-driven engagement.",
+    )
+    active_festival_name = models.CharField(
+        max_length=120,
+        blank=True,
+        default="",
+    )
+    active_festival_message = models.CharField(
+        max_length=500,
+        blank=True,
+        default="",
+    )
+    engagement_context_starts_at = models.DateTimeField(null=True, blank=True)
+    engagement_context_ends_at = models.DateTimeField(null=True, blank=True)
+    portfolio_milestone_thresholds_inr = models.JSONField(
+        default=list,
+        blank=True,
+        help_text='List of INR thresholds, e.g. ["100000","500000"].',
+    )
+    holding_milestone_threshold_inr = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        default=Decimal("100000"),
+        help_text="Notify when a holding estimated value crosses this INR (once per band).",
+    )
+    max_portfolio_alerts_per_day = models.PositiveSmallIntegerField(
+        default=2,
+        help_text="Max portfolio_growth / portfolio_milestone alerts per customer per day.",
     )
     gold_deposit_yield_apr_percent = models.DecimalField(
         max_digits=8,

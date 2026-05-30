@@ -2198,6 +2198,37 @@ class FestivalBroadcastNotification(models.Model):
     )
     target_metadata = models.JSONField(default=dict, blank=True)
     logo_url = models.URLField(max_length=512, blank=True, default="")
+    engagement_context = models.CharField(
+        max_length=32,
+        blank=True,
+        default="",
+        help_text="Engagement template context, e.g. festival, jeweller_campaign.",
+    )
+    engagement_moment = models.CharField(
+        max_length=32,
+        blank=True,
+        default="",
+        help_text="When set with personalize_per_user, render this moment template per recipient.",
+    )
+    festival_name = models.CharField(
+        max_length=120,
+        blank=True,
+        default="",
+        help_text="Festival label for {{festival_name}} when context is festival.",
+    )
+    festival_message = models.CharField(
+        max_length=500,
+        blank=True,
+        default="",
+    )
+    personalize_per_user = models.BooleanField(
+        default=False,
+        help_text="Render engagement template per audience member using their facts.",
+    )
+    store_in_inbox = models.BooleanField(
+        default=False,
+        help_text="Also create PortfolioUserNotification rows for recipients.",
+    )
     created_by_jeweller = models.ForeignKey(
         User,
         null=True,
@@ -2552,6 +2583,12 @@ class PersonalHoldingNotificationState(models.Model):
         default=Decimal("0"),
     )
     last_notified_at = models.DateTimeField(null=True, blank=True)
+    last_milestone_value_inr = models.DecimalField(
+        max_digits=18,
+        decimal_places=2,
+        default=Decimal("0"),
+        help_text="Last holding value INR at which a holding_milestone alert fired.",
+    )
 
     class Meta:
         verbose_name_plural = "Personal holding notification states"
@@ -2574,16 +2611,28 @@ class UserPortfolioNotificationState(models.Model):
         default=Decimal("0"),
     )
     last_notified_at = models.DateTimeField(null=True, blank=True)
+    last_milestone_portfolio_value_inr = models.DecimalField(
+        max_digits=18,
+        decimal_places=2,
+        default=Decimal("0"),
+        help_text="Portfolio value INR when portfolio_milestone last fired.",
+    )
 
     def __str__(self):
         return f"PortfolioNotifyState(u={self.user_id})"
 
 
 class NotificationTemplate(models.Model):
-    """Reusable notification copy for admin campaigns."""
+    """Engagement copy: moment (category) + context + locale → title/body templates."""
 
-    name = models.CharField(max_length=120, unique=True)
-    category = models.CharField(max_length=24, default="promo")
+    name = models.CharField(max_length=120, help_text="Admin display label.")
+    category = models.CharField(
+        max_length=32,
+        default="portfolio_growth",
+        help_text="Engagement moment key, e.g. portfolio_growth, holding_appreciation.",
+    )
+    context = models.CharField(max_length=32, default="default", db_index=True)
+    locale = models.CharField(max_length=8, default="en", db_index=True)
     tone = models.CharField(max_length=24, blank=True, default="")
     title_template = models.CharField(max_length=180)
     body_template = models.TextField()
@@ -2593,10 +2642,16 @@ class NotificationTemplate(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ["name"]
+        ordering = ["category", "context", "locale"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["category", "context", "locale"],
+                name="uniq_notification_template_moment_ctx_locale",
+            ),
+        ]
 
     def __str__(self):
-        return self.name
+        return self.name or f"{self.category}/{self.context}/{self.locale}"
 
 
 class NotificationEventLog(models.Model):

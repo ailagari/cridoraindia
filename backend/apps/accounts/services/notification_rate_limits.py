@@ -17,6 +17,7 @@ def _gold_alerts_daily_cap() -> int:
         return GOLD_ALERTS_PER_DAY
 PROMO_PER_JEWELLER_PER_WEEK = 3
 FUN_PER_DAY = 1
+PORTFOLIO_ALERTS_PER_DAY = 2
 
 
 def _day_key(prefix: str, user_id: int) -> str:
@@ -76,6 +77,33 @@ def fun_notification_allowed(user_id: int) -> bool:
 
 def record_fun_notification(user_id: int) -> None:
     key = _day_key("fun", user_id)
+    try:
+        cache.incr(key)
+    except ValueError:
+        cache.set(key, 1, timeout=86400)
+
+
+def _portfolio_alerts_daily_cap() -> int:
+    try:
+        from apps.marketplace.models import get_or_create_ticker
+
+        cap = int(get_or_create_ticker().max_portfolio_alerts_per_day or PORTFOLIO_ALERTS_PER_DAY)
+        return max(1, min(cap, 10))
+    except Exception:
+        return PORTFOLIO_ALERTS_PER_DAY
+
+
+def portfolio_alert_allowed(user_id: int | None) -> bool:
+    if user_id is None:
+        return True
+    key = _day_key("port", user_id)
+    return int(cache.get(key, 0)) < _portfolio_alerts_daily_cap()
+
+
+def record_portfolio_alert(user_id: int | None) -> None:
+    if user_id is None:
+        return
+    key = _day_key("port", user_id)
     try:
         cache.incr(key)
     except ValueError:

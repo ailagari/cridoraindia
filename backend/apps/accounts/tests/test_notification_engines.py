@@ -21,7 +21,10 @@ from apps.accounts.services.notification_copy import (
 )
 from apps.accounts.services.personal_holding_gain_notify import notify_personal_holdings_after_rate_change
 from apps.accounts.services.portfolio_gain_notify import run_portfolio_gain_notifications
-from apps.marketplace.jeweller_gold_rate_notify import maybe_notify_jeweller_gold_rate_change
+from apps.marketplace.jeweller_gold_rate_notify import (
+    deliver_jeweller_rate_notifications,
+    maybe_notify_jeweller_gold_rate_change,
+)
 from apps.marketplace.models import JewellerPricingProfile, get_or_create_ticker, jeweller_profile_for
 
 User = get_user_model()
@@ -66,7 +69,7 @@ class PortfolioGainDedupTests(TestCase):
         ticker.portfolio_gain_threshold_inr = Decimal("500")
         ticker.save(update_fields=["portfolio_gain_threshold_inr"])
 
-    @patch("apps.accounts.services.portfolio_gain_notify.notify_inbox")
+    @patch("apps.accounts.services.portfolio_gain_notify.deliver_engagement")
     @patch(
         "apps.accounts.services.portfolio_gain_notify.customer_portfolio_totals_payload",
         return_value={
@@ -80,7 +83,7 @@ class PortfolioGainDedupTests(TestCase):
         run_portfolio_gain_notifications()
         self.assertEqual(mock_notify.call_count, 1)
 
-    @patch("apps.accounts.services.portfolio_gain_notify.notify_inbox")
+    @patch("apps.accounts.services.portfolio_gain_notify.deliver_engagement")
     @patch(
         "apps.accounts.services.portfolio_gain_notify.customer_portfolio_totals_payload",
         return_value={
@@ -123,7 +126,7 @@ class HoldingGainOnlyTests(TestCase):
             last_notified_value_inr=Decimal("100000"),
         )
 
-    @patch("apps.accounts.services.personal_holding_gain_notify.notify_inbox")
+    @patch("apps.accounts.services.personal_holding_gain_notify.deliver_engagement")
     @patch(
         "apps.accounts.services.personal_holding_gain_notify._rate_for_holding",
         return_value=Decimal("9000"),
@@ -132,7 +135,7 @@ class HoldingGainOnlyTests(TestCase):
         notify_personal_holdings_after_rate_change(jeweller_id=None)
         mock_notify.assert_not_called()
 
-    @patch("apps.accounts.services.personal_holding_gain_notify.notify_inbox")
+    @patch("apps.accounts.services.personal_holding_gain_notify.deliver_engagement")
     @patch(
         "apps.accounts.services.personal_holding_gain_notify._rate_for_holding",
         return_value=Decimal("11000"),
@@ -165,7 +168,7 @@ class JewellerGoldNotifyLogoTests(TestCase):
         "apps.accounts.services.personal_holding_gain_notify.notify_personal_holdings_after_rate_change",
         return_value=0,
     )
-    @patch("apps.marketplace.jeweller_gold_rate_notify.notify_inbox")
+    @patch("apps.marketplace.jeweller_gold_rate_notify.deliver_engagement")
     @patch("apps.accounts.services.campaign_audience.resolve_campaign_user_ids")
     @patch("apps.marketplace.jeweller_gold_rate_notify.resolve_jeweller_push_branding")
     def test_notify_inbox_receives_logo(self, mock_brand, mock_ids, mock_notify, _hold):
@@ -175,8 +178,8 @@ class JewellerGoldNotifyLogoTests(TestCase):
             "title_prefix": "Test Jewels",
         }
         mock_ids.return_value = [self.customer.pk]
-        maybe_notify_jeweller_gold_rate_change(
-            self.profile,
+        deliver_jeweller_rate_notifications(
+            jeweller_id=self.profile.jeweller_id,
             previous_rate=Decimal("6900"),
             new_rate=Decimal("7000"),
         )

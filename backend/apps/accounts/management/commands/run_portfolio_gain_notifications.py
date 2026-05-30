@@ -1,15 +1,18 @@
-"""Notify customers when portfolio value gain crosses platform thresholds."""
+"""Evaluate portfolio gain alerts (normally triggered by GoldPriceUpdated ingest)."""
 
 from django.core.management.base import BaseCommand
 
-from apps.accounts.services.portfolio_gain_notify import run_portfolio_gain_notifications
+from apps.accounts.services.portfolio_gain_notify import evaluate_portfolio_gains_after_rate_change
 
 
 class Command(BaseCommand):
-    help = "Send portfolio gain inbox notifications when thresholds are exceeded (deduped)."
+    help = (
+        "Manual replay of portfolio gain rules. Live market alerts run on gold price ingest, "
+        "not Railway cron. Use for housekeeping/replay only."
+    )
 
     def handle(self, *args, **options):
-        out = run_portfolio_gain_notifications()
+        out = evaluate_portfolio_gains_after_rate_change(defer_push=False)
         self.stdout.write(
             self.style.SUCCESS(
                 f"Portfolio gain notifications sent: {out.get('sent', 0)} (skipped {out.get('skipped', 0)})"

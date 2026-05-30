@@ -10,9 +10,18 @@ from django.utils import timezone
 from django.contrib.auth import get_user_model
 
 from apps.accounts.models import AdminNotification, FestivalBroadcastNotification, WebPushSubscription
+from apps.accounts.models import PortfolioUserNotification
 from apps.accounts.push_payload import build_push_payload
 from apps.accounts.services.campaign_audience import resolve_campaign_user_ids
+from apps.accounts.services.deliver_engagement import deliver_engagement
+from apps.accounts.services.engagement_context import EngagementContextResult
+from apps.accounts.services.engagement_facts import build_engagement_facts
+from apps.accounts.services.engagement_template_render import render_template
 from apps.accounts.services.notification_preferences import get_or_create_preferences, should_send_push
+from apps.accounts.services.notification_rate_limits import (
+    promotional_allowed_for_jeweller,
+    record_promotional_jeweller,
+)
 from apps.accounts.webpush_service import send_push_broadcast, send_push_to_user
 
 User = get_user_model()
@@ -26,8 +35,65 @@ _ZERO_DEVICE_SUFFIX = "Sent to 0 devices — check VAPID env vars and user subsc
 _SENT_COUNT_SUFFIX_RE = re.compile(r"(?:\r?\n){2}Sent to \d+ subscribed device\(s\)\.\s*\Z")
 
 
+def _campaign_engagement_context(row: FestivalBroadcastNotification) -> EngagementContextResult:
+    ctx = (row.engagement_context or "").strip() or "default"
+    return EngagementContextResult(
+        context=ctx,
+        festival_name=(row.festival_name or "").strip(),
+        festival_message=(row.festival_message or "").strip(),
+    )
+
+
+def _payload_for_user(row: FestivalBroadcastNotification, user: User) -> dict | None:
+    moment = (row.engagement_moment or "").strip()
+    if row.personalize_per_user and moment:
+        ctx = _campaign_engagement_context(row)
+        facts = build_engagement_facts(user, context=ctx)
+        rendered = render_template(moment=moment, context=ctx.context, facts=facts)
+        if rendered:
+            title, body = rendered.title, rendered.body
+        else:
+            title = row.title.strip() or "Cridora"
+            body = row.body.strip()
+    else:
+        title = row.title.strip() or "Cridora"
+        body = row.body.strip()
+    if not body:
+        return None
+    return build_push_payload(
+        title=title[:120],
+        body=body,
+        url="/",
+        tag=f"cridora-festival-{row.pk}",
+        image_url=(row.image_url or "").strip() or (row.logo_url or "").strip() or None,
+    )
+
+
 def _deliver_campaign_push(row: FestivalBroadcastNotification, payload: dict) -> int:
+    jeweller_id = None
+    if row.created_by_jeweller_id:
+        jeweller_id = row.created_by_jeweller_id
+    if not promotional_allowed_for_jeweller(jeweller_id):
+        return 0
+
     if row.target_type == FestivalBroadcastNotification.TARGET_ALL_APP_INSTALLS:
+        if row.personalize_per_user and (row.engagement_moment or "").strip():
+            total = 0
+            for uid in resolve_campaign_user_ids(row.target_type, row.target_metadata):
+                user = User.objects.filter(pk=uid, is_active=True).first()
+                if user is None:
+                    continue
+                pref = get_or_create_preferences(user)
+                if not pref.allow_festival_alerts and not pref.allow_promotional:
+                    continue
+                pl = _payload_for_user(row, user)
+                if pl and should_send_push(user, category="promo", priority="low"):
+                    total += send_push_to_user(user, pl)
+                    if row.store_in_inbox:
+                        _store_campaign_inbox(row, user, pl)
+            if jeweller_id:
+                record_promotional_jeweller(jeweller_id)
+            return total
         return send_push_broadcast(payload)
 
     total = 0
@@ -38,9 +104,48 @@ def _deliver_campaign_push(row: FestivalBroadcastNotification, payload: dict) ->
         pref = get_or_create_preferences(user)
         if not pref.allow_festival_alerts and not pref.allow_promotional:
             continue
-        if should_send_push(user, category="promo", priority="low"):
-            total += send_push_to_user(user, payload)
+        pl = _payload_for_user(row, user) if row.personalize_per_user else payload
+        if pl and should_send_push(user, category="promo", priority="low"):
+            total += send_push_to_user(user, pl)
+            if row.store_in_inbox:
+                _store_campaign_inbox(row, user, pl)
+    if jeweller_id and total:
+        record_promotional_jeweller(jeweller_id)
     return total
+
+
+def _store_campaign_inbox(row: FestivalBroadcastNotification, user: User, payload: dict) -> None:
+    moment = (row.engagement_moment or "").strip()
+    if moment and row.personalize_per_user:
+        deliver_engagement(
+            user,
+            moment=moment,
+            context=_campaign_engagement_context(row),
+            link_path="/",
+            category=PortfolioUserNotification.CATEGORY_PROMO,
+            priority=PortfolioUserNotification.PRIORITY_LOW,
+            notification_type="festival_campaign",
+            image_url=payload.get("image"),
+            tag=f"cridora-festival-inbox-{row.pk}",
+            send_push=False,
+        )
+        return
+    from apps.accounts.services.inbox_notify import notify_inbox
+
+    notify_inbox(
+        user,
+        kind=PortfolioUserNotification.KIND_SYSTEM,
+        title=(payload.get("title") or "Cridora")[:180],
+        body=payload.get("body") or "",
+        link_path="/",
+        category=PortfolioUserNotification.CATEGORY_PROMO,
+        priority=PortfolioUserNotification.PRIORITY_LOW,
+        notification_type="festival_campaign",
+        image_url=payload.get("image"),
+        tag=f"cridora-festival-inbox-{row.pk}",
+        send_push=False,
+        jeweller_id=row.created_by_jeweller_id,
+    )
 
 
 def strip_festival_broadcast_feed_body(text: str) -> str:
