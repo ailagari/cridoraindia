@@ -251,7 +251,7 @@ export function AdminEngagementTemplatesPanel() {
                     {guide.moment_guides.map((m) => (
                       <tr key={m.key}>
                         <td>
-                          <code>{m.key}</code>
+                          <code className="engagement-guide-code">{m.key}</code>
                           {m.label ? (
                             <>
                               <br />
@@ -262,7 +262,7 @@ export function AdminEngagementTemplatesPanel() {
                         <td style={{ maxWidth: 280 }}>{m.when_fires || '—'}</td>
                         <td>
                           {(m.suggested_variables || []).map((v) => (
-                            <code key={v} style={{ marginRight: '0.35rem' }}>
+                            <code key={v} className="engagement-var-chip" style={{ marginRight: '0.35rem' }}>
                               {`{{${v}}}`}
                             </code>
                           ))}
@@ -292,7 +292,7 @@ export function AdminEngagementTemplatesPanel() {
                     {guide.context_guides.map((c) => (
                       <tr key={c.key}>
                         <td>
-                          <code>{c.key}</code>
+                          <code className="engagement-guide-code">{c.key}</code>
                         </td>
                         <td>{c.use_when || '—'}</td>
                         <td>
@@ -315,19 +315,11 @@ export function AdminEngagementTemplatesPanel() {
                 Copy-paste into title or body. Values are pre-formatted (₹, %) for the customer locale.
               </p>
               {Object.entries(guide.variables).map(([group, vars]) => (
-                <div key={group} style={{ marginBottom: '0.75rem' }}>
+                <div key={group} className="engagement-var-group" style={{ marginBottom: '0.75rem' }}>
                   <strong style={{ textTransform: 'capitalize' }}>{group}</strong>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginTop: '0.25rem' }}>
                     {vars.map((v) => (
-                      <code
-                        key={v}
-                        style={{
-                          padding: '0.15rem 0.4rem',
-                          background: 'var(--dash-surface-muted, #f0f0f0)',
-                          borderRadius: 4,
-                          fontSize: '0.8rem',
-                        }}
-                      >
+                      <code key={v} className="engagement-var-chip">
                         {`{{${v}}}`}
                       </code>
                     ))}
@@ -352,16 +344,12 @@ export function AdminEngagementTemplatesPanel() {
               {guide.sample_templates.map((s) => (
                 <div
                   key={`${s.category}-${s.context}-${s.locale}`}
-                  className="card"
-                  style={{
-                    marginBottom: '0.75rem',
-                    padding: '0.75rem 1rem',
-                    background: 'var(--dash-surface-muted, #f8f8f8)',
-                  }}
+                  className="card engagement-sample-card"
+                  style={{ marginBottom: '0.75rem', padding: '0.75rem 1rem' }}
                 >
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center' }}>
                     <strong>{s.name}</strong>
-                    <code>
+                    <code className="engagement-guide-code">
                       {s.category}/{s.context}/{s.locale}
                     </code>
                     <button type="button" className="btn btn-ghost btn-sm" onClick={() => applySample(s)}>
@@ -385,7 +373,7 @@ export function AdminEngagementTemplatesPanel() {
                   {uc.sample_key ? (
                     <span className="dash-footnote">
                       {' '}
-                      — template key <code>{uc.sample_key}</code>
+                      — template key <code className="engagement-guide-code">{uc.sample_key}</code>
                     </span>
                   ) : null}
                   <ol className="dash-footnote" style={{ margin: '0.35rem 0 0', paddingLeft: '1.25rem' }}>
@@ -509,10 +497,10 @@ export function AdminEngagementTemplatesPanel() {
                   rows.map((r) => (
                     <tr key={r.id}>
                       <td>
-                        <code>{r.category}</code>
+                        <code className="engagement-guide-code">{r.category}</code>
                       </td>
                       <td>
-                        <code>{r.context}</code>
+                        <code className="engagement-guide-code">{r.context}</code>
                       </td>
                       <td>{r.locale}</td>
                       <td>{r.name}</td>
@@ -535,10 +523,7 @@ export function AdminEngagementTemplatesPanel() {
         </GuideSection>
 
         {selectedId != null ? (
-          <div
-            className="card"
-            style={{ marginTop: '1rem', padding: '1rem', background: 'var(--dash-surface-muted, #f8f8f8)' }}
-          >
+          <div className="card engagement-preview-box" style={{ marginTop: '1rem', padding: '1rem' }}>
             <strong>Preview (template #{selectedId})</strong>
             <p className="dash-footnote" style={{ margin: '0.5rem 0 0' }}>
               Tray may truncate long bodies (~120 chars).

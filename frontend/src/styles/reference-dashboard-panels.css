@@ -882,3 +882,40 @@ html[data-theme='light'] .ref-dash-shell .topbar .tb-logo-name .dash-brand-India
     font-size: 1.1rem;
   }
 }
+
+/* Engagement templates panel — readable chips on dark dashboard */
+.engagement-var-group strong {
+  color: var(--ink, #eaecf4);
+}
+
+.engagement-var-chip {
+  display: inline-block;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  line-height: 1.35;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color: var(--gold-light, #e8d5b5);
+  background: color-mix(in srgb, var(--veil-55, rgba(255, 255, 255, 0.12)) 100%, transparent);
+  border: 1px solid var(--border-soft, rgba(165, 180, 252, 0.4));
+}
+
+.engagement-guide-code {
+  color: var(--gold-light, #e8d5b5);
+  background: color-mix(in srgb, var(--veil-40, rgba(255, 255, 255, 0.1)) 100%, transparent);
+  padding: 0.12rem 0.4rem;
+  border-radius: 3px;
+  border: 1px solid var(--border-soft, rgba(165, 180, 252, 0.3));
+  font-size: 0.85em;
+}
+
+.engagement-sample-card {
+  background: color-mix(in srgb, var(--veil-35, rgba(255, 255, 255, 0.08)) 100%, transparent) !important;
+  border: 1px solid var(--border-soft, rgba(165, 180, 252, 0.28)) !important;
+}
+
+.engagement-preview-box {
+  background: color-mix(in srgb, var(--veil-35, rgba(255, 255, 255, 0.08)) 100%, transparent) !important;
+  border: 1px solid var(--border-soft, rgba(165, 180, 252, 0.28));
+  color: var(--ink, #eaecf4);
+}
