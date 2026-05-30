@@ -364,9 +364,9 @@ def public_spot_prices_payload(*, include_live_raw: bool = False) -> dict:
     cache.set(_CACHE_KEY_LAST_GOOD, data, timeout=_CACHE_TTL_LAST_GOOD)
     payload_out = apply_live_adjustments_to_spot_payload(data, ticker)
     try:
-        from .gold_rate_alerts import maybe_notify_gold_rate_move
+        from .platform_gold_notify import run_platform_gold_rate_notifications
 
-        maybe_notify_gold_rate_move()
+        run_platform_gold_rate_notifications()
     except Exception:
         logger.exception("Gold rate alert check failed after spot refresh")
     return _finalize_spot_payload(payload_out, include_live_raw=include_live_raw)

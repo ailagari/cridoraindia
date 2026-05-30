@@ -11,6 +11,9 @@ export type AppNotification = {
   link_path?: string
   priority?: 'high' | 'medium' | 'low'
   apiCategory?: string
+  notificationType?: string
+  logoUrl?: string
+  imageUrl?: string
 }
 
 function baseMockRows(locale = readStoredPublicLocale()): AppNotification[] {

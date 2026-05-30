@@ -50,12 +50,16 @@ def should_send_push(
     *,
     category: str,
     priority: str = "medium",
+    notification_type: str = "",
 ) -> bool:
     pref = get_or_create_preferences(user)
     if not pref.allow_push_notifications:
         return False
     if _in_quiet_hours(pref) and priority != "high":
         return False
+    if notification_type in ("gold_rate", "gold_hourly"):
+        if not pref.allow_gold_alerts:
+            return False
     if category == "security":
         return True
     if category == "promo":

@@ -437,6 +437,8 @@ export const enMessages = {
   'idx.inv.h2': 'Gold added three ways, one unified vault.',
   'idx.inv.sub':
     'However you accumulate gold — buying small, depositing physical, or through purchases — every gram appears in the same dashboard with live valuation.',
+  'idx.inv.insightsNote':
+    'Track personal holdings in your portfolio — when gold rates move, signed-in customers can get value insights in the bell and notification tray (enable in notification settings).',
   'idx.inv.ariaLabel': 'Ways gold reaches your unified vault',
   'idx.inv.tab0label': 'All methods',
   'idx.inv.tab0hint': 'Full comparison',

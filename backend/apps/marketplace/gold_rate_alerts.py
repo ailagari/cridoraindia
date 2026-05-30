@@ -96,5 +96,6 @@ def maybe_notify_gold_rate_move(*, force: bool = False) -> dict:
         result["subscriptions_notified"] = n
         result["delta_inr"] = str(delta)
         result["current_inr"] = str(current)
+        result["baseline_inr"] = str(baseline)
 
     return result

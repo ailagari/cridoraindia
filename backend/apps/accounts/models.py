@@ -2538,6 +2538,47 @@ class PortfolioUserNotification(models.Model):
         return f"PortfolioUserNotification({self.kind}, {self.user_id})"
 
 
+class PersonalHoldingNotificationState(models.Model):
+    """Dedup baseline for per-item personal holding gain alerts."""
+
+    holding = models.OneToOneField(
+        "PersonalGoldHolding",
+        on_delete=models.CASCADE,
+        related_name="notification_state",
+    )
+    last_notified_value_inr = models.DecimalField(
+        max_digits=18,
+        decimal_places=2,
+        default=Decimal("0"),
+    )
+    last_notified_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name_plural = "Personal holding notification states"
+
+    def __str__(self):
+        return f"HoldingNotifyState(h={self.holding_id})"
+
+
+class UserPortfolioNotificationState(models.Model):
+    """Dedup baseline for aggregate portfolio gain alerts."""
+
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name="portfolio_notification_state",
+    )
+    last_notified_gain_inr = models.DecimalField(
+        max_digits=18,
+        decimal_places=2,
+        default=Decimal("0"),
+    )
+    last_notified_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"PortfolioNotifyState(u={self.user_id})"
+
+
 class NotificationTemplate(models.Model):
     """Reusable notification copy for admin campaigns."""
 

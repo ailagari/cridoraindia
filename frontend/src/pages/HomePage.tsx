@@ -512,6 +512,9 @@ export function HomePage() {
             <p id="invest-panel-lead" className="invest-panel-lead">
               {activeInvestLead}
             </p>
+            <p className="invest-panel-lead" style={{ marginTop: '0.65rem', fontSize: '0.92rem', opacity: 0.88 }}>
+              {t('idx.inv.insightsNote')}
+            </p>
           </div>
 
           <div

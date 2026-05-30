@@ -28,6 +28,16 @@ type GoldAlertSettings = {
   gold_push_image_url: string
   hourly_gold_push_baseline_inr_per_gram_22k: string | null
   hourly_gold_push_baseline_recorded_at: string | null
+  portfolio_gain_threshold_inr?: string
+  portfolio_gain_threshold_percent?: string
+  holding_gain_threshold_inr?: string
+  max_gold_alerts_per_day?: number
+  last_platform_rate_change?: {
+    previous_rate: string
+    new_rate: string
+    difference: string
+    created_at: string
+  } | null
 }
 
 function statusTone(s: string): string {
@@ -75,6 +85,12 @@ export function AdminFestivalBroadcastPanel({ tab }: { tab?: HubTab }) {
   const [thresholdTitle, setThresholdTitle] = useState('Gold rate alert')
   const [thresholdLink, setThresholdLink] = useState('/marketplace')
   const [goldImageUrl, setGoldImageUrl] = useState('')
+  const [holdingGainInr, setHoldingGainInr] = useState('500')
+  const [maxGoldAlertsDay, setMaxGoldAlertsDay] = useState('3')
+  const [portfolioGainInr, setPortfolioGainInr] = useState('500')
+  const [portfolioGainPct, setPortfolioGainPct] = useState('2')
+  const [sendPushBusy, setSendPushBusy] = useState(false)
+  const [sendPushMsg, setSendPushMsg] = useState('')
 
   const loadFestivals = useCallback(async () => {
     setLoadErr('')
@@ -109,6 +125,10 @@ export function AdminFestivalBroadcastPanel({ tab }: { tab?: HubTab }) {
     setThresholdTitle(data.rate_move_alert_title?.trim() || 'Gold rate alert')
     setThresholdLink(data.rate_move_alert_link?.trim() || '/marketplace')
     setGoldImageUrl(data.gold_push_image_url ?? '')
+    setHoldingGainInr(data.holding_gain_threshold_inr ?? '500')
+    setMaxGoldAlertsDay(String(data.max_gold_alerts_per_day ?? 3))
+    setPortfolioGainInr(data.portfolio_gain_threshold_inr ?? '500')
+    setPortfolioGainPct(data.portfolio_gain_threshold_percent ?? '2')
   }, [])
 
   useEffect(() => {
@@ -148,6 +168,10 @@ export function AdminFestivalBroadcastPanel({ tab }: { tab?: HubTab }) {
           rate_move_alert_title: thresholdTitle.trim() || 'Gold rate alert',
           rate_move_alert_link: thresholdLink.trim() || '/marketplace',
           gold_push_image_url: goldImageUrl.trim(),
+          holding_gain_threshold_inr: holdingGainInr.trim(),
+          max_gold_alerts_per_day: Number.parseInt(maxGoldAlertsDay.trim(), 10) || 3,
+          portfolio_gain_threshold_inr: portfolioGainInr.trim(),
+          portfolio_gain_threshold_percent: portfolioGainPct.trim(),
         },
       })
       const data = (await res.json().catch(() => ({}))) as { detail?: string }
@@ -159,6 +183,32 @@ export function AdminFestivalBroadcastPanel({ tab }: { tab?: HubTab }) {
       await loadGoldSettings()
     } finally {
       setGoldBusy(false)
+    }
+  }
+
+  const sendGoldPriceNow = async () => {
+    setSendPushMsg('')
+    setSendPushBusy(true)
+    try {
+      const res = await authFetch('/api/v1/admin/gold-ticker/send-price-notification/', {
+        method: 'POST',
+        jsonBody: { use_live_price_line: true },
+      })
+      const data = (await res.json().catch(() => ({}))) as {
+        detail?: string
+        body_preview?: string
+        sent_broadcast?: number
+        sent_inbox?: number
+      }
+      if (!res.ok) {
+        setSendPushMsg(typeof data.detail === 'string' ? data.detail : `Send failed (${res.status}).`)
+        return
+      }
+      setSendPushMsg(
+        `Sent: ${data.sent_broadcast ?? 0} broadcast, ${data.sent_inbox ?? 0} customer inbox. Preview: ${data.body_preview ?? ''}`,
+      )
+    } finally {
+      setSendPushBusy(false)
     }
   }
 
@@ -249,8 +299,10 @@ export function AdminFestivalBroadcastPanel({ tab }: { tab?: HubTab }) {
         Automated gold alerts
       </h3>
       <p className="dash-footnote" style={{ marginBottom: '0.75rem', maxWidth: 720 }}>
-        Schedule cron on Railway: <code className="tabular">run_hourly_gold_push</code> every hour and{' '}
-        <code className="tabular">run_gold_rate_alerts</code> every 1–5 minutes for reliable delivery.
+        Schedule cron on Railway: <code className="tabular">run_hourly_gold_push</code> every hour;{' '}
+        <code className="tabular">run_gold_rate_alerts</code> every 1–5 minutes;{' '}
+        <code className="tabular">run_portfolio_gain_notifications</code> daily or hourly. Threshold moves also run a
+        public broadcast plus customer inbox for users with holdings (prefs + daily cap).
       </p>
       {goldLoadErr ? <p className="form-error">{goldLoadErr}</p> : null}
       <div className="card" style={{ maxWidth: 640, padding: '1.25rem', marginBottom: '1.5rem' }}>
@@ -268,6 +320,17 @@ export function AdminFestivalBroadcastPanel({ tab }: { tab?: HubTab }) {
                 {' '}
                 · hourly snapshot{' '}
                 <strong className="tabular">{goldSettings.hourly_gold_push_baseline_inr_per_gram_22k}</strong>
+              </>
+            ) : null}
+            {goldSettings.last_platform_rate_change ? (
+              <>
+                {' '}
+                · last platform move{' '}
+                <strong className="tabular">
+                  ₹{goldSettings.last_platform_rate_change.previous_rate} → ₹
+                  {goldSettings.last_platform_rate_change.new_rate}
+                </strong>{' '}
+                ({fmtWhen(goldSettings.last_platform_rate_change.created_at)})
               </>
             ) : null}
           </p>
@@ -326,6 +389,48 @@ export function AdminFestivalBroadcastPanel({ tab }: { tab?: HubTab }) {
           <input id="threshold-link" value={thresholdLink} onChange={(e) => setThresholdLink(e.target.value)} placeholder="/marketplace" />
         </div>
 
+        <div className="field" style={{ marginBottom: '0.85rem' }}>
+          <label htmlFor="holding-gain-inr">Per-holding gain threshold (₹)</label>
+          <input
+            id="holding-gain-inr"
+            type="text"
+            inputMode="decimal"
+            value={holdingGainInr}
+            onChange={(e) => setHoldingGainInr(e.target.value)}
+          />
+        </div>
+        <div className="field" style={{ marginBottom: '0.85rem' }}>
+          <label htmlFor="max-gold-alerts">Max gold/holding alerts per customer per day</label>
+          <input
+            id="max-gold-alerts"
+            type="number"
+            min={1}
+            max={20}
+            value={maxGoldAlertsDay}
+            onChange={(e) => setMaxGoldAlertsDay(e.target.value)}
+          />
+        </div>
+        <div className="field" style={{ marginBottom: '0.85rem' }}>
+          <label htmlFor="portfolio-gain-inr">Portfolio gain threshold (₹)</label>
+          <input
+            id="portfolio-gain-inr"
+            type="text"
+            inputMode="decimal"
+            value={portfolioGainInr}
+            onChange={(e) => setPortfolioGainInr(e.target.value)}
+          />
+        </div>
+        <div className="field" style={{ marginBottom: '1rem' }}>
+          <label htmlFor="portfolio-gain-pct">Portfolio gain threshold (%)</label>
+          <input
+            id="portfolio-gain-pct"
+            type="text"
+            inputMode="decimal"
+            value={portfolioGainPct}
+            onChange={(e) => setPortfolioGainPct(e.target.value)}
+          />
+        </div>
+
         <div className="field" style={{ marginBottom: '1rem' }}>
           <label htmlFor="gold-image">Image for gold alerts (optional HTTPS URL)</label>
           <input
@@ -342,9 +447,24 @@ export function AdminFestivalBroadcastPanel({ tab }: { tab?: HubTab }) {
 
         {goldSaveErr ? <p className="form-error">{goldSaveErr}</p> : null}
         {goldSaved ? <p className="dash-footnote" style={{ color: 'var(--ok, #2ecc71)' }}>{goldSaved}</p> : null}
-        <button type="button" className="btn btn-primary" disabled={goldBusy} onClick={() => void saveGoldSettings()}>
-          {goldBusy ? 'Saving…' : 'Save gold alert settings'}
-        </button>
+        {sendPushMsg ? <p className="dash-footnote" style={{ marginTop: '0.5rem' }}>{sendPushMsg}</p> : null}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.75rem' }}>
+          <button type="button" className="btn btn-primary" disabled={goldBusy} onClick={() => void saveGoldSettings()}>
+            {goldBusy ? 'Saving…' : 'Save gold alert settings'}
+          </button>
+          <button
+            type="button"
+            className="btn btn-ghost"
+            disabled={sendPushBusy}
+            onClick={() => void sendGoldPriceNow()}
+          >
+            {sendPushBusy ? 'Sending…' : 'Send price notification now'}
+          </button>
+        </div>
+        <p className="dash-footnote" style={{ marginTop: '0.65rem', fontSize: '0.72rem' }}>
+          Manual send uses the live 22K line for broadcast and customer inbox; it does not change threshold baselines.
+          Tray body is truncated to ~120 characters; image URL must be HTTPS.
+        </p>
       </div>
         </>
       ) : null}

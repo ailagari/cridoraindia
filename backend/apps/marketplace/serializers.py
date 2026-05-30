@@ -51,6 +51,7 @@ class GoldTickerReadSerializer(serializers.ModelSerializer):
     platform_base_inr_per_gram_22k = serializers.SerializerMethodField()
     cridora_base_source = serializers.SerializerMethodField()
     live_spot_raw_preview = serializers.SerializerMethodField()
+    last_platform_rate_change = serializers.SerializerMethodField()
 
     class Meta:
         model = GoldTickerConfig
@@ -66,6 +67,10 @@ class GoldTickerReadSerializer(serializers.ModelSerializer):
             "rate_move_alert_title",
             "rate_move_alert_link",
             "gold_push_image_url",
+            "portfolio_gain_threshold_inr",
+            "portfolio_gain_threshold_percent",
+            "holding_gain_threshold_inr",
+            "max_gold_alerts_per_day",
             "hourly_gold_push_baseline_inr_per_gram_22k",
             "hourly_gold_push_baseline_recorded_at",
             "manual_ticker_enabled",
@@ -80,9 +85,23 @@ class GoldTickerReadSerializer(serializers.ModelSerializer):
             "cross_platform_fee_inr",
             "platform_base_inr_per_gram_22k",
             "cridora_base_source",
+            "last_platform_rate_change",
             "updated_at",
         )
         read_only_fields = fields
+
+    def get_last_platform_rate_change(self, obj: GoldTickerConfig) -> dict | None:
+        from .models import GoldRateHistory
+
+        row = GoldRateHistory.objects.filter(jeweller__isnull=True).order_by("-created_at").first()
+        if not row:
+            return None
+        return {
+            "previous_rate": str(row.previous_rate),
+            "new_rate": str(row.new_rate),
+            "difference": str(row.difference),
+            "created_at": row.created_at.isoformat(),
+        }
 
     def get_platform_base_inr_per_gram_22k(self, obj: GoldTickerConfig) -> str:
         base, _ = resolve_cridora_base_22k_inr()
@@ -179,6 +198,10 @@ class GoldTickerAdminSerializer(serializers.ModelSerializer):
             "rate_move_alert_title",
             "rate_move_alert_link",
             "gold_push_image_url",
+            "portfolio_gain_threshold_inr",
+            "portfolio_gain_threshold_percent",
+            "holding_gain_threshold_inr",
+            "max_gold_alerts_per_day",
             "manual_ticker_enabled",
             "ticker_manual_22k_inr_per_gram",
             "ticker_manual_24k_inr_per_gram",

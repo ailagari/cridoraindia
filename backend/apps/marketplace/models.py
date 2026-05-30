@@ -116,6 +116,16 @@ class GoldTickerConfig(models.Model):
         default=Decimal("2"),
         help_text="Or when gain percentage exceeds this value (whichever triggers first).",
     )
+    holding_gain_threshold_inr = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        default=Decimal("500"),
+        help_text="Per personal holding: notify when estimated value gain vs last notified baseline exceeds this ₹.",
+    )
+    max_gold_alerts_per_day = models.PositiveSmallIntegerField(
+        default=3,
+        help_text="Max gold-rate / holding gain inbox+push alerts per customer per day.",
+    )
     enable_fun_notifications = models.BooleanField(
         default=False,
         help_text="Allow occasional fun/time-of-day notification copy (max 1/day per user).",
@@ -648,13 +658,16 @@ class MarketplaceProduct(models.Model):
 
 
 class GoldRateHistory(models.Model):
-    """Jeweller manual gold rate changes for customer notifications."""
+    """Platform or jeweller gold rate changes for audit and notifications."""
 
     jeweller = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="gold_rate_history",
         limit_choices_to={"user_type": "jeweller"},
+        null=True,
+        blank=True,
+        help_text="Null for platform Cridora 22K reference moves.",
     )
     previous_rate = models.DecimalField(max_digits=12, decimal_places=2)
     new_rate = models.DecimalField(max_digits=12, decimal_places=2)

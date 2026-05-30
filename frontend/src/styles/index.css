@@ -7214,6 +7214,22 @@ select.input {
   color: var(--text-muted);
 }
 
+.notif-item-thumb {
+  float: right;
+  width: 36px;
+  height: 36px;
+  margin: 0 0 0.35rem 0.5rem;
+  border-radius: 6px;
+  object-fit: cover;
+  border: 1px solid var(--border-soft);
+}
+
+.notif-kind--chip {
+  margin-left: 0.35rem;
+  font-size: 0.62rem;
+  opacity: 0.85;
+}
+
 .public-hub-tabs {
   display: none;
   overflow-x: auto;

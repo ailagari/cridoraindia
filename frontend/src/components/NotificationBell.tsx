@@ -68,6 +68,9 @@ type ApiInboxRow = {
   created_at: string
   priority?: string
   branding_label?: string
+  logo_url?: string
+  image_url?: string
+  notification_type?: string
 }
 
 function mapInboxApiRow(
@@ -94,7 +97,35 @@ function mapInboxApiRow(
     link_path: r.link_path,
     priority: pri,
     apiCategory: cat || r.category || '',
+    notificationType: r.notification_type || '',
+    logoUrl: (r.logo_url || '').trim() || undefined,
+    imageUrl: (r.image_url || '').trim() || undefined,
   }
+}
+
+function inboxCategoryLabel(n: AppNotification): string | null {
+  const nt = (n.notificationType || '').toLowerCase()
+  if (nt === 'gold_rate' || nt === 'gold_hourly') return 'Gold'
+  if (nt === 'holding_gain' || nt === 'portfolio_gain') return 'Portfolio'
+  const cat = (n.apiCategory || '').toLowerCase()
+  if (cat === 'portfolio') return 'Portfolio'
+  return null
+}
+
+function NotifThumb({ n }: { n: AppNotification }) {
+  const src = n.logoUrl || n.imageUrl
+  if (!src) return null
+  return (
+    <img
+      src={src}
+      alt=""
+      className="notif-item-thumb"
+      width={36}
+      height={36}
+      loading="lazy"
+      decoding="async"
+    />
+  )
 }
 
 function priorityClass(p?: AppNotification['priority']): string {
@@ -681,6 +712,7 @@ export function NotificationBell({
                   onClick={() => void onFeedItemActivate(n)}
                 >
                   <span className="notif-kind notif-kind--promo">{publicUi ? t('notifications.promo') : 'Promo'}</span>
+                  <NotifThumb n={n} />
                   <p className="notif-item-title">{n.title}</p>
                   <p className="notif-item-body">{n.body}</p>
                 </button>
@@ -700,6 +732,10 @@ export function NotificationBell({
                 onClick={() => void onFeedItemActivate(n)}
               >
                 <span className={kindClass(n.kind)}>{n.kind}</span>
+                {inboxCategoryLabel(n) ? (
+                  <span className="notif-kind notif-kind--chip">{inboxCategoryLabel(n)}</span>
+                ) : null}
+                <NotifThumb n={n} />
                 <p className="notif-item-title">{n.title}</p>
                 <p className="notif-item-body">{n.body}</p>
                 <p className="notif-item-time">{n.time}</p>

@@ -71,9 +71,9 @@ class MarketplaceGoldTickerPublicView(APIView):
 
     def get(self, request):
         try:
-            from .gold_rate_alerts import maybe_notify_gold_rate_move
+            from .platform_gold_notify import run_platform_gold_rate_notifications
 
-            maybe_notify_gold_rate_move()
+            run_platform_gold_rate_notifications()
         except Exception:
             logger.exception("Gold rate alert check failed")
         ticker = get_or_create_ticker()
@@ -435,12 +435,35 @@ class AdminGoldTickerView(APIView):
         ticker.refresh_from_db()
         invalidate_spot_price_cache()
         try:
-            from .gold_rate_alerts import maybe_notify_gold_rate_move
+            from .platform_gold_notify import run_platform_gold_rate_notifications
 
-            maybe_notify_gold_rate_move(force=True)
+            run_platform_gold_rate_notifications(force=True)
         except Exception:
             logger.exception("Gold rate alert check failed after ticker save")
         return Response(GoldTickerReadSerializer(ticker).data)
+
+
+class AdminGoldPricePushView(APIView):
+    """POST manual gold price notification (broadcast + customer inbox)."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        err = _forbid_non_admin(request)
+        if err:
+            return err
+        from .admin_gold_manual_push import send_manual_gold_price_notification
+
+        out = send_manual_gold_price_notification(
+            title=str(request.data.get("title") or "").strip() or None,
+            body=str(request.data.get("body") or "").strip() or None,
+            image_url=str(request.data.get("image_url") or "").strip() or None,
+            link_path=str(request.data.get("link_path") or "").strip() or None,
+            use_live_price_line=bool(request.data.get("use_live_price_line")),
+        )
+        if not out.get("ok"):
+            return Response(out, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        return Response(out)
 
 
 class AdminSpotPricesView(APIView):

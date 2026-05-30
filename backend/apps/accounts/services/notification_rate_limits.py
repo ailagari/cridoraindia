@@ -4,7 +4,17 @@ from __future__ import annotations
 
 from django.core.cache import cache
 
-GOLD_ALERTS_PER_DAY = 2
+GOLD_ALERTS_PER_DAY = 3
+
+
+def _gold_alerts_daily_cap() -> int:
+    try:
+        from apps.marketplace.models import get_or_create_ticker
+
+        cap = int(get_or_create_ticker().max_gold_alerts_per_day or GOLD_ALERTS_PER_DAY)
+        return max(1, min(cap, 20))
+    except Exception:
+        return GOLD_ALERTS_PER_DAY
 PROMO_PER_JEWELLER_PER_WEEK = 3
 FUN_PER_DAY = 1
 
@@ -28,7 +38,7 @@ def gold_alert_allowed(user_id: int | None) -> bool:
         return True
     key = _day_key("gold", user_id)
     count = cache.get(key, 0)
-    return int(count) < GOLD_ALERTS_PER_DAY
+    return int(count) < _gold_alerts_daily_cap()
 
 
 def record_gold_alert(user_id: int | None) -> None:

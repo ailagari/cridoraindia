@@ -13,6 +13,10 @@ from apps.accounts.services.campaign_audience import (
     resolve_campaign_user_ids,
 )
 from apps.accounts.services.inbox_notify import notify_inbox
+from apps.accounts.services.notification_copy import (
+    format_gold_rate_standard,
+    resolve_jeweller_push_branding,
+)
 from apps.marketplace.models import GoldRateHistory, JewellerPricingProfile
 
 User = get_user_model()
@@ -52,10 +56,10 @@ def maybe_notify_jeweller_gold_rate_change(
         effective_from=timezone.now(),
     )
 
-    direction = "increased" if delta > 0 else "decreased"
-    title = "Gold rate updated"
-    body = f"Gold rate {direction} ₹{abs(delta)}/g — ₹{prev} → ₹{new}/g"
-    jeweller_name = (profile.jeweller.business_name or "Your jeweller").strip()
+    branding = resolve_jeweller_push_branding(profile.jeweller_id)
+    title = f"{branding['title_prefix']}: Gold rate updated" if branding.get("title_prefix") else "Gold rate updated"
+    body = format_gold_rate_standard(previous_rate=prev, new_rate=new)
+    logo = branding.get("logo_url") or ""
     sent = 0
     for uid in resolve_campaign_user_ids(
         TARGET_DEFAULT_JEWELLER_USERS,
@@ -67,13 +71,28 @@ def maybe_notify_jeweller_gold_rate_change(
         notify_inbox(
             user,
             kind=PortfolioUserNotification.KIND_SYSTEM,
-            title=f"{jeweller_name}: {title}",
+            title=title[:180],
             body=body,
             link_path="/userdashboard?section=shop_jewellers",
             category=PortfolioUserNotification.CATEGORY_PORTFOLIO,
             priority=PortfolioUserNotification.PRIORITY_MEDIUM,
+            notification_type="gold_rate",
             jeweller_id=profile.jeweller_id,
+            logo_url=logo or None,
+            image_url=logo or None,
             tag=f"jgold-rate-{profile.jeweller_id}",
         )
         sent += 1
+
+    try:
+        from apps.accounts.services.personal_holding_gain_notify import (
+            notify_personal_holdings_after_rate_change,
+        )
+
+        notify_personal_holdings_after_rate_change(jeweller_id=profile.jeweller_id)
+    except Exception:
+        import logging
+
+        logging.getLogger(__name__).exception("holding gain after jeweller rate failed")
+
     return sent

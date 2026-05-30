@@ -116,6 +116,19 @@ Android APK also needs `google-services.json` in the Capacitor Android project (
 
 ---
 
+## Automated engines (gold & portfolio)
+
+| Engine | Trigger | Delivery |
+|--------|---------|----------|
+| **Platform 22K** | Live spot refresh, `run_gold_rate_alerts`, admin ticker save | Public broadcast + inbox/tray for customers with holdings (`allow_gold_alerts`) |
+| **Jeweller manual rate** | Jeweller pricing profile PATCH | Inbox + tray for default-jeweller customers; jeweller `logo_url` on push when HTTPS |
+| **Personal holding gain** | After platform or jeweller rate move | Gain-only per item; `holding_gain_threshold_inr` on gold ticker |
+| **Portfolio aggregate** | `run_portfolio_gain_notifications` cron | Deduped vs `UserPortfolioNotificationState`; `allow_portfolio_alerts` |
+
+Copy helpers: `backend/apps/accounts/services/notification_copy.py`. Admin manual send (no baseline change): `POST /api/v1/admin/gold-ticker/send-price-notification/`.
+
+---
+
 ## Related docs
 
 - Full product spec: `docs/notificationsystem.md`

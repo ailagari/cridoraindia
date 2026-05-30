@@ -100,8 +100,16 @@ export function NotificationSettingsPanel({
 
   const toggles: { key: keyof NotificationPreferencesDTO; label: string; hint?: string }[] = [
     { key: 'allow_push_notifications', label: 'Push notifications', hint: 'Master switch for device alerts.' },
-    { key: 'allow_portfolio_alerts', label: 'Portfolio & transactions' },
-    { key: 'allow_gold_alerts', label: 'Gold rate movement' },
+    {
+      key: 'allow_portfolio_alerts',
+      label: 'Portfolio & holdings',
+      hint: 'Per-item holding gains, total portfolio value updates, and transaction alerts.',
+    },
+    {
+      key: 'allow_gold_alerts',
+      label: 'Gold rate alerts',
+      hint: 'Public 22K moves and your jeweller’s manual rate updates (bell + tray).',
+    },
     { key: 'allow_jeweller_campaigns', label: 'Jeweller campaigns' },
     { key: 'allow_festival_alerts', label: 'Festival & seasonal messages' },
     { key: 'allow_promotional', label: 'Promotional offers' },
