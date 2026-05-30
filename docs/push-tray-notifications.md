@@ -149,7 +149,8 @@ Contexts: `default`, `festival` (use `{{festival_name}}`), `jeweller_campaign`, 
 **Not** separate contexts per holiday (Vishu/Onam are fact values).
 
 - Seed defaults: `python manage.py seed_engagement_templates`
-- Admin API: `/api/v1/admin/notification-templates/`, preview, variables catalog
+- Admin UI: **Pushes & alerts → Templates** (full guide, samples, create form)
+- Admin API: `/api/v1/admin/notification-templates/`, preview, `/admin/notification-variables/` (guide payload)
 - Jeweller campaigns: `POST /api/v1/jeweller/campaigns/` (same `FestivalBroadcastNotification` processor)
 - Delivery unchanged: `notify_inbox` → `PortfolioUserNotification` + tray push
 

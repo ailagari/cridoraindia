@@ -8,7 +8,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.accounts.models import NotificationEventLog, NotificationTemplate, User
-from apps.accounts.services.engagement_constants import CONTEXTS, MOMENTS, VARIABLE_CATALOG
+from apps.accounts.services.engagement_admin_guide import engagement_admin_guide_payload
 from apps.accounts.services.engagement_facts import build_engagement_facts, build_monthly_storytelling_facts
 from apps.accounts.services.engagement_template_render import preview_render
 from apps.accounts.views_admin import _require_admin
@@ -161,13 +161,7 @@ class AdminNotificationVariablesView(APIView):
         err = _require_admin(request)
         if err:
             return err
-        return Response(
-            {
-                "moments": list(MOMENTS),
-                "contexts": list(CONTEXTS),
-                "variables": VARIABLE_CATALOG,
-            }
-        )
+        return Response(engagement_admin_guide_payload())
 
 
 class AdminNotificationStatsView(APIView):
