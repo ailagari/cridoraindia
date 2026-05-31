@@ -118,18 +118,8 @@ function PublicLayoutInner() {
               <div className="nav-mark-mini" aria-hidden>
                 <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <circle cx="20" cy="20" r="18" stroke={`url(#${footerMarkGradId})`} strokeWidth="2.5" />
-                  <path
-                    d="M14 20C14 16.6863 16.6863 14 20 14"
-                    stroke="#d4a85c"
-                    strokeWidth="3"
-                    strokeLinecap="round"
-                  />
-                  <path
-                    d="M26 20C26 23.3137 23.3137 26 20 26"
-                    stroke="#a67a28"
-                    strokeWidth="3"
-                    strokeLinecap="round"
-                  />
+                  <path d="M14 20C14 16.6863 16.6863 14 20 14" stroke="#d4a85c" strokeWidth="3" strokeLinecap="round" />
+                  <path d="M26 20C26 23.3137 23.3137 26 20 26" stroke="#a67a28" strokeWidth="3" strokeLinecap="round" />
                   <defs>
                     <linearGradient id={footerMarkGradId} x1="2" y1="2" x2="38" y2="38" gradientUnits="userSpaceOnUse">
                       <stop offset="0%" stopColor="#e0bc78" />
@@ -143,93 +133,91 @@ function PublicLayoutInner() {
                 Cridora<span className="cridora-logo__aindia">India</span>
               </div>
             </Link>
-            <p>
-              India&apos;s gold savings infrastructure. Linking verified jewellers to digital gold records, live rates,
-              and real redemption tools.
-            </p>
+            <p>{t('footer.blurb')}</p>
             <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
-              <span className="badge badge-gold">KYC Secured</span>
-              <span className="badge badge-ok">BIS 916</span>
+              <span className="badge badge-gold">{t('footer.kycBadge')}</span>
+              <span className="badge badge-ok">{t('footer.bisBadge')}</span>
             </div>
           </div>
 
           <div className="footer-col">
-            <h4>Platform</h4>
+            <h4>{t('footer.platform')}</h4>
             <Link className="footer-link" to={{ pathname: '/', hash: 'home' }}>
-              Home
+              {t('footer.home')}
             </Link>
             <Link className="footer-link" to={{ pathname: '/', hash: 'discover' }}>
-              Discover
+              {t('footer.discover')}
             </Link>
             <Link className="footer-link" to={{ pathname: '/', hash: 'how' }}>
-              How it works
+              {t('footer.howItWorks')}
             </Link>
-            <Link className="footer-link" to={{ pathname: '/', hash: 'invest' }}>
-              Invest
+            <Link className="footer-link" to={{ pathname: '/', hash: 'portfolio' }}>
+              {t('footer.portfolio')}
+            </Link>
+            <Link className="footer-link" to={{ pathname: '/', hash: 'integration' }}>
+              {t('footer.integration')}
             </Link>
             <Link className="footer-link" to={{ pathname: '/', hash: 'trust' }}>
-              Trust &amp; safety
+              {t('footer.trust')}
             </Link>
           </div>
 
           <div className="footer-col">
-            <h4>For customers</h4>
+            <h4>{t('footer.customers')}</h4>
             <Link className="footer-link" to="/login">
-              Log in
+              {t('footer.logIn')}
             </Link>
             <Link className="footer-link" to={{ pathname: '/', hash: 'join' }}>
-              Sign up
+              {t('footer.signUp')}
             </Link>
             <Link className="footer-link" to={{ pathname: '/', hash: 'jewellers' }}>
-              Find jewellers
+              {t('footer.findJewellers')}
             </Link>
             <Link className="footer-link" to="/marketplace">
-              Marketplace
+              {t('footer.marketplace')}
             </Link>
             <Link className="footer-link" to="/waitlist">
-              Waitlist
+              {t('footer.waitlist')}
             </Link>
           </div>
 
           <div className="footer-col">
-            <h4>Company</h4>
+            <h4>{t('footer.company')}</h4>
             <Link className="footer-link" to="/jeweller/apply">
-              For jewellers
+              {t('footer.forJewellers')}
             </Link>
             <Link className="footer-link" to="/investors">
-              Investor relations
+              {t('footer.investors')}
             </Link>
             <Link className="footer-link" to="/features">
-              Features
+              {t('footer.features')}
             </Link>
             <Link className="footer-link" to="/why-cridora">
-              Why Cridora
+              {t('footer.whyCridora')}
             </Link>
             <Link className="footer-link" to="/waitlist">
-              Contact
+              {t('footer.contact')}
             </Link>
           </div>
         </div>
 
         <div className="footer-bottom">
-          <span>© 2026 Cridora India. All rights reserved.</span>
+          <span>{t('footer.copyright')}</span>
           <div className="fb-links">
             <a className="fb-link" href="#">
-              Privacy policy
+              {t('footer.privacy')}
             </a>
             <a className="fb-link" href="#">
-              Terms of use
+              {t('footer.terms')}
             </a>
             <a className="fb-link" href="#">
-              Disclaimer
+              {t('footer.disclaimer')}
             </a>
             <a className="fb-link" href="#">
-              Grievance
+              {t('footer.grievance')}
             </a>
           </div>
-          <span style={{ color: 'var(--ink3)', fontSize: '0.68rem' }}>
-            Gold rates are indicative. Not SEBI regulated investment advice.
-          </span>
+          <span style={{ color: 'var(--ink3)', fontSize: '0.68rem' }}>{t('footer.ratesNote')}</span>
         </div>
       </footer>
     </div>

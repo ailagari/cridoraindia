@@ -17,10 +17,34 @@ export const enMessages = {
   'nav.guest': 'Guest',
 
   'footer.blurb':
-    'Cridora helps people save, track, and use gold digitally through verified jeweller networks.',
-  'footer.whyCridora': 'Why Cridora',
+    'A digital gold portfolio, customer engagement & modernization platform for jewellers. Track holdings, store bills, stay connected — without replacing your existing systems.',
+  'footer.platform': 'Platform',
+  'footer.customers': 'For customers',
+  'footer.company': 'Company',
+  'footer.home': 'Home',
+  'footer.discover': 'What is Cridora',
+  'footer.howItWorks': 'How it works',
+  'footer.portfolio': 'Gold portfolio',
+  'footer.integration': 'System integration',
+  'footer.trust': 'Trust & safety',
+  'footer.logIn': 'Log in',
+  'footer.signUp': 'Sign up',
+  'footer.findJewellers': 'Find jewellers',
+  'footer.marketplace': 'Marketplace',
+  'footer.waitlist': 'Waitlist',
+  'footer.forJewellers': 'For jewellers',
+  'footer.investors': 'Investor relations',
   'footer.features': 'Features',
-  'footer.investors': 'Investors',
+  'footer.whyCridora': 'Why Cridora',
+  'footer.contact': 'Contact',
+  'footer.copyright': '© 2026 Cridora India. All rights reserved.',
+  'footer.privacy': 'Privacy policy',
+  'footer.terms': 'Terms of use',
+  'footer.disclaimer': 'Disclaimer',
+  'footer.grievance': 'Grievance',
+  'footer.ratesNote': 'Gold rates are indicative. Not SEBI regulated investment advice.',
+  'footer.kycBadge': 'KYC Secured',
+  'footer.bisBadge': 'BIS 916',
 
   'mobile.home': 'Home',
   'mobile.discover': 'Discover',
@@ -351,228 +375,274 @@ export const enMessages = {
   // ── HomePage (reference landing) ──────────────────────────────────────────
 
   // Hero
-  'idx.hero.eyebrow': "India's gold savings infrastructure",
-  'idx.hero.h1': 'Gold savings.',
-  'idx.hero.h1em': 'Finally done right.',
+  'idx.hero.eyebrow': 'Digital gold portfolio & jeweller engagement platform',
+  'idx.hero.h1': 'Your Gold.',
+  'idx.hero.h1em': 'Digitally Visible.',
   'idx.hero.sub':
-    'Cridora links your gold to the verified jewellers you already trust — digital records, live board rates, and real redemption options. Start from ₹10.',
-  'idx.hero.pill1': 'Start from ₹10',
-  'idx.hero.pill2': 'No lock-in period',
-  'idx.hero.pill3': '916 BIS certified',
-  'idx.hero.pill4': '0% interest loans',
-  'idx.hero.pill5': 'OTP secured',
-  'idx.hero.cta1': 'Start saving',
+    'Track your holdings, store bills safely, receive calm updates, and stay connected with the jewellers you already trust — all in one modern gold experience.',
+  'idx.hero.mlAccent': 'നിങ്ങളുടെ സ്വർണം… ഇനി ഡിജിറ്റലായും സുരക്ഷിതമായി.',
+  'idx.hero.pill1': 'Portfolio tracking',
+  'idx.hero.pill2': 'Digital bill vault',
+  'idx.hero.pill3': 'Jeweller-linked',
+  'idx.hero.pill4': 'Smart notifications',
+  'idx.hero.pill5': 'No ERP replacement',
+  'idx.hero.cta1': 'Explore platform',
   'idx.hero.cta2': 'Join as jeweller',
-  'idx.hero.vaultLabel': 'Total Vaulted Gold',
-  'idx.hero.boardRateNote': '≈ ₹1,05,932 at board rate',
-  'idx.hero.unrealisedPL': 'Unrealised P/L',
-  'idx.hero.redeemable': 'Redeemable',
-  'idx.hero.txn1': 'Fractional purchase',
-  'idx.hero.txn2': 'Gold deposit verified',
+  'idx.hero.cta3': 'Join waitlist',
+  'idx.hero.vaultLabel': 'Total Gold Portfolio',
+  'idx.hero.boardRateNote': '≈ ₹1,05,932 at live board rate',
+  'idx.hero.unrealisedPL': 'Portfolio growth',
+  'idx.hero.redeemable': 'In-hand gold',
+  'idx.hero.txn1': 'Purchase recorded',
+  'idx.hero.txn2': 'Bill stored securely',
 
   // Feature strip
-  'idx.fstrip.f1title': 'Fractional Gold',
-  'idx.fstrip.f1sub': 'Buy from ₹10. GST included. Credited instantly.',
-  'idx.fstrip.f2title': 'Gold Deposit',
-  'idx.fstrip.f2sub': 'Digitise physical gold you already own.',
-  'idx.fstrip.f3title': 'CridoraPay',
-  'idx.fstrip.f3sub': 'Pay jeweller bills using vault gold + UPI.',
-  'idx.fstrip.f4title': '0% Gold Loans',
-  'idx.fstrip.f4sub': 'Borrow against vault gold. Pay back, get gold.',
+  'idx.fstrip.f1title': 'Gold Portfolio',
+  'idx.fstrip.f1sub': 'Track all your gold — purchased, in-hand, and imported holdings.',
+  'idx.fstrip.f2title': 'Digital Bill Vault',
+  'idx.fstrip.f2sub': 'Store invoices safely. Never lose proof of your gold again.',
+  'idx.fstrip.f3title': 'Smart Notifications',
+  'idx.fstrip.f3sub': 'Calm updates on gold value, portfolio growth, and jeweller news.',
+  'idx.fstrip.f4title': 'Jeweller Engagement',
+  'idx.fstrip.f4sub': 'Stay digitally connected with your trusted jeweller — not a marketplace.',
 
-  // Discover
-  'idx.disc.eyebrow': 'Why Cridora',
-  'idx.disc.h2': 'Gold saving deserves better infrastructure.',
-  'idx.disc.sub':
-    'India holds over 25,000 tonnes of household gold. Most of it sits idle, unleveraged, and un-traceable. Cridora is the financial layer that finally makes that gold work — without moving it from jewellers you trust.',
-  'idx.disc.vaultLabel': 'Your vault · Malabar Gold',
-  'idx.disc.fractionalLabel': 'Fractional',
-  'idx.disc.depositLabel': 'Deposit',
-  'idx.disc.c1title': 'Infrastructure, not a new wallet',
-  'idx.disc.c1desc':
-    "Cridora doesn't hold your gold. Your verified local jeweller does — the same one your family has trusted for decades. We add digital records, live rates, and redemption tools on top of that relationship.",
-  'idx.disc.c1tag': 'No new middleman · Your jeweller keeps the gold',
-  'idx.disc.c2title': 'Live board rates. Always.',
-  'idx.disc.c2desc':
-    "See the jeweller's actual board rate for every transaction. Compare buyback rates before you sell. No guesswork, no \"come back tomorrow.\"",
-  'idx.disc.c2tag': 'Transparent · Auditable',
-  'idx.disc.c3title': 'Three ways to redeem',
-  'idx.disc.c3desc':
-    'Sell back for cash, transfer grams to family members, or pledge gold as collateral for a 0% interest loan. Your gold works for you.',
-  'idx.disc.c3tag': 'No lock-in · Instant settlement',
-  'idx.disc.c4title': 'Buy jewellery online',
-  'idx.disc.c4desc':
-    'Browse the BIS 916 catalogue from verified jewellers. Pay using vault gold + UPI. Completed purchases appear in your Gold Records vault.',
-  'idx.disc.c4tag': 'Marketplace · CridoraPay',
-  'idx.disc.c5title': 'OTP-secured every step',
-  'idx.disc.c5desc':
-    "Every physical transaction — deposit, sellback, or counter payment — requires a one-time code shared only at the moment. Your vault can't be touched without your phone.",
-  'idx.disc.c5tag': 'Zero-trust · Cryptographic verification',
+  // What is Cridora
+  'idx.what.eyebrow': 'What is Cridora',
+  'idx.what.h2': 'A digital gold portfolio & modernization platform for jewellers.',
+  'idx.what.sub':
+    'Cridora is not another gold wallet or trading app. It is the digital engagement layer that helps customers track gold life and helps jewellers modernize relationships — without replacing existing software.',
+  'idx.what.mlAccent': 'നിങ്ങൾ വാങ്ങിയ സ്വർണം, ബില്ലുകൾ, സ്കീമുകൾ, വളർച്ച — എല്ലാം ഒരൊറ്റ ഇടത്ത്.',
+  'idx.what.c1title': 'Digital engagement layer',
+  'idx.what.c1desc':
+    'Cridora sits on top of your existing jeweller relationship — adding visibility, records, and calm communication. Your jeweller stays at the centre.',
+  'idx.what.c1tag': 'Not a marketplace · Not a jeweller replacement',
+  'idx.what.c2title': 'Portfolio tracking platform',
+  'idx.what.c2desc':
+    'See every gram — purchased gold, in-hand ornaments, imported membership holdings — with live valuation in one calm dashboard.',
+  'idx.what.c2tag': 'One view · Live rates',
+  'idx.what.c3title': 'Customer relationship platform',
+  'idx.what.c3desc':
+    'Jewellers reach customers with festive greetings, rate updates, and scheme reminders — warm engagement, not aggressive marketing.',
+  'idx.what.c3tag': 'Retention · Loyalty',
+  'idx.what.c4title': 'Modernization infrastructure',
+  'idx.what.c4desc':
+    'Link existing membership IDs, import Excel records, and auto-create portfolios. No need to replace your current ERP or billing software.',
+  'idx.what.c4tag': 'Works with what you have',
+  'idx.what.c5title': 'Trust-first design',
+  'idx.what.c5desc':
+    'KYC-verified accounts, OTP-secured actions, BIS 916 records, and full audit trails. Premium, calm, and transparent.',
+  'idx.what.c5tag': 'Secure · Auditable',
 
-  // Quote banner
-  'idx.quote.text':
-    '"Indian households hold more gold than the entire reserves of the US Federal Reserve — yet most of it earns nothing, protects nothing, and can\'t be used as collateral without selling it."',
-  'idx.quote.source': 'World Gold Council · Cridora Editorial',
+  // Customer benefits
+  'idx.cust.eyebrow': 'For customers',
+  'idx.cust.h2': 'Track your gold life — simply and beautifully.',
+  'idx.cust.sub':
+    'Everything you love about gold, made visible. No crypto vibes, no trading screens — just your gold, your jeweller, your peace of mind.',
+  'idx.cust.c1title': 'See all your gold in one place',
+  'idx.cust.c1desc': 'Purchased gold, in-hand ornaments, scheme savings, and imported jeweller holdings — unified in one portfolio.',
+  'idx.cust.c2title': 'Know your gold net worth',
+  'idx.cust.c2desc': 'Live board-rate valuation shows what your gold is worth today — updated calmly, never aggressively.',
+  'idx.cust.c3title': 'Store bills digitally',
+  'idx.cust.c3desc': 'Invoices and purchase proofs live in a secure digital vault — ready for insurance, resale, or family records.',
+  'idx.cust.c4title': 'Stay connected with your jeweller',
+  'idx.cust.c4desc': 'Receive updates from the jewellers you trust — festive wishes, scheme reminders, and calm gold value alerts.',
+  'idx.cust.c5title': 'Emotionally intelligent experience',
+  'idx.cust.c5desc': 'Built for Kerala families and Indian gold culture — warm, premium, and respectful of how gold really matters.',
+
+  // Personal holdings
+  'idx.hold.eyebrow': 'Personal holdings',
+  'idx.hold.h2': 'Every gram you own — tracked with care.',
+  'idx.hold.sub':
+    'Whether gold is in your locker, at the jeweller, or still in a savings scheme — Cridora brings it all into one personal view.',
+  'idx.hold.mlAccent': 'നിങ്ങളുടെ സ്വർണത്തിന്റെ ഇന്നത്തെ മൂല്യം എത്രയെന്ന് ഒരു നോട്ടത്തിൽ.',
+  'idx.hold.c1title': 'In-hand gold',
+  'idx.hold.c1desc': 'Record ornaments and physical gold you keep at home — with weight, purity, and valuation.',
+  'idx.hold.c2title': 'Purchased gold',
+  'idx.hold.c2desc': 'Every store purchase and fractional buy logged automatically with jeweller and date.',
+  'idx.hold.c3title': 'Imported jeweller holdings',
+  'idx.hold.c3desc': 'Existing membership scheme balances linked by your jeweller — no re-entry needed.',
+  'idx.hold.c4title': 'Total gold net worth',
+  'idx.hold.c4desc': 'One number that reflects your complete gold life — updated at live board rates.',
+
+  // Bill vault
+  'idx.bills.eyebrow': 'Digital bill vault',
+  'idx.bills.h2': 'Your gold proof — safe forever.',
+  'idx.bills.sub':
+    'Bills get lost. Drawers get cleared. Cridora keeps every invoice digitally — so your gold always has proof behind it.',
+  'idx.bills.mlAccent': 'ബില്ലുകൾ നഷ്ടപ്പെടാതിരിക്കാൻ… സുരക്ഷിത ഡിജിറ്റൽ സ്റ്റോറേജ്.',
+  'idx.bills.c1title': 'Store invoices digitally',
+  'idx.bills.c1desc': 'Upload or auto-capture purchase bills from partner jewellers — hallmark, weight, and value preserved.',
+  'idx.bills.c2title': 'Never lose gold proof',
+  'idx.bills.c2desc': 'Insurance claims, resale, and family inheritance all need records. Your vault is always accessible.',
+  'idx.bills.c3title': 'Future-ready records',
+  'idx.bills.c3desc': "Every bill linked to your portfolio — today's purchases become tomorrow's trusted history.",
+
+  // Notifications
+  'idx.notif.eyebrow': 'Smart notifications',
+  'idx.notif.h2': 'Calm updates on the gold you care about.',
+  'idx.notif.sub':
+    'No trading alerts. No panic push notifications. Just thoughtful updates that help you feel connected to your gold life.',
+  'idx.notif.mlAccent': 'സ്വർണ വില ഉയർന്നാലും കുറഞ്ഞാലും… Cridora നിങ്ങളോട് പറയുന്നു.',
+  'idx.notif.c1title': 'Gold value updates',
+  'idx.notif.c1desc': 'Gentle alerts when your portfolio value moves — so you always know, never surprised.',
+  'idx.notif.c2title': 'Portfolio growth alerts',
+  'idx.notif.c2desc': 'Celebrate milestones as your gold savings grow — scheme completions and gram targets.',
+  'idx.notif.c3title': 'Festive greetings',
+  'idx.notif.c3desc': 'Onam, Vishu, weddings — your jeweller reaches you warmly through Cridora.',
+  'idx.notif.c4title': 'Jeweller updates',
+  'idx.notif.c4desc': 'Scheme reminders, new collections, and store news from jewellers you already trust.',
+
+  // Gold portfolio section
+  'idx.port.eyebrow': 'Gold portfolio',
+  'idx.port.h2': 'Your complete gold net worth — one calm view.',
+  'idx.port.sub':
+    'Live valuation, gram-by-gram history, and growth tracking — designed to feel premium, not like a trading terminal.',
+  'idx.port.vaultLabel': 'Your portfolio · Malabar Gold',
+  'idx.port.inHandLabel': 'In-hand',
+  'idx.port.purchasedLabel': 'Purchased',
+  'idx.port.importedLabel': 'Imported',
+  'idx.port.growthLabel': 'Portfolio growth',
+  'idx.port.totalLabel': 'Total net worth',
+
+  // System integration
+  'idx.integr.eyebrow': 'Works with existing jeweller systems',
+  'idx.integr.h2': 'Modernize without replacing what already works.',
+  'idx.integr.sub':
+    'Cridora integrates with your current workflow — membership IDs, ERP exports, and Excel records. No rip-and-replace. No disruption.',
+  'idx.integr.mlAccent': 'ഇപ്പോഴുള്ള മെമ്പർഷിപ്പ് സിസ്റ്റങ്ങൾ മാറ്റേണ്ടതില്ല.',
+  'idx.integr.c1title': 'Existing membership IDs supported',
+  'idx.integr.c1desc': 'Link customers by their current scheme or membership number — continuity from day one.',
+  'idx.integr.c2title': 'ERP exports supported',
+  'idx.integr.c2desc': 'Import customer records from your existing billing or ERP system — mapped automatically.',
+  'idx.integr.c3title': 'Excel imports supported',
+  'idx.integr.c3desc': 'Upload a spreadsheet of customers and holdings — Cridora creates portfolios instantly.',
+  'idx.integr.c4title': 'No software replacement',
+  'idx.integr.c4desc': 'Keep your current POS, billing, and accounting tools. Cridora adds the digital layer on top.',
+
+  // Already have membership
+  'idx.member.eyebrow': 'Already have membership systems?',
+  'idx.member.h2': 'Cridora works alongside — not instead of.',
+  'idx.member.sub':
+    'Your customers keep their existing IDs. Your staff keep their familiar tools. Cridora adds digital portfolios and engagement on top.',
+  'idx.member.c1': 'Link existing customer IDs',
+  'idx.member.c2': 'Import Excel records in minutes',
+  'idx.member.c3': 'Auto-create customer portfolios',
+  'idx.member.c4': 'Modernize engagement without workflow change',
 
   // How it works
-  'idx.how.eyebrow': 'How Cridora works',
-  'idx.how.h2': 'Four steps to your first gram.',
-  'idx.how.sub':
-    "You don't need a new bank account. Your existing UPI app and your local jeweller are all you need.",
-  'idx.how.s1title': 'Pick a verified jeweller',
-  'idx.how.s1desc':
-    'Browse the Cridora directory. Filter by city, trust score, buyback rate, or services offered. Every jeweller is KYB-verified.',
-  'idx.how.s2title': 'Start saving digitally',
-  'idx.how.s2desc':
-    'Buy fractional gold via UPI from ₹10 — or visit the store and pay at the counter. Gold is credited to your vault within minutes.',
-  'idx.how.s3title': 'Track it live',
-  'idx.how.s3desc':
-    'Your dashboard shows live valuation, gram-by-gram history, unrealised P/L, and every transaction with an audit trail.',
-  'idx.how.s4title': 'Redeem on your terms',
-  'idx.how.s4desc':
-    'Sell back for cash, transfer to family, take a 0% loan, or spend at the store via CridoraPay. No lock-in, no penalty.',
+  'idx.how.eyebrow': 'How it works',
+  'idx.how.h2': 'Simple steps for customers and jewellers.',
+  'idx.how.sub': 'Two calm flows — one platform. No complexity, no disruption.',
+  'idx.how.customerTitle': 'Customer flow',
+  'idx.how.jewellerTitle': 'Jeweller flow',
+  'idx.how.cs1title': 'Create account',
+  'idx.how.cs1desc': 'Sign up with phone and KYC — takes under 3 minutes.',
+  'idx.how.cs2title': 'Link jeweller',
+  'idx.how.cs2desc': 'Connect to your trusted jeweller from the verified directory.',
+  'idx.how.cs3title': 'Track gold',
+  'idx.how.cs3desc': 'See holdings, live value, and growth in your personal portfolio.',
+  'idx.how.cs4title': 'Store bills',
+  'idx.how.cs4desc': 'Upload or auto-save invoices to your digital bill vault.',
+  'idx.how.cs5title': 'Receive updates',
+  'idx.how.cs5desc': 'Get calm notifications on value, schemes, and jeweller news.',
+  'idx.how.js1title': 'Join Cridora',
+  'idx.how.js1desc': 'Apply as a partner jeweller — KYB verified before listing.',
+  'idx.how.js2title': 'Upload / import customers',
+  'idx.how.js2desc': 'Excel import or ERP export — customer records mapped in minutes.',
+  'idx.how.js3title': 'Link membership IDs',
+  'idx.how.js3desc': 'Existing scheme numbers connect automatically — no customer re-registration.',
+  'idx.how.js4title': 'Engage digitally',
+  'idx.how.js4desc': 'Send notifications, festive greetings, and scheme updates to customers.',
+  'idx.how.js5title': 'Build stronger loyalty',
+  'idx.how.js5desc': 'Modern digital experience that keeps customers coming back to your showroom.',
 
-  // Invest section
-  'idx.inv.eyebrow': 'Three ways to invest',
-  'idx.inv.h2': 'Gold added three ways, one unified vault.',
-  'idx.inv.sub':
-    'However you accumulate gold — buying small, depositing physical, or through purchases — every gram appears in the same dashboard with live valuation.',
-  'idx.inv.insightsNote':
-    'Track personal holdings in your portfolio — when gold rates move, signed-in customers can get value insights in the bell and notification tray (enable in notification settings).',
-  'idx.inv.ariaLabel': 'Ways gold reaches your unified vault',
-  'idx.inv.tab0label': 'All methods',
-  'idx.inv.tab0hint': 'Full comparison',
-  'idx.inv.tab0lead':
-    'Every route lands in one wallet: live board-rate valuation, gram history, P/L — no separate dashboards.',
-  'idx.inv.tab1label': 'Fractional',
-  'idx.inv.tab1hint': 'UPI · from ₹10',
-  'idx.inv.tab1lead':
-    'Top up digitally or conclude at the counter — each buy posts with GST rolled into the gram quote and settles in minutes.',
-  'idx.inv.tab2label': 'Deposit',
-  'idx.inv.tab2hint': 'Physical → vault',
-  'idx.inv.tab2lead':
-    'Carry ornaments or bullion into a verified counter. Weight and purity OTP confirmation credits deposit-class grams instantly.',
-  'idx.inv.tab3label': 'Purchase-linked',
-  'idx.inv.tab3hint': 'Store invoices',
-  'idx.inv.tab3lead':
-    'Jewellery paid through CridoraPay auto-builds lineage in your vault — hallmark, weight and partner stamps for audits.',
-  'idx.inv.m1num': 'Method 01 — Fractional',
-  'idx.inv.m1title': 'Buy from ₹10, any time',
-  'idx.inv.m1desc':
-    'Choose a partner jeweller, enter any INR amount or gram weight. GST on gold is already included in the quote. Pay via UPI — or visit the counter and get an OTP. Grams are credited to your vault within minutes.',
-  'idx.inv.m1tag': 'Start from ₹10 · UPI or counter',
-  'idx.inv.m1h1': 'Jeweller-linked quote spells out INR, grams after GST — no spreadsheet math.',
-  'idx.inv.m1h2': 'Remote UPI buys or OTP walk-throughs both route through the partner you chose.',
-  'idx.inv.m1h3': 'Credits hit the unified vault tally used for transfers, loans, and sellbacks.',
-  'idx.inv.m2num': 'Method 02 — Gold deposit',
-  'idx.inv.m2title': 'Digitise gold you already own',
-  'idx.inv.m2desc':
-    'Bring physical gold — coins, bars, or ornaments — to a verified partner jeweller. The counter records weight and purity. You confirm with a one-time OTP. Deposit-class grams appear in your vault immediately.',
-  'idx.inv.m2tag': 'No cash moves · Deposit class grams',
-  'idx.inv.m2h1': 'Custody stays with trusted jewellers; Cridora only digitises proofs and OTP trail.',
-  'idx.inv.m2h2': 'Deposit grams stay tagged so auditors can reconcile physical vs vaulted metal.',
-  'idx.inv.m2h3': 'Appears beside fractional rows — one portfolio instead of spreadsheets.',
-  'idx.inv.m3num': 'Method 03 — Purchase-linked',
-  'idx.inv.m3title': 'Gold records from store purchases',
-  'idx.inv.m3desc':
-    'When you buy jewellery at a partner store via CridoraPay, the purchase is automatically logged in your Gold Records vault — purity, weight, jeweller, date. Perfect for insurance and valuation tracking.',
-  'idx.inv.m3tag': 'Auto-logged · Records vault',
-  'idx.inv.m3h1': 'Invoices ingest hallmark, SKU, valuation — ready for insurer submissions.',
-  'idx.inv.m3h2': 'Works even when fractional purchases already exist; everything rolls into one ledger.',
-  'idx.inv.m3h3': 'Still redeemable downstream via sellbacks, transfers, or 0% loan pledges.',
-  'idx.inv.redNum': 'Redemption — Three Options',
-  'idx.inv.redTitle': "Use your gold, don't just hold it",
-  'idx.inv.redCash': 'Cash Sellback',
-  'idx.inv.redCashDesc': 'Sell fractional grams back to the jeweller at buyback rate. OTP at counter or UPI payout.',
-  'idx.inv.redTransfer': 'Gold Transfer',
-  'idx.inv.redTransferDesc':
-    'Send grams to any Cridora member by vault card — family, gifts, settlements.',
-  'idx.inv.redLoan': '0% Gold Loan',
-  'idx.inv.redLoanDesc':
-    'Pledge grams as collateral. Only 2% flat fee. Repay in parts; gold returns to vault on full repayment.',
-
-  // Built for India
-  'idx.india.eyebrow': 'Built around real Indian gold behaviour',
-  'idx.india.h2': "Every Indian saves gold. Most can't use it.",
-  'idx.india.sub':
-    "We built Cridora specifically around how gold actually moves in Indian households — not how Western finance thinks it should.",
-  'idx.india.c1title': "You already own gold — it's just not working for you",
-  'idx.india.c1desc':
-    "India's household gold stockpile exceeds 25,000 tonnes. Most of it earns zero returns, has no formal record, and can't be used as collateral without selling it at the wrong time. Cridora adds a financial layer without moving the gold.",
-  'idx.india.c2title': 'You trust your jeweller more than a bank',
-  'idx.india.c2desc':
-    "We don't ask you to change that. Your verified local jeweller remains the physical custodian. Cridora adds digital records, rate transparency, and redemption infrastructure on top.",
-  'idx.india.c3title': 'Small savings matter — ₹10 at a time',
-  'idx.india.c3desc':
-    "No minimum holding period. No lock-in. No penalty for selling. Buy from ₹10. Add whenever you can. That's what a genuine savings tool looks like.",
-  'idx.india.c4title': 'Rate transparency is non-negotiable',
-  'idx.india.c4desc':
-    'Live 22K and 24K board rates on every screen. Buyback rates visible before you decide. Full gram-by-gram ledger. BIS 916 hallmarks recorded for every piece.',
-  'idx.india.c5title': 'Gold that earns, pays, and transfers',
-  'idx.india.c5desc':
-    '0% loans. Peer-to-peer transfers. CridoraPay at the counter. Vault gold used for online marketplace purchases. Gold as active utility, not just a legacy asset.',
-
-  // Trust
-  'idx.trust.eyebrow': 'Trust & transparency',
-  'idx.trust.h2': 'Six pillars of trust. No exceptions.',
-  'idx.trust.t1title': 'KYC verified accounts',
-  'idx.trust.t1desc':
-    'PAN, Aadhaar, and selfie verification before any transaction. Every user is a real person. No anonymous wallets.',
-  'idx.trust.t2title': 'BIS 916 hallmarked gold',
-  'idx.trust.t2desc':
-    'Every gram deposited or purchased through Cridora is required to carry BIS 916 certification. Purity is recorded and auditable.',
-  'idx.trust.t3title': 'Jeweller KYB verification',
-  'idx.trust.t3desc':
-    'Every partner jeweller goes through Know Your Business checks — GST, shop registration, and physical inspection before listing.',
-  'idx.trust.t4title': 'End-to-end audit trail',
-  'idx.trust.t4desc':
-    'Every transaction — purchase, deposit, transfer, sellback, or loan — is logged with timestamps, rates, and reference IDs. Immutable record.',
-  'idx.trust.t5title': 'OTP-secured physical actions',
-  'idx.trust.t5desc':
-    'Counter deposits, sellbacks, and CridoraPay transactions require a time-limited OTP. No action happens without your active confirmation.',
-  'idx.trust.t6title': 'No hidden charges',
-  'idx.trust.t6desc':
-    'Platform fee: ₹0. GST: 3% (mandated by law, shown upfront). Loan fee: 2% flat. Sellback spread: visible before confirmation. No surprises.',
-
-  // For jewellers section
+  // Jeweller benefits
   'idx.jw.eyebrow': 'For jewellers',
-  'idx.jw.h2': 'Grow your business with digital gold infrastructure.',
+  'idx.jw.h2': 'Modernize customer relationships — without changing your business.',
   'idx.jw.sub':
-    'Cridora gives your showroom a modern digital layer — customer loyalty, recurring savings plans, and real-time settlement — without replacing your existing workflow.',
-  'idx.jw.f1title': 'CridoraPay desk billing',
-  'idx.jw.f1desc':
-    'Create bills for walk-in customers. They pay with vault gold + UPI. You get settled instantly. No card machine or POS needed.',
-  'idx.jw.f2title': 'Gold deposit management',
-  'idx.jw.f2desc':
-    'Accept physical gold deposits from Cridora customers. Record weight and purity. OTP-verified. Digital grams credited automatically.',
-  'idx.jw.f3title': 'Customer loyalty & recurring savings',
-  'idx.jw.f3desc':
-    'Run golden schemes digitally. Your customers save fractional gold through your verified vault — trackable and auditable in real time.',
-  'idx.jw.f4title': 'Product marketplace listing',
-  'idx.jw.f4desc':
-    'List your BIS 916 jewellery catalogue online. Reach Cridora savers who can pay using vault gold — a warm audience with existing gold balances.',
+    'Cridora helps jewellers retain customers, increase engagement, and add digital visibility — while keeping existing membership systems and workflows intact.',
+  'idx.jw.mlAccent': 'നിങ്ങളുടെ കസ്റ്റമർമാരുമായി കൂടുതൽ ശക്തമായ ഡിജിറ്റൽ ബന്ധം.',
+  'idx.jw.f1title': 'Customer retention',
+  'idx.jw.f1desc': 'Digital portfolios and scheme tracking keep customers emotionally connected to your brand.',
+  'idx.jw.f2title': 'Digital engagement',
+  'idx.jw.f2desc': 'Festive greetings, rate updates, and scheme reminders — warm outreach that builds loyalty.',
+  'idx.jw.f3title': 'Existing customer continuity',
+  'idx.jw.f3desc': 'Import membership IDs and Excel records — your current customers appear on day one.',
+  'idx.jw.f4title': 'No ERP replacement',
+  'idx.jw.f4desc': 'Keep your billing, POS, and accounting tools. Cridora is the engagement layer, not a replacement.',
+  'idx.jw.f5title': 'Notification system',
+  'idx.jw.f5desc': 'Reach customers with calm, permission-based updates — not spam, not trading alerts.',
+  'idx.jw.f6title': 'Digital portfolio experience',
+  'idx.jw.f6desc': 'Give customers a premium gold tracking experience linked to your showroom.',
   'idx.jw.cta1': 'Apply as jeweller →',
-  'idx.jw.cta2': 'Download info kit',
-  'idx.jw.mockDeskTitle': "Today's desk activity",
-  'idx.jw.mockPurchases': 'Purchases',
-  'idx.jw.mockDeposits': 'Deposits',
-  'idx.jw.mockCridorapay': 'CridoraPay bills',
-  'idx.jw.mockNewCustomers': 'New customers',
+  'idx.jw.cta2': 'Learn more',
+  'idx.jw.mockDeskTitle': "Today's engagement",
+  'idx.jw.mockCustomers': 'Active customers',
+  'idx.jw.mockNotifications': 'Notifications sent',
+  'idx.jw.mockPortfolios': 'Portfolios linked',
+  'idx.jw.mockNewCustomers': 'New this week',
   'idx.jw.mockRate22k': '22K rate',
   'idx.jw.mockBuyback': 'Buyback',
   'idx.jw.mockMaking': 'Making',
 
+  // Trusted modernization
+  'idx.modern.eyebrow': 'Trusted jeweller modernization',
+  'idx.modern.h2': 'Built for trust. Designed for continuity.',
+  'idx.modern.sub':
+    'Cridora is infrastructure for the jeweller-customer bond — not a competitor, not a replacement, not a trading exchange.',
+  'idx.modern.t1title': 'KYC verified accounts',
+  'idx.modern.t1desc': 'Every customer is a real person — PAN, Aadhaar, and selfie verified before any transaction.',
+  'idx.modern.t2title': 'BIS 916 hallmarked records',
+  'idx.modern.t2desc': 'Purity and hallmark data preserved for every recorded purchase and deposit.',
+  'idx.modern.t3title': 'Jeweller KYB verification',
+  'idx.modern.t3desc': 'Every partner jeweller verified — GST, shop registration, and physical inspection.',
+  'idx.modern.t4title': 'End-to-end audit trail',
+  'idx.modern.t4desc': 'Every action logged with timestamps, rates, and reference IDs — immutable record.',
+  'idx.modern.t5title': 'OTP-secured actions',
+  'idx.modern.t5desc': 'Physical transactions require active confirmation — your gold cannot move without you.',
+  'idx.modern.t6title': 'No hidden charges',
+  'idx.modern.t6desc': 'Transparent fees shown upfront. No surprises, no aggressive upselling.',
+
+  // FAQ
+  'idx.faq.eyebrow': 'FAQ',
+  'idx.faq.h2': 'Questions jewellers and customers ask.',
+  'idx.faq.sub': 'Practical answers about how Cridora works with your existing gold life and business.',
+  'idx.faq.q1': 'Is Cridora replacing jeweller software?',
+  'idx.faq.a1':
+    'No. Cridora is a digital engagement and portfolio layer that works alongside your existing billing, POS, and membership systems — not instead of them.',
+  'idx.faq.q2': 'Can existing membership IDs be used?',
+  'idx.faq.a2':
+    'Yes. Cridora links customers by their current scheme or membership number. Your customers keep the IDs they already know.',
+  'idx.faq.q3': 'Can jewellers upload Excel data?',
+  'idx.faq.a3':
+    'Yes. Upload a spreadsheet of customers and holdings — Cridora maps records and auto-creates digital portfolios in minutes.',
+  'idx.faq.q4': 'Is personal gold transferable?',
+  'idx.faq.a4':
+    'Gold tracked in Cridora remains linked to your jeweller relationship. Transfer and redemption options depend on your jeweller\'s policies and Cridora features enabled for their store.',
+  'idx.faq.q5': 'Can bills be stored?',
+  'idx.faq.a5':
+    'Yes. The Digital Bill Vault lets you store invoices and purchase proofs securely — linked to your portfolio for insurance and records.',
+  'idx.faq.q6': 'How are notifications sent?',
+  'idx.faq.a6':
+    'Calm, permission-based push and in-app notifications — gold value updates, portfolio milestones, festive greetings, and jeweller news. No trading alerts.',
+  'idx.faq.q7': 'Is this free for jewellers initially?',
+  'idx.faq.a7':
+    'Early partner jewellers join during our launch phase with introductory access. Contact us via the waitlist or jeweller application for current partner terms.',
+
   // CTA section
-  'idx.cta.eyebrow': 'Get early access',
-  'idx.cta.h2': 'Start your gold vault today.',
+  'idx.cta.eyebrow': 'Start your gold experience',
+  'idx.cta.h2': 'Track your gold life. Modernize your jeweller bond.',
   'idx.cta.sub':
-    'Join thousands of Indian savers using Cridora to invest, track, and redeem gold through verified local jewellers.',
+    'Join customers and jewellers building a calmer, more visible gold future — starting in Kerala, built for all of India.',
+  'idx.cta.mlAccent': 'ഇന്ന് തന്നെ Cridora അനുഭവം ആരംഭിക്കൂ.',
   'idx.cta.placeholder': '+91 mobile number or email',
   'idx.cta.btn': 'Get started →',
-  'idx.cta.note': 'No credit card. No minimum deposit. KYC takes under 3 minutes.',
-  'idx.cta.stat1label': 'Minimum first purchase',
+  'idx.cta.btnJeweller': 'Apply as jeweller',
+  'idx.cta.btnWaitlist': 'Join waitlist',
+  'idx.cta.note': 'Free to explore. KYC takes under 3 minutes. No credit card required.',
+  'idx.cta.stat1label': 'Portfolio tracking',
   'idx.cta.stat2label': 'To complete KYC',
-  'idx.cta.stat3label': 'Interest on gold loans',
+  'idx.cta.stat3label': 'ERP replacement needed',
   'idx.cta.stat4label': 'Verified partner stores',
 } as const
 

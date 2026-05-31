@@ -1,0 +1,158 @@
+/* iOS PWA safe-area: Dynamic Island, notch, home indicator (standalone / Add to Home Screen) */
+
+:root {
+  --sat: env(safe-area-inset-top, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+  --chrome-top: calc(var(--nav-h) + var(--sat));
+  --chrome-bottom: calc(var(--bh) + var(--sab));
+  --dash-chrome-top: calc(var(--th) + var(--sat));
+}
+
+/* Fallback when standalone iOS reports zero insets (known WebKit quirk) */
+html.ios.pwa-standalone {
+  --sat: max(env(safe-area-inset-top, 0px), 47px);
+  --sab: max(env(safe-area-inset-bottom, 0px), 34px);
+}
+
+/* ── Public shell ─────────────────────────────────────────────────────────── */
+
+.pub-ref {
+  padding-top: var(--chrome-top);
+}
+
+.pub-ref .nav {
+  padding-top: var(--sat);
+  height: var(--chrome-top);
+  box-sizing: border-box;
+}
+
+.pub-ref .pub-ref__ticker-sticky {
+  top: var(--chrome-top);
+}
+
+.pub-ref .public-mobile-segment-bar {
+  top: var(--chrome-top);
+  padding-left: max(12px, var(--sal));
+  padding-right: max(12px, var(--sar));
+}
+
+.pub-ref .nav-drawer,
+.pub-ref .nav-drawer__backdrop {
+  top: var(--chrome-top);
+}
+
+.pub-ref .public-bottom-nav {
+  display: flex;
+  align-items: stretch;
+  height: auto;
+  min-height: var(--chrome-bottom);
+  padding: 0.35rem max(0.35rem, var(--sal)) var(--sab) max(0.35rem, var(--sal));
+  box-sizing: border-box;
+  z-index: 500;
+}
+
+.pub-ref .public-bottom-item {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.12rem;
+  padding: 0.2rem 0.12rem;
+  font-size: 0.52rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.pub-ref .public-bottom-item .mobile-tab-ico {
+  display: grid;
+  place-items: center;
+  height: 2rem;
+  width: 2.65rem;
+  border-radius: 14px;
+  transition:
+    transform 0.32s cubic-bezier(0.34, 1.45, 0.64, 1),
+    background 0.24s ease,
+    color 0.2s ease;
+}
+
+.pub-ref .public-bottom-item--active {
+  color: var(--gold-hi);
+}
+
+.pub-ref .public-bottom-item--active .mobile-tab-ico {
+  transform: translateY(-2px);
+  background: color-mix(in srgb, var(--gold-hi) 17%, transparent);
+}
+
+.pub-ref .public-hub-tabs {
+  padding-left: max(5vw, var(--sal));
+  padding-right: max(5vw, var(--sar));
+}
+
+@media (max-width: 767px) {
+  .pub-ref .public-main {
+    padding-bottom: calc(var(--chrome-bottom) + 0.75rem);
+  }
+
+  .pub-ref .pub-footer.ref-index-footer {
+    padding-bottom: calc(2rem + var(--chrome-bottom));
+  }
+}
+
+/* ── Dashboard shell ──────────────────────────────────────────────────────── */
+
+@media (max-width: 767px) {
+  .ref-dash-shell .topbar {
+    padding-top: var(--sat);
+    height: auto;
+    min-height: var(--dash-chrome-top);
+    padding-left: max(0.65rem, var(--sal));
+    padding-right: max(0.65rem, var(--sar));
+    box-sizing: border-box;
+  }
+
+  .ref-dash-shell .subnav {
+    top: var(--dash-chrome-top);
+    padding-left: max(12px, var(--sal));
+    padding-right: max(12px, var(--sar));
+  }
+
+  .ref-dash-shell .bnav {
+    height: auto;
+    min-height: var(--chrome-bottom);
+    padding-left: max(0.35rem, var(--sal));
+    padding-right: max(0.35rem, var(--sar));
+    box-sizing: border-box;
+  }
+
+  .ref-dash-shell .bnav-inner {
+    min-height: var(--bh);
+    padding-bottom: var(--sab);
+    box-sizing: border-box;
+  }
+
+  .ref-dash-shell .btab {
+    min-height: 44px;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .ref-dash-shell .main.dash-content {
+    padding-bottom: calc(var(--chrome-bottom) + 1rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pub-ref .public-bottom-item .mobile-tab-ico {
+    transition: none;
+  }
+
+  .pub-ref .public-bottom-item--active .mobile-tab-ico {
+    transform: none;
+  }
+}

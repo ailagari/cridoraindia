@@ -4,7 +4,9 @@ import App from '@/App'
 import { PwaUpdateBar } from '@/components/PwaUpdateBar'
 import { applyDocumentLocale, readStoredPublicLocale } from '@/i18n/engine'
 import '@/lib/pwaRegister'
+import { initPlatformShellClasses } from '@/lib/platformShell'
 
+initPlatformShellClasses()
 applyDocumentLocale(readStoredPublicLocale())
 
 function showBootError(message: string): void {

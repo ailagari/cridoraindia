@@ -19,10 +19,34 @@ export const mlMessages: Record<MessageKey, string> = {
   'nav.guest': 'അതിഥി',
 
   'footer.blurb':
-    'അംഗീകൃത ജ്വല്ലറി ശൃംഖലകളിലൂടെ ഡിജിറ്റലായി സ്വർണ്ണം സമ്പാദിക്കാനും ട്രാക്ക് ചെയ്യാനും ഉപയോഗിക്കാനും ക്രിഡോറ ആളുകളെ സഹായിക്കുന്നു.',
-  'footer.whyCridora': 'എന്തുകൊണ്ട് Cridora',
-  'footer.features': 'ഫീച്ചറുകൾ',
-  'footer.investors': 'ഇൻവെസ്റ്റർമാർ',
+    'ജ്വല്ലറിമാർക്കുള്ള ഡിജിറ്റൽ ഗോൾഡ് പോർട്ട്‌ഫോളിയോ, കസ്‌റ്റമർ എൻഗേജ്‌മെന്റ് & മോഡേൺനൈസേഷൻ പ്ലാറ്റ്‌ഫോം. ഹോൾഡിംഗ്സ് ട്രാക്ക് ചെയ്യൂ, ബില്ലുകൾ സൂക്ഷിക്കൂ, ബന്ധം നിലനിർത്തൂ — നിലവിലുള്ള സിസ്റ്റങ്ങൾ മാറ്റാതെ.',
+  'footer.platform': 'പ്ലാറ്റ്‌ഫോം',
+  'footer.customers': 'ഉപഭോക്താക്കൾക്ക്',
+  'footer.company': 'കമ്പനി',
+  'footer.home': 'ഹോം',
+  'footer.discover': 'ക്രിഡോറ എന്താണ്',
+  'footer.howItWorks': 'എങ്ങനെ പ്രവർത്തിക്കുന്നു',
+  'footer.portfolio': 'ഗോൾഡ് പോർട്ട്‌ഫോളിയോ',
+  'footer.integration': 'സിസ്റ്റം ഇന്റഗ്രേഷൻ',
+  'footer.trust': 'വിശ്വാസവും സുരക്ഷയും',
+  'footer.logIn': 'ലോഗിൻ',
+  'footer.signUp': 'സൈൻ അപ്പ്',
+  'footer.findJewellers': 'ജ്വല്ലറി കണ്ടെത്തൂ',
+  'footer.marketplace': 'Marketplace',
+  'footer.waitlist': 'Waitlist',
+  'footer.forJewellers': 'ജ്വല്ലറിമാർക്ക്',
+  'footer.investors': 'Investor relations',
+  'footer.features': 'Features',
+  'footer.whyCridora': 'Why Cridora',
+  'footer.contact': 'Contact',
+  'footer.copyright': '© 2026 Cridora India. All rights reserved.',
+  'footer.privacy': 'Privacy policy',
+  'footer.terms': 'Terms of use',
+  'footer.disclaimer': 'Disclaimer',
+  'footer.grievance': 'Grievance',
+  'footer.ratesNote': 'Gold rates are indicative. Not SEBI regulated investment advice.',
+  'footer.kycBadge': 'KYC Secured',
+  'footer.bisBadge': 'BIS 916',
 
   'mobile.home': 'ഹോം',
   'mobile.discover': 'കണ്ടെത്തുക',
@@ -355,228 +379,273 @@ export const mlMessages: Record<MessageKey, string> = {
   // ── HomePage (reference landing) ──────────────────────────────────────────
 
   // Hero
-  'idx.hero.eyebrow': 'ഇന്ത്യയിലെ ഡിജിറ്റൽ സ്വർണ്ണ സമ്പാദ്യ സൗകര്യം',
-  'idx.hero.h1': 'സ്വർണ്ണ സമ്പാദ്യം.',
-  'idx.hero.h1em': 'ഇനി ശരിയായ വഴിയിൽ.',
+  'idx.hero.eyebrow': 'ഡിജിറ്റൽ ഗോൾഡ് പോർട്ട്‌ഫോളിയോ & ജ്വല്ലർ എൻഗേജ്‌മെന്റ് പ്ലാറ്റ്‌ഫോം',
+  'idx.hero.h1': 'നിങ്ങളുടെ സ്വർണം.',
+  'idx.hero.h1em': 'ഇനി ഡിജിറ്റലായും.',
   'idx.hero.sub':
-    'ക്രിഡോറ നിങ്ങളുടെ സ്വർണ്ണത്തെ, നിങ്ങൾ വർഷങ്ങളായി വിശ്വസിക്കുന്ന ജ്വല്ലറിയുമായി ബന്ധിപ്പിക്കുന്നു — ഡിജിറ്റൽ രേഖകൾ, ലൈവ് ബോർഡ് നിരക്ക്, യഥാർത്ഥ റിഡംപ്ഷൻ ഓപ്ഷനുകൾ. ₹10 മുതൽ ആരംഭിക്കൂ.',
-  'idx.hero.pill1': '₹10 മുതൽ തുടങ്ങൂ',
-  'idx.hero.pill2': 'ലോക്ക്-ഇൻ ഇല്ല',
-  'idx.hero.pill3': '916 BIS ഹാൾമാർക്ക്',
-  'idx.hero.pill4': '0% പലിശ വായ്പ',
-  'idx.hero.pill5': 'OTP സുരക്ഷിതം',
-  'idx.hero.cta1': 'സ്വർണ്ണം സമ്പാദിക്കാൻ തുടങ്ങൂ',
+    'നിങ്ങൾ വാങ്ങിയ സ്വർണം, ബില്ലുകൾ, സ്കീമുകൾ, വളർച്ച — എല്ലാം ഒരൊറ്റ ഇടത്ത്. നിങ്ങൾ വിശ്വസിക്കുന്ന ജ്വല്ലറിയുമായി ബന്ധം നിലനിർത്തിക്കൊണ്ട്.',
+  'idx.hero.mlAccent': 'നിങ്ങളുടെ സ്വർണം… ഇനി ഡിജിറ്റലായും സുരക്ഷിതമായി.',
+  'idx.hero.pill1': 'പോർട്ട്‌ഫോളിയോ ട്രാക്കിംഗ്',
+  'idx.hero.pill2': 'ഡിജിറ്റൽ ബിൽ വോൾട്ട്',
+  'idx.hero.pill3': 'ജ്വല്ലർ-ലിങ്ക്ഡ്',
+  'idx.hero.pill4': 'സ്മാർട്ട് അറിയിപ്പുകൾ',
+  'idx.hero.pill5': 'ERP മാറ്റേണ്ട',
+  'idx.hero.cta1': 'പ്ലാറ്റ്‌ഫോം കണ്ടെത്തൂ',
   'idx.hero.cta2': 'ജ്വല്ലർ ആയി ചേരൂ',
-  'idx.hero.vaultLabel': 'ആകെ ഡിജിറ്റൽ സ്വർണ്ണം',
-  'idx.hero.boardRateNote': '≈ ₹1,05,932 ബോർഡ് നിരക്ക് പ്രകാരം',
-  'idx.hero.unrealisedPL': 'ലാഭ/നഷ്ട കണക്ക്',
-  'idx.hero.redeemable': 'ഉടൻ ഉപയോഗിക്കാം',
-  'idx.hero.txn1': 'ഭാഗിക വാങ്ങൽ',
-  'idx.hero.txn2': 'സ്വർണ്ണ നിക്ഷേപം അംഗീകൃതമായി',
+  'idx.hero.cta3': 'Waitlist-ൽ ചേരൂ',
+  'idx.hero.vaultLabel': 'ആകെ ഗോൾഡ് പോർട്ട്‌ഫോളിയോ',
+  'idx.hero.boardRateNote': '≈ ₹1,05,932 ലൈവ് ബോർഡ് നിരക്ക്',
+  'idx.hero.unrealisedPL': 'പോർട്ട്‌ഫോളിയോ വളർച്ച',
+  'idx.hero.redeemable': 'കൈവശമുള്ള സ്വർണം',
+  'idx.hero.txn1': 'വാങ്ങൽ രേഖപ്പെടുത്തി',
+  'idx.hero.txn2': 'ബിൽ സുരക്ഷിതമായി സൂക്ഷിച്ചു',
 
   // Feature strip
-  'idx.fstrip.f1title': 'ഭാഗിക സ്വർണ്ണം',
-  'idx.fstrip.f1sub': '₹10 മുതൽ വാങ്ങൂ. GST ഉൾപ്പെടെ. ഉടൻ ക്രെഡിറ്റ്.',
-  'idx.fstrip.f2title': 'ഗോൾഡ് ഡിപ്പോസിറ്റ്',
-  'idx.fstrip.f2sub': 'കൈവശമുള്ള ഭൗതിക സ്വർണ്ണം ഡിജിറ്റൽ ആക്കൂ.',
-  'idx.fstrip.f3title': 'CridoraPay',
-  'idx.fstrip.f3sub': 'ജ്വല്ലറി ബില്ലുകൾ വോൾട്ട് ഗോൾഡ് + UPI ഉപയോഗിച്ച് അടയ്ക്കൂ.',
-  'idx.fstrip.f4title': '0% ഗോൾഡ് ലോൺ',
-  'idx.fstrip.f4sub': 'വോൾട്ട് ഗോൾഡ് ഈടായി വായ്പ. തിരിച്ചടച്ചാൽ സ്വർണ്ണം തിരിച്ചുകിട്ടും.',
+  'idx.fstrip.f1title': 'ഗോൾഡ് പോർട്ട്‌ഫോളിയോ',
+  'idx.fstrip.f1sub': 'വാങ്ങിയതും, കൈവശമുള്ളതും, ഇംപോർട്ട് ചെയ്തതും — എല്ലാ സ്വർണ്ണവും ട്രാക്ക് ചെയ്യൂ.',
+  'idx.fstrip.f2title': 'ഡിജിറ്റൽ ബിൽ വോൾട്ട്',
+  'idx.fstrip.f2sub': 'ബില്ലുകൾ സുരക്ഷിതമായി സൂക്ഷിക്കൂ. സ്വർണ്ണത്തിന്റെ തെളിവ് ഒരിക്കലും നഷ്ടപ്പെടാതെ.',
+  'idx.fstrip.f3title': 'സ്മാർട്ട് അറിയിപ്പുകൾ',
+  'idx.fstrip.f3sub': 'സ്വർണ്ണ മൂല്യം, പോർട്ട്‌ഫോളിയോ വളർച്ച, ജ്വല്ലർ വാർത്തകൾ — ശാന്തമായ അപ്‌ഡേറ്റുകൾ.',
+  'idx.fstrip.f4title': 'ജ്വല്ലർ എൻഗേജ്‌മെന്റ്',
+  'idx.fstrip.f4sub': 'നിങ്ങൾ വിശ്വസിക്കുന്ന ജ്വല്ലറിയുമായി ഡിജിറ്റൽ ബന്ധം — marketplace അല്ല.',
 
-  // Discover
-  'idx.disc.eyebrow': 'എന്തുകൊണ്ട് ക്രിഡോറ',
-  'idx.disc.h2': 'സ്വർണ്ണ സമ്പാദ്യത്തിന് മികച്ചൊരു ഡിജിറ്റൽ സൗകര്യം ആവശ്യമാണ്.',
-  'idx.disc.sub':
-    'ഇന്ത്യൻ കുടുംബങ്ങളിൽ 25,000 ടൺ-ലേറെ സ്വർണ്ണമുണ്ട്. ഭൂരിഭാഗവും ഉപേക്ഷിക്കപ്പെട്ടതുപോലെ കിടക്കുന്നു — ഉപയോഗമില്ല, ഈടില്ല, ട്രാക്കില്ല. ക്രിഡോറ ആ സ്വർണ്ണം ജോലി ചെയ്യിക്കുന്ന ഡിജിറ്റൽ ലൂ ആണ് — ജ്വല്ലറിയിൽ നിന്ന് മാറ്റാതെ.',
-  'idx.disc.vaultLabel': 'നിങ്ങളുടെ വോൾട്ട് · Malabar Gold',
-  'idx.disc.fractionalLabel': 'ഭാഗിക',
-  'idx.disc.depositLabel': 'ഡിപ്പോസിറ്റ്',
-  'idx.disc.c1title': 'പുതിയ വാലറ്റ് അല്ല, ഡിജിറ്റൽ ഇൻഫ്രാസ്ട്രക്ചർ',
-  'idx.disc.c1desc':
-    'ക്രിഡോറ നിങ്ങളുടെ സ്വർണ്ണം സൂക്ഷിക്കില്ല. നിങ്ങളുടെ കുടുംബം ദശകങ്ങളായി വിശ്വസിക്കുന്ന അതേ ജ്വല്ലറി തന്നെ അത് കൈവശം വയ്ക്കും. ആ ബന്ധത്തിനു മുകളിൽ ഡിജിറ്റൽ രേഖകൾ, ലൈവ് നിരക്ക്, റിഡംപ്ഷൻ ടൂളുകൾ ഞങ്ങൾ ചേർക്കുന്നു.',
-  'idx.disc.c1tag': 'ഇടനിലക്കാർ ഇല്ല · ജ്വല്ലറി തന്നെ സ്വർണ്ണം സൂക്ഷിക്കുന്നു',
-  'idx.disc.c2title': 'ലൈവ് ബോർഡ് നിരക്ക്. എപ്പോഴും.',
-  'idx.disc.c2desc':
-    'ഓരോ ഇടപാടിലും ജ്വല്ലറിയുടെ യഥാർത്ഥ ബോർഡ് നിരക്ക് കാണൂ. വിൽക്കുന്നതിന് മുമ്പ് ബൈബാക്ക് നിരക്ക് ഒന്ന് നോക്കൂ. ഊഹക്കച്ചവടം ഇല്ല, "നാളെ വരൂ" ഇല്ല.',
-  'idx.disc.c2tag': 'സ്പഷ്ടം · ഓഡിറ്റ് ചെയ്യാം',
-  'idx.disc.c3title': 'മൂന്നു തരം റിഡംപ്ഷൻ',
-  'idx.disc.c3desc':
-    'പണമായി തിരിച്ചുവാങ്ങൂ, കുടുംബാംഗങ്ങൾക്ക് ഗ്രാം കൈമാറൂ, അല്ലെങ്കിൽ 0% പലിശ വായ്പ്പക്ക് ഈടായി ഉപയോഗിക്കൂ. നിങ്ങളുടെ സ്വർണ്ണം നിങ്ങൾക്ക് വേണ്ടി ജോലി ചെയ്യട്ടെ.',
-  'idx.disc.c3tag': 'ലോക്ക്-ഇൻ ഇല്ല · ഉടൻ സെറ്റിൽമെന്റ്',
-  'idx.disc.c4title': 'ഓൺലൈൻ ആഭരണം വാങ്ങൂ',
-  'idx.disc.c4desc':
-    'അംഗീകൃത ജ്വല്ലറിയിൽ നിന്ന് BIS 916 കാറ്റലോഗ് ബ്രൗസ് ചെയ്യൂ. വോൾട്ട് ഗോൾഡ് + UPI ഉപയോഗിച്ച് അടയ്ക്കൂ. ഇടപാടുകൾ ഗോൾഡ് റിക്കോർഡ്സ് വോൾട്ടിൽ ദൃശ്യമാകും.',
-  'idx.disc.c4tag': 'Marketplace · CridoraPay',
-  'idx.disc.c5title': 'ഓരോ ഘട്ടത്തിലും OTP സുരക്ഷ',
-  'idx.disc.c5desc':
-    'ഡിപ്പോസിറ്റ്, സെൽബാക്ക്, കൗണ്ടർ പേയ്‌മെന്റ് — ഓരോ ഭൗതിക ഇടപാടിനും ആ നിമിഷം മാത്രം ഷെയർ ചെയ്യുന്ന ഒരു OTP ആവശ്യം. ഫോൺ ഇല്ലാതെ വോൾട്ടിൽ ഒന്നും നടക്കില്ല.',
-  'idx.disc.c5tag': 'Zero-trust · ക്രിപ്‌റ്റോഗ്രാഫിക് വെരിഫിക്കേഷൻ',
+  // What is Cridora
+  'idx.what.eyebrow': 'ക്രിഡോറ എന്താണ്',
+  'idx.what.h2': 'ജ്വല്ലറിമാർക്കുള്ള ഡിജിറ്റൽ ഗോൾഡ് പോർട്ട്‌ഫോളിയോ & മോഡേൺനൈസേഷൻ പ്ലാറ്റ്‌ഫോം.',
+  'idx.what.sub':
+    'ക്രിഡോറ മറ്റൊരു ഗോൾഡ് വാലറ്റോ ട്രേഡിംഗ് ആപ്പോ അല്ല. ഉപഭോക്താക്കൾക്ക് സ്വർണ്ണ ജീവിതം ട്രാക്ക് ചെയ്യാനും ജ്വല്ലറിമാർക്ക് ബന്ധം ആധുനികമാക്കാനും — നിലവിലുള്ള സോഫ്‌റ്റ്‌വെയർ മാറ്റാതെ.',
+  'idx.what.mlAccent': 'നിങ്ങൾ വാങ്ങിയ സ്വർണം, ബില്ലുകൾ, സ്കീമുകൾ, വളർച്ച — എല്ലാം ഒരൊറ്റ ഇടത്ത്.',
+  'idx.what.c1title': 'ഡിജിറ്റൽ എൻഗേജ്‌മെന്റ് ലെയർ',
+  'idx.what.c1desc':
+    'നിങ്ങളുടെ നിലവിലുള്ള ജ്വല്ലർ ബന്ധത്തിനു മുകളിൽ visibility, രേഖകൾ, ശാന്തമായ ആശയവിനിമയം — ജ്വല്ലർ തന്നെ കേന്ദ്രത്തിൽ.',
+  'idx.what.c1tag': 'Marketplace അല്ല · ജ്വല്ലർ മാറ്റം അല്ല',
+  'idx.what.c2title': 'പോർട്ട്‌ഫോളിയോ ട്രാക്കിംഗ്',
+  'idx.what.c2desc':
+    'വാങ്ങിയ സ്വർണ്ണം, കൈവശമുള്ള ആഭരണം, ഇംപോർട്ട് ചെയ്ത സ്കീം ബാലൻസ് — ലൈവ് valuation-ഒടെ ഒരൊറ്റ dashboard-ൽ.',
+  'idx.what.c2tag': 'ഒരു view · ലൈവ് നിരക്ക്',
+  'idx.what.c3title': 'കസ്‌റ്റമർ റിലേഷൻഷിപ്പ് പ്ലാറ്റ്‌ഫോം',
+  'idx.what.c3desc':
+    'ഓണം, വിഷു, വിവാഹം — ജ്വല്ലർമാർ ഉത്സവ ആശംസകളും സ്കീം reminders-ും അയയ്ക്കും. ചൂടുള്ള ബന്ധം, aggressive marketing അല്ല.',
+  'idx.what.c3tag': 'Retention · Loyalty',
+  'idx.what.c4title': 'മോഡേൺനൈസേഷൻ ഇൻഫ്രാസ്ട്രക്ചർ',
+  'idx.what.c4desc':
+    'നിലവിലുള്ള membership ID, Excel import, auto portfolio — നിങ്ങളുടെ ERP അല്ലെങ്കിൽ billing software മാറ്റേണ്ട.',
+  'idx.what.c4tag': 'നിങ്ങൾക്കുള്ളതോടെ പ്രവർത്തിക്കും',
+  'idx.what.c5title': 'Trust-first design',
+  'idx.what.c5desc':
+    'KYC verified, OTP secured, BIS 916 records, full audit trail — premium, calm, transparent.',
+  'idx.what.c5tag': 'Secure · Auditable',
 
-  // Quote banner
-  'idx.quote.text':
-    '"ഇന്ത്യൻ കുടുംബങ്ങൾ കൈവശം വക്കുന്ന സ്വർണ്ണം, അമേരിക്കൻ ഫെഡറൽ റിസർവ്‌വിന്റെ ആകെ ശേഖരത്തേക്കാൾ കൂടുതൽ — എന്നിട്ടും അതിൽ ഭൂരിഭാഗവും ഒരു ലാഭവും ഉണ്ടാക്കുന്നില്ല, ഒന്നും സംരക്ഷിക്കുന്നില്ല, വിൽക്കാതെ ഈടായി ഉപയോഗിക്കാൻ കഴിയില്ല."',
-  'idx.quote.source': 'World Gold Council · Cridora Editorial',
+  // Customer benefits
+  'idx.cust.eyebrow': 'ഉപഭോക്താക്കൾക്ക്',
+  'idx.cust.h2': 'നിങ്ങളുടെ സ്വർണ്ണ ജീവിതം — ലളിതവും മനോഹരവുമായി.',
+  'idx.cust.sub':
+    'സ്വർണ്ണത്തെ സ്നേഹിക്കുന്ന എല്ലാം visible ആക്കൂ. Crypto vibes ഇല്ല, trading screens ഇല്ല — നിങ്ങളുടെ സ്വർണ്ണം, നിങ്ങളുടെ ജ്വല്ലർ, നിങ്ങളുടെ peace of mind.',
+  'idx.cust.c1title': 'എല്ലാ സ്വർണ്ണവും ഒരിടത്ത്',
+  'idx.cust.c1desc': 'വാങ്ങിയതും, കൈവശമുള്ളതും, സ്കീം savings-um, imported holdings-um — unified portfolio.',
+  'idx.cust.c2title': 'സ്വർണ്ണ net worth അറിയൂ',
+  'idx.cust.c2desc': 'ലൈവ് ബോർഡ് നിരക്കിൽ ഇന്നത്തെ മൂല്യം — ശാന്തമായി അപ്‌ഡേറ്റ്, aggressive alerts അല്ല.',
+  'idx.cust.c3title': 'ബില്ലുകൾ ഡിജിറ്റലായി സൂക്ഷിക്കൂ',
+  'idx.cust.c3desc': 'Insurance, resale, കുടുംബ രേഖകൾ — secure digital vault-ൽ invoices എപ്പോഴും.',
+  'idx.cust.c4title': 'ജ്വല്ലറുമായി ബന്ധം നിലനിർത്തൂ',
+  'idx.cust.c4desc': 'ഉത്സവ ആശംസകൾ, സ്കീം reminders, calm gold value alerts — വിശ്വസിക്കുന്ന ജ്വല്ലറിൽ നിന്ന്.',
+  'idx.cust.c5title': 'Emotionally intelligent experience',
+  'idx.cust.c5desc': 'Kerala families-നും Indian gold culture-നും — warm, premium, respectful.',
+
+  // Personal holdings
+  'idx.hold.eyebrow': 'Personal holdings',
+  'idx.hold.h2': 'നിങ്ങൾ ഉടമയായ ഓരോ ഗ്രാമും — care-യോടെ ട്രാക്ക്.',
+  'idx.hold.sub':
+    'Locker-il, jeweller-il, savings scheme-il — Cridora എല്ലാം ഒരൊറ്റ personal view-il കൊണ്ടുവരും.',
+  'idx.hold.mlAccent': 'നിങ്ങളുടെ സ്വർണത്തിന്റെ ഇന്നത്തെ മൂല്യം എത്രയെന്ന് ഒരു നോട്ടത്തിൽ.',
+  'idx.hold.c1title': 'കൈവശമുള്ള സ്വർണം',
+  'idx.hold.c1desc': 'വീട്ടിൽ സൂക്ഷിക്കുന്ന ആഭരണം — weight, purity, valuation-ഒടെ.',
+  'idx.hold.c2title': 'വാങ്ങിയ സ്വർണം',
+  'idx.hold.c2desc': 'ഓരോ store purchase-um fractional buy-um auto-log — jeweller, date.',
+  'idx.hold.c3title': 'Imported jeweller holdings',
+  'idx.hold.c3desc': 'നിലവിലുള്ള membership scheme balances — jeweller link ചെയ്താൽ re-entry ഇല്ല.',
+  'idx.hold.c4title': 'Total gold net worth',
+  'idx.hold.c4desc': 'നിങ്ങളുടെ complete gold life reflect ചെയ്യുന്ന ഒരു number — live board rates.',
+
+  // Bill vault
+  'idx.bills.eyebrow': 'Digital bill vault',
+  'idx.bills.h2': 'നിങ്ങളുടെ സ്വർണ്ണ തെളിവ് — എന്നും സുരക്ഷിതം.',
+  'idx.bills.sub':
+    'Bills get lost. Drawers get cleared. Cridora keeps every invoice digitally.',
+  'idx.bills.mlAccent': 'ബില്ലുകൾ നഷ്ടപ്പെടാതിരിക്കാൻ… സുരക്ഷിത ഡിജിറ്റൽ സ്റ്റോറേജ്.',
+  'idx.bills.c1title': 'Invoices digitally store ചെയ്യൂ',
+  'idx.bills.c1desc': 'Upload or auto-capture — hallmark, weight, value preserved.',
+  'idx.bills.c2title': 'Gold proof ഒരിക്കലും നഷ്ടപ്പെടില്ല',
+  'idx.bills.c2desc': 'Insurance, resale, inheritance — vault എപ്പോഴും accessible.',
+  'idx.bills.c3title': 'Future-ready records',
+  'idx.bills.c3desc': 'ഓരോ bill-um portfolio-യോട് linked — today\'s purchases, tomorrow\'s trusted history.',
+
+  // Notifications
+  'idx.notif.eyebrow': 'Smart notifications',
+  'idx.notif.h2': 'നിങ്ങൾക്ക് matter ആയ സ്വർണ്ണത്തെക്കുറിച്ച് ശാന്തമായ updates.',
+  'idx.notif.sub':
+    'Trading alerts ഇല്ല. Panic push notifications ഇല്ല. Thoughtful updates മാത്രം.',
+  'idx.notif.mlAccent': 'സ്വർണ വില ഉയർന്നാലും കുറഞ്ഞാലും… Cridora നിങ്ങളോട് പറയുന്നു.',
+  'idx.notif.c1title': 'Gold value updates',
+  'idx.notif.c1desc': 'Portfolio value move ചെയ്യുമ്പോൾ gentle alerts — surprised അല്ല.',
+  'idx.notif.c2title': 'Portfolio growth alerts',
+  'idx.notif.c2desc': 'Scheme completions, gram targets — milestones celebrate ചെയ്യൂ.',
+  'idx.notif.c3title': 'Festive greetings',
+  'idx.notif.c3desc': 'ഓണം, വിഷു, weddings — jeweller Cridora വഴി warmly reach ചെയ്യും.',
+  'idx.notif.c4title': 'Jeweller updates',
+  'idx.notif.c4desc': 'Scheme reminders, new collections, store news — trusted jewellers-ൽ നിന്ന്.',
+
+  // Gold portfolio section
+  'idx.port.eyebrow': 'Gold portfolio',
+  'idx.port.h2': 'Complete gold net worth — one calm view.',
+  'idx.port.sub':
+    'Live valuation, gram-by-gram history, growth tracking — premium feel, trading terminal അല്ല.',
+  'idx.port.vaultLabel': 'Your portfolio · Malabar Gold',
+  'idx.port.inHandLabel': 'കൈവശം',
+  'idx.port.purchasedLabel': 'വാങ്ങിയത്',
+  'idx.port.importedLabel': 'Imported',
+  'idx.port.growthLabel': 'Portfolio growth',
+  'idx.port.totalLabel': 'Total net worth',
+
+  // System integration
+  'idx.integr.eyebrow': 'Works with existing jeweller systems',
+  'idx.integr.h2': 'നിലവിലുള്ളത് പ്രവർത്തിക്കുന്നത് മാറ്റാതെ modernize ചെയ്യൂ.',
+  'idx.integr.sub':
+    'Membership IDs, ERP exports, Excel records — rip-and-replace ഇല്ല, disruption ഇല്ല.',
+  'idx.integr.mlAccent': 'ഇപ്പോഴുള്ള മെമ്പർഷിപ്പ് സിസ്റ്റങ്ങൾ മാറ്റേണ്ടതില്ല.',
+  'idx.integr.c1title': 'Existing membership IDs supported',
+  'idx.integr.c1desc': 'Current scheme/membership number-ൽ customers link — day one continuity.',
+  'idx.integr.c2title': 'ERP exports supported',
+  'idx.integr.c2desc': 'Existing billing/ERP-ൽ നിന്ന് customer records import — auto mapped.',
+  'idx.integr.c3title': 'Excel imports supported',
+  'idx.integr.c3desc': 'Spreadsheet upload — Cridora portfolios instantly create ചെയ്യും.',
+  'idx.integr.c4title': 'Software replacement ഇല്ല',
+  'idx.integr.c4desc': 'POS, billing, accounting tools keep ചെയ്യൂ. Cridora digital layer മാത്രം.',
+
+  // Already have membership
+  'idx.member.eyebrow': 'Already have membership systems?',
+  'idx.member.h2': 'Cridora alongside — instead of അല്ല.',
+  'idx.member.sub':
+    'Customers existing IDs keep ചെയ്യും. Staff familiar tools keep ചെയ്യും. Digital portfolios & engagement add.',
+  'idx.member.c1': 'Existing customer IDs link ചെയ്യൂ',
+  'idx.member.c2': 'Excel records minutes-il import',
+  'idx.member.c3': 'Auto-create customer portfolios',
+  'idx.member.c4': 'Workflow change ഇല്ലാതെ engagement modernize',
 
   // How it works
-  'idx.how.eyebrow': 'ക്രിഡോറ എങ്ങനെ പ്രവർത്തിക്കുന്നു',
-  'idx.how.h2': 'ആദ്യ ഗ്രാമിലേക്ക് നാല് ഘട്ടങ്ങൾ.',
-  'idx.how.sub':
-    'പുതിയ ബാങ്ക് അക്കൗണ്ട് ആവശ്യമില്ല. UPI ഉള്ള ഫോണും അടുത്ത ജ്വല്ലറിയും ഉണ്ടെങ്കിൽ മതി.',
-  'idx.how.s1title': 'അംഗീകൃത ജ്വല്ലറിയെ തിരഞ്ഞെടുക്കൂ',
-  'idx.how.s1desc':
-    'ക്രിഡോറ ഡയറക്ടറി ബ്രൗസ് ചെയ്യൂ. നഗരം, ട്രസ്റ്റ് സ്‌കോർ, ബൈബാക്ക് നിരക്ക്, സേവനങ്ങൾ — ഫിൽറ്റർ ചെയ്ത് തിരഞ്ഞെടുക്കൂ. എല്ലാ ജ്വല്ലറിയും KYB-verified.',
-  'idx.how.s2title': 'ഡിജിറ്റലായി സ്വർണ്ണം സമ്പാദ്യം ആരംഭിക്കൂ',
-  'idx.how.s2desc':
-    '₹10 മുതൽ UPI വഴി ഭാഗിക സ്വർണ്ണം വാങ്ങൂ — അല്ലെങ്കിൽ കടയിൽ ചെന്ന് കൗണ്ടറിൽ അടയ്ക്കൂ. ഏതാനും മിനിറ്റുകൾക്കുള്ളിൽ ഗ്രാം വോൾട്ടിലെത്തും.',
-  'idx.how.s3title': 'ലൈവ് ആയി ട്രാക്ക് ചെയ്യൂ',
-  'idx.how.s3desc':
-    'ഡാഷ്‌ബോർഡ്, ലൈവ് വാല്യൂ, ഗ്രാം-ബൈ-ഗ്രാം ഹിസ്‌ട്രി, ലാഭ/നഷ്ട കണക്ക്, ഓരോ ഇടപാടും ഓഡിറ്റ് ട്രയലോടെ — എല്ലാം ഒറ്റ സ്ഥലത്ത്.',
-  'idx.how.s4title': 'നിങ്ങൾ ആഗ്രഹിക്കുന്ന വിധം ഉപയോഗിക്കൂ',
-  'idx.how.s4desc':
-    'പണമായി തിരിച്ചുവിൽക്കൂ, കുടുംബത്തിനു കൈമാറൂ, 0% ലോൺ എടുക്കൂ, അല്ലെങ്കിൽ CridoraPay വഴി ഷോറൂമിൽ ഉപയോഗിക്കൂ. ലോക്ക്-ഇൻ ഇല്ല, പെനാൽറ്റി ഇല്ല.',
+  'idx.how.eyebrow': 'എങ്ങനെ പ്രവർത്തിക്കുന്നു',
+  'idx.how.h2': 'Customers-ിനും jewellers-ിനും simple steps.',
+  'idx.how.sub': 'Two calm flows — one platform. Complexity ഇല്ല, disruption ഇല്ല.',
+  'idx.how.customerTitle': 'Customer flow',
+  'idx.how.jewellerTitle': 'Jeweller flow',
+  'idx.how.cs1title': 'Account create ചെയ്യൂ',
+  'idx.how.cs1desc': 'Phone & KYC sign up — 3 minutes-il താഴെ.',
+  'idx.how.cs2title': 'Jeweller link ചെയ്യൂ',
+  'idx.how.cs2desc': 'Verified directory-ൽ നിന്ന് trusted jeweller connect.',
+  'idx.how.cs3title': 'Gold track ചെയ്യൂ',
+  'idx.how.cs3desc': 'Holdings, live value, growth — personal portfolio-il.',
+  'idx.how.cs4title': 'Bills store ചെയ്യൂ',
+  'idx.how.cs4desc': 'Upload or auto-save — digital bill vault-il.',
+  'idx.how.cs5title': 'Updates receive ചെയ്യൂ',
+  'idx.how.cs5desc': 'Value, schemes, jeweller news — calm notifications.',
+  'idx.how.js1title': 'Cridora-il join',
+  'idx.how.js1desc': 'Partner jeweller apply — KYB verified before listing.',
+  'idx.how.js2title': 'Customers upload/import',
+  'idx.how.js2desc': 'Excel or ERP export — minutes-il mapped.',
+  'idx.how.js3title': 'Membership IDs link',
+  'idx.how.js3desc': 'Existing scheme numbers auto connect — re-registration ഇല്ല.',
+  'idx.how.js4title': 'Digitally engage',
+  'idx.how.js4desc': 'Notifications, festive greetings, scheme updates അയയ്ക്കൂ.',
+  'idx.how.js5title': 'Stronger loyalty build',
+  'idx.how.js5desc': 'Modern digital experience — customers showroom-il തിരിച്ചുവരും.',
 
-  // Invest section
-  'idx.inv.eyebrow': 'മൂന്നു തരം നിക്ഷേപ വഴികൾ',
-  'idx.inv.h2': 'മൂന്നു വഴിയിൽ ഗോൾഡ്, ഒരൊറ്റ വോൾട്ടിൽ.',
-  'idx.inv.sub':
-    'ഭാഗിക വാങ്ങൽ, ഭൗതിക ഡിപ്പോസിറ്റ്, അല്ലെങ്കിൽ ഷോറൂം പർച്ചേസ് — ഏത് വഴിയിൽ ഗ്രാം ഉണ്ടായാലും ലൈവ് വാല്യൂ കാണിക്കുന്ന ഒരേ ഡാഷ്‌ബോർഡിൽ ദൃശ്യമാകും.',
-  'idx.inv.insightsNote':
-    'പേഴ്സണൽ ഹോൾഡിംഗ്സ് പോർട്ട്ഫോളിയോയിൽ ട്രാക്ക് ചെയ്യുക — സ്വർണ്ണ നിരക്ക് മാറുമ്പോൾ സൈൻ ഇൻ ചെയ്ത ഉപഭോക്താക്കൾക്ക് ബെൽ, ട്രേ അറിയിപ്പുകളിൽ മൂല്യ ഇൻസൈറ്റ് ലഭിക്കും (നോട്ടിഫിക്കേഷൻ സെറ്റിംഗ്സിൽ പ്രവർത്തനക്ഷമമാക്കുക).',
-  'idx.inv.ariaLabel': 'ഗോൾഡ് വോൾട്ടിലെത്തുന്ന വഴികൾ',
-  'idx.inv.tab0label': 'എല്ലാ രീതികളും',
-  'idx.inv.tab0hint': 'സമ്പൂർണ്ണ താരതമ്യം',
-  'idx.inv.tab0lead':
-    'ഓരോ വഴിയും ഒരേ വോൾട്ടിലാണ് എത്തുന്നത്: ലൈവ് ബോർഡ്-നിരക്ക് വാല്യൂ, ഗ്രാം ഹിസ്‌ട്രി, ലാഭ/നഷ്ടം — വേറെ ഡാഷ്‌ബോർഡ് ഇല്ല.',
-  'idx.inv.tab1label': 'ഭാഗിക',
-  'idx.inv.tab1hint': 'UPI · ₹10 മുതൽ',
-  'idx.inv.tab1lead':
-    'ഡിജിറ്റലായോ കൗണ്ടറിൽ ചെന്നോ ടോപ്പ് അപ്പ് ചെയ്യൂ — ഓരോ വാങ്ങലും GST ഉൾപ്പെടെ ഗ്രാം കണക്കിൽ ഏതാനും മിനിറ്റിൽ സെറ്റിൽ ആകും.',
-  'idx.inv.tab2label': 'ഡിപ്പോസിറ്റ്',
-  'idx.inv.tab2hint': 'ഭൗതിക → വോൾട്ട്',
-  'idx.inv.tab2lead':
-    'ആഭരണം അല്ലെങ്കിൽ ബുള്ളിയൻ അംഗീകൃത കൗണ്ടറിൽ കൊണ്ടുവരൂ. ഭാരവും മാറ്റും OTP-ൽ സ്ഥിരീകരിക്കൂ. ഡിപ്പോസിറ്റ് ഗ്രാം ഉടൻ ക്രെഡിറ്റ്.',
-  'idx.inv.tab3label': 'പർച്ചേസ്-ലിങ്ക്ഡ്',
-  'idx.inv.tab3hint': 'ഇൻവോയ്‌സ് രേഖകൾ',
-  'idx.inv.tab3lead':
-    'CridoraPay വഴി അടച്ച ആഭരണം ഓട്ടോ ആയി ഗ്രാം ലൈനേജ് ബിൽഡ് ചെയ്യും — ഹാൾമാർക്ക്, ഭാരം, പാർട്ണർ സ്റ്റാമ്പ് ഉൾപ്പെടെ.',
-  'idx.inv.m1num': 'രീതി 01 — ഭാഗിക',
-  'idx.inv.m1title': '₹10 മുതൽ, ഏത് സമയവും',
-  'idx.inv.m1desc':
-    'ഒരു പാർട്ണർ ജ്വല്ലറിയെ തിരഞ്ഞെടുക്കൂ, INR തുകയോ ഗ്രാം ഭാരമോ നൽകൂ. GST ഉൾപ്പെടെ ക്വോട്ടിൽ ഉണ്ടാകും. UPI വഴി അടയ്ക്കൂ — അല്ലെങ്കിൽ കടയിൽ ചെന്ന് OTP ഉപയോഗിക്കൂ. ഏതാനും മിനിറ്റുകൾക്കുള്ളിൽ ഗ്രാം വോൾട്ടിൽ ക്രെഡിറ്റ് ആകും.',
-  'idx.inv.m1tag': '₹10 മുതൽ · UPI അല്ലെങ്കിൽ കൗണ്ടർ',
-  'idx.inv.m1h1': 'GST-ക്ക് ശേഷം INR, ഗ്രാം — ജ്വല്ലർ ക്വോട്ടിൽ വ്യക്തം, കണക്ക് ഇല്ല.',
-  'idx.inv.m1h2': 'UPI വഴിയോ OTP ഉപയോഗിച്ചോ — ഒരേ ജ്വല്ലറി, ഒരേ വഴി.',
-  'idx.inv.m1h3': 'കൈമാറ്റം, ലോൺ, സെൽബാക്ക് — ഒരൊറ്റ വോൾട്ടിൽ ഒന്നിക്കുന്നു.',
-  'idx.inv.m2num': 'രീതി 02 — ഗോൾഡ് ഡിപ്പോസിറ്റ്',
-  'idx.inv.m2title': 'കൈവശമുള്ള സ്വർണ്ണം ഡിജിറ്റൽ ആക്കൂ',
-  'idx.inv.m2desc':
-    'നാണയം, ബാർ, ആഭരണം — ഭൗതിക സ്വർണ്ണം അംഗീകൃത ജ്വല്ലറി കൗണ്ടറിൽ കൊണ്ടുവരൂ. ഭാരവും മാറ്റും രേഖപ്പെടുത്തും. OTP-ൽ സ്ഥിരീകരിക്കൂ. ഡിപ്പോസിറ്റ് ഗ്രാം ഉടൻ വോൾട്ടിൽ ദൃശ്യമാകും.',
-  'idx.inv.m2tag': 'പണം ഇടപ്പെടില്ല · ഡിപ്പോസിറ്റ് ഗ്രാം',
-  'idx.inv.m2h1': 'സ്വർണ്ണം ജ്വല്ലറിയിൽ തന്നെ; ക്രിഡോറ OTP ട്രയൽ ഡിജിറ്റൈസ് ചെയ്യുന്നു.',
-  'idx.inv.m2h2': 'ഡിപ്പോസിറ്റ് ഗ്രാം ടാഗ് ചെയ്യും; ഭൗതികവും ഡിജിറ്റലും ഒത്തുനോക്കാം.',
-  'idx.inv.m2h3': 'ഭാഗിക റോകൾക്കൊപ്പം ദൃശ്യമാകും — ഒരൊറ്റ പോർട്ട്‌ഫോളിയോ.',
-  'idx.inv.m3num': 'രീതി 03 — പർച്ചേസ്-ലിങ്ക്ഡ്',
-  'idx.inv.m3title': 'ഷോറൂം ഇടപാടുകൾ ഗോൾഡ് രേഖയായി',
-  'idx.inv.m3desc':
-    'CridoraPay വഴി പാർട്ണർ കടയിൽ ആഭരണം വാങ്ങിയാൽ — മാറ്റ്, ഭാരം, ജ്വല്ലർ, തീയതി — ഓട്ടോ ആയി ഗോൾഡ് റിക്കോർഡ്സ് വോൾട്ടിൽ ലോഗ് ആകും. ഇൻഷൂറൻസ്, വാല്യൂ ട്രാക്കിന് ഏറ്റവും അനുകൂലം.',
-  'idx.inv.m3tag': 'ഓട്ടോ ലോഗ് · റിക്കോർഡ്സ് വോൾട്ട്',
-  'idx.inv.m3h1': 'ഹാൾമാർക്ക്, SKU, വാല്യൂ — ഇൻഷൂറൻസ് ക്ലെയ്‌മിന് തയ്യാർ.',
-  'idx.inv.m3h2': 'ഭാഗിക ഇടപാടുകൾ ഉണ്ടെങ്കിലും, ഒരൊറ്റ ലെഡ്ജർ.',
-  'idx.inv.m3h3': 'സെൽബാക്ക്, കൈമാറ്റം, ലോൺ — ഭാവിയിൽ ഉപയോഗിക്കാം.',
-  'idx.inv.redNum': 'റിഡംപ്ഷൻ — മൂന്ന് ഓപ്‌ഷൻ',
-  'idx.inv.redTitle': 'സ്വർണ്ണം ഉപയോഗിക്കൂ, വെറുതെ കൈവശം വയ്ക്കരുത്',
-  'idx.inv.redCash': 'പണമായി തിരിച്ചുവിൽക്കൂ',
-  'idx.inv.redCashDesc':
-    'ബൈബാക്ക് നിരക്കിൽ ജ്വല്ലറിക്ക് ഭാഗിക ഗ്രാം തിരിച്ചുനൽകൂ. OTP കൗണ്ടറിൽ അല്ലെങ്കിൽ UPI-ൽ പണം.',
-  'idx.inv.redTransfer': 'ഗോൾഡ് ട്രാൻസ്‌ഫർ',
-  'idx.inv.redTransferDesc':
-    'ഏതൊരു ക്രിഡോറ അംഗത്തിനും വോൾട്ട് കാർഡ് വഴി ഗ്രാം അയക്കൂ — കുടുംബം, സമ്മാനം, ഒതുക്കങ്ങൾ.',
-  'idx.inv.redLoan': '0% ഗോൾഡ് ലോൺ',
-  'idx.inv.redLoanDesc':
-    'ഗ്രാം ഈടായി നൽകൂ. 2% flat fee മാത്രം. ഭാഗം ഭാഗമായി തിരിച്ചടയ്ക്കൂ; പൂർണ്ണ അടവിൽ സ്വർണ്ണം തിരിച്ചുകിട്ടും.',
-
-  // Built for India
-  'idx.india.eyebrow': 'ഇന്ത്യൻ സ്വർണ്ണ ശൈലിക്ക് അനുയോജ്യം',
-  'idx.india.h2': 'എല്ലാ ഇന്ത്യക്കാരും സ്വർണ്ണം സൂക്ഷിക്കുന്നു. പക്ഷേ ഭൂരിഭാഗത്തിനും ഉപയോഗിക്കാൻ കഴിയില്ല.',
-  'idx.india.sub':
-    'ഇന്ത്യൻ കുടുംബങ്ങളിൽ സ്വർണ്ണം ശരിക്ക് എങ്ങനെ ചലിക്കുന്നു എന്ന് ആഴത്തിൽ മനസ്സിലാക്കിയാണ് ഞങ്ങൾ ക്രിഡോറ നിർമ്മിച്ചത് — പടിഞ്ഞാറൻ ഫിനാൻസ് ചിന്തിക്കുന്ന വഴിയിൽ അല്ല.',
-  'idx.india.c1title': 'നിങ്ങൾ ഇതിനേ സ്വർണ്ണം ഉള്ളവരാണ് — അത് ജോലി ചെയ്യുന്നില്ല',
-  'idx.india.c1desc':
-    'ഇന്ത്യൻ കുടുംബ സ്വർണ്ണ ശേഖരം 25,000 ടൺ-ലേറെ. ഭൂരിഭാഗത്തിനും ലാഭമില്ല, ഔദ്യോഗിക രേഖ ഇല്ല, തെറ്റായ സമയത്ത് വിൽക്കാതെ ഈടായി ഉപയോഗിക്കാനുമാകില്ല. ക്രിഡോറ, സ്വർണ്ണം ഇളക്കാതെ ഒരു ഡിജിറ്റൽ ലൂ ചേർക്കുന്നു.',
-  'idx.india.c2title': 'ബാങ്കിനേക്കാൾ ജ്വല്ലറിയെ നിങ്ങൾ വിശ്വസിക്കുന്നു',
-  'idx.india.c2desc':
-    'ആ വിശ്വാസം മാറ്റേണ്ടതില്ല. നിങ്ങളുടെ അംഗീകൃത ജ്വല്ലറി ഭൗതിക കസ്‌റ്റോഡിയൻ ആയി തുടരും. ക്രിഡോറ ഡിജിറ്റൽ രേഖ, നിരക്ക് സ്‌പഷ്‌ടത, റിഡംപ്ഷൻ ഇൻഫ്രാസ്‌ട്രക്ചർ ചേർക്കുന്നു.',
-  'idx.india.c3title': 'ചെറിയ സമ്പാദ്യം ഉള്ളതാണ് — ₹10 ഒ ₹10 കൊണ്ടുതന്നെ',
-  'idx.india.c3desc':
-    'ഏറ്റവും കുറഞ്ഞ ഹോൾഡിംഗ് കാലം ഇല്ല. ലോക്ക്-ഇൻ ഇല്ല. വിൽക്കാൻ പെനാൽറ്റി ഇല്ല. ₹10 മുതൽ ആരംഭിക്കൂ. കഴിയുമ്പോഴൊക്കെ ചേർക്കൂ. ഇതാണ് ശരിക്കൊരു സേവിംഗ്‌സ് ടൂൾ.',
-  'idx.india.c4title': 'നിരക്ക് സ്‌പഷ്‌ടത ഒഴിവാക്കാനാകില്ല',
-  'idx.india.c4desc':
-    'ഓരോ സ്‌ക്രീനിലും ലൈവ് 22K, 24K ബോർഡ് നിരക്ക്. തീരുമാനിക്കുന്നതിന് മുമ്പ് ബൈബാക്ക് നിരക്ക് ദൃശ്യം. ഗ്രാം-ബൈ-ഗ്രാം ലെഡ്ജർ. ഓരോ ആഭരണത്തിന്റെ BIS 916 ഹാൾമാർക്കും രേഖ.',
-  'idx.india.c5title': 'ലാഭം ഉണ്ടാക്കുന്ന, കൊടുക്കുന്ന, കൈമാറുന്ന സ്വർണ്ണം',
-  'idx.india.c5desc':
-    '0% ലോൺ. Peer-to-peer കൈമാറ്റം. CridoraPay കൗണ്ടറിൽ. ഓൺലൈൻ ഷോപ്പിംഗിന് വോൾട്ട് ഗോൾഡ്. ഒരു കിടക്കുന്ന ആസ്‌തിയല്ല, ഒരു സജീവ ഉപകരണം.',
-
-  // Trust
-  'idx.trust.eyebrow': 'വിശ്വാസവും സ്‌പഷ്‌ടതയും',
-  'idx.trust.h2': 'ആറ് വിശ്വാസ്യതാ തൂണുകൾ. ഒഴിവില്ല.',
-  'idx.trust.t1title': 'KYC verified അക്കൗണ്ടുകൾ',
-  'idx.trust.t1desc':
-    'ഏതൊരു ഇടപാടിനും മുമ്പ് PAN, Aadhaar, സെൽഫി — മൂന്നും വെരിഫൈ ചെയ്യും. ഓരോ ഉപഭോക്താവും ഒരു യഥാർത്ഥ വ്യക്തി. അജ്ഞാത വാലറ്റ് ഇല്ല.',
-  'idx.trust.t2title': 'BIS 916 ഹാൾമാർക്ക്ഡ് ഗോൾഡ്',
-  'idx.trust.t2desc':
-    'ക്രിഡോറ വഴി ഡിപ്പോസിറ്റ് ചെയ്‌ത അല്ലെങ്കിൽ വാങ്ങിയ ഓരോ ഗ്രാമും BIS 916 സർട്ടിഫിക്കേഷൻ ഉള്ളതാകണം. മാറ്റ് രേഖപ്പെടുത്തും, ഓഡിറ്റ് ചെയ്യാം.',
-  'idx.trust.t3title': 'ജ്വല്ലർ KYB വെരിഫിക്കേഷൻ',
-  'idx.trust.t3desc':
-    'ഓരോ പാർട്ണർ ജ്വല്ലറിയും GST, ഷോപ്പ് രജിസ്‌ട്രേഷൻ, ഫിസിക്കൽ ഇൻസ്‌പെക്ഷൻ — Know Your Business പ്രക്രിയ പൂർത്തിയാക്കും. ലിസ്‌റ്റ് ചെയ്യുന്നതിന് മുമ്പ്.',
-  'idx.trust.t4title': 'ആദ്യ മുതൽ ഒടുവ് വരെ ഓഡിറ്റ് ട്രയൽ',
-  'idx.trust.t4desc':
-    'ഓരോ ഇടപാടും — വാങ്ങൽ, ഡിപ്പോസിറ്റ്, കൈമാറ്റം, സെൽബാക്ക്, ലോൺ — ടൈംസ്‌റ്റാമ്പ്, നിരക്ക്, Ref ID. Immutable record.',
-  'idx.trust.t5title': 'ഭൗതിക ഇടപാടുകൾ OTP-ൽ സുരക്ഷിതം',
-  'idx.trust.t5desc':
-    'കൗണ്ടർ ഡിപ്പോസിറ്റ്, സെൽബാക്ക്, CridoraPay ഇടപാടുകൾ — ഓരോന്നിനും ഒരു നിശ്ചിത OTP ആവശ്യം. നിങ്ങളുടെ സ്ഥിരീകരണം ഇല്ലാതെ ഒന്നും നടക്കില്ല.',
-  'idx.trust.t6title': 'മറഞ്ഞ ഫീ ഇല്ല',
-  'idx.trust.t6desc':
-    'Platform fee: ₹0. GST: 3% (നിയമം, upfront കാണും). Loan fee: 2% flat. Sellback spread: confirm ചെയ്യും മുമ്പ് ദൃശ്യം. ഒരു ആശ്ചര്യവുമില്ല.',
-
-  // For jewellers
+  // Jeweller benefits
   'idx.jw.eyebrow': 'ജ്വല്ലറിമാർക്കായി',
-  'idx.jw.h2': 'ഡിജിറ്റൽ ഗോൾഡ് ഇൻഫ്രാസ്‌ട്രക്ചർ ഉപയോഗിച്ച് ബിസിനസ്സ് വളർത്തൂ.',
+  'idx.jw.h2': 'Customer relationships modernize — business മാറ്റാതെ.',
   'idx.jw.sub':
-    'ക്രിഡോറ, നിങ്ങളുടെ ഷോറൂമിന് ആധുനിക ഡിജിറ്റൽ ലൂ നൽകുന്നു — കസ്‌റ്റമർ ലോയൽറ്റി, ആവർത്തന സേവിംഗ്‌സ് പ്ലാൻ, ഉടൻ സെറ്റിൽമെന്റ് — നിലവിലുള്ള ബിസിനസ്സ് രീതി മാറ്റാതെ.',
-  'idx.jw.f1title': 'CridoraPay ഡെസ്ക് ബില്ലിംഗ്',
-  'idx.jw.f1desc':
-    'Walk-in കസ്‌റ്റമർക്ക് ബിൽ ഉണ്ടാക്കൂ. അവർ വോൾട്ട് ഗോൾഡ് + UPI ഉപയോഗിച്ച് അടയ്ക്കും. നിങ്ങൾക്ക് ഉടൻ സെറ്റിൽ. POS അല്ലെങ്കിൽ card machine ആവശ്യമില്ല.',
-  'idx.jw.f2title': 'ഗോൾഡ് ഡിപ്പോസിറ്റ് മാനേജ്‌മെന്റ്',
-  'idx.jw.f2desc':
-    'ക്രിഡോറ കസ്‌റ്റമർ ഭൗതിക സ്വർണ്ണം ഡിപ്പോസിറ്റ് ചെയ്യൂ. ഭാരവും മാറ്റും രേഖ ചെയ്യൂ. OTP-verified. ഡിജിറ്റൽ ഗ്രാം ഓട്ടോ ക്രെഡിറ്റ്.',
-  'idx.jw.f3title': 'കസ്‌റ്റമർ ലോയൽറ്റിയും ആവർത്തന സ്വർണ്ണ സ്‌കീമും',
-  'idx.jw.f3desc':
-    'ഗോൾഡ് ചിട്ടി ഡിജിറ്റലായി നടത്തൂ. കസ്‌റ്റമർ നിങ്ങളുടെ verified vault-ൽ ഭാഗിക സ്വർണ്ണം സമ്പാദിക്കും — real-time ആയി ട്രാക്കും ഓഡിറ്റും.',
-  'idx.jw.f4title': 'ഉൽ‌പ്പന്നങ്ങൾ ഓൺലൈൻ ലിസ്‌റ്റ് ചെയ്യൂ',
-  'idx.jw.f4desc':
-    'BIS 916 ആഭരണ കാറ്റലോഗ് ഓൺലൈൻ ആക്കൂ. Vault gold ഉള്ള ക്രിഡോറ ഉപഭോക്താക്കൾ — ഒരു warm audience — നിങ്ങളുടെ ഉൽ‌പ്പന്നം കണ്ടെത്തും.',
+    'Retention, engagement, digital visibility — existing membership systems & workflows intact.',
+  'idx.jw.mlAccent': 'നിങ്ങളുടെ കസ്റ്റമർമാരുമായി കൂടുതൽ ശക്തമായ ഡിജിറ്റൽ ബന്ധം.',
+  'idx.jw.f1title': 'Customer retention',
+  'idx.jw.f1desc': 'Digital portfolios & scheme tracking — customers emotionally connected to your brand.',
+  'idx.jw.f2title': 'Digital engagement',
+  'idx.jw.f2desc': 'Festive greetings, rate updates, scheme reminders — warm outreach, loyalty build.',
+  'idx.jw.f3title': 'Existing customer continuity',
+  'idx.jw.f3desc': 'Membership IDs & Excel import — current customers day one-il appear.',
+  'idx.jw.f4title': 'ERP replacement ഇല്ല',
+  'idx.jw.f4desc': 'Billing, POS, accounting keep — Cridora engagement layer മാത്രം.',
+  'idx.jw.f5title': 'Notification system',
+  'idx.jw.f5desc': 'Calm, permission-based updates — spam അല്ല, trading alerts അല്ല.',
+  'idx.jw.f6title': 'Digital portfolio experience',
+  'idx.jw.f6desc': 'Customers-ന് premium gold tracking — your showroom-il linked.',
   'idx.jw.cta1': 'ജ്വല്ലർ ആയി അപേക്ഷിക്കൂ →',
-  'idx.jw.cta2': 'Info kit ഡൗൺലോഡ്',
-  'idx.jw.mockDeskTitle': 'ഇന്നത്തെ ഡെസ്ക് ആക്‌ടിവിറ്റി',
-  'idx.jw.mockPurchases': 'വാങ്ങലുകൾ',
-  'idx.jw.mockDeposits': 'ഡിപ്പോസിറ്റുകൾ',
-  'idx.jw.mockCridorapay': 'CridoraPay ബില്ലുകൾ',
-  'idx.jw.mockNewCustomers': 'പുതിയ കസ്‌റ്റമർ',
+  'idx.jw.cta2': 'Learn more',
+  'idx.jw.mockDeskTitle': "Today's engagement",
+  'idx.jw.mockCustomers': 'Active customers',
+  'idx.jw.mockNotifications': 'Notifications sent',
+  'idx.jw.mockPortfolios': 'Portfolios linked',
+  'idx.jw.mockNewCustomers': 'New this week',
   'idx.jw.mockRate22k': '22K നിരക്ക്',
   'idx.jw.mockBuyback': 'Buyback',
   'idx.jw.mockMaking': 'Making',
 
+  // Trusted modernization
+  'idx.modern.eyebrow': 'Trusted jeweller modernization',
+  'idx.modern.h2': 'Trust-നായി built. Continuity-ക്കായി designed.',
+  'idx.modern.sub':
+    'Jeweller-customer bond-നുള്ള infrastructure — competitor അല്ല, replacement അല്ല, trading exchange അല്ല.',
+  'idx.modern.t1title': 'KYC verified accounts',
+  'idx.modern.t1desc': 'Every customer real person — PAN, Aadhaar, selfie verified.',
+  'idx.modern.t2title': 'BIS 916 hallmarked records',
+  'idx.modern.t2desc': 'Purity & hallmark data preserved for every purchase & deposit.',
+  'idx.modern.t3title': 'Jeweller KYB verification',
+  'idx.modern.t3desc': 'GST, shop registration, physical inspection — every partner verified.',
+  'idx.modern.t4title': 'End-to-end audit trail',
+  'idx.modern.t4desc': 'Every action logged — timestamps, rates, reference IDs.',
+  'idx.modern.t5title': 'OTP-secured actions',
+  'idx.modern.t5desc': 'Physical transactions need active confirmation — gold moves without you അല്ല.',
+  'idx.modern.t6title': 'Hidden charges ഇല്ല',
+  'idx.modern.t6desc': 'Transparent fees upfront. Surprises ഇല്ല, aggressive upselling ഇല്ല.',
+
+  // FAQ
+  'idx.faq.eyebrow': 'FAQ',
+  'idx.faq.h2': 'Jewellers-um customers-um ചോദിക്കുന്ന doubts.',
+  'idx.faq.sub': 'Cridora existing gold life-um business-um എങ്ങനെ work ചെയ്യുന്നു — practical answers.',
+  'idx.faq.q1': 'Cridora jeweller software replace ചെയ്യുമോ?',
+  'idx.faq.a1':
+    'ഇല്ല. Cridora digital engagement & portfolio layer — existing billing, POS, membership systems-നോടൊപ്പം, instead of അല്ല.',
+  'idx.faq.q2': 'Existing membership IDs use ചെയ്യാമോ?',
+  'idx.faq.a2':
+    'അതെ. Current scheme/membership number-ൽ customers link — അവർ already അറിയുന്ന IDs keep ചെയ്യും.',
+  'idx.faq.q3': 'Jewellers Excel data upload ചെയ്യാമോ?',
+  'idx.faq.a3':
+    'അതെ. Customers & holdings spreadsheet upload — minutes-il digital portfolios create.',
+  'idx.faq.q4': 'Personal gold transferable ആണോ?',
+  'idx.faq.a4':
+    'Cridora-il tracked gold jeweller relationship-il linked. Transfer & redemption jeweller policies & enabled features-നെ ആശ്രയിച്ച്.',
+  'idx.faq.q5': 'Bills store ചെയ്യാമോ?',
+  'idx.faq.a5':
+    'അതെ. Digital Bill Vault — invoices & purchase proofs securely, portfolio-യോട് linked.',
+  'idx.faq.q6': 'Notifications എങ്ങനെ അയയ്ക്കും?',
+  'idx.faq.a6':
+    'Calm, permission-based push & in-app — value updates, milestones, festive greetings, jeweller news. Trading alerts ഇല്ല.',
+  'idx.faq.q7': 'Jewellers-ന് initially free ആണോ?',
+  'idx.faq.a7':
+    'Early partner jewellers launch phase-il introductory access-ോടെ join. Waitlist or jeweller application-il current terms contact.',
+
   // CTA section
-  'idx.cta.eyebrow': 'നേരത്തെ ചേരൂ',
-  'idx.cta.h2': 'ഇന്ന് തന്നെ ഗോൾഡ് വോൾട്ട് ആരംഭിക്കൂ.',
+  'idx.cta.eyebrow': 'Gold experience ആരംഭിക്കൂ',
+  'idx.cta.h2': 'Gold life track ചെയ്യൂ. Jeweller bond modernize ചെയ്യൂ.',
   'idx.cta.sub':
-    'ആയിരക്കണക്കിന് ഇന്ത്യൻ ഉപഭോക്താക്കൾ ക്രിഡോറ ഉപയോഗിച്ച് സ്വർണ്ണം നിക്ഷേപിക്കുകയും ട്രാക്ക് ചെയ്യുകയും അംഗീകൃത ജ്വല്ലർ നെറ്റ്‌വർക്ക് വഴി കൈ‌പ്പറ്റുകയും ചെയ്യുന്നു.',
+    'Kerala-യിൽ ആരംഭിച്ച് India-യ്ക്കായി built — calmer, more visible gold future.',
+  'idx.cta.mlAccent': 'ഇന്ന് തന്നെ Cridora അനുഭവം ആരംഭിക്കൂ.',
   'idx.cta.placeholder': '+91 മൊബൈൽ നമ്പർ അല്ലെങ്കിൽ ഇമെയിൽ',
   'idx.cta.btn': 'ആരംഭിക്കൂ →',
-  'idx.cta.note': 'ക്രെഡിറ്റ് കാർഡ് ഇല്ല. ഏറ്റവും കുറഞ്ഞ ഡിപ്പോസിറ്റ് ഇല്ല. KYC 3 മിനിറ്റിൽ.',
-  'idx.cta.stat1label': 'ഏറ്റവും കുറഞ്ഞ ആദ്യ വാങ്ങൽ',
-  'idx.cta.stat2label': 'KYC-ക്ക് ആവശ്യമുള്ള സമയം',
-  'idx.cta.stat3label': 'ഗോൾഡ് ലോൺ പലിശ',
+  'idx.cta.btnJeweller': 'ജ്വല്ലർ apply',
+  'idx.cta.btnWaitlist': 'Waitlist join',
+  'idx.cta.note': 'Free explore. KYC 3 minutes. Credit card ആവശ്യമില്ല.',
+  'idx.cta.stat1label': 'Portfolio tracking',
+  'idx.cta.stat2label': 'KYC-ക്ക് സമയം',
+  'idx.cta.stat3label': 'ERP replacement',
   'idx.cta.stat4label': 'Verified partner stores',
 }

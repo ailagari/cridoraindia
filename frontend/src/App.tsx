@@ -40,6 +40,7 @@ import '@/styles/reference-dashboard-panels.css'
 import '@/styles/reference-index-landing.css'
 import '@/styles/how-it-works-page.css'
 import '@/styles/malayalam-locale.css'
+import '@/styles/ios-pwa-chrome.css'
 
 const useHashRouter =
   import.meta.env.VITE_CAPACITOR_BUILD === 'true' || isNativePlatform()

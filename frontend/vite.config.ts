@@ -76,7 +76,7 @@ export default defineConfig(({ mode }) => {
         manifest: {
           name: 'Cridora India',
           short_name: 'Cridora',
-          description: 'Gold savings, redemption, and verified jeweller infrastructure for India.',
+          description: 'Digital gold portfolio, customer engagement & modernization platform for jewellers in India.',
           theme_color: '#000814',
           background_color: '#000814',
           display: 'standalone',
