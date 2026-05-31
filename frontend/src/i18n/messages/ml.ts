@@ -32,19 +32,19 @@ export const mlMessages: Record<MessageKey, string> = {
   'footer.logIn': 'ലോഗിൻ',
   'footer.signUp': 'സൈൻ അപ്പ്',
   'footer.findJewellers': 'ജ്വല്ലറി കണ്ടെത്തൂ',
-  'footer.marketplace': 'Marketplace',
-  'footer.waitlist': 'Waitlist',
+  'footer.marketplace': 'മാർക്കറ്റ്‌പ്ലേസ്',
+  'footer.waitlist': 'വെയ്റ്റ്‌ലിസ്റ്റ്',
   'footer.forJewellers': 'ജ്വല്ലറിമാർക്ക്',
-  'footer.investors': 'Investor relations',
-  'footer.features': 'Features',
-  'footer.whyCridora': 'Why Cridora',
-  'footer.contact': 'Contact',
-  'footer.copyright': '© 2026 Cridora India. All rights reserved.',
-  'footer.privacy': 'Privacy policy',
-  'footer.terms': 'Terms of use',
-  'footer.disclaimer': 'Disclaimer',
-  'footer.grievance': 'Grievance',
-  'footer.ratesNote': 'Gold rates are indicative. Not SEBI regulated investment advice.',
+  'footer.investors': 'ഇൻവെസ്റ്റർ ബന്ധങ്ങൾ',
+  'footer.features': 'സവിശേഷതകൾ',
+  'footer.whyCridora': 'എന്തുകൊണ്ട് ക്രിഡോറ',
+  'footer.contact': 'ബന്ധപ്പെടുക',
+  'footer.copyright': '© 2026 Cridora India. എല്ലാ അവകാശങ്ങളും നിക്ഷിപ്തം.',
+  'footer.privacy': 'സ്വകാര്യതാ നയം',
+  'footer.terms': 'ഉപയോഗ നിബന്ധനകൾ',
+  'footer.disclaimer': 'നിരാകരണം',
+  'footer.grievance': 'പരാതി',
+  'footer.ratesNote': 'ഗോൾഡ് നിരക്കുകൾ indicativ ആണ്. SEBI regulated investment advice അല്ല.',
   'footer.kycBadge': 'KYC Secured',
   'footer.bisBadge': 'BIS 916',
 
@@ -383,7 +383,7 @@ export const mlMessages: Record<MessageKey, string> = {
   'idx.hero.h1': 'നിങ്ങളുടെ സ്വർണം.',
   'idx.hero.h1em': 'ഇനി ഡിജിറ്റലായും.',
   'idx.hero.sub':
-    'നിങ്ങൾ വാങ്ങിയ സ്വർണം, ബില്ലുകൾ, സ്കീമുകൾ, വളർച്ച — എല്ലാം ഒരൊറ്റ ഇടത്ത്. നിങ്ങൾ വിശ്വസിക്കുന്ന ജ്വല്ലറിയുമായി ബന്ധം നിലനിർത്തിക്കൊണ്ട്.',
+    'നിങ്ങളുടെ holdings ട്രാക്ക് ചെയ്യൂ, ബില്ലുകൾ സുരക്ഷിതമായി സൂക്ഷിക്കൂ, ശാന്തമായ അപ്‌ഡേറ്റുകൾ ലഭിക്കൂ — നിങ്ങൾ വിശ്വസിക്കുന്ന ജ്വല്ലർമാരുമായി ബന്ധം നിലനിർത്തിക്കൊണ്ട്, ആധുനികമായ ഒരു ഗോൾഡ് അനുഭവത്തിൽ.',
   'idx.hero.mlAccent': 'നിങ്ങളുടെ സ്വർണം… ഇനി ഡിജിറ്റലായും സുരക്ഷിതമായി.',
   'idx.hero.pill1': 'പോർട്ട്‌ഫോളിയോ ട്രാക്കിംഗ്',
   'idx.hero.pill2': 'ഡിജിറ്റൽ ബിൽ വോൾട്ട്',
@@ -392,7 +392,7 @@ export const mlMessages: Record<MessageKey, string> = {
   'idx.hero.pill5': 'ERP മാറ്റേണ്ട',
   'idx.hero.cta1': 'പ്ലാറ്റ്‌ഫോം കണ്ടെത്തൂ',
   'idx.hero.cta2': 'ജ്വല്ലർ ആയി ചേരൂ',
-  'idx.hero.cta3': 'Waitlist-ൽ ചേരൂ',
+  'idx.hero.cta3': 'വെയ്റ്റ്‌ലിസ്റ്റിൽ ചേരൂ',
   'idx.hero.vaultLabel': 'ആകെ ഗോൾഡ് പോർട്ട്‌ഫോളിയോ',
   'idx.hero.boardRateNote': '≈ ₹1,05,932 ലൈവ് ബോർഡ് നിരക്ക്',
   'idx.hero.unrealisedPL': 'പോർട്ട്‌ഫോളിയോ വളർച്ച',
@@ -402,9 +402,9 @@ export const mlMessages: Record<MessageKey, string> = {
 
   // Feature strip
   'idx.fstrip.f1title': 'ഗോൾഡ് പോർട്ട്‌ഫോളിയോ',
-  'idx.fstrip.f1sub': 'വാങ്ങിയതും, കൈവശമുള്ളതും, ഇംപോർട്ട് ചെയ്തതും — എല്ലാ സ്വർണ്ണവും ട്രാക്ക് ചെയ്യൂ.',
+  'idx.fstrip.f1sub': 'വാങ്ങിയതും, കൈവശമുള്ളതും, ഇംപോർട്ട് ചെയ്ത holdings-um — എല്ലാ സ്വർണ്ണവും ട്രാക്ക് ചെയ്യൂ.',
   'idx.fstrip.f2title': 'ഡിജിറ്റൽ ബിൽ വോൾട്ട്',
-  'idx.fstrip.f2sub': 'ബില്ലുകൾ സുരക്ഷിതമായി സൂക്ഷിക്കൂ. സ്വർണ്ണത്തിന്റെ തെളിവ് ഒരിക്കലും നഷ്ടപ്പെടാതെ.',
+  'idx.fstrip.f2sub': 'ഇൻവോയ്‌സുകൾ സുരക്ഷിതമായി സൂക്ഷിക്കൂ. സ്വർണ്ണത്തിന്റെ തെളിവ് ഒരിക്കലും നഷ്ടപ്പെടാതെ.',
   'idx.fstrip.f3title': 'സ്മാർട്ട് അറിയിപ്പുകൾ',
   'idx.fstrip.f3sub': 'സ്വർണ്ണ മൂല്യം, പോർട്ട്‌ഫോളിയോ വളർച്ച, ജ്വല്ലർ വാർത്തകൾ — ശാന്തമായ അപ്‌ഡേറ്റുകൾ.',
   'idx.fstrip.f4title': 'ജ്വല്ലർ എൻഗേജ്‌മെന്റ്',
@@ -414,15 +414,15 @@ export const mlMessages: Record<MessageKey, string> = {
   'idx.what.eyebrow': 'ക്രിഡോറ എന്താണ്',
   'idx.what.h2': 'ജ്വല്ലറിമാർക്കുള്ള ഡിജിറ്റൽ ഗോൾഡ് പോർട്ട്‌ഫോളിയോ & മോഡേൺനൈസേഷൻ പ്ലാറ്റ്‌ഫോം.',
   'idx.what.sub':
-    'ക്രിഡോറ മറ്റൊരു ഗോൾഡ് വാലറ്റോ ട്രേഡിംഗ് ആപ്പോ അല്ല. ഉപഭോക്താക്കൾക്ക് സ്വർണ്ണ ജീവിതം ട്രാക്ക് ചെയ്യാനും ജ്വല്ലറിമാർക്ക് ബന്ധം ആധുനികമാക്കാനും — നിലവിലുള്ള സോഫ്‌റ്റ്‌വെയർ മാറ്റാതെ.',
+    'ക്രിഡോറ മറ്റൊരു ഗോൾഡ് വാലറ്റോ ട്രേഡിംഗ് ആപ്പോ അല്ല. ഉപഭോക്താക്കൾക്ക് സ്വർണ്ണ ജീവിതം ട്രാക്ക് ചെയ്യാനും ജ്വല്ലറിമാർക്ക് ബന്ധം ആധുനികമാക്കാനും സഹായിക്കുന്ന ഡിജിറ്റൽ എൻഗേജ്‌മെന്റ് ലെയർ — നിലവിലുള്ള സോഫ്‌റ്റ്‌വെയർ മാറ്റാതെ.',
   'idx.what.mlAccent': 'നിങ്ങൾ വാങ്ങിയ സ്വർണം, ബില്ലുകൾ, സ്കീമുകൾ, വളർച്ച — എല്ലാം ഒരൊറ്റ ഇടത്ത്.',
   'idx.what.c1title': 'ഡിജിറ്റൽ എൻഗേജ്‌മെന്റ് ലെയർ',
   'idx.what.c1desc':
     'നിങ്ങളുടെ നിലവിലുള്ള ജ്വല്ലർ ബന്ധത്തിനു മുകളിൽ visibility, രേഖകൾ, ശാന്തമായ ആശയവിനിമയം — ജ്വല്ലർ തന്നെ കേന്ദ്രത്തിൽ.',
   'idx.what.c1tag': 'Marketplace അല്ല · ജ്വല്ലർ മാറ്റം അല്ല',
-  'idx.what.c2title': 'പോർട്ട്‌ഫോളിയോ ട്രാക്കിംഗ്',
+  'idx.what.c2title': 'പോർട്ട്‌ഫോളിയോ ട്രാക്കിംഗ് പ്ലാറ്റ്‌ഫോം',
   'idx.what.c2desc':
-    'വാങ്ങിയ സ്വർണ്ണം, കൈവശമുള്ള ആഭരണം, ഇംപോർട്ട് ചെയ്ത സ്കീം ബാലൻസ് — ലൈവ് valuation-ഒടെ ഒരൊറ്റ dashboard-ൽ.',
+    'വാങ്ങിയ സ്വർണ്ണം, കൈവശമുള്ള ആഭരണം, ഇംപോർട്ട് ചെയ്ത membership holdings — ലൈവ് valuation-ഒടെ ഒരൊറ്റ dashboard-ൽ.',
   'idx.what.c2tag': 'ഒരു view · ലൈവ് നിരക്ക്',
   'idx.what.c3title': 'കസ്‌റ്റമർ റിലേഷൻഷിപ്പ് പ്ലാറ്റ്‌ഫോം',
   'idx.what.c3desc':
@@ -432,10 +432,10 @@ export const mlMessages: Record<MessageKey, string> = {
   'idx.what.c4desc':
     'നിലവിലുള്ള membership ID, Excel import, auto portfolio — നിങ്ങളുടെ ERP അല്ലെങ്കിൽ billing software മാറ്റേണ്ട.',
   'idx.what.c4tag': 'നിങ്ങൾക്കുള്ളതോടെ പ്രവർത്തിക്കും',
-  'idx.what.c5title': 'Trust-first design',
+  'idx.what.c5title': 'വിശ്വാസ-കേന്ദ്രിത രൂപകൽപ്പന',
   'idx.what.c5desc':
     'KYC verified, OTP secured, BIS 916 records, full audit trail — premium, calm, transparent.',
-  'idx.what.c5tag': 'Secure · Auditable',
+  'idx.what.c5tag': 'സുരക്ഷിതം · Audit ചെയ്യാവുന്നത്',
 
   // Customer benefits
   'idx.cust.eyebrow': 'ഉപഭോക്താക്കൾക്ക്',
@@ -443,18 +443,23 @@ export const mlMessages: Record<MessageKey, string> = {
   'idx.cust.sub':
     'സ്വർണ്ണത്തെ സ്നേഹിക്കുന്ന എല്ലാം visible ആക്കൂ. Crypto vibes ഇല്ല, trading screens ഇല്ല — നിങ്ങളുടെ സ്വർണ്ണം, നിങ്ങളുടെ ജ്വല്ലർ, നിങ്ങളുടെ peace of mind.',
   'idx.cust.c1title': 'എല്ലാ സ്വർണ്ണവും ഒരിടത്ത്',
-  'idx.cust.c1desc': 'വാങ്ങിയതും, കൈവശമുള്ളതും, സ്കീം savings-um, imported holdings-um — unified portfolio.',
+  'idx.cust.c1desc':
+    'വാങ്ങിയ സ്വർണ്ണം, കൈവശമുള്ള ആഭരണം, സ്കീം savings, imported jeweller holdings — unified portfolio-യിൽ.',
   'idx.cust.c2title': 'സ്വർണ്ണ net worth അറിയൂ',
-  'idx.cust.c2desc': 'ലൈവ് ബോർഡ് നിരക്കിൽ ഇന്നത്തെ മൂല്യം — ശാന്തമായി അപ്‌ഡേറ്റ്, aggressive alerts അല്ല.',
+  'idx.cust.c2desc':
+    'ലൈവ് ബോർഡ് നിരക്കിൽ ഇന്നത്തെ മൂല്യം — ശാന്തമായി അപ്‌ഡേറ്റ്, aggressive alerts അല്ല.',
   'idx.cust.c3title': 'ബില്ലുകൾ ഡിജിറ്റലായി സൂക്ഷിക്കൂ',
-  'idx.cust.c3desc': 'Insurance, resale, കുടുംബ രേഖകൾ — secure digital vault-ൽ invoices എപ്പോഴും.',
+  'idx.cust.c3desc':
+    'Insurance, resale, കുടുംബ രേഖകൾ — secure digital vault-ൽ invoices എപ്പോഴും.',
   'idx.cust.c4title': 'ജ്വല്ലറുമായി ബന്ധം നിലനിർത്തൂ',
-  'idx.cust.c4desc': 'ഉത്സവ ആശംസകൾ, സ്കീം reminders, calm gold value alerts — വിശ്വസിക്കുന്ന ജ്വല്ലറിൽ നിന്ന്.',
-  'idx.cust.c5title': 'Emotionally intelligent experience',
-  'idx.cust.c5desc': 'Kerala families-നും Indian gold culture-നും — warm, premium, respectful.',
+  'idx.cust.c4desc':
+    'ഉത്സവ ആശംസകൾ, സ്കീം reminders, calm gold value alerts — വിശ്വസിക്കുന്ന ജ്വല്ലറിൽ നിന്ന്.',
+  'idx.cust.c5title': 'വികാരബുദ്ധിയുള്ള അനുഭവം',
+  'idx.cust.c5desc':
+    'Kerala families-നും Indian gold culture-നും — warm, premium, respectful.',
 
   // Personal holdings
-  'idx.hold.eyebrow': 'Personal holdings',
+  'idx.hold.eyebrow': 'വ്യക്തിഗത holdings',
   'idx.hold.h2': 'നിങ്ങൾ ഉടമയായ ഓരോ ഗ്രാമും — care-യോടെ ട്രാക്ക്.',
   'idx.hold.sub':
     'Locker-il, jeweller-il, savings scheme-il — Cridora എല്ലാം ഒരൊറ്റ personal view-il കൊണ്ടുവരും.',
@@ -463,16 +468,16 @@ export const mlMessages: Record<MessageKey, string> = {
   'idx.hold.c1desc': 'വീട്ടിൽ സൂക്ഷിക്കുന്ന ആഭരണം — weight, purity, valuation-ഒടെ.',
   'idx.hold.c2title': 'വാങ്ങിയ സ്വർണം',
   'idx.hold.c2desc': 'ഓരോ store purchase-um fractional buy-um auto-log — jeweller, date.',
-  'idx.hold.c3title': 'Imported jeweller holdings',
+  'idx.hold.c3title': 'Import ചെയ്ത jeweller holdings',
   'idx.hold.c3desc': 'നിലവിലുള്ള membership scheme balances — jeweller link ചെയ്താൽ re-entry ഇല്ല.',
-  'idx.hold.c4title': 'Total gold net worth',
+  'idx.hold.c4title': 'ആകെ gold net worth',
   'idx.hold.c4desc': 'നിങ്ങളുടെ complete gold life reflect ചെയ്യുന്ന ഒരു number — live board rates.',
 
   // Bill vault
-  'idx.bills.eyebrow': 'Digital bill vault',
+  'idx.bills.eyebrow': 'ഡിജിറ്റൽ ബിൽ വോൾട്ട്',
   'idx.bills.h2': 'നിങ്ങളുടെ സ്വർണ്ണ തെളിവ് — എന്നും സുരക്ഷിതം.',
   'idx.bills.sub':
-    'Bills get lost. Drawers get cleared. Cridora keeps every invoice digitally.',
+    'Bills നഷ്ടപ്പെടും. Drawers clear ചെയ്യും. Cridora എല്ലാ invoice-um digitally സൂക്ഷിക്കും — സ്വർണ്ണത്തിന് എപ്പോഴും proof.',
   'idx.bills.mlAccent': 'ബില്ലുകൾ നഷ്ടപ്പെടാതിരിക്കാൻ… സുരക്ഷിത ഡിജിറ്റൽ സ്റ്റോറേജ്.',
   'idx.bills.c1title': 'Invoices digitally store ചെയ്യൂ',
   'idx.bills.c1desc': 'Upload or auto-capture — hallmark, weight, value preserved.',
@@ -482,7 +487,7 @@ export const mlMessages: Record<MessageKey, string> = {
   'idx.bills.c3desc': 'ഓരോ bill-um portfolio-യോട് linked — today\'s purchases, tomorrow\'s trusted history.',
 
   // Notifications
-  'idx.notif.eyebrow': 'Smart notifications',
+  'idx.notif.eyebrow': 'സ്മാർട്ട് അറിയിപ്പുകൾ',
   'idx.notif.h2': 'നിങ്ങൾക്ക് matter ആയ സ്വർണ്ണത്തെക്കുറിച്ച് ശാന്തമായ updates.',
   'idx.notif.sub':
     'Trading alerts ഇല്ല. Panic push notifications ഇല്ല. Thoughtful updates മാത്രം.',
@@ -491,25 +496,25 @@ export const mlMessages: Record<MessageKey, string> = {
   'idx.notif.c1desc': 'Portfolio value move ചെയ്യുമ്പോൾ gentle alerts — surprised അല്ല.',
   'idx.notif.c2title': 'Portfolio growth alerts',
   'idx.notif.c2desc': 'Scheme completions, gram targets — milestones celebrate ചെയ്യൂ.',
-  'idx.notif.c3title': 'Festive greetings',
+  'idx.notif.c3title': 'ഉത്സവ ആശംസകൾ',
   'idx.notif.c3desc': 'ഓണം, വിഷു, weddings — jeweller Cridora വഴി warmly reach ചെയ്യും.',
-  'idx.notif.c4title': 'Jeweller updates',
+  'idx.notif.c4title': 'ജ്വല്ലർ അപ്‌ഡേറ്റുകൾ',
   'idx.notif.c4desc': 'Scheme reminders, new collections, store news — trusted jewellers-ൽ നിന്ന്.',
 
   // Gold portfolio section
-  'idx.port.eyebrow': 'Gold portfolio',
+  'idx.port.eyebrow': 'ഗോൾഡ് പോർട്ട്‌ഫോളിയോ',
   'idx.port.h2': 'Complete gold net worth — one calm view.',
   'idx.port.sub':
     'Live valuation, gram-by-gram history, growth tracking — premium feel, trading terminal അല്ല.',
-  'idx.port.vaultLabel': 'Your portfolio · Malabar Gold',
+  'idx.port.vaultLabel': 'നിങ്ങളുടെ portfolio · Malabar Gold',
   'idx.port.inHandLabel': 'കൈവശം',
   'idx.port.purchasedLabel': 'വാങ്ങിയത്',
-  'idx.port.importedLabel': 'Imported',
+  'idx.port.importedLabel': 'Import ചെയ്തത്',
   'idx.port.growthLabel': 'Portfolio growth',
-  'idx.port.totalLabel': 'Total net worth',
+  'idx.port.totalLabel': 'ആകെ net worth',
 
   // System integration
-  'idx.integr.eyebrow': 'Works with existing jeweller systems',
+  'idx.integr.eyebrow': 'നിലവിലുള്ള ജ്വല്ലർ സിസ്റ്റങ്ങളുമായി',
   'idx.integr.h2': 'നിലവിലുള്ളത് പ്രവർത്തിക്കുന്നത് മാറ്റാതെ modernize ചെയ്യൂ.',
   'idx.integr.sub':
     'Membership IDs, ERP exports, Excel records — rip-and-replace ഇല്ല, disruption ഇല്ല.',
@@ -524,7 +529,7 @@ export const mlMessages: Record<MessageKey, string> = {
   'idx.integr.c4desc': 'POS, billing, accounting tools keep ചെയ്യൂ. Cridora digital layer മാത്രം.',
 
   // Already have membership
-  'idx.member.eyebrow': 'Already have membership systems?',
+  'idx.member.eyebrow': 'Membership systems ഉണ്ടോ?',
   'idx.member.h2': 'Cridora alongside — instead of അല്ല.',
   'idx.member.sub':
     'Customers existing IDs keep ചെയ്യും. Staff familiar tools keep ചെയ്യും. Digital portfolios & engagement add.',
@@ -579,12 +584,12 @@ export const mlMessages: Record<MessageKey, string> = {
   'idx.jw.f6title': 'Digital portfolio experience',
   'idx.jw.f6desc': 'Customers-ന് premium gold tracking — your showroom-il linked.',
   'idx.jw.cta1': 'ജ്വല്ലർ ആയി അപേക്ഷിക്കൂ →',
-  'idx.jw.cta2': 'Learn more',
-  'idx.jw.mockDeskTitle': "Today's engagement",
+  'idx.jw.cta2': 'കൂടുതൽ അറിയൂ',
+  'idx.jw.mockDeskTitle': 'ഇന്നത്തെ engagement',
   'idx.jw.mockCustomers': 'Active customers',
   'idx.jw.mockNotifications': 'Notifications sent',
   'idx.jw.mockPortfolios': 'Portfolios linked',
-  'idx.jw.mockNewCustomers': 'New this week',
+  'idx.jw.mockNewCustomers': 'ഈ ആഴ്ച പുതിയവർ',
   'idx.jw.mockRate22k': '22K നിരക്ക്',
   'idx.jw.mockBuyback': 'Buyback',
   'idx.jw.mockMaking': 'Making',

@@ -8,8 +8,10 @@ import { dashboardLandingPath } from '@/lib/routes'
 
 function MlAccent({ accentKey, locale }: { accentKey: MessageKey; locale: string }) {
   const { t } = usePublicLocale()
-  if (locale !== 'en') return null
-  return <p className="idx-ml-accent reveal reveal-delay-1">{t(accentKey)}</p>
+  if (locale !== 'ml') return null
+  const text = t(accentKey)
+  if (!text) return null
+  return <p className="idx-ml-accent reveal reveal-delay-1">{text}</p>
 }
 
 function SectionHeader({
@@ -42,7 +44,7 @@ function SectionHeader({
 export function HomePage() {
   const { user } = useAuth()
   const { t, locale } = usePublicLocale()
-  useRefLandingReveal()
+  useRefLandingReveal(locale)
   const [openFaq, setOpenFaq] = useState<number | null>(null)
 
   useEffect(() => {
@@ -58,11 +60,11 @@ export function HomePage() {
 
   const WHAT_CARDS = useMemo(
     () => [
-      { icon: '🏛️', title: t('idx.what.c1title'), desc: t('idx.what.c1desc'), tag: t('idx.what.c1tag') },
-      { icon: '📊', title: t('idx.what.c2title'), desc: t('idx.what.c2desc'), tag: t('idx.what.c2tag'), d: 'reveal-delay-1' },
-      { icon: '💬', title: t('idx.what.c3title'), desc: t('idx.what.c3desc'), tag: t('idx.what.c3tag'), d: 'reveal-delay-2' },
-      { icon: '🔗', title: t('idx.what.c4title'), desc: t('idx.what.c4desc'), tag: t('idx.what.c4tag'), d: 'reveal-delay-1' },
-      { icon: '🛡️', title: t('idx.what.c5title'), desc: t('idx.what.c5desc'), tag: t('idx.what.c5tag'), d: 'reveal-delay-2' },
+      { id: 'w1', icon: '🏛️', title: t('idx.what.c1title'), desc: t('idx.what.c1desc'), tag: t('idx.what.c1tag') },
+      { id: 'w2', icon: '📊', title: t('idx.what.c2title'), desc: t('idx.what.c2desc'), tag: t('idx.what.c2tag'), d: 'reveal-delay-1' },
+      { id: 'w3', icon: '💬', title: t('idx.what.c3title'), desc: t('idx.what.c3desc'), tag: t('idx.what.c3tag'), d: 'reveal-delay-2' },
+      { id: 'w4', icon: '🔗', title: t('idx.what.c4title'), desc: t('idx.what.c4desc'), tag: t('idx.what.c4tag'), d: 'reveal-delay-1' },
+      { id: 'w5', icon: '🛡️', title: t('idx.what.c5title'), desc: t('idx.what.c5desc'), tag: t('idx.what.c5tag'), d: 'reveal-delay-2' },
     ],
     [t],
   )
@@ -326,7 +328,7 @@ export function HomePage() {
           />
           <div className="feat-grid" style={{ marginTop: 56 }}>
             {WHAT_CARDS.map((card) => (
-              <div key={card.title} className={`feat-card reveal ${card.d ?? ''}`}>
+              <div key={card.id} className={`feat-card reveal ${card.d ?? ''}`}>
                 <div className="fc-ico">{card.icon}</div>
                 <h3 className="fc-title">{card.title}</h3>
                 <p className="fc-desc">{card.desc}</p>
@@ -367,7 +369,7 @@ export function HomePage() {
           />
           <div className="idx-benefit-grid" style={{ marginTop: 48 }}>
             {HOLD_CARDS.map((card, ix) => (
-              <div key={card.title} className={`idx-benefit-card reveal${ix > 0 ? ` reveal-delay-${ix}` : ''}`}>
+              <div key={`hold-${ix}`} className={`idx-benefit-card reveal${ix > 0 ? ` reveal-delay-${ix}` : ''}`}>
                 <div className="idx-benefit-ico">{card.icon}</div>
                 <div className="idx-benefit-title">{card.title}</div>
                 <div className="idx-benefit-desc">{card.desc}</div>
@@ -389,7 +391,7 @@ export function HomePage() {
           />
           <div className="idx-benefit-grid idx-benefit-grid--3" style={{ marginTop: 48 }}>
             {BILL_CARDS.map((card, ix) => (
-              <div key={card.title} className={`idx-benefit-card reveal${ix > 0 ? ` reveal-delay-${ix}` : ''}`}>
+              <div key={`bill-${ix}`} className={`idx-benefit-card reveal${ix > 0 ? ` reveal-delay-${ix}` : ''}`}>
                 <div className="idx-benefit-ico">{card.icon}</div>
                 <div className="idx-benefit-title">{card.title}</div>
                 <div className="idx-benefit-desc">{card.desc}</div>
@@ -411,7 +413,7 @@ export function HomePage() {
           />
           <div className="idx-benefit-grid" style={{ marginTop: 48 }}>
             {NOTIF_CARDS.map((card, ix) => (
-              <div key={card.title} className={`idx-benefit-card reveal${ix > 0 ? ` reveal-delay-${ix}` : ''}`}>
+              <div key={`notif-${ix}`} className={`idx-benefit-card reveal${ix > 0 ? ` reveal-delay-${ix}` : ''}`}>
                 <div className="idx-benefit-ico">{card.icon}</div>
                 <div className="idx-benefit-title">{card.title}</div>
                 <div className="idx-benefit-desc">{card.desc}</div>
@@ -477,7 +479,7 @@ export function HomePage() {
           />
           <div className="idx-benefit-grid" style={{ marginTop: 48 }}>
             {INTEGR_CARDS.map((card, ix) => (
-              <div key={card.title} className={`idx-benefit-card reveal${ix > 0 ? ` reveal-delay-${ix}` : ''}`}>
+              <div key={`integr-${ix}`} className={`idx-benefit-card reveal${ix > 0 ? ` reveal-delay-${ix}` : ''}`}>
                 <div className="idx-benefit-ico">{card.icon}</div>
                 <div className="idx-benefit-title">{card.title}</div>
                 <div className="idx-benefit-desc">{card.desc}</div>
@@ -498,8 +500,8 @@ export function HomePage() {
             <h2 className="sh-md">{t('idx.member.h2')}</h2>
             <p className="sh-sub" style={{ marginTop: 10 }}>{t('idx.member.sub')}</p>
             <ul className="idx-member-list">
-              {MEMBER_ITEMS.map((item) => (
-                <li key={item}>{item}</li>
+              {MEMBER_ITEMS.map((item, ix) => (
+                <li key={`member-${ix}`}>{item}</li>
               ))}
             </ul>
             <div className="idx-row" style={{ marginTop: 24 }}>
@@ -575,7 +577,7 @@ export function HomePage() {
               <p className="sh-sub reveal reveal-delay-2">{t('idx.jw.sub')}</p>
               <div className="jw-features">
                 {JW_FEATURES.map((item, ix) => (
-                  <div key={item.title} className={`jw-feat reveal reveal-delay-${Math.min(ix + 1, 5)}`}>
+                  <div key={`jw-${ix}`} className={`jw-feat reveal reveal-delay-${Math.min(ix + 1, 5)}`}>
                     <div className="jf-ico">{item.icon}</div>
                     <div>
                       <div className="jf-title">{item.title}</div>
@@ -635,8 +637,8 @@ export function HomePage() {
         <div className="inner">
           <SectionHeader eyebrowKey="idx.modern.eyebrow" h2Key="idx.modern.h2" subKey="idx.modern.sub" locale={locale} />
           <div className="landing-trust-grid" style={{ marginTop: 48 }}>
-            {MODERN_CELLS.map((cell) => (
-              <div key={cell.title} className={`landing-trust-cell reveal ${cell.d ?? ''}`}>
+            {MODERN_CELLS.map((cell, ix) => (
+              <div key={`modern-${ix}`} className={`landing-trust-cell reveal ${cell.d ?? ''}`}>
                 <div className="tc-ico" aria-hidden>
                   {cell.icon}
                 </div>
@@ -658,7 +660,7 @@ export function HomePage() {
             {FAQ_ITEMS.map((item, ix) => {
               const isOpen = openFaq === ix
               return (
-                <div key={item.q} className="idx-faq-item">
+                <div key={`faq-${ix}`} className="idx-faq-item">
                   <button
                     type="button"
                     className="idx-faq-q"

@@ -380,7 +380,7 @@ export const enMessages = {
   'idx.hero.h1em': 'Digitally Visible.',
   'idx.hero.sub':
     'Track your holdings, store bills safely, receive calm updates, and stay connected with the jewellers you already trust — all in one modern gold experience.',
-  'idx.hero.mlAccent': 'നിങ്ങളുടെ സ്വർണം… ഇനി ഡിജിറ്റലായും സുരക്ഷിതമായി.',
+  'idx.hero.mlAccent': '',
   'idx.hero.pill1': 'Portfolio tracking',
   'idx.hero.pill2': 'Digital bill vault',
   'idx.hero.pill3': 'Jeweller-linked',
@@ -411,7 +411,7 @@ export const enMessages = {
   'idx.what.h2': 'A digital gold portfolio & modernization platform for jewellers.',
   'idx.what.sub':
     'Cridora is not another gold wallet or trading app. It is the digital engagement layer that helps customers track gold life and helps jewellers modernize relationships — without replacing existing software.',
-  'idx.what.mlAccent': 'നിങ്ങൾ വാങ്ങിയ സ്വർണം, ബില്ലുകൾ, സ്കീമുകൾ, വളർച്ച — എല്ലാം ഒരൊറ്റ ഇടത്ത്.',
+  'idx.what.mlAccent': '',
   'idx.what.c1title': 'Digital engagement layer',
   'idx.what.c1desc':
     'Cridora sits on top of your existing jeweller relationship — adding visibility, records, and calm communication. Your jeweller stays at the centre.',
@@ -454,7 +454,7 @@ export const enMessages = {
   'idx.hold.h2': 'Every gram you own — tracked with care.',
   'idx.hold.sub':
     'Whether gold is in your locker, at the jeweller, or still in a savings scheme — Cridora brings it all into one personal view.',
-  'idx.hold.mlAccent': 'നിങ്ങളുടെ സ്വർണത്തിന്റെ ഇന്നത്തെ മൂല്യം എത്രയെന്ന് ഒരു നോട്ടത്തിൽ.',
+  'idx.hold.mlAccent': '',
   'idx.hold.c1title': 'In-hand gold',
   'idx.hold.c1desc': 'Record ornaments and physical gold you keep at home — with weight, purity, and valuation.',
   'idx.hold.c2title': 'Purchased gold',
@@ -469,7 +469,7 @@ export const enMessages = {
   'idx.bills.h2': 'Your gold proof — safe forever.',
   'idx.bills.sub':
     'Bills get lost. Drawers get cleared. Cridora keeps every invoice digitally — so your gold always has proof behind it.',
-  'idx.bills.mlAccent': 'ബില്ലുകൾ നഷ്ടപ്പെടാതിരിക്കാൻ… സുരക്ഷിത ഡിജിറ്റൽ സ്റ്റോറേജ്.',
+  'idx.bills.mlAccent': '',
   'idx.bills.c1title': 'Store invoices digitally',
   'idx.bills.c1desc': 'Upload or auto-capture purchase bills from partner jewellers — hallmark, weight, and value preserved.',
   'idx.bills.c2title': 'Never lose gold proof',
@@ -482,7 +482,7 @@ export const enMessages = {
   'idx.notif.h2': 'Calm updates on the gold you care about.',
   'idx.notif.sub':
     'No trading alerts. No panic push notifications. Just thoughtful updates that help you feel connected to your gold life.',
-  'idx.notif.mlAccent': 'സ്വർണ വില ഉയർന്നാലും കുറഞ്ഞാലും… Cridora നിങ്ങളോട് പറയുന്നു.',
+  'idx.notif.mlAccent': '',
   'idx.notif.c1title': 'Gold value updates',
   'idx.notif.c1desc': 'Gentle alerts when your portfolio value moves — so you always know, never surprised.',
   'idx.notif.c2title': 'Portfolio growth alerts',
@@ -509,7 +509,7 @@ export const enMessages = {
   'idx.integr.h2': 'Modernize without replacing what already works.',
   'idx.integr.sub':
     'Cridora integrates with your current workflow — membership IDs, ERP exports, and Excel records. No rip-and-replace. No disruption.',
-  'idx.integr.mlAccent': 'ഇപ്പോഴുള്ള മെമ്പർഷിപ്പ് സിസ്റ്റങ്ങൾ മാറ്റേണ്ടതില്ല.',
+  'idx.integr.mlAccent': '',
   'idx.integr.c1title': 'Existing membership IDs supported',
   'idx.integr.c1desc': 'Link customers by their current scheme or membership number — continuity from day one.',
   'idx.integr.c2title': 'ERP exports supported',
@@ -561,7 +561,7 @@ export const enMessages = {
   'idx.jw.h2': 'Modernize customer relationships — without changing your business.',
   'idx.jw.sub':
     'Cridora helps jewellers retain customers, increase engagement, and add digital visibility — while keeping existing membership systems and workflows intact.',
-  'idx.jw.mlAccent': 'നിങ്ങളുടെ കസ്റ്റമർമാരുമായി കൂടുതൽ ശക്തമായ ഡിജിറ്റൽ ബന്ധം.',
+  'idx.jw.mlAccent': '',
   'idx.jw.f1title': 'Customer retention',
   'idx.jw.f1desc': 'Digital portfolios and scheme tracking keep customers emotionally connected to your brand.',
   'idx.jw.f2title': 'Digital engagement',
@@ -634,7 +634,7 @@ export const enMessages = {
   'idx.cta.h2': 'Track your gold life. Modernize your jeweller bond.',
   'idx.cta.sub':
     'Join customers and jewellers building a calmer, more visible gold future — starting in Kerala, built for all of India.',
-  'idx.cta.mlAccent': 'ഇന്ന് തന്നെ Cridora അനുഭവം ആരംഭിക്കൂ.',
+  'idx.cta.mlAccent': '',
   'idx.cta.placeholder': '+91 mobile number or email',
   'idx.cta.btn': 'Get started →',
   'idx.cta.btnJeweller': 'Apply as jeweller',
