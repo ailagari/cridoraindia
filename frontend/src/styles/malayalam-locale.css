@@ -240,6 +240,81 @@ html[lang='ml'] .ref-landing .hero .hero-pills {
   gap: 0.75rem !important;
 }
 
+/* Reference landing — Malayalam copy length & rhythm */
+html[lang='ml'] .ref-landing .sh,
+html[lang='ml'] .ref-landing .sh-md {
+  line-height: 1.42 !important;
+  letter-spacing: 0 !important;
+}
+
+html[lang='ml'] .ref-landing .sh-sub {
+  font-size: 0.95rem !important;
+  line-height: 1.72 !important;
+  max-width: min(52ch, 100%) !important;
+}
+
+html[lang='ml'] .ref-landing .eyebrow {
+  font-size: 0.68rem;
+  line-height: 1.45;
+  letter-spacing: 0.06em;
+}
+
+html[lang='ml'] .ref-landing .fc-title,
+html[lang='ml'] .ref-landing .idx-benefit-title,
+html[lang='ml'] .ref-landing .ic-title,
+html[lang='ml'] .ref-landing .jf-title,
+html[lang='ml'] .ref-landing .tc-title {
+  line-height: 1.4;
+  letter-spacing: 0;
+}
+
+html[lang='ml'] .ref-landing .fc-desc,
+html[lang='ml'] .ref-landing .idx-benefit-desc,
+html[lang='ml'] .ref-landing .ic-desc,
+html[lang='ml'] .ref-landing .jf-desc,
+html[lang='ml'] .ref-landing .tc-desc {
+  line-height: 1.65;
+}
+
+html[lang='ml'] .ref-landing .fc-tag {
+  text-transform: none;
+  letter-spacing: 0.02em;
+  font-size: 0.62rem;
+  line-height: 1.35;
+}
+
+html[lang='ml'] .ref-landing .fstrip .fs-title {
+  line-height: 1.35;
+}
+
+html[lang='ml'] .ref-landing .fstrip .fs-sub {
+  line-height: 1.55;
+}
+
+html[lang='ml'] .ref-landing .idx-ml-accent {
+  font-size: 0.92rem;
+  line-height: 1.62;
+  max-width: 42ch;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+html[lang='ml'] .ref-landing .hero-pill {
+  font-size: 0.72rem;
+  line-height: 1.35;
+  white-space: normal;
+  text-align: center;
+}
+
+html[lang='ml'] .ref-landing .idx-faq-q {
+  line-height: 1.45;
+  text-align: left;
+}
+
+html[lang='ml'] .ref-landing .idx-faq-a {
+  line-height: 1.7;
+}
+
 html[lang='ml'] .cridora-quote {
   font-size: clamp(0.92rem, 1.7vw, 1.1rem) !important;
   line-height: 1.68 !important;
