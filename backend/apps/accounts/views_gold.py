@@ -36,6 +36,7 @@ from .vault_service import (
     customer_has_vault_at_custodian,
     debit_customer_vault_for_transfer,
     jeweller_custody_vault_payload,
+    jeweller_primary_customer_base_payload,
     legacy_credit_jeweller_balance,
     legacy_debit_jeweller_balance,
     migrate_customer_legacy_balance_if_needed,
@@ -189,6 +190,33 @@ class JewellerCustodyVaultsView(APIView):
                 "custodian_vault_grams_total": str(total_vault_g),
                 "custodian_fractional_grams_total": str(frac_g),
                 "custodian_estimated_value_inr_total": str(est_inr_total.quantize(Decimal("0.01"))),
+            }
+        )
+
+
+class JewellerPrimaryCustomersView(APIView):
+    """Customers who listed this jeweller as their primary, with gold held at this shop."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        if user.user_type != User.JEWELLER:
+            return Response(
+                {"detail": "Jewellers only."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        rows = jeweller_primary_customer_base_payload(user)
+        total_g = sum(Decimal(r["vault_total_grams"]) for r in rows)
+        est_inr = sum(
+            Decimal(r["estimated_total_vault_value_inr"] or "0") for r in rows
+        )
+        return Response(
+            {
+                "results": rows,
+                "primary_customer_count": len(rows),
+                "primary_vault_grams_total": str(total_g),
+                "primary_estimated_value_inr_total": str(est_inr.quantize(Decimal("0.01"))),
             }
         )
 
@@ -502,6 +530,7 @@ class DefaultJewellerView(APIView):
                     {"detail": "jeweller_id must be an integer."},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
+            old_jeweller_id = user.default_jeweller_id
             jeweller = User.objects.filter(
                 pk=jid, user_type=User.JEWELLER, kyc_status=User.KYC_VERIFIED
             ).first()
@@ -525,6 +554,21 @@ class DefaultJewellerView(APIView):
             user.default_jeweller = jeweller
             update_fields.append("default_jeweller")
             migrate_customer_legacy_balance_if_needed(user, jeweller)
+            if (
+                old_jeweller_id
+                and old_jeweller_id != jeweller.id
+            ):
+                from apps.accounts.platform_features import is_feature_enabled
+                from apps.accounts.services.primary_jeweller_change_notify import (
+                    notify_previous_primary_jeweller,
+                )
+
+                if is_feature_enabled("notify_primary_jeweller_change"):
+                    notify_previous_primary_jeweller(
+                        customer=user,
+                        previous_jeweller_id=old_jeweller_id,
+                        new_jeweller=jeweller,
+                    )
 
         def _opt_jeweller(field_name: str, body_key: str):
             nonlocal update_fields

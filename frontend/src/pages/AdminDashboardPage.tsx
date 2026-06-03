@@ -7,6 +7,7 @@ import { LIVE_ADMIN_POLL_MS } from '@/lib/liveDeskIntervals'
 import { useLivePoll } from '@/lib/useLivePoll'
 import { AdminPortfolioPanel } from '@/features/portfolio/AdminPortfolioPanel'
 import { AdminPersonalHoldingsPanel } from '@/features/portfolio/AdminPersonalHoldingsPanel'
+import { AdminPrimaryCustomersTable } from '@/features/portfolio/JewellerPrimaryCustomersPanel'
 import { AdminFractionalOtpPolicyPanel } from '@/features/admin/AdminFractionalOtpPolicyPanel'
 import { AdminFeatureRolloutPanel } from '@/features/admin/AdminFeatureRolloutPanel'
 import { ChangePasswordPanel } from '@/features/auth/ChangePasswordPanel'
@@ -324,6 +325,7 @@ export function AdminDashboardPage() {
   const [reuploadDocId, setReuploadDocId] = useState<number | null>(null)
   const [reuploadReason, setReuploadReason] = useState('')
   const [modalError, setModalError] = useState('')
+  const [resetPasswordResult, setResetPasswordResult] = useState<string | null>(null)
 
   useEffect(() => {
     void refreshProfile()
@@ -354,6 +356,7 @@ export function AdminDashboardPage() {
     setRejectReason('')
     setReuploadDocId(null)
     setReuploadReason('')
+    setResetPasswordResult(null)
     const res = await authFetch(`/api/v1/admin/users/${userId}/documents/`)
     const j = await res.json().catch(() => ({}))
     if (!res.ok) {
@@ -376,6 +379,7 @@ export function AdminDashboardPage() {
     setRejectReason('')
     setReuploadDocId(null)
     setReuploadReason('')
+    setResetPasswordResult(null)
   }, [])
 
   const runKycAction = useCallback(
@@ -520,6 +524,35 @@ export function AdminDashboardPage() {
     },
     [fetchOverview],
   )
+
+  const runResetPassword = useCallback(async (userId: number) => {
+    if (
+      !window.confirm(
+        'Generate a new temporary password for this user? Existing sessions will be signed out.',
+      )
+    ) {
+      return
+    }
+    setBusyId(userId)
+    setModalError('')
+    setResetPasswordResult(null)
+    const res = await authFetch(`/api/v1/admin/users/${userId}/reset-password/`, {
+      method: 'POST',
+      jsonBody: {},
+    })
+    const j = (await res.json().catch(() => ({}))) as {
+      detail?: string
+      temporary_password?: string
+    }
+    setBusyId(null)
+    if (!res.ok) {
+      setModalError(j.detail ?? 'Password reset failed.')
+      return
+    }
+    if (j.temporary_password) {
+      setResetPasswordResult(j.temporary_password)
+    }
+  }, [])
 
   return (
     <DashboardLayout
@@ -828,10 +861,63 @@ export function AdminDashboardPage() {
                   <div className="admin-inspect-panel">
                     <h3 className="admin-inspect-panel__title">Account</h3>
                     <InspectKv rows={profileInspectAccountRows(modalDetail.profile as InspectProfile)} />
+                    {(modalDetail.profile as InspectProfile).user_type !== 'admin' ? (
+                      <div className="kyb-actions" style={{ marginTop: 'var(--sp-3)' }}>
+                        <button
+                          type="button"
+                          className="btn btn-ghost kyb-btn-sm"
+                          disabled={busyId === modalUserId}
+                          onClick={() => void runResetPassword(modalUserId)}
+                        >
+                          Reset password
+                        </button>
+                      </div>
+                    ) : null}
+                    {resetPasswordResult ? (
+                      <div
+                        className="card"
+                        style={{
+                          marginTop: 'var(--sp-3)',
+                          padding: 'var(--sp-3)',
+                          border: '1px solid var(--border)',
+                        }}
+                      >
+                        <p style={{ margin: 0, fontWeight: 600 }}>Temporary password (shown once)</p>
+                        <p
+                          style={{
+                            margin: 'var(--sp-2) 0',
+                            fontFamily: 'monospace',
+                            fontSize: '1.1rem',
+                            wordBreak: 'break-all',
+                          }}
+                        >
+                          {resetPasswordResult}
+                        </p>
+                        <p className="dash-footnote" style={{ margin: 0 }}>
+                          Copy and share securely with the user. They can sign in and change it in account settings.
+                        </p>
+                        <button
+                          type="button"
+                          className="btn btn-ghost kyb-btn-sm"
+                          style={{ marginTop: 'var(--sp-2)' }}
+                          onClick={() => {
+                            void navigator.clipboard.writeText(resetPasswordResult)
+                          }}
+                        >
+                          Copy password
+                        </button>
+                      </div>
+                    ) : null}
                     {(modalDetail.profile as InspectProfile).user_type === 'jeweller' ? (
                       <>
                         <h3 className="admin-inspect-panel__title">Business</h3>
                         <InspectKv rows={profileInspectBusinessRows(modalDetail.profile as InspectProfile)} />
+                        {modalUserId != null ? (
+                          <AdminPrimaryCustomersTable
+                            jewellerId={modalUserId}
+                            onInspectCustomer={(customerId) => void openUserModal(customerId)}
+                          />
+                        ) : null}
                       </>
                     ) : null}
                     {modalDetail.bank ? (

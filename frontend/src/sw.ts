@@ -1,7 +1,10 @@
 /// <reference lib="webworker" />
 import { cleanupOutdatedCaches, precacheAndRoute } from 'workbox-precaching'
 
-import { CRIDORA_PUSH_REFRESH_MESSAGE_TYPE } from './lib/cridoraSwMessages'
+import {
+  CRIDORA_PUSH_REFRESH_MESSAGE_TYPE,
+  CRIDORA_PUSH_RESUBSCRIBE_MESSAGE_TYPE,
+} from './lib/cridoraSwMessages'
 
 declare const self: ServiceWorkerGlobalScope & { __WB_MANIFEST: unknown }
 
@@ -26,7 +29,36 @@ type PushPayload = {
   url?: string
   tag?: string
   image?: string
+  id?: string
 }
+
+async function postTrayAck(body: Record<string, string>): Promise<void> {
+  try {
+    await fetch('/api/v1/push/ack/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+  } catch {
+    /* analytics only */
+  }
+}
+
+self.addEventListener('pushsubscriptionchange', (event: Event) => {
+  const ev = event as ExtendableEvent
+  ev.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      const payload = { type: CRIDORA_PUSH_RESUBSCRIBE_MESSAGE_TYPE }
+      for (const c of clientList) {
+        try {
+          c.postMessage(payload)
+        } catch {
+          /* ignore */
+        }
+      }
+    }),
+  )
+})
 
 self.addEventListener('push', (event: PushEvent) => {
   const fallback: PushPayload = {
@@ -59,18 +91,27 @@ self.addEventListener('push', (event: PushEvent) => {
       : imageRaw.startsWith('/')
         ? new URL(imageRaw, self.location.origin).href
         : null
+  const tag = data.tag || fallback.tag || 'cridora-default'
+  const notificationId = typeof data.id === 'string' ? data.id : ''
   const notifyOpts = {
     body,
     icon: imageHref || iconHref,
     badge: iconHref,
     vibrate: [180, 80, 120],
-    data: { url: targetUrl },
-    tag: data.tag || fallback.tag,
+    data: { url: targetUrl, tag, notification_id: notificationId },
+    tag,
     ...(imageHref ? { image: imageHref } : {}),
   } as NotificationOptions
   event.waitUntil(
     (async () => {
       await self.registration.showNotification(title, notifyOpts)
+      if (notificationId) {
+        await postTrayAck({
+          event: 'tray_delivered',
+          notification_id: notificationId,
+          tag,
+        })
+      }
       const clientList = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
       const payload = { type: CRIDORA_PUSH_REFRESH_MESSAGE_TYPE }
       for (const c of clientList) {
@@ -86,10 +127,21 @@ self.addEventListener('push', (event: PushEvent) => {
 
 self.addEventListener('notificationclick', (event: NotificationEvent) => {
   event.notification.close()
-  const raw = event.notification.data?.url as string | undefined
+  const nd = event.notification.data as { url?: string; tag?: string; notification_id?: string } | undefined
+  const raw = nd?.url
   const targetUrl = new URL(raw || '/', self.location.origin).href
+  const tag = typeof nd?.tag === 'string' ? nd.tag : ''
+  const notificationId = typeof nd?.notification_id === 'string' ? nd.notification_id : ''
   event.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+    (async () => {
+      if (notificationId) {
+        await postTrayAck({
+          event: 'tray_clicked',
+          notification_id: notificationId,
+          tag: tag || 'cridora-default',
+        })
+      }
+      const clientList = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
       const payload = { type: CRIDORA_PUSH_REFRESH_MESSAGE_TYPE }
       for (const c of clientList) {
         try {
@@ -101,18 +153,16 @@ self.addEventListener('notificationclick', (event: NotificationEvent) => {
       for (const c of clientList) {
         if (c.url.startsWith(self.location.origin) && 'focus' in c) {
           const wc = c as WindowClient & { navigate?: (u: string) => Promise<unknown> }
-          return wc.focus().then(() => {
-            if (typeof wc.navigate === 'function') {
-              return wc.navigate(targetUrl)
-            }
-            return undefined
-          })
+          await wc.focus()
+          if (typeof wc.navigate === 'function') {
+            await wc.navigate(targetUrl)
+          }
+          return
         }
       }
       if (self.clients.openWindow) {
-        return self.clients.openWindow(targetUrl)
+        await self.clients.openWindow(targetUrl)
       }
-      return undefined
-    }),
+    })(),
   )
 })

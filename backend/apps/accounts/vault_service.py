@@ -573,3 +573,42 @@ def jeweller_custody_vault_payload(jeweller: User) -> list[dict]:
         )
     rows.sort(key=lambda r: Decimal(r["vault_total_grams"]), reverse=True)
     return rows
+
+
+def jeweller_primary_customer_base_payload(jeweller: User) -> list[dict]:
+    """Customers who chose this jeweller as primary (default), with vault grams at this shop."""
+    if jeweller.user_type != User.JEWELLER:
+        return []
+    custody_by_customer = {
+        int(r["customer_id"]): r for r in jeweller_custody_vault_payload(jeweller)
+    }
+    customers = User.objects.filter(
+        user_type=User.CUSTOMER,
+        default_jeweller=jeweller,
+    ).order_by("id")
+    rows: list[dict] = []
+    for customer in customers:
+        vault = custody_by_customer.get(customer.id)
+        label = f"{customer.first_name} {customer.last_name}".strip() or "Customer"
+        if vault:
+            rows.append(
+                {
+                    "customer_id": customer.id,
+                    "customer_member_id": customer.cridora_member_id or "",
+                    "customer_label": label,
+                    "vault_total_grams": vault["vault_total_grams"],
+                    "estimated_total_vault_value_inr": vault["estimated_total_vault_value_inr"],
+                }
+            )
+        else:
+            rows.append(
+                {
+                    "customer_id": customer.id,
+                    "customer_member_id": customer.cridora_member_id or "",
+                    "customer_label": label,
+                    "vault_total_grams": "0",
+                    "estimated_total_vault_value_inr": "0.00",
+                }
+            )
+    rows.sort(key=lambda r: Decimal(r["vault_total_grams"]), reverse=True)
+    return rows

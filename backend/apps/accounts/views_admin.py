@@ -1,4 +1,6 @@
 from decimal import Decimal
+import secrets
+import string
 
 from django.db.models import Sum
 from django.utils import timezone
@@ -36,6 +38,7 @@ from .services.platform_operational import (
     set_fractional_counter_otp_ttl_seconds,
     set_fractional_markup_percent,
 )
+from .vault_service import jeweller_primary_customer_base_payload
 
 User = get_user_model()
 
@@ -275,6 +278,35 @@ class AdminUserDocumentsView(APIView):
         profile = AdminUserInspectProfileSerializer(u).data
 
         return Response({"profile": profile, "documents": payload, "bank": bank})
+
+
+class AdminJewellerPrimaryCustomersView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, user_id):
+        err = _require_admin(request)
+        if err:
+            return err
+        try:
+            jeweller = User.objects.get(pk=user_id, user_type=User.JEWELLER)
+        except User.DoesNotExist:
+            return Response(
+                {"detail": "Jeweller not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        rows = jeweller_primary_customer_base_payload(jeweller)
+        total_g = sum(Decimal(r["vault_total_grams"]) for r in rows)
+        est_inr = sum(
+            Decimal(r["estimated_total_vault_value_inr"] or "0") for r in rows
+        )
+        return Response(
+            {
+                "results": rows,
+                "primary_customer_count": len(rows),
+                "primary_vault_grams_total": str(total_g),
+                "primary_estimated_value_inr_total": str(est_inr.quantize(Decimal("0.01"))),
+            }
+        )
 
 
 class AdminCustomerKYCActionView(APIView):
@@ -552,6 +584,48 @@ class AdminFreezeUserView(APIView):
             {
                 "detail": "User updated.",
                 "is_active": user.is_active,
+            }
+        )
+
+
+def _generate_temporary_password(length: int = 12) -> str:
+    alphabet = string.ascii_letters + string.digits
+    return "".join(secrets.choice(alphabet) for _ in range(length))
+
+
+def _blacklist_user_refresh_tokens(user: User) -> None:
+    from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
+
+    for outstanding in OutstandingToken.objects.filter(user=user):
+        BlacklistedToken.objects.get_or_create(token=outstanding)
+
+
+class AdminResetPasswordView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, user_id):
+        err = _require_admin(request)
+        if err:
+            return err
+        try:
+            user = User.objects.get(pk=user_id)
+        except User.DoesNotExist:
+            return Response(
+                {"detail": "User not found."}, status=status.HTTP_404_NOT_FOUND
+            )
+        if user_is_platform_admin(user):
+            return Response(
+                {"detail": "Cannot reset admin account passwords."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        temp_password = _generate_temporary_password()
+        user.set_password(temp_password)
+        user.save(update_fields=["password"])
+        _blacklist_user_refresh_tokens(user)
+        return Response(
+            {
+                "detail": "Password reset.",
+                "temporary_password": temp_password,
             }
         )
 

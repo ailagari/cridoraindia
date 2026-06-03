@@ -1,5 +1,6 @@
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
+import { getStoredAccess } from '@/lib/api'
 import { dashboardLandingPath } from '@/lib/routes'
 import { Spinner } from '@/components/ui'
 
@@ -12,7 +13,7 @@ export function DashboardIndexRedirect() {
       </div>
     )
   }
-  if (!user) {
+  if (!user || !getStoredAccess()) {
     return <Navigate to="/login" replace />
   }
   return <Navigate to={dashboardLandingPath(user)} replace />

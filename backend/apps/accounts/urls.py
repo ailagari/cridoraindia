@@ -39,6 +39,7 @@ from .views_gold import (
     GoldWalletView,
     JewellerCustodyVaultsView,
     JewellerCustomerVaultLedgerView,
+    JewellerPrimaryCustomersView,
 )
 from .platform_features_views import AdminFeatureRolloutView, PlatformFeaturesView
 from .views_admin_treasury import (
@@ -62,9 +63,11 @@ from .views_admin import (
     AdminFreezeUserView,
     AdminFractionalCounterOtpPolicyView,
     AdminJewellerKYBActionView,
+    AdminJewellerPrimaryCustomersView,
     AdminNotificationsListView,
     AdminNotificationsMarkReadView,
     AdminOverviewView,
+    AdminResetPasswordView,
     AdminUserDocumentsView,
     AdminVerificationRevokeView,
 )
@@ -173,6 +176,7 @@ from .views_push import (
     NativePushStatusView,
     NativePushSubscribeView,
     NativePushUnsubscribeView,
+    PushAckView,
     WebPushAdminSelfTestView,
     WebPushSubscribeView,
     WebPushUnsubscribeView,
@@ -278,6 +282,7 @@ urlpatterns = [
     path("push/vapid-public-key/", WebPushVapidPublicKeyView.as_view()),
     path("push/subscribe/", WebPushSubscribeView.as_view()),
     path("push/unsubscribe/", WebPushUnsubscribeView.as_view()),
+    path("push/ack/", PushAckView.as_view()),
     path("push/native-status/", NativePushStatusView.as_view()),
     path("push/native-subscribe/", NativePushSubscribeView.as_view()),
     path("push/native-unsubscribe/", NativePushUnsubscribeView.as_view()),
@@ -451,6 +456,7 @@ urlpatterns = [
         JewellerCustomerVaultLedgerView.as_view(),
     ),
     path("jeweller/custody-vaults/", JewellerCustodyVaultsView.as_view()),
+    path("jeweller/primary-customers/", JewellerPrimaryCustomersView.as_view()),
     path(
         "jeweller/fractional/orders/<int:pk>/verify/",
         JewellerFractionalVerifyView.as_view(),
@@ -526,7 +532,15 @@ urlpatterns = [
         "admin/users/<int:user_id>/documents/<int:doc_id>/request-reupload/",
         AdminDocumentRequestReuploadView.as_view(),
     ),
+    path(
+        "admin/users/<int:user_id>/primary-customers/",
+        AdminJewellerPrimaryCustomersView.as_view(),
+    ),
     path("admin/users/<int:user_id>/freeze/", AdminFreezeUserView.as_view()),
+    path(
+        "admin/users/<int:user_id>/reset-password/",
+        AdminResetPasswordView.as_view(),
+    ),
     path("jeweller/cridorapay/bills/", JewellerCridoraPayBillCreateView.as_view()),
     path("jeweller/cridorapay/bills/list/", JewellerCridoraPayBillsListView.as_view()),
     path(

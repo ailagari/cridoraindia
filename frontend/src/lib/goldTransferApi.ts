@@ -221,6 +221,35 @@ export async function fetchJewellerCustodyVaults(): Promise<JewellerCustodyVault
   return (await res.json()) as JewellerCustodyVaultsPayloadDTO
 }
 
+export type JewellerPrimaryCustomerRowDTO = {
+  customer_id: number
+  customer_member_id: string
+  customer_label: string
+  vault_total_grams: string
+  estimated_total_vault_value_inr: string
+}
+
+export type JewellerPrimaryCustomersPayloadDTO = {
+  results: JewellerPrimaryCustomerRowDTO[]
+  primary_customer_count: number
+  primary_vault_grams_total: string
+  primary_estimated_value_inr_total: string
+}
+
+export async function fetchJewellerPrimaryCustomers(): Promise<JewellerPrimaryCustomersPayloadDTO | null> {
+  const res = await authFetch('/api/v1/jeweller/primary-customers/')
+  if (!res.ok) return null
+  return (await res.json()) as JewellerPrimaryCustomersPayloadDTO
+}
+
+export async function fetchAdminJewellerPrimaryCustomers(
+  jewellerId: number,
+): Promise<JewellerPrimaryCustomersPayloadDTO | null> {
+  const res = await authFetch(`/api/v1/admin/users/${jewellerId}/primary-customers/`)
+  if (!res.ok) return null
+  return (await res.json()) as JewellerPrimaryCustomersPayloadDTO
+}
+
 export async function fetchJewellerCustomerVaultLedger(
   customerId: number,
   filter?: string,

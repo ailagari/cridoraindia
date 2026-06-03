@@ -171,26 +171,6 @@ class AdminNotificationStatsView(APIView):
         err = _require_admin(request)
         if err:
             return err
-        delivered = NotificationEventLog.objects.filter(
-            event_type=NotificationEventLog.EVENT_DELIVERED
-        ).count()
-        clicked = NotificationEventLog.objects.filter(
-            event_type=NotificationEventLog.EVENT_CLICKED
-        ).count()
-        by_category = (
-            NotificationEventLog.objects.filter(
-                event_type=NotificationEventLog.EVENT_DELIVERED
-            )
-            .values("category")
-            .annotate(c=Count("id"))
-            .order_by("-c")[:20]
-        )
-        open_rate = round((clicked / delivered * 100), 2) if delivered else 0
-        return Response(
-            {
-                "delivered_count": delivered,
-                "clicked_count": clicked,
-                "open_rate_percent": open_rate,
-                "by_category": list(by_category),
-            }
-        )
+        from apps.accounts.services.notification_stats import admin_notification_stats_payload
+
+        return Response(admin_notification_stats_payload())

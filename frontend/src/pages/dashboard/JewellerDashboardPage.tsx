@@ -5,6 +5,7 @@ import { JewellerBusinessProfilePanel } from '@/features/jeweller/JewellerBusine
 import { JewellerKybWorkflow } from '@/features/jeweller/JewellerKybWorkflow'
 import { JewellerPortfolioOverviewPanel } from '@/features/portfolio/JewellerPortfolioOverviewPanel'
 import { JewellerCustomerVaultsPanel } from '@/features/portfolio/JewellerCustomerVaultsPanel'
+import { JewellerPrimaryCustomersPanel } from '@/features/portfolio/JewellerPrimaryCustomersPanel'
 import { GoldTransferPanel } from '@/features/gold/GoldTransferPanel'
 import { JewellerMarketplacePanel } from '@/features/marketplace/JewellerMarketplacePanel'
 import { JewellerRatesSchemesPanel } from '@/features/marketplace/JewellerRatesSchemesPanel'
@@ -99,7 +100,12 @@ export function JewellerDashboardPage() {
       title={head}
     >
       {active === 'portfolio' ? <JewellerPortfolioOverviewPanel onNavigate={setSection} /> : null}
-      {active === 'cust_hub' ? <JewellerCustomerVaultsPanel /> : null}
+      {active === 'cust_hub' ? (
+        <>
+          <JewellerCustomerVaultsPanel />
+          <JewellerPrimaryCustomersPanel />
+        </>
+      ) : null}
       {active === 'mkt_products' ? <JewellerMarketplacePanel /> : null}
       {active === 'mkt_policy' ? (
         <div className="dash-panel-max">

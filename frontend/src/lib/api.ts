@@ -74,23 +74,73 @@ export function extractApiDetail(body: unknown, fallback: string): string {
   return fallback
 }
 
+const AUTH_KEYS = ['access_token', 'refresh_token', 'cridora_user'] as const
+const AUTH_PERSISTENCE_KEY = 'cridora_auth_persistence'
+
+export type AuthPersistence = 'local' | 'session'
+
+function readAuthPersistence(): AuthPersistence {
+  const v = localStorage.getItem(AUTH_PERSISTENCE_KEY)
+  return v === 'session' ? 'session' : 'local'
+}
+
+export function setAuthPersistence(mode: AuthPersistence): void {
+  localStorage.setItem(AUTH_PERSISTENCE_KEY, mode)
+}
+
+function authStorage(): Storage {
+  return readAuthPersistence() === 'session' ? sessionStorage : localStorage
+}
+
+function readTokenFromStores(key: string): string | null {
+  return sessionStorage.getItem(key) ?? localStorage.getItem(key)
+}
+
 export function getStoredAccess(): string | null {
-  return localStorage.getItem('access_token')
+  return readTokenFromStores('access_token')
 }
 
 export function getStoredRefresh(): string | null {
-  return localStorage.getItem('refresh_token')
+  return readTokenFromStores('refresh_token')
+}
+
+export function getStoredUserJson(): string | null {
+  return readTokenFromStores('cridora_user')
 }
 
 export function storeTokens(access: string, refresh: string): void {
-  localStorage.setItem('access_token', access)
-  localStorage.setItem('refresh_token', refresh)
+  const store = authStorage()
+  store.setItem('access_token', access)
+  store.setItem('refresh_token', refresh)
+  if (store !== localStorage) {
+    for (const key of AUTH_KEYS) {
+      localStorage.removeItem(key)
+    }
+  } else {
+    for (const key of AUTH_KEYS) {
+      sessionStorage.removeItem(key)
+    }
+  }
 }
 
+export function storeUserJson(json: string): void {
+  authStorage().setItem('cridora_user', json)
+}
+
+export const SESSION_INVALIDATED_EVENT = 'cridora:session-invalidated'
+
 export function clearTokens(): void {
-  localStorage.removeItem('access_token')
-  localStorage.removeItem('refresh_token')
-  localStorage.removeItem('cridora_user')
+  for (const key of AUTH_KEYS) {
+    localStorage.removeItem(key)
+    sessionStorage.removeItem(key)
+  }
+}
+
+export function invalidateSession(): void {
+  clearTokens()
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event(SESSION_INVALIDATED_EVENT))
+  }
 }
 
 type Json = Record<string, unknown>
@@ -182,7 +232,7 @@ async function refreshTokens(): Promise<string | null> {
     refresh?: string
   }
   if (!refr.ok || !data.access) {
-    clearTokens()
+    invalidateSession()
     return null
   }
   storeTokens(data.access, data.refresh ?? refresh)
@@ -231,9 +281,14 @@ export async function authFetch(
   }
   const next = await refreshTokens()
   if (!next) {
+    invalidateSession()
     return res
   }
-  return run(next)
+  const retry = await run(next)
+  if (retry.status === 401) {
+    invalidateSession()
+  }
+  return retry
 }
 
 export async function authUpload(
@@ -259,7 +314,12 @@ export async function authUpload(
   }
   const next = await refreshTokens()
   if (!next) {
+    invalidateSession()
     return res
   }
-  return run(next)
+  const retry = await run(next)
+  if (retry.status === 401) {
+    invalidateSession()
+  }
+  return retry
 }

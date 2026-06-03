@@ -6,7 +6,7 @@ from django.conf import settings
 from django.db.models import Q
 from pywebpush import WebPushException, webpush
 
-from .models import WebPushSubscription
+from .models import PushDeliveryAttempt, WebPushSubscription
 from .locale_utils import DEFAULT_PUBLIC_LOCALE, normalize_preferred_locale
 from .vapid_utils import load_vapid_private_key, vapid_signer_ready
 from . import fcm_service
@@ -15,6 +15,16 @@ logger = logging.getLogger(__name__)
 
 # FCM/APNs: ttl=0 tends to mean deliver-immediately-or-drop; non-zero TTL improves delivery when the device is briefly offline.
 _WEB_PUSH_TTL_SECONDS = 86_400
+
+
+def _notification_id_from_payload(payload: dict[str, Any]) -> int | None:
+    raw = payload.get("id")
+    if raw is None:
+        return None
+    try:
+        return int(str(raw))
+    except (TypeError, ValueError):
+        return None
 
 
 def webpush_configured() -> bool:
@@ -50,12 +60,23 @@ def send_push_payload(subscription: WebPushSubscription, payload: dict[str, Any]
 
 def send_push_to_user(user, payload: dict[str, Any]) -> int:
     """Send payload to all stored subscriptions; drop endpoints that return 410."""
+    from .services.push_delivery import log_push_attempt
+
     n = 0
+    nid = _notification_id_from_payload(payload)
+    tag = str(payload.get("tag") or "")
     if webpush_configured():
         for sub in WebPushSubscription.objects.filter(user=user):
             try:
                 send_push_payload(sub, payload)
                 n += 1
+                log_push_attempt(
+                    user=user,
+                    channel=PushDeliveryAttempt.CHANNEL_WEBPUSH,
+                    status=PushDeliveryAttempt.STATUS_SENT,
+                    notification_id=nid,
+                    tag=tag,
+                )
             except WebPushException as exc:
                 status = getattr(getattr(exc, "response", None), "status_code", None)
                 if status == 410:
@@ -68,6 +89,14 @@ def send_push_to_user(user, payload: dict[str, Any]) -> int:
                         status,
                         exc,
                     )
+                log_push_attempt(
+                    user=user,
+                    channel=PushDeliveryAttempt.CHANNEL_WEBPUSH,
+                    status=PushDeliveryAttempt.STATUS_FAILED,
+                    notification_id=nid,
+                    tag=tag,
+                    error_message=str(status or exc)[:255],
+                )
             except Exception as exc:
                 logger.warning(
                     "Web Push delivery unexpected error for user_id=%s endpoint_prefix=%s error=%s",
@@ -75,7 +104,15 @@ def send_push_to_user(user, payload: dict[str, Any]) -> int:
                     (sub.endpoint[:64] + "…") if len(sub.endpoint) > 64 else sub.endpoint,
                     exc,
                 )
-    n += fcm_service.send_fcm_to_user(user, payload)
+                log_push_attempt(
+                    user=user,
+                    channel=PushDeliveryAttempt.CHANNEL_WEBPUSH,
+                    status=PushDeliveryAttempt.STATUS_FAILED,
+                    notification_id=nid,
+                    tag=tag,
+                    error_message=str(exc)[:255],
+                )
+    n += fcm_service.send_fcm_to_user(user, payload, notification_id=nid, tag=tag)
     return n
 
 

@@ -2659,9 +2659,15 @@ class NotificationEventLog(models.Model):
 
     EVENT_DELIVERED = "delivered"
     EVENT_CLICKED = "clicked"
+    EVENT_READ = "read"
+    EVENT_TRAY_DELIVERED = "tray_delivered"
+    EVENT_TRAY_CLICKED = "tray_clicked"
     EVENT_CHOICES = [
         (EVENT_DELIVERED, "Delivered"),
         (EVENT_CLICKED, "Clicked"),
+        (EVENT_READ, "Read"),
+        (EVENT_TRAY_DELIVERED, "Tray delivered"),
+        (EVENT_TRAY_CLICKED, "Tray clicked"),
     ]
 
     user = models.ForeignKey(
@@ -2682,6 +2688,56 @@ class NotificationEventLog(models.Model):
         indexes = [
             models.Index(fields=["event_type", "created_at"]),
             models.Index(fields=["user", "event_type"]),
+        ]
+
+
+class PushDeliveryAttempt(models.Model):
+    """Per-device push send outcome and tray ack (analytics)."""
+
+    CHANNEL_WEBPUSH = "webpush"
+    CHANNEL_FCM = "fcm"
+    CHANNEL_CHOICES = [
+        (CHANNEL_WEBPUSH, "Web Push"),
+        (CHANNEL_FCM, "FCM"),
+    ]
+
+    STATUS_SENT = "sent"
+    STATUS_FAILED = "failed"
+    STATUS_TRAY_DELIVERED = "tray_delivered"
+    STATUS_TRAY_CLICKED = "tray_clicked"
+    STATUS_CHOICES = [
+        (STATUS_SENT, "Sent"),
+        (STATUS_FAILED, "Failed"),
+        (STATUS_TRAY_DELIVERED, "Tray delivered"),
+        (STATUS_TRAY_CLICKED, "Tray clicked"),
+    ]
+
+    user = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="push_delivery_attempts",
+    )
+    portfolio_notification = models.ForeignKey(
+        PortfolioUserNotification,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="push_attempts",
+    )
+    channel = models.CharField(max_length=16, choices=CHANNEL_CHOICES)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES)
+    tag = models.CharField(max_length=64, blank=True, default="")
+    error_message = models.CharField(max_length=255, blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["status", "created_at"]),
+            models.Index(fields=["user", "channel", "status"]),
+            models.Index(fields=["portfolio_notification", "status"]),
         ]
 
 

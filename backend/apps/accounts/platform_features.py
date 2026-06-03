@@ -136,6 +136,15 @@ FEATURE_DEFINITIONS: tuple[dict[str, Any], ...] = (
         "jeweller_sections": ("txn_ops",),
         "admin_sections": (),
     },
+    {
+        "key": "notify_primary_jeweller_change",
+        "label": "Primary jeweller change alerts",
+        "description": "Notify a jeweller when a customer switches their primary jeweller away from that shop.",
+        "default": True,
+        "customer_sections": (),
+        "jeweller_sections": (),
+        "admin_sections": (),
+    },
 )
 
 FEATURE_KEYS: frozenset[str] = frozenset(d["key"] for d in FEATURE_DEFINITIONS)

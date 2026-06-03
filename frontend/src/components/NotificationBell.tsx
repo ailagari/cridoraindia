@@ -8,6 +8,7 @@ import { useAuth } from '@/context/AuthContext'
 import { authFetch } from '@/lib/api'
 import {
   fetchWebPushServerStatus,
+  canSubscribeWebPush,
   getBrowserPushActive,
   getPushDeliveryLabel,
   isPushPermissionDenied,
@@ -584,7 +585,7 @@ export function NotificationBell({
 
   const showTrayPushRow =
     !hidePushRowInBell && pushServerReady === true && !pushActive
-  const pushSupported = pushNotificationsSupported()
+  const pushSupported = canSubscribeWebPush()
   const canEnableTrayPush =
     pushSupported && !pushActive && !pushPermissionBlocked
   const showTrayInstallHint = showTrayPushRow && !pushActive && !pushSupported && Boolean(setupHint)

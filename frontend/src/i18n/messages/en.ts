@@ -312,6 +312,7 @@ export const enMessages = {
   'auth.loginTrustNote': 'Protected access for customers and verified jeweller accounts.',
   'auth.email': 'Email',
   'auth.password': 'Password',
+  'auth.rememberMe': 'Remember me',
   'auth.signIn': 'Sign in',
   'auth.signInFailed': 'Sign in failed',
   'auth.noAccount': 'No account?',

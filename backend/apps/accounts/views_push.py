@@ -5,7 +5,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import WebPushSubscription, NativePushToken
+from .models import WebPushSubscription, NativePushToken, NotificationEventLog
 from .locale_utils import normalize_preferred_locale
 from .services.admin_access import user_is_platform_admin
 from .vapid_utils import vapid_signer_ready
@@ -165,3 +165,48 @@ class NativePushUnsubscribeView(APIView):
             return Response({"detail": "token is required."}, status=status.HTTP_400_BAD_REQUEST)
         NativePushToken.objects.filter(token=token).delete()
         return Response({"ok": True}, status=status.HTTP_200_OK)
+
+
+class PushAckView(APIView):
+    """Tray delivery/click ack from service worker (analytics)."""
+
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        from apps.accounts.services.notification_analytics import log_notification_event
+        from apps.accounts.services.push_delivery import log_tray_ack
+
+        data = request.data if isinstance(request.data, dict) else {}
+        event = str(data.get("event") or "").strip()
+        if event not in ("tray_delivered", "tray_clicked"):
+            return Response(
+                {"detail": "event must be tray_delivered or tray_clicked."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        tag = str(data.get("tag") or "")
+        raw_id = data.get("notification_id") or data.get("id")
+        notification_id = None
+        if raw_id is not None:
+            try:
+                notification_id = int(raw_id)
+            except (TypeError, ValueError):
+                notification_id = None
+        owner = request.user if request.user.is_authenticated else None
+        attempt = log_tray_ack(
+            event=event,
+            notification_id=notification_id,
+            tag=tag,
+            user=owner,
+        )
+        if attempt and attempt.user_id:
+            log_notification_event(
+                attempt.user,
+                event_type=(
+                    NotificationEventLog.EVENT_TRAY_CLICKED
+                    if event == "tray_clicked"
+                    else NotificationEventLog.EVENT_TRAY_DELIVERED
+                ),
+                kind=tag[:32],
+                title=tag[:180],
+            )
+        return Response({"ok": True})

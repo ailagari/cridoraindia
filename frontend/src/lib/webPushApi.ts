@@ -1,5 +1,6 @@
 import { apiFetch, authFetch, getStoredAccess } from '@/lib/api'
 import { readStoredPublicLocale } from '@/i18n/engine'
+import { CRIDORA_PUSH_RESUBSCRIBE_MESSAGE_TYPE } from '@/lib/cridoraSwMessages'
 import {
   claimNativePushForLoggedInUser,
   getNativePushActive,
@@ -72,6 +73,14 @@ export function pushNotificationsSupported(): boolean {
   if (typeof window === 'undefined') return false
   if (!window.isSecureContext) return false
   return 'serviceWorker' in navigator && 'PushManager' in window && typeof Notification !== 'undefined'
+}
+
+/** True when this device can attempt Web Push subscribe (blocks iOS Safari tab). */
+export function canSubscribeWebPush(): boolean {
+  if (nativePushNotificationsSupported()) return true
+  if (!pushNotificationsSupported()) return false
+  if (likelyIosMobile() && !displayModeStandalone()) return false
+  return true
 }
 
 /** Browser Notification API permission, or null when unavailable (Capacitor WebView). */
@@ -164,6 +173,10 @@ export async function registerWebPushSubscription(): Promise<void> {
     await registerNativePushSubscription()
     return
   }
+  if (!canSubscribeWebPush()) {
+    const hint = pushSetupHint()
+    throw new Error(hint ?? 'Tray notifications are not available on this device.')
+  }
   const { configured, publicKey: pub } = await fetchWebPushServerStatus()
   if (!configured || !pub) {
     throw new Error(
@@ -241,4 +254,19 @@ export async function isPushPermissionDenied(): Promise<boolean> {
     return isNativePushPermissionDenied()
   }
   return browserNotificationPermission() === 'denied'
+}
+
+/** Re-subscribe when the service worker reports subscription rotation. */
+export function initWebPushResubscribeListener(): () => void {
+  if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) {
+    return () => undefined
+  }
+  const onMessage = (event: MessageEvent) => {
+    const t = event.data && typeof event.data === 'object' ? (event.data as { type?: string }).type : null
+    if (t !== CRIDORA_PUSH_RESUBSCRIBE_MESSAGE_TYPE) return
+    if (!getStoredAccess() && browserNotificationPermission() !== 'granted') return
+    void registerWebPushSubscription().catch(() => undefined)
+  }
+  navigator.serviceWorker.addEventListener('message', onMessage)
+  return () => navigator.serviceWorker.removeEventListener('message', onMessage)
 }

@@ -324,6 +324,7 @@ export const mlMessages: Record<MessageKey, string> = {
   'auth.loginTrustNote': 'ഉപഭോക്താക്കൾക്കും വെരിഫൈഡ് ജ്വല്ലറികൾക്കും മാത്രമുള്ള സുരക്ഷിത പ്രവേശനം.',
   'auth.email': 'ഇമെയിൽ',
   'auth.password': 'പാസ്‌വേഡ്',
+  'auth.rememberMe': 'എന്നെ ഓർമ്മിക്കുക',
   'auth.signIn': 'സൈൻ ഇൻ',
   'auth.signInFailed': 'സൈൻ ഇൻ പരാജയപ്പെട്ടു',
   'auth.noAccount': 'അക്കൗണ്ട് ഇല്ലേ?',

@@ -14,6 +14,7 @@ export function LoginPage() {
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [rememberMe, setRememberMe] = useState(true)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
 
@@ -27,7 +28,7 @@ export function LoginPage() {
     setError('')
     setBusy(true)
     try {
-      const u = await login(email, password)
+      const u = await login(email, password, rememberMe)
       navigate(dashboardLandingPath(u), { replace: true })
     } catch (err) {
       setError(err instanceof Error ? err.message : t('auth.signInFailed'))
@@ -64,6 +65,14 @@ export function LoginPage() {
             onChange={(e) => setPassword(e.target.value)}
             required
           />
+          <label className="ds-checkbox-row" style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-2)' }}>
+            <input
+              type="checkbox"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+            />
+            <span>{t('auth.rememberMe')}</span>
+          </label>
           {isNativeApiMisconfigured() ? <Feedback>{nativeApiConfigError()}</Feedback> : null}
           {error ? <Feedback>{error}</Feedback> : null}
           {isNativePlatform() && getApiBaseUrl() ? (

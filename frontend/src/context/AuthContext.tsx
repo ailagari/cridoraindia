@@ -12,9 +12,17 @@ import {
   clearTokens,
   getStoredAccess,
   getStoredRefresh,
+  getStoredUserJson,
+  invalidateSession,
+  SESSION_INVALIDATED_EVENT,
+  setAuthPersistence,
   storeTokens,
+  storeUserJson,
 } from '@/lib/api'
-import { claimPushSubscriptionForLoggedInUser } from '@/lib/webPushApi'
+import {
+  claimPushSubscriptionForLoggedInUser,
+  initWebPushResubscribeListener,
+} from '@/lib/webPushApi'
 
 export type UserType = 'customer' | 'jeweller' | 'admin'
 
@@ -33,7 +41,7 @@ export type AuthUser = {
 type AuthContextValue = {
   user: AuthUser | null
   loading: boolean
-  login: (email: string, password: string) => Promise<AuthUser>
+  login: (email: string, password: string, rememberMe?: boolean) => Promise<AuthUser>
   registerCustomer: (
     payload: Record<string, string>,
   ) => Promise<{ user: AuthUser; referralWarning?: string }>
@@ -57,7 +65,7 @@ function extractApiMessage(data: Record<string, unknown>, fallback: string): str
 }
 
 function readStoredUser(): AuthUser | null {
-  const raw = localStorage.getItem('cridora_user')
+  const raw = getStoredUserJson()
   if (!raw) return null
   try {
     const u = JSON.parse(raw) as AuthUser
@@ -73,7 +81,7 @@ function readStoredUser(): AuthUser | null {
 }
 
 function saveUser(u: AuthUser) {
-  localStorage.setItem('cridora_user', JSON.stringify(u))
+  storeUserJson(JSON.stringify(u))
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -85,9 +93,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const cached = readStoredUser()
     if (token && cached) {
       setUser(cached)
+    } else if (!token && cached) {
+      clearTokens()
     }
     setLoading(false)
   }, [])
+
+  useEffect(() => {
+    const onInvalidated = () => setUser(null)
+    window.addEventListener(SESSION_INVALIDATED_EVENT, onInvalidated)
+    return () => window.removeEventListener(SESSION_INVALIDATED_EVENT, onInvalidated)
+  }, [])
+
+  useEffect(() => initWebPushResubscribeListener(), [])
 
   useEffect(() => {
     if (loading) return
@@ -116,7 +134,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const login = useCallback(
-    async (email: string, password: string) => {
+    async (email: string, password: string, rememberMe = true) => {
+      setAuthPersistence(rememberMe ? 'local' : 'session')
       const res = await apiFetch('/api/v1/auth/login/', {
         method: 'POST',
         jsonBody: { email, password },
@@ -136,6 +155,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const registerCustomer = useCallback(
     async (payload: Record<string, string>) => {
+      setAuthPersistence('local')
       const res = await apiFetch('/api/v1/auth/register/', {
         method: 'POST',
         jsonBody: payload,
@@ -159,6 +179,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const registerJeweller = useCallback(
     async (payload: Record<string, string>) => {
+      setAuthPersistence('local')
       const res = await apiFetch('/api/v1/auth/jeweller/apply/', {
         method: 'POST',
         jsonBody: payload,
@@ -176,7 +197,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   )
 
   const logout = useCallback(async () => {
-    const refresh = localStorage.getItem('refresh_token')
+    const refresh = getStoredRefresh()
     const access = getStoredAccess()
     if (refresh && access) {
       await apiFetch('/api/v1/auth/logout/', {
@@ -192,7 +213,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const refreshProfile = useCallback(async () => {
     if (!getStoredAccess()) return
     const res = await authFetch('/api/v1/auth/me/')
-    if (!res.ok) return
+    if (!res.ok) {
+      if (res.status === 401 || !getStoredAccess()) {
+        invalidateSession()
+        setUser(null)
+      }
+      return
+    }
     const data = (await res.json()) as Record<string, unknown>
     const u: AuthUser = {
       id: Number(data.id),

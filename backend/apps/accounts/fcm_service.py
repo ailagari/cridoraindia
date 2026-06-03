@@ -65,16 +65,31 @@ def send_fcm_payload(token: str, payload: dict[str, Any]) -> None:
     messaging.send(message, app=app)
 
 
-def send_fcm_to_user(user, payload: dict[str, Any]) -> int:
+def send_fcm_to_user(
+    user,
+    payload: dict[str, Any],
+    *,
+    notification_id: int | None = None,
+    tag: str = "",
+) -> int:
     if not fcm_configured():
         return 0
-    from .models import NativePushToken
+    from .models import NativePushToken, PushDeliveryAttempt
+    from .services.push_delivery import log_push_attempt
 
     n = 0
+    resolved_tag = tag or str(payload.get("tag") or "")
     for row in NativePushToken.objects.filter(user=user):
         try:
             send_fcm_payload(row.token, payload)
             n += 1
+            log_push_attempt(
+                user=user,
+                channel=PushDeliveryAttempt.CHANNEL_FCM,
+                status=PushDeliveryAttempt.STATUS_SENT,
+                notification_id=notification_id,
+                tag=resolved_tag,
+            )
         except Exception as exc:
             err = str(exc).lower()
             if "not-found" in err or "registration-token-not-registered" in err:
@@ -86,6 +101,14 @@ def send_fcm_to_user(user, payload: dict[str, Any]) -> int:
                     row.platform,
                     exc,
                 )
+            log_push_attempt(
+                user=user,
+                channel=PushDeliveryAttempt.CHANNEL_FCM,
+                status=PushDeliveryAttempt.STATUS_FAILED,
+                notification_id=notification_id,
+                tag=resolved_tag,
+                error_message=str(exc)[:255],
+            )
     return n
 
 
