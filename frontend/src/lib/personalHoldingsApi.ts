@@ -1,4 +1,4 @@
-import { authFetch, apiUrl, getStoredAccess } from '@/lib/api'
+import { authFetch, authUpload, apiUrl, getStoredAccess } from '@/lib/api'
 import type { PortfolioTotalsDTO } from '@/lib/goldTransferApi'
 
 export type { PortfolioTotalsDTO }
@@ -152,6 +152,73 @@ export async function fetchPortfolioLedger(filter: string): Promise<{ entries: P
   const res = await authFetch(`/api/v1/portfolio/ledger/${q}`)
   if (!res.ok) return null
   return (await res.json()) as { entries: PortfolioLedgerEntryDTO[] }
+}
+
+export type InvoiceExtractDTO = {
+  is_legible: true
+  title: string
+  category: string
+  weight_grams: string
+  purity: string
+  purchase_date: string | null
+  purchase_source: string
+  purchase_price_inr_per_gram: string | null
+  invoice_number: string | null
+  confidence: 'high' | 'medium' | 'low'
+}
+
+export async function analyzeInvoice(
+  file: File,
+): Promise<
+  | { ok: true; data: InvoiceExtractDTO }
+  | { ok: false; detail: string; notLegible?: boolean; reason?: string }
+> {
+  const fd = new FormData()
+  fd.set('file', file)
+  const res = await authUpload('/api/v1/portfolio/invoice-import/analyze/', fd)
+  const parsed = await readResponseJson<
+    InvoiceExtractDTO & { detail?: string; reason?: string; is_legible?: boolean }
+  >(res)
+  if (res.status === 422) {
+    const reason =
+      parsed && typeof parsed.reason === 'string' && parsed.reason.trim()
+        ? parsed.reason
+        : 'Photo is not clear enough. Please upload a sharper image.'
+    return { ok: false, notLegible: true, reason, detail: reason }
+  }
+  if (!res.ok) {
+    return { ok: false, detail: parseApiDetail(parsed, 'Could not read invoice.') }
+  }
+  if (!parsed || parsed.is_legible !== true) {
+    return {
+      ok: false,
+      notLegible: true,
+      reason: 'Could not read invoice details.',
+      detail: 'Could not read invoice details.',
+    }
+  }
+  return {
+    ok: true,
+    data: {
+      is_legible: true,
+      title: String(parsed.title ?? '').trim(),
+      category: String(parsed.category ?? 'ornament').trim(),
+      weight_grams: String(parsed.weight_grams ?? '').trim(),
+      purity: String(parsed.purity ?? 'BIS 916').trim() || 'BIS 916',
+      purchase_date: parsed.purchase_date ?? null,
+      purchase_source: String(parsed.purchase_source ?? '').trim(),
+      purchase_price_inr_per_gram:
+        parsed.purchase_price_inr_per_gram != null
+          ? String(parsed.purchase_price_inr_per_gram).trim()
+          : null,
+      invoice_number:
+        parsed.invoice_number != null ? String(parsed.invoice_number).trim() : null,
+      confidence:
+        parsed.confidence === 'high' || parsed.confidence === 'low'
+          ? parsed.confidence
+          : 'medium',
+    },
+  }
 }
 
 export async function createPersonalHolding(body: {

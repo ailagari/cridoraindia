@@ -2,6 +2,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { FormSubmitFoot } from '@/components/ui/FormSubmitFoot'
 import { FileUploadTrigger, type FileUploadTriggerPhase } from '@/components/ui'
 import { fetchVerifiedJewellers, type JewellerStorefrontDTO } from '@/lib/marketplaceApi'
+import { InvoiceImportFlow } from '@/features/portfolio/InvoiceImportFlow'
 import {
   createPersonalHolding,
   deletePersonalDocument,
@@ -130,6 +131,7 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
   const submitInFlightRef = useRef(false)
 
   const [formOpen, setFormOpen] = useState(false)
+  const [invoiceImportOpen, setInvoiceImportOpen] = useState(false)
   const [title, setTitle] = useState('')
   const [category, setCategory] = useState('ornament')
   const [weight, setWeight] = useState('')
@@ -413,6 +415,28 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
         <div className="pf-vault-hero__actions">
           <button
             type="button"
+            className={
+              invoiceImportOpen ? 'pf-vault-hero__cta pf-vault-hero__cta--muted' : 'pf-vault-hero__cta pf-vault-hero__cta--muted'
+            }
+            aria-expanded={invoiceImportOpen}
+            aria-controls="pf-vault-invoice-import"
+            onClick={() => {
+              setInvoiceImportOpen((o) => {
+                const next = !o
+                if (next) {
+                  setFormOpen(false)
+                  setAddFormSuccess('')
+                  setAddFormError('')
+                  setLoadErr('')
+                }
+                return next
+              })
+            }}
+          >
+            {invoiceImportOpen ? 'Close import' : 'Import from invoice'}
+          </button>
+          <button
+            type="button"
             className={formOpen ? 'pf-vault-hero__cta pf-vault-hero__cta--muted' : 'pf-vault-hero__cta'}
             aria-expanded={formOpen}
             aria-controls="pf-vault-add-form"
@@ -420,6 +444,7 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
               setFormOpen((o) => {
                 const next = !o
                 if (next) {
+                  setInvoiceImportOpen(false)
                   setAddFormSuccess('')
                   setAddFormError('')
                   setLoadErr('')
@@ -452,6 +477,15 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
           {loadErr}
         </p>
       ) : null}
+      <InvoiceImportFlow
+        open={invoiceImportOpen}
+        onClose={() => setInvoiceImportOpen(false)}
+        jewellers={approvedJewellers}
+        onCreated={async (holding) => {
+          setInvoiceImportOpen(false)
+          await finishAddSuccess(holding.title, holding.id)
+        }}
+      />
       {formOpen ? (
         <form
           className="pf-vault-form"

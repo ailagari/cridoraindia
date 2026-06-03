@@ -182,6 +182,7 @@ from .views_push import (
     WebPushUnsubscribeView,
     WebPushVapidPublicKeyView,
 )
+from .invoice_import_views import InvoiceImportAnalyzeView
 from .views_personal_portfolio import (
     AdminPersonalDocumentRemoveView,
     AdminPersonalHoldingRemoveView,
@@ -238,6 +239,7 @@ urlpatterns = [
     path("portfolio/active-ledger/", CustomerActiveGoldLedgerView.as_view()),
     path("portfolio/notifications/", PortfolioUserNotificationsListView.as_view()),
     path("portfolio/notifications/mark-read/", PortfolioUserNotificationsMarkReadView.as_view()),
+    path("portfolio/invoice-import/analyze/", InvoiceImportAnalyzeView.as_view()),
     path("portfolio/personal-holdings/", PersonalHoldingsListCreateView.as_view()),
     path("portfolio/personal-holdings/documents/", PersonalVaultDocumentsListView.as_view()),
     path("portfolio/personal-holdings/<int:pk>/", PersonalHoldingDetailView.as_view()),

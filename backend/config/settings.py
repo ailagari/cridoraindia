@@ -227,6 +227,9 @@ PERSONAL_HOLDING_MAX_UPLOAD_BYTES = int(
     os.environ.get("PERSONAL_HOLDING_MAX_UPLOAD_BYTES", str(8 * 1024 * 1024))
 )
 
+# Smart Gold Invoice Import (Gemini Vision).
+GEMINI_API_KEY = (os.environ.get("GEMINI_API_KEY") or "").strip()
+
 # Web Push (VAPID). Generate keys: python manage.py generate_vapid_keys
 WEB_PUSH_VAPID_PUBLIC_KEY = (os.environ.get("WEB_PUSH_VAPID_PUBLIC_KEY") or "").strip()
 WEB_PUSH_VAPID_PRIVATE_KEY = (os.environ.get("WEB_PUSH_VAPID_PRIVATE_KEY") or "").strip()
