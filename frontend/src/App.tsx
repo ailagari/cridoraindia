@@ -2,6 +2,7 @@ import { BrowserRouter, HashRouter, Navigate, Route, Routes } from 'react-router
 import { ScrollToTop } from '@/components/ScrollToTop'
 import { AuthProvider } from '@/context/AuthContext'
 import { ThemeProvider } from '@/context/ThemeContext'
+import { ToastProvider } from '@/context/ToastContext'
 import { PublicLayout } from '@/components/PublicLayout'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { HomePage } from '@/pages/HomePage'
@@ -52,6 +53,7 @@ export default function App() {
       <ScrollToTop />
       <NativeNotificationBridge />
       <ThemeProvider>
+        <ToastProvider>
         <AuthProvider>
           <NativeAppSplash />
           <NativeAppEntryRoute />
@@ -113,6 +115,7 @@ export default function App() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </AuthProvider>
+        </ToastProvider>
       </ThemeProvider>
     </AppRouter>
   )

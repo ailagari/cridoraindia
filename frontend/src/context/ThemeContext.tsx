@@ -16,7 +16,7 @@ function readStoredTheme(): ThemeMode {
 }
 
 function metaThemeColors(mode: ThemeMode): string {
-  return mode === 'dark' ? '#07090f' : '#f5f3ee'
+  return mode === 'dark' ? '#07090f' : '#f1f5f9'
 }
 
 function applyTheme(mode: ThemeMode): void {
