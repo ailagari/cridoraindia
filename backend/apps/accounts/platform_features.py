@@ -17,6 +17,7 @@ FEATURE_DEFINITIONS: tuple[dict[str, Any], ...] = (
         "default": True,
         "customer_sections": ("shop_jewellers", "shop_products"),
         "jeweller_sections": (),
+        "admin_sections": ("mkt_products",),
     },
     {
         "key": "fractional_purchase",
@@ -25,6 +26,7 @@ FEATURE_DEFINITIONS: tuple[dict[str, Any], ...] = (
         "default": True,
         "customer_sections": ("invest_fractional",),
         "jeweller_sections": ("txn_purchases",),
+        "admin_sections": ("plat_control",),
     },
     {
         "key": "fractional_upi_reconciliation",
@@ -33,6 +35,7 @@ FEATURE_DEFINITIONS: tuple[dict[str, Any], ...] = (
         "default": True,
         "customer_sections": (),
         "jeweller_sections": (),
+        "admin_sections": (),
     },
     {
         "key": "fractional_counter",
@@ -41,6 +44,7 @@ FEATURE_DEFINITIONS: tuple[dict[str, Any], ...] = (
         "default": True,
         "customer_sections": (),
         "jeweller_sections": (),
+        "admin_sections": (),
     },
     {
         "key": "gold_deposit",
@@ -49,6 +53,7 @@ FEATURE_DEFINITIONS: tuple[dict[str, Any], ...] = (
         "default": True,
         "customer_sections": ("invest_deposit",),
         "jeweller_sections": ("txn_deposits",),
+        "admin_sections": (),
     },
     {
         "key": "corridorapay",
@@ -57,6 +62,7 @@ FEATURE_DEFINITIONS: tuple[dict[str, Any], ...] = (
         "default": True,
         "customer_sections": ("invest_cridorapay",),
         "jeweller_sections": ("txn_cridorapay",),
+        "admin_sections": (),
     },
     {
         "key": "golden_scheme",
@@ -65,6 +71,7 @@ FEATURE_DEFINITIONS: tuple[dict[str, Any], ...] = (
         "default": False,
         "customer_sections": ("invest_scheme",),
         "jeweller_sections": (),
+        "admin_sections": ("mkt_programs",),
     },
     {
         "key": "sellback_cash",
@@ -73,6 +80,7 @@ FEATURE_DEFINITIONS: tuple[dict[str, Any], ...] = (
         "default": True,
         "customer_sections": ("redeem_cash",),
         "jeweller_sections": ("txn_ops",),
+        "admin_sections": (),
     },
     {
         "key": "sellback_upi",
@@ -81,6 +89,7 @@ FEATURE_DEFINITIONS: tuple[dict[str, Any], ...] = (
         "default": False,
         "customer_sections": (),
         "jeweller_sections": ("txn_ops",),
+        "admin_sections": (),
     },
     {
         "key": "gold_transfer",
@@ -89,6 +98,7 @@ FEATURE_DEFINITIONS: tuple[dict[str, Any], ...] = (
         "default": True,
         "customer_sections": ("redeem_transfer",),
         "jeweller_sections": ("txn_transfers",),
+        "admin_sections": (),
     },
     {
         "key": "gold_loan",
@@ -97,6 +107,7 @@ FEATURE_DEFINITIONS: tuple[dict[str, Any], ...] = (
         "default": True,
         "customer_sections": ("redeem_loan",),
         "jeweller_sections": ("txn_loans",),
+        "admin_sections": (),
     },
     {
         "key": "loan_repayment_upi",
@@ -105,6 +116,7 @@ FEATURE_DEFINITIONS: tuple[dict[str, Any], ...] = (
         "default": True,
         "customer_sections": (),
         "jeweller_sections": (),
+        "admin_sections": (),
     },
     {
         "key": "cross_redemption",
@@ -113,6 +125,7 @@ FEATURE_DEFINITIONS: tuple[dict[str, Any], ...] = (
         "default": True,
         "customer_sections": ("redeem_emergency",),
         "jeweller_sections": ("txn_ops",),
+        "admin_sections": (),
     },
     {
         "key": "marketplace_redemption",
@@ -121,6 +134,7 @@ FEATURE_DEFINITIONS: tuple[dict[str, Any], ...] = (
         "default": True,
         "customer_sections": (),
         "jeweller_sections": ("txn_ops",),
+        "admin_sections": (),
     },
 )
 
@@ -179,6 +193,14 @@ def jeweller_section_enabled(section_key: str, flags: dict[str, bool] | None = N
     flags = flags or effective_feature_flags()
     for d in FEATURE_DEFINITIONS:
         if section_key in d.get("jeweller_sections", ()) and flags.get(d["key"], d["default"]):
+            return True
+    return False
+
+
+def admin_section_enabled(section_key: str, flags: dict[str, bool] | None = None) -> bool:
+    flags = flags or effective_feature_flags()
+    for d in FEATURE_DEFINITIONS:
+        if section_key in d.get("admin_sections", ()) and flags.get(d["key"], d["default"]):
             return True
     return False
 

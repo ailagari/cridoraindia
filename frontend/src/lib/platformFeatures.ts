@@ -5,6 +5,7 @@ export type PlatformFeaturesPayload = {
   flags: Record<string, boolean>
   customer_sections: Record<string, boolean>
   jeweller_sections: Record<string, boolean>
+  admin_sections: Record<string, boolean>
 }
 
 export type FeatureCatalogItem = {
@@ -26,6 +27,7 @@ export async function fetchPlatformFeatures(force = false): Promise<PlatformFeat
     flags: data.flags,
     customer_sections: data.customer_sections ?? {},
     jeweller_sections: data.jeweller_sections ?? {},
+    admin_sections: data.admin_sections ?? {},
   }
   return cached
 }
@@ -59,6 +61,19 @@ export function filterCustomerNav(
 }
 
 export function filterJewellerNav(
+  groups: DashboardNavGroup[],
+  sections: Record<string, boolean> | undefined,
+): DashboardNavGroup[] {
+  if (!sections) return groups
+  return groups
+    .map((g) => ({
+      ...g,
+      items: g.items.filter((i) => sections[i.sectionKey] !== false),
+    }))
+    .filter((g) => g.items.length > 0)
+}
+
+export function filterAdminNav(
   groups: DashboardNavGroup[],
   sections: Record<string, boolean> | undefined,
 ): DashboardNavGroup[] {

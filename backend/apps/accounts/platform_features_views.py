@@ -5,6 +5,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .platform_features import (
+    admin_section_enabled,
     customer_section_enabled,
     effective_feature_flags,
     feature_catalog_for_admin,
@@ -32,6 +33,10 @@ class PlatformFeaturesView(APIView):
                     section: jeweller_section_enabled(section, flags)
                     for section in _all_jeweller_sections()
                 },
+                "admin_sections": {
+                    section: admin_section_enabled(section, flags)
+                    for section in _all_admin_sections()
+                },
             }
         )
 
@@ -51,6 +56,15 @@ def _all_jeweller_sections() -> tuple[str, ...]:
 
     for d in FEATURE_DEFINITIONS:
         sections.update(d.get("jeweller_sections", ()))
+    return tuple(sorted(sections))
+
+
+def _all_admin_sections() -> tuple[str, ...]:
+    sections: set[str] = set()
+    from .platform_features import FEATURE_DEFINITIONS
+
+    for d in FEATURE_DEFINITIONS:
+        sections.update(d.get("admin_sections", ()))
     return tuple(sorted(sections))
 
 

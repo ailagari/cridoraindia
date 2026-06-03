@@ -19,6 +19,11 @@ import { TablePagination } from '@/components/ui'
 import { useTablePagination } from '@/hooks/useTablePagination'
 
 import { ADMIN_DEFAULT_SECTION, ADMIN_NAV_GROUPS, normalizeAdminSection } from '@/lib/mobileNav/adminNav'
+import {
+  fetchPlatformFeatures,
+  filterAdminNav,
+  type PlatformFeaturesPayload,
+} from '@/lib/platformFeatures'
 
 function adminTitle(section: string): string {
   const item = ADMIN_NAV_GROUPS.flatMap((g) => g.items).find((i) => i.sectionKey === section)
@@ -292,6 +297,19 @@ export function AdminDashboardPage() {
     else if (!n) setParams({}, { replace: true })
   }, [rawSection, setParams])
 
+  const [features, setFeatures] = useState<PlatformFeaturesPayload | null>(null)
+
+  useEffect(() => {
+    void fetchPlatformFeatures().then(setFeatures)
+  }, [])
+
+  useEffect(() => {
+    if (!features?.admin_sections) return
+    if (features.admin_sections[active] === false) {
+      setSection(ADMIN_DEFAULT_SECTION)
+    }
+  }, [features, active, setSection])
+
   const head = useMemo(() => adminTitle(active), [active])
   const [data, setData] = useState<OverviewPayload | null>(null)
   const [loadError, setLoadError] = useState('')
@@ -467,20 +485,24 @@ export function AdminDashboardPage() {
   )
 
   const adminNavGroups = useMemo(() => {
-    if (!data?.stats) return ADMIN_NAV_GROUPS
-    const kyc = data.stats.kyc_review_queue_count ?? 0
-    const kyb = data.stats.kyb_review_queue_count ?? 0
-    const queueTotal = kyc + kyb
-    return ADMIN_NAV_GROUPS.map((group) => ({
-      ...group,
-      items: group.items.map((item) => {
-        if (item.sectionKey === 'users_kyc_kyb' && queueTotal > 0) {
-          return { ...item, badge: queueTotal }
-        }
-        return { ...item }
-      }),
-    }))
-  }, [data])
+    const base = !data?.stats
+      ? ADMIN_NAV_GROUPS
+      : ADMIN_NAV_GROUPS.map((group) => {
+          const kyc = data.stats.kyc_review_queue_count ?? 0
+          const kyb = data.stats.kyb_review_queue_count ?? 0
+          const queueTotal = kyc + kyb
+          return {
+            ...group,
+            items: group.items.map((item) => {
+              if (item.sectionKey === 'users_kyc_kyb' && queueTotal > 0) {
+                return { ...item, badge: queueTotal }
+              }
+              return { ...item }
+            }),
+          }
+        })
+    return filterAdminNav(base, features?.admin_sections)
+  }, [data, features])
 
   const runFreeze = useCallback(
     async (userId: number, freeze: boolean) => {
