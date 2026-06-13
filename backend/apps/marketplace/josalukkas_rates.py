@@ -141,6 +141,23 @@ def _db_stale_payload() -> dict | None:
     return latest_board_rates_payload(source_prefix="kerala_gold")
 
 
+def _enrich_payload_silver(payload: dict) -> dict:
+    silver = payload.get("silver") if isinstance(payload.get("silver"), dict) else {}
+    if silver.get("999") is not None:
+        return payload
+    try:
+        from .spot_prices import _build_intl_spot_inr_from_feed
+
+        intl = _build_intl_spot_inr_from_feed()
+        if intl and isinstance(intl.get("silver"), dict) and intl["silver"].get("999"):
+            merged = dict(payload)
+            merged["silver"] = {**silver, "999": intl["silver"]["999"]}
+            return merged
+    except Exception:
+        pass
+    return payload
+
+
 def _should_fetch_remote(now_ts: float) -> bool:
     last_fetch = cache.get(_CACHE_KEY_LAST_FETCH_TS)
     if last_fetch is None:
@@ -152,6 +169,7 @@ def _should_fetch_remote(now_ts: float) -> bool:
 
 
 def _store_payload(payload: dict, *, fingerprint: str) -> None:
+    payload = _enrich_payload_silver(payload)
     cache.set(_CACHE_KEY, payload, timeout=_CACHE_TTL)
     cache.set(_CACHE_KEY_LAST_GOOD, payload, timeout=_CACHE_TTL_LAST_GOOD)
     cache.set(_CACHE_KEY_FINGERPRINT, fingerprint, timeout=_CACHE_TTL_LAST_GOOD)

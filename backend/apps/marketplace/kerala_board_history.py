@@ -130,6 +130,12 @@ def record_kerala_board_rates(payload: dict) -> None:
     )
     cache.set(_DEBOUNCE_KEY, (now_ts, k22_f), 3600)
     _record_daily(k22=k22, k18=k18, k24=k24, silver=silver, src=src, board_date=board_date)
+    try:
+        from .goodreturns_kerala_rates import maybe_backfill_kerala_history
+
+        maybe_backfill_kerala_history()
+    except Exception:
+        pass
 
 
 def _record_daily(
@@ -158,6 +164,8 @@ def _record_daily(
         },
     )
     if created:
+        _upsert_kerala_gold_rate_daily(row)
+        _maybe_prune_old_rows()
         return
     row.high_inr_22k = max(row.high_inr_22k, k22)
     row.low_inr_22k = min(row.low_inr_22k, k22)
@@ -237,6 +245,16 @@ def _intraday_value_for_metal(row: AkgsmaBoardRateHistory, metal: str) -> Decima
     return row.inr_per_gram_22k
 
 
+def _kerala_daily_value(row: KeralaGoldRateDaily, metal: str) -> Decimal | None:
+    if metal == "18K":
+        return row.inr_per_gram_18k
+    if metal == "24K":
+        return row.inr_per_gram_24k
+    if metal == "silver999":
+        return row.silver_999_inr
+    return row.inr_per_gram_22k
+
+
 def fetch_board_history_payload(*, range_key: str, metal: str = "22K", max_points: int = 900) -> dict[str, Any]:
     rk = normalize_board_range_param(range_key)
     mk = normalize_board_metal_param(metal)
@@ -273,27 +291,26 @@ def fetch_board_history_payload(*, range_key: str, metal: str = "22K", max_point
         }
 
     start_day = timezone.localdate() - window
-    qs = AkgsmaBoardDailySnapshot.objects.filter(snapshot_date__gte=start_day).order_by("snapshot_date")
+    qs = KeralaGoldRateDaily.objects.filter(rate_date__gte=start_day).order_by("rate_date")
     rows = list(qs)
     if len(rows) > max_points:
         step = int(math.ceil(len(rows) / max_points))
         rows = rows[::step]
     points = []
     for r in rows:
-        val = _daily_value_for_metal(r, mk)
+        val = _kerala_daily_value(r, mk)
         if val is None:
             continue
-        points.append(
-            {
-                "t": r.snapshot_date.isoformat(),
-                "v": str(val.quantize(Decimal("0.01"))),
-                "open": str(r.open_inr_22k.quantize(Decimal("0.01"))) if mk == "22K" else None,
-                "high": str(r.high_inr_22k.quantize(Decimal("0.01"))) if mk == "22K" else None,
-                "low": str(r.low_inr_22k.quantize(Decimal("0.01"))) if mk == "22K" else None,
-                "change_inr": None,
-                "change_pct": None,
-            }
-        )
+        pt: dict[str, Any] = {
+            "t": r.rate_date.isoformat(),
+            "v": str(val.quantize(Decimal("0.01"))),
+        }
+        snap = AkgsmaBoardDailySnapshot.objects.filter(snapshot_date=r.rate_date).first()
+        if snap and mk == "22K":
+            pt["open"] = str(snap.open_inr_22k.quantize(Decimal("0.01")))
+            pt["high"] = str(snap.high_inr_22k.quantize(Decimal("0.01")))
+            pt["low"] = str(snap.low_inr_22k.quantize(Decimal("0.01")))
+        points.append(pt)
     for i in range(1, len(points)):
         try:
             prev = Decimal(points[i - 1]["v"])
@@ -311,7 +328,7 @@ def fetch_board_history_payload(*, range_key: str, metal: str = "22K", max_point
         "metal": mk,
         "granularity": "daily",
         "retention_days": _RETENTION_DAYS,
-        "note": "Daily Kerala board close ₹/g — up to 2 years on record.",
+        "note": "Daily Kerala gold/silver close ₹/g — up to 2 years stored; today updates with live ticker.",
         "points": [{k: v for k, v in pt.items() if v is not None} for pt in points],
     }
 

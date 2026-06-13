@@ -140,8 +140,21 @@ export function GoldRatesPage() {
   const [calcMc, setCalcMc] = useState('0')
 
   const loadRates = useCallback(() => {
-    void fetchKeralaGoldRates().then(setRates)
-  }, [])
+    void fetchKeralaGoldRates().then((payload) => {
+      setRates((prev) => {
+        const prev22 = prev?.gold?.['22K']
+        const next22 = payload?.gold?.['22K']
+        if (prev22 != null && next22 != null && Math.abs(prev22 - next22) > 0.005) {
+          void fetchKeralaGoldRatesHistory(historyRange, chartMetal).then(setHistory)
+        }
+        return payload
+      })
+    })
+  }, [historyRange, chartMetal])
+
+  const refreshHistory = useCallback(() => {
+    void fetchKeralaGoldRatesHistory(historyRange, chartMetal).then(setHistory)
+  }, [historyRange, chartMetal])
 
   useEffect(() => {
     void fetchGoldRatesAds().then(setAds)
@@ -159,8 +172,15 @@ export function GoldRatesPage() {
   }, [ads, t])
 
   useEffect(() => {
-    void fetchKeralaGoldRatesHistory(historyRange, chartMetal).then(setHistory)
-  }, [historyRange, chartMetal])
+    refreshHistory()
+  }, [refreshHistory])
+
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      refreshHistory()
+    }, LIVE_PRICE_POLL_MS)
+    return () => window.clearInterval(id)
+  }, [refreshHistory])
 
   const loadDaily = useCallback(async (append: boolean) => {
     setDailyLoading(true)

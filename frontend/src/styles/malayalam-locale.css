@@ -36,10 +36,10 @@ html[lang='ml'] .public-bottom-item {
 }
 
 html[lang='ml'] .pub-ref .nav-link {
-  font-size: 0.68rem;
+  font-size: 0.58rem;
   font-weight: 600;
-  letter-spacing: 0.14em;
-  padding: 0.2rem 0;
+  letter-spacing: 0.1em;
+  padding: 4px 5px;
 }
 
 html[lang='ml'] .pub-ref .btn.btn-ghost {

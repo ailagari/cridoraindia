@@ -115,6 +115,13 @@ class MarketplaceKeralaGoldRatesHistoryView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
+        try:
+            from .goodreturns_kerala_rates import maybe_backfill_kerala_history
+
+            maybe_backfill_kerala_history()
+        except Exception:
+            pass
+
         raw_range = (request.query_params.get("range") or "1m").strip()
         raw_metal = (request.query_params.get("metal") or "22K").strip()
         body = fetch_board_history_payload(

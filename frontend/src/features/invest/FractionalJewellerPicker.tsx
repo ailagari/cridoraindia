@@ -84,15 +84,19 @@ export function FractionalJewellerPicker({
   const listboxId = `fractional-jeweller-suggest-${uid}`
   const rootRef = useRef<HTMLDivElement>(null)
 
-  const isReturning = knownJewellers.length > 0
-  const [changeOpen, setChangeOpen] = useState(!isReturning)
+  const isReturning = knownJewellers.length > 0 || defaultKnownJewellerId != null
+  const [changeOpen, setChangeOpen] = useState(() => jewellerId === '')
   const [searchQuery, setSearchQuery] = useState('')
   const [suggestOpen, setSuggestOpen] = useState(false)
   const [activeIndex, setActiveIndex] = useState(-1)
 
   useEffect(() => {
+    if (jewellerId !== '') {
+      setChangeOpen(false)
+      return
+    }
     if (!isReturning) setChangeOpen(true)
-  }, [isReturning])
+  }, [isReturning, jewellerId])
 
   const suggestions = useMemo(
     () => filterVerifiedJewellersByQuery(allJewellers, searchQuery),
@@ -301,7 +305,7 @@ export function FractionalJewellerPicker({
                 pickJeweller(defaultKnownJewellerId)
               }}
             >
-              Use last paid jeweller
+              Use primary jeweller
             </Button>
           ) : null}
         </div>

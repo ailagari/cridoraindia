@@ -289,8 +289,10 @@ def compare_loan_offers(
         offers.append(row)
 
     offers.sort(
-        key=lambda o: Decimal(o["net_disbursement_inr"]),
-        reverse=True,
+        key=lambda o: (
+            o.get("is_primary_custodian") != "true",
+            -Decimal(o["net_disbursement_inr"]),
+        ),
     )
 
     eligible_offers = [o for o in offers if o["eligible_for_request"] == "true"]

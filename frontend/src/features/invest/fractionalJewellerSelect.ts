@@ -9,6 +9,12 @@ export type FractionalJewellerOption = {
   state: string
 }
 
+/** Customer primary jeweller from wallet (set at onboarding or in settings). */
+export function customerDefaultJewellerId(wallet: GoldWalletDTO | null): number | null {
+  const id = wallet?.default_jeweller_id
+  return id != null && id > 0 ? id : null
+}
+
 export function jewellerOptionLabel(j: Pick<FractionalJewellerOption, 'business_name' | 'city' | 'state'>): string {
   const name = j.business_name.trim()
   const city = j.city.trim()
@@ -39,12 +45,14 @@ export function filterVerifiedJewellersByQuery(
   return matches.sort((a, b) => jewellerOptionLabel(a).localeCompare(jewellerOptionLabel(b), 'en')).slice(0, limit)
 }
 
-/** Jeweller IDs where the customer has completed fractional purchases or holds fractional vault gold. */
+/** Jeweller IDs for quick-pick chips: primary jeweller plus prior fractional custodians. */
 export function knownFractionalJewellerIds(
   orders: FractionalPurchaseDTO[],
   wallet: GoldWalletDTO | null,
 ): number[] {
   const ids = new Set<number>()
+  const defaultId = customerDefaultJewellerId(wallet)
+  if (defaultId != null) ids.add(defaultId)
   for (const o of orders) {
     if (o.status === 'completed' && o.jeweller.id > 0) {
       ids.add(o.jeweller.id)
@@ -97,21 +105,54 @@ export function resolveKnownFractionalJewellers(
   return out
 }
 
-/** Primary default jeweller, else last completed order, else single known custodian. */
+/** Primary jeweller by default; fallbacks only when primary is unset. */
 export function preferredPaidFractionalJewellerId(
   orders: FractionalPurchaseDTO[],
   wallet: GoldWalletDTO | null,
   knownIds: number[],
 ): number | null {
+  const defaultId = customerDefaultJewellerId(wallet)
+  if (defaultId != null) return defaultId
   const known = new Set(knownIds)
-  const defaultId = wallet?.default_jeweller_id
-  if (defaultId != null && defaultId > 0) return defaultId
   const completed = orders
     .filter((o) => o.status === 'completed' && known.has(o.jeweller.id))
     .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at))
   if (completed[0]) return completed[0].jeweller.id
   if (knownIds.length === 1) return knownIds[0]
   return knownIds[0] ?? null
+}
+
+type LoanOfferPick = {
+  jeweller_id: string
+  eligible_for_request: string
+  is_primary_custodian?: string
+}
+
+/** Prefer primary custodian among eligible loan offers, else first eligible. */
+export function pickPreferredLoanOffer<T extends LoanOfferPick>(
+  offers: T[],
+  defaultJewellerId: number | null,
+): T | null {
+  const eligible = offers.filter((o) => o.eligible_for_request === 'true')
+  if (eligible.length === 0) return null
+  if (defaultJewellerId != null) {
+    const fromDefault = eligible.find((o) => Number.parseInt(o.jeweller_id, 10) === defaultJewellerId)
+    if (fromDefault) return fromDefault
+  }
+  const primary = eligible.find((o) => o.is_primary_custodian === 'true')
+  if (primary) return primary
+  return eligible[0]
+}
+
+/** Prefer primary vault custodian when customer holds gold at multiple jewellers. */
+export function preferredVaultCustodianId(
+  wallet: GoldWalletDTO | null,
+  custodianIds: number[],
+): number | null {
+  const defaultId = customerDefaultJewellerId(wallet)
+  if (defaultId != null && custodianIds.includes(defaultId)) return defaultId
+  if (custodianIds.length === 1) return custodianIds[0]
+  return custodianIds[0] ?? null
 }
 
 export function parseJewellerIdFromUrl(raw: string | null): number | null {

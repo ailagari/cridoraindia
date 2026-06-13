@@ -18,6 +18,11 @@ import {
   type GoldLoanQuoteDTO,
   type GoldLoanVaultRateDTO,
 } from '@/lib/goldLoanApi'
+import { fetchGoldWallet, type GoldWalletDTO } from '@/lib/goldTransferApi'
+import {
+  customerDefaultJewellerId,
+  pickPreferredLoanOffer,
+} from '@/features/invest/fractionalJewellerSelect'
 import { LIVE_BALANCE_POLL_MS } from '@/lib/liveDeskIntervals'
 import { useLivePoll } from '@/lib/useLivePoll'
 import { fetchPlatformFeatures, isFeatureEnabled } from '@/lib/platformFeatures'
@@ -40,6 +45,7 @@ function eligibleOffers(data: GoldLoanCompareDTO): GoldLoanOfferDTO[] {
 }
 
 export function CustomerGoldLoanPanel() {
+  const [wallet, setWallet] = useState<GoldWalletDTO | null>(null)
   const [vaultRates, setVaultRates] = useState<GoldLoanVaultRateDTO[]>([])
   const [gramsInput, setGramsInput] = useState('')
   const [compare, setCompare] = useState<GoldLoanCompareDTO | null>(null)
@@ -73,6 +79,7 @@ export function CustomerGoldLoanPanel() {
 
   useEffect(() => {
     void fetchPlatformFeatures().then((p) => setFeatureFlags(p?.flags ?? null))
+    void fetchGoldWallet().then(setWallet)
   }, [])
 
   function loanStatusHint(st: string): string {
@@ -144,16 +151,15 @@ export function CustomerGoldLoanPanel() {
         setSelectedJewellerId(null)
         return
       }
-      if (data.skip_compare === 'true' && data.auto_selected_jeweller_id) {
-        const jid = Number.parseInt(data.auto_selected_jeweller_id, 10)
-        await runQuote(jid, data.grams)
+      const preferred = pickPreferredLoanOffer(eligible, customerDefaultJewellerId(wallet))
+      if (preferred) {
+        await runQuote(Number.parseInt(preferred.jeweller_id, 10), data.grams)
         return
       }
-      const first = eligible[0]
-      setSelectedJewellerId(Number.parseInt(first.jeweller_id, 10))
+      setSelectedJewellerId(null)
       setQuote(null)
     },
-    [runQuote],
+    [runQuote, wallet],
   )
 
   const runCompare = useCallback(

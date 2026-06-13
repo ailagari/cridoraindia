@@ -134,6 +134,33 @@ class GoldLoanQuoteTests(TestCase):
         self.assertEqual(rows[0]["loan_available"], "true")
         self.assertGreater(Decimal(rows[0]["net_loan_inr_per_gram"]), Decimal("0"))
 
+    def test_compare_lists_primary_jeweller_before_higher_ltv_secondary(self):
+        secondary = User.objects.create_user(
+            username="loan-j-sec",
+            email="loan-j-sec@test.com",
+            password="x",
+            user_type=User.JEWELLER,
+            kyc_status=User.KYC_VERIFIED,
+            business_name="Secondary Jeweller",
+        )
+        sec_profile = jeweller_profile_for(secondary)
+        sec_profile.feat_loan_available = True
+        sec_profile.gold_loan_ltv_percent = Decimal("99")
+        sec_profile.save()
+        ensure_vault(self.customer, secondary)
+        credit_customer_fractional(self.customer, secondary, Decimal("10"))
+
+        self.customer.default_jeweller = self.jeweller
+        self.customer.save(update_fields=["default_jeweller"])
+
+        payload, err = compare_loan_offers(self.customer, grams=Decimal("10"))
+        self.assertIsNone(err)
+        assert payload is not None
+        eligible = [o for o in payload["offers"] if o["eligible_for_request"] == "true"]
+        self.assertEqual(len(eligible), 2)
+        self.assertEqual(eligible[0]["jeweller_id"], str(self.jeweller.id))
+        self.assertEqual(eligible[0]["is_primary_custodian"], "true")
+
 
 class GoldLoanLockRepayTests(TestCase):
     def setUp(self):

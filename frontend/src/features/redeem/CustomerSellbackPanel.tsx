@@ -16,7 +16,7 @@ import { UpiProofReviewActions } from '@/features/upi/UpiProofReviewActions'
 import { LIVE_BALANCE_POLL_MS } from '@/lib/liveDeskIntervals'
 import { useLivePoll } from '@/lib/useLivePoll'
 import { fetchPlatformFeatures, isFeatureEnabled } from '@/lib/platformFeatures'
-import { MobileDashboardCancelButton } from '@/features/dashboard/MobileDashboardCancelButton'
+import { preferredVaultCustodianId } from '@/features/invest/fractionalJewellerSelect'
 
 function parseG(s: string): number {
   const n = Number.parseFloat(s)
@@ -131,8 +131,10 @@ export function CustomerSellbackPanel() {
   useEffect(() => {
     if (jewellerId != null) return
     if (vaultOpts.length === 0) return
-    setJewellerId(vaultOpts[0].custodian_id)
-  }, [vaultOpts, jewellerId])
+    const ids = vaultOpts.map((v) => v.custodian_id)
+    const preferred = preferredVaultCustodianId(wallet, ids)
+    if (preferred != null) setJewellerId(preferred)
+  }, [vaultOpts, jewellerId, wallet])
 
   const selectedVault = useMemo(() => {
     if (jewellerId == null) return undefined
