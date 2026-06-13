@@ -52,7 +52,7 @@ export function GoldRatesAdSlot({ placement, adsenseClientId, adsenseEnabled, cl
 
   useEffect(() => {
     if (!adsenseEnabled || !adsenseClientId) return
-    if (document.querySelector('script[data-cridora-adsense]')) return
+    if (document.querySelector('script[src*="pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"]')) return
     const script = document.createElement('script')
     script.async = true
     script.crossOrigin = 'anonymous'
