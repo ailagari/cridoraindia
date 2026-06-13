@@ -1,6 +1,6 @@
 import { apiFetch, authFetch, getStoredAccess } from '@/lib/api'
-import { readStoredPublicLocale } from '@/i18n/engine'
-import { CRIDORA_PUSH_RESUBSCRIBE_MESSAGE_TYPE } from '@/lib/cridoraSwMessages'
+import { readStoredPublicLocale, translate } from '@/i18n/engine'
+import { CRIDORA_PUSH_RESUBSCRIBE_MESSAGE_TYPE, CRIDORA_SHOW_LOCAL_TRAY_MESSAGE_TYPE } from '@/lib/cridoraSwMessages'
 import {
   claimNativePushForLoggedInUser,
   getNativePushActive,
@@ -10,6 +10,7 @@ import {
   nativePushSetupHint,
   openNativeNotificationSettings,
   registerNativePushSubscription,
+  showTrayNotification,
 } from '@/lib/nativeNotifications'
 
 export { openNativeNotificationSettings }
@@ -168,9 +169,67 @@ async function refreshServiceWorkerRegistration(): Promise<ServiceWorkerRegistra
   return navigator.serviceWorker.ready
 }
 
-export async function registerWebPushSubscription(): Promise<void> {
+/** Show a one-time confirmation in the OS notification tray after the user enables alerts. */
+export async function showTrayWelcomeNotification(): Promise<void> {
+  const locale = readStoredPublicLocale()
+  const title = translate(locale, 'notifications.trayWelcomeTitle')
+  const body = translate(locale, 'notifications.trayWelcomeBody')
+  const tag = 'cridora-tray-welcome'
+
+  if (nativePushNotificationsSupported()) {
+    await showTrayNotification({
+      id: `welcome-${Date.now()}`,
+      title,
+      body,
+      link_path: '/',
+    })
+    return
+  }
+
+  if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return
+  if (browserNotificationPermission() !== 'granted') return
+
+  const reg = await refreshServiceWorkerRegistration()
+  const iconHref = new URL('/icon-192.png', window.location.origin).href
+  const notifyOpts = {
+    body,
+    icon: iconHref,
+    badge: iconHref,
+    tag,
+    vibrate: [120, 60, 120],
+    data: { url: '/', tag },
+  } as NotificationOptions
+
+  try {
+    await reg.showNotification(title, notifyOpts)
+    return
+  } catch {
+    /* iOS installed PWA often requires the service worker context */
+  }
+
+  const controller = navigator.serviceWorker.controller
+  if (controller) {
+    controller.postMessage({
+      type: CRIDORA_SHOW_LOCAL_TRAY_MESSAGE_TYPE,
+      title,
+      body,
+      tag,
+      url: '/',
+    })
+  }
+}
+
+type RegisterPushOptions = {
+  /** When true, shows a confirmation alert in the device tray after subscribe succeeds. */
+  confirmTray?: boolean
+}
+
+export async function registerWebPushSubscription(options?: RegisterPushOptions): Promise<void> {
   if (nativePushNotificationsSupported()) {
     await registerNativePushSubscription()
+    if (options?.confirmTray) {
+      await showTrayWelcomeNotification()
+    }
     return
   }
   if (!canSubscribeWebPush()) {
@@ -204,6 +263,9 @@ export async function registerWebPushSubscription(): Promise<void> {
   if (!res.ok) {
     const err = (await res.json().catch(() => ({}))) as { detail?: string }
     throw new Error(err.detail ?? `Subscribe failed (${res.status})`)
+  }
+  if (options?.confirmTray) {
+    await showTrayWelcomeNotification()
   }
 }
 

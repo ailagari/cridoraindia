@@ -8087,7 +8087,8 @@ select.input {
 
 @media (max-width: 960px) {
   .public-bottom-nav ~ .push-activation-bar,
-  body:has(.public-bottom-nav) .push-activation-bar {
+  body:has(.public-bottom-nav) .push-activation-bar,
+  body:has(.dash-bottom-nav) .push-activation-bar {
     bottom: calc(3.35rem + env(safe-area-inset-bottom, 0px));
   }
 }

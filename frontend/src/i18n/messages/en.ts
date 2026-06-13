@@ -364,6 +364,9 @@ export const enMessages = {
   'notifications.trayOnDetail': 'Alerts appear in your phone or system notification tray.',
   'notifications.trayOff': 'Notification tray',
   'notifications.trayBlocked': 'Tray notifications blocked',
+  'notifications.trayWelcomeTitle': 'Tray notifications on',
+  'notifications.trayWelcomeBody':
+    'Cridora alerts will appear in your phone or system notification tray.',
   'notifications.openSettings': 'Open app settings',
   'notifications.blocked': 'Notifications blocked — allow them in your browser or system settings.',
   'notifications.previewOnly': 'Sample alerts below are for UI preview only.',

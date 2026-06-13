@@ -4,6 +4,7 @@ import { cleanupOutdatedCaches, precacheAndRoute } from 'workbox-precaching'
 import {
   CRIDORA_PUSH_REFRESH_MESSAGE_TYPE,
   CRIDORA_PUSH_RESUBSCRIBE_MESSAGE_TYPE,
+  CRIDORA_SHOW_LOCAL_TRAY_MESSAGE_TYPE,
 } from './lib/cridoraSwMessages'
 
 declare const self: ServiceWorkerGlobalScope & { __WB_MANIFEST: unknown }
@@ -13,9 +14,32 @@ precacheAndRoute(self.__WB_MANIFEST)
 
 /** Required for vite-plugin-pwa / workbox-window “Refresh” (prompt mode). */
 self.addEventListener('message', (event: ExtendableMessageEvent) => {
-  const t = event.data && typeof event.data === 'object' ? (event.data as { type?: string }).type : null
+  const data = event.data && typeof event.data === 'object' ? (event.data as Record<string, unknown>) : null
+  const t = data?.type
   if (t === 'SKIP_WAITING') {
     void self.skipWaiting()
+    return
+  }
+  if (t === CRIDORA_SHOW_LOCAL_TRAY_MESSAGE_TYPE) {
+    const title = typeof data?.title === 'string' ? data.title.trim() : 'Cridora'
+    const body =
+      typeof data?.body === 'string' && data.body.trim()
+        ? data.body.trim()
+        : 'Open Cridora for details.'
+    const tag = typeof data?.tag === 'string' ? data.tag : 'cridora-local-tray'
+    const url = typeof data?.url === 'string' ? data.url : '/'
+    const iconHref = new URL('/icon-192.png', self.location.origin).href
+    const targetUrl = new URL(url, self.location.origin).href
+    event.waitUntil(
+      self.registration.showNotification(title || 'Cridora', {
+        body,
+        icon: iconHref,
+        badge: iconHref,
+        tag,
+        vibrate: [120, 60, 120],
+        data: { url: targetUrl, tag },
+      } as NotificationOptions),
+    )
   }
 })
 

@@ -375,6 +375,9 @@ export const mlMessages: Record<MessageKey, string> = {
   'notifications.trayOnDetail': 'അലർട്ടുകൾ phone/system notification tray-യിൽ കാണാം.',
   'notifications.trayOff': 'Notification tray',
   'notifications.trayBlocked': 'Tray notifications blocked',
+  'notifications.trayWelcomeTitle': 'Tray notifications ഓൺ',
+  'notifications.trayWelcomeBody':
+    'Cridora അലർട്ടുകൾ phone/system notification tray-യിൽ കാണാം.',
   'notifications.openSettings': 'App settings തുറക്കുക',
   'notifications.blocked': 'notifications blocked — browser/system settings-ൽ allow ചെയ്യുക.',
   'notifications.previewOnly': 'sample alerts UI preview മാത്രമാണ്.',

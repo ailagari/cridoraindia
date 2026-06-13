@@ -434,7 +434,7 @@ export function NotificationBell({
     setPushBusy(true)
     setPushError('')
     try {
-      await registerWebPushSubscription()
+      await registerWebPushSubscription({ confirmTray: true })
       setPushActive(true)
       setPushPermissionBlocked(false)
     } catch (e) {

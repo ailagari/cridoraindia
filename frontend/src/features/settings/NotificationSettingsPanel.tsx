@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import {
+  canSubscribeWebPush,
   fetchWebPushServerStatus,
   getBrowserPushActive,
   getPushDeliveryLabel,
@@ -73,10 +74,13 @@ export function NotificationSettingsPanel({
     setPushBusy(true)
     setPushErr('')
     try {
-      await registerWebPushSubscription()
+      await registerWebPushSubscription({ confirmTray: true })
       setPushActive(true)
+      setPushBlocked(false)
     } catch (e) {
       setPushErr(e instanceof Error ? e.message : 'Could not enable push.')
+      const denied = await isPushPermissionDenied().catch(() => false)
+      setPushBlocked(denied)
     } finally {
       setPushBusy(false)
     }
@@ -155,7 +159,7 @@ export function NotificationSettingsPanel({
               </button>
             ) : null}
           </>
-        ) : pushNotificationsSupported() ? (
+        ) : pushNotificationsSupported() && canSubscribeWebPush() ? (
           <button type="button" className="btn btn-primary" disabled={pushBusy} onClick={() => void enablePush()}>
             {pushBusy ? 'Turning on…' : 'Turn on tray notifications'}
           </button>
