@@ -17,6 +17,7 @@ import { LIVE_BALANCE_POLL_MS } from '@/lib/liveDeskIntervals'
 import { useLivePoll } from '@/lib/useLivePoll'
 import { fetchPlatformFeatures, isFeatureEnabled } from '@/lib/platformFeatures'
 import { preferredVaultCustodianId } from '@/features/invest/fractionalJewellerSelect'
+import { MobileDashboardCancelButton } from '@/features/dashboard/MobileDashboardCancelButton'
 
 function parseG(s: string): number {
   const n = Number.parseFloat(s)
