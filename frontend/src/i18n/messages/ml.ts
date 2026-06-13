@@ -49,6 +49,7 @@ export const mlMessages: Record<MessageKey, string> = {
   'mobile.home': 'ഹോം',
   'mobile.discover': 'അറിയുക',
   'mobile.shop': 'ഷോപ്പ്',
+  'mobile.rates': 'നിരക്ക്',
   'mobile.how': 'പ്രവർത്തനം',
   'mobile.join': 'പങ്കാളിയാകൂ',
   'mobile.overview': 'ഓവർവ്യൂ',

@@ -167,6 +167,48 @@ class NativePushUnsubscribeView(APIView):
         return Response({"ok": True}, status=status.HTTP_200_OK)
 
 
+class PushDeviceStatusView(APIView):
+    """Check whether this device's push endpoint/token is registered on the server."""
+
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        endpoint = str(request.query_params.get("endpoint") or "").strip()
+        token = str(request.query_params.get("token") or "").strip()
+        owner = request.user if request.user.is_authenticated else None
+
+        if token:
+            row = NativePushToken.objects.filter(token=token).first()
+            if not row:
+                return Response({"registered": False, "linked_to_user": False, "channel": "none"})
+            linked = row.user_id == owner.pk if owner else row.user_id is None
+            return Response(
+                {
+                    "registered": True,
+                    "linked_to_user": linked,
+                    "channel": "fcm",
+                }
+            )
+
+        if endpoint:
+            row = WebPushSubscription.objects.filter(endpoint=endpoint).first()
+            if not row:
+                return Response({"registered": False, "linked_to_user": False, "channel": "none"})
+            if owner:
+                linked = row.user_id == owner.pk
+            else:
+                linked = row.user_id is None
+            return Response(
+                {
+                    "registered": True,
+                    "linked_to_user": linked,
+                    "channel": "webpush",
+                }
+            )
+
+        return Response({"registered": False, "linked_to_user": False, "channel": "none"})
+
+
 class PushAckView(APIView):
     """Tray delivery/click ack from service worker (analytics)."""
 

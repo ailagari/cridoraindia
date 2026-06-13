@@ -1,4 +1,4 @@
-type Tab = 'home' | 'discover' | 'shop' | 'join' | 'dashboard' | 'account' | 'how'
+type Tab = 'home' | 'discover' | 'shop' | 'join' | 'dashboard' | 'account' | 'how' | 'rates'
 
 const svgBase = {
   xmlns: 'http://www.w3.org/2000/svg' as const,
@@ -40,6 +40,14 @@ export function PublicTabIcon({ tab, active }: { tab: Tab; active: boolean }) {
         <svg {...svgBase} style={style}>
           <path d="M5 8h14l-1.2 9.1A2 2 0 0 1 15.8 19H8.2a2 2 0 0 1-1.99-1.9z" />
           <path d="M9 8V6a3 3 0 0 1 6 0v2" />
+        </svg>
+      )
+    case 'rates':
+      return (
+        <svg {...svgBase} style={style}>
+          <circle cx="12" cy="12" r="9.5" />
+          <path d="M12 7v10" />
+          <path d="M9.25 9.5h4.5a2 2 0 0 1 0 4h-3a2 2 0 0 0 0 4h4.5" />
         </svg>
       )
     case 'join':

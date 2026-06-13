@@ -16,8 +16,16 @@ function topForPath(
   if (pathname === '/') {
     return [
       { to: '/', label: t('mobile.overview') },
+      { to: '/gold-rates/kerala', label: t('mobile.rates') },
       { to: '/how-it-works', label: t('mobile.flow') },
       { to: '/waitlist', label: t('nav.waitlist') },
+    ]
+  }
+  if (pathname.startsWith('/gold-rates')) {
+    return [
+      { to: '/gold-rates/kerala', label: t('mobile.rates') },
+      { to: '/marketplace', label: t('nav.products') },
+      { to: '/jewellers', label: t('nav.jewellers') },
     ]
   }
   if (pathname.startsWith('/discover') || pathname.startsWith('/why-cridora') || pathname.startsWith('/features')) {
@@ -88,6 +96,7 @@ export function PublicMobileChrome() {
     pathname.startsWith('/shop') ||
     pathname.startsWith('/marketplace') ||
     pathname.startsWith('/jewellers')
+  const isRatesPath = pathname.startsWith('/gold-rates')
   const isJoinPath =
     pathname.startsWith('/join') || pathname.startsWith('/signup') || pathname.startsWith('/jeweller/apply')
   const discoverActive =
@@ -156,6 +165,21 @@ export function PublicMobileChrome() {
                 <PublicTabIcon tab="shop" active={isShopPath || isActive} />
               </span>
               <span className="mobile-tab-label">{t('mobile.shop')}</span>
+            </>
+          )}
+        </NavLink>
+        <NavLink
+          to="/gold-rates/kerala"
+          className={({ isActive }) =>
+            `public-bottom-item${isRatesPath || isActive ? ' public-bottom-item--active' : ''}`
+          }
+        >
+          {({ isActive }) => (
+            <>
+              <span className="mobile-tab-ico">
+                <PublicTabIcon tab="rates" active={isRatesPath || isActive} />
+              </span>
+              <span className="mobile-tab-label">{t('mobile.rates')}</span>
             </>
           )}
         </NavLink>

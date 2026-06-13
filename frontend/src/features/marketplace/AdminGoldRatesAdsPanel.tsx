@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
+  buildAdSizeGuidance,
+  formatAdSize,
+  getGoldRatesAdSlotSpec,
+  GOLD_RATES_AD_SLOT_SPECS,
+} from '@/features/goldRates/goldRatesAdSpecs'
+import {
   fetchAdminGoldRatesConfig,
   patchAdminGoldRatesConfig,
   uploadAdminGoldRatesAdImage,
@@ -7,13 +13,9 @@ import {
   type GoldRatesAdPlacementDTO,
 } from '@/lib/marketplaceApi'
 
-const SLOT_LABELS: Record<string, string> = {
-  top_banner: 'Top banner',
-  sidebar: 'Sidebar',
-  in_content_1: 'After rate cards',
-  in_content_2: 'After chart',
-  footer: 'Footer strip',
-}
+const SLOT_LABELS: Record<string, string> = Object.fromEntries(
+  Object.entries(GOLD_RATES_AD_SLOT_SPECS).map(([slot, spec]) => [slot, spec.label]),
+)
 
 const PLACEHOLDER_IMAGES: Record<string, string> = {
   top_banner: '/ads/gold-rates-top-banner.svg',
@@ -147,12 +149,15 @@ export function AdminGoldRatesAdsPanel() {
           />
         </label>
         <p className="admin-panel-lead">
-          When a slot is set to Google AdSense mode, it uses this publisher account and the slot ID below.
-          Image and manual HTML modes ignore AdSense.
+          Banner slots use standard Google AdSense / IAB sizes. Images are scaled to fit the slot
+          container on all devices; prepare assets at the recommended dimensions below for best
+          quality. When a slot uses Google AdSense mode, it uses this publisher account and the
+          slot ID configured per placement.
         </p>
       </section>
 
       {cfg.placements.map((p) => {
+        const slotSpec = getGoldRatesAdSlotSpec(p.slot)
         const previewSrc =
           p.mode === 'image'
             ? p.image_url?.trim() || PLACEHOLDER_IMAGES[p.slot] || ''
@@ -162,6 +167,13 @@ export function AdminGoldRatesAdsPanel() {
         return (
           <section key={p.slot} className="admin-card">
             <h3>{SLOT_LABELS[p.slot] ?? p.slot}</h3>
+            {slotSpec ? (
+              <div className="admin-ad-size-guide" role="note">
+                <strong>Recommended image size</strong>
+                <p>{formatAdSize(slotSpec.recommended)}</p>
+                <p className="admin-ad-size-guide__meta">{buildAdSizeGuidance(slotSpec)}</p>
+              </div>
+            ) : null}
             <label className="admin-check">
               <input
                 type="checkbox"
@@ -211,6 +223,7 @@ export function AdminGoldRatesAdsPanel() {
                     </button>
                     <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                       JPEG, PNG, or WebP · max 4 MB
+                      {slotSpec ? ` · target ${slotSpec.recommended.width}×${slotSpec.recommended.height} px` : ''}
                     </span>
                   </div>
                   {uploadErr[p.slot] ? (
@@ -271,22 +284,43 @@ export function AdminGoldRatesAdsPanel() {
                 <label className="admin-field">
                   <span>Format</span>
                   <select
-                    value={p.adsense_format ?? 'auto'}
+                    value={p.adsense_format ?? slotSpec?.adsenseFormat ?? 'auto'}
                     onChange={(e) => updatePlacement(p.slot, { adsense_format: e.target.value })}
                   >
-                    <option value="auto">auto</option>
-                    <option value="horizontal">horizontal</option>
-                    <option value="rectangle">rectangle</option>
-                    <option value="vertical">vertical</option>
+                    <option value="auto">auto (responsive)</option>
+                    <option value="horizontal">horizontal (728×90 leaderboard)</option>
+                    <option value="rectangle">rectangle (300×250 medium rectangle)</option>
+                    <option value="vertical">vertical (120×600 skyscraper)</option>
                   </select>
                 </label>
+                {slotSpec ? (
+                  <p className="admin-panel-lead">
+                    Suggested AdSense unit: {formatAdSize(slotSpec.recommended)} · format{' '}
+                    <code>{slotSpec.adsenseFormat}</code>
+                  </p>
+                ) : null}
               </>
             ) : null}
 
             {previewSrc ? (
               <div className="admin-ad-preview">
-                <span className="admin-ad-preview__label">Preview</span>
-                <img src={previewSrc} alt="" className="admin-ad-preview__img" />
+                <span className="admin-ad-preview__label">
+                  Preview
+                  {slotSpec ? ` · ${slotSpec.recommended.width}×${slotSpec.recommended.height} container` : ''}
+                </span>
+                <div
+                  className={`admin-ad-preview__frame admin-ad-preview__frame--${p.slot}`}
+                  style={
+                    slotSpec
+                      ? {
+                          aspectRatio: slotSpec.aspectRatio,
+                          maxWidth: slotSpec.maxWidthPx ? `${slotSpec.maxWidthPx}px` : undefined,
+                        }
+                      : undefined
+                  }
+                >
+                  <img src={previewSrc} alt="" className="admin-ad-preview__img" />
+                </div>
               </div>
             ) : null}
           </section>

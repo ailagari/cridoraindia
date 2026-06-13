@@ -468,17 +468,6 @@
 .gr-ad {
   margin: 1rem 0;
   border-radius: 10px;
-  overflow: hidden;
-}
-
-.gr-ad--top,
-.gr-ad--inline,
-.gr-ad--footer {
-  min-height: 72px;
-}
-
-.gr-ad--sidebar {
-  min-height: 200px;
 }
 
 .gr-ad--image,
@@ -486,36 +475,57 @@
   display: block;
   border: 1px solid var(--border);
   background: color-mix(in srgb, var(--surface) 85%, transparent);
+  overflow: hidden;
 }
 
 .gr-ad__link {
   display: block;
-  line-height: 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+.gr-ad__frame {
+  position: relative;
+  width: 100%;
+  max-width: var(--gr-ad-max-w, 100%);
+  margin-inline: auto;
+  aspect-ratio: var(--gr-ad-aspect, 728 / 90);
+  background: color-mix(in srgb, var(--surface) 92%, #0f172a);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.gr-ad__frame--adsense {
+  min-height: 0;
 }
 
 .gr-ad__image {
   display: block;
   width: 100%;
-  height: auto;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
   object-fit: contain;
-}
-
-.gr-ad--sidebar .gr-ad__image {
-  max-height: 280px;
-  object-fit: cover;
+  object-position: center;
 }
 
 .gr-ad--manual {
-  min-height: 90px;
+  width: 100%;
+  max-width: var(--gr-ad-max-w, 100%);
+  margin-inline: auto;
+  aspect-ratio: var(--gr-ad-aspect, 728 / 90);
+  min-height: 0;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface) 85%, transparent);
+  overflow: auto;
 }
 
 .gr-ad--adsense {
-  min-height: 90px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   border: 1px dashed var(--border);
   background: color-mix(in srgb, var(--surface) 80%, transparent);
+  overflow: hidden;
 }
 
 .gr-ad--placeholder {
@@ -560,10 +570,163 @@
 
   .gr-page__sidebar {
     position: static;
-    order: -1;
   }
 
   .gr-calc {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 767px) {
+  .gr-page {
+    padding-bottom: 0.5rem;
+  }
+
+  .gr-page .container {
+    padding-left: max(0.85rem, env(safe-area-inset-left, 0px));
+    padding-right: max(0.85rem, env(safe-area-inset-right, 0px));
+  }
+
+  .gr-page__hero {
+    padding: 1.15rem 0 0.85rem;
+  }
+
+  .gr-page__title {
+    font-size: 1.45rem;
+  }
+
+  .gr-page__sub {
+    font-size: 0.82rem;
+    line-height: 1.5;
+  }
+
+  .gr-page__meta {
+    font-size: 0.72rem;
+    line-height: 1.45;
+  }
+
+  .gr-page__layout {
+    gap: 1rem;
+  }
+
+  .gr-page__sidebar {
+    order: 1;
+    gap: 0.85rem;
+  }
+
+  .gr-section {
+    margin-bottom: 1.15rem;
+    padding: 0.95rem 0.85rem;
+    border-radius: 12px;
+  }
+
+  .gr-section__title {
+    font-size: 0.98rem;
+  }
+
+  .gr-section__head-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.55rem;
+  }
+
+  .gr-rate-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.55rem;
+  }
+
+  .gr-rate-card {
+    padding: 0.75rem 0.8rem;
+  }
+
+  .gr-rate-card__head h3 {
+    font-size: 0.72rem;
+  }
+
+  .gr-rate-card__val {
+    font-size: 1.15rem;
+  }
+
+  .gr-rate-card__extras {
+    font-size: 0.66rem;
+  }
+
+  .gr-tabs,
+  .gr-ranges {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 0.15rem;
+    margin: 0 -0.15rem;
+    padding-left: 0.15rem;
+    padding-right: 0.15rem;
+  }
+
+  .gr-tabs::-webkit-scrollbar,
+  .gr-ranges::-webkit-scrollbar {
+    display: none;
+  }
+
+  .gr-tab,
+  .gr-range {
+    flex-shrink: 0;
+  }
+
+  .gr-chart-wrap {
+    min-height: 168px;
+    margin-left: -0.15rem;
+    margin-right: -0.15rem;
+  }
+
+  .gr-price-chart__rate {
+    font-size: 1.1rem;
+  }
+
+  .gr-calc__fields {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .gr-calc__result {
+    padding: 0.85rem;
+  }
+
+  .gr-table {
+    font-size: 0.72rem;
+  }
+
+  .gr-table th,
+  .gr-table td {
+    padding: 0.45rem 0.5rem;
+    white-space: nowrap;
+  }
+
+  .gr-ad__frame,
+  .gr-ad--manual {
+    aspect-ratio: var(--gr-ad-mobile-aspect, var(--gr-ad-aspect, 728 / 90));
+  }
+
+  .gr-sidebar-card .btn {
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 380px) {
+  .gr-rate-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .gr-calc__fields {
+    grid-template-columns: 1fr;
+  }
+
+  .pub-ref .public-bottom-item {
+    font-size: 0.48rem;
+    letter-spacing: 0.02em;
+  }
+
+  .pub-ref .mobile-tab-ico {
+    width: 2.35rem;
+    height: 1.85rem;
   }
 }

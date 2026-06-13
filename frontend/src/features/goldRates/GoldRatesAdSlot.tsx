@@ -1,5 +1,6 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react'
 import type { GoldRatesAdPlacementDTO } from '@/lib/marketplaceApi'
+import { adSlotFrameStyle, getGoldRatesAdSlotSpec } from '@/features/goldRates/goldRatesAdSpecs'
 
 declare global {
   interface Window {
@@ -27,6 +28,23 @@ function slotClass(slot: string | undefined): string {
   if (slot === 'footer') return ' gr-ad--footer'
   if (slot === 'top_banner') return ' gr-ad--top'
   return ' gr-ad--inline'
+}
+
+function AdFrame({
+  slot,
+  className,
+  children,
+}: {
+  slot: string | undefined
+  className?: string
+  children: ReactNode
+}) {
+  const spec = getGoldRatesAdSlotSpec(slot)
+  return (
+    <div className={`gr-ad__frame${className ? ` ${className}` : ''}`} style={adSlotFrameStyle(spec)}>
+      {children}
+    </div>
+  )
 }
 
 export function GoldRatesAdSlot({ placement, adsenseClientId, adsenseEnabled, className }: Props) {
@@ -65,11 +83,13 @@ export function GoldRatesAdSlot({ placement, adsenseClientId, adsenseEnabled, cl
 
   const slotCls = slotClass(placement.slot)
   const baseCls = `gr-ad${slotCls}${className ? ` ${className}` : ''}`
+  const frameStyle = adSlotFrameStyle(getGoldRatesAdSlotSpec(placement.slot)) as CSSProperties | undefined
 
   if (placement.mode === 'manual' && placement.manual_html?.trim()) {
     return (
       <aside
         className={`${baseCls} gr-ad--manual`}
+        style={frameStyle}
         aria-label={placement.label || 'Sponsored'}
         dangerouslySetInnerHTML={{ __html: placement.manual_html }}
       />
@@ -86,41 +106,48 @@ export function GoldRatesAdSlot({ placement, adsenseClientId, adsenseEnabled, cl
     const img = (
       <img src={src} alt={alt} className="gr-ad__image" loading="lazy" decoding="async" />
     )
+    const framed = <AdFrame slot={placement.slot}>{img}</AdFrame>
     return (
       <aside className={`${baseCls} gr-ad--image`} aria-label={alt}>
         {link ? (
           <a href={link} target="_blank" rel="noopener noreferrer sponsored" className="gr-ad__link">
-            {img}
+            {framed}
           </a>
         ) : (
-          img
+          framed
         )}
       </aside>
     )
   }
 
   if (placement.mode === 'adsense' && adsenseEnabled && adsenseClientId && placement.adsense_slot_id) {
+    const spec = getGoldRatesAdSlotSpec(placement.slot)
+    const format = placement.adsense_format?.trim() || spec?.adsenseFormat || 'auto'
     return (
       <aside className={`${baseCls} gr-ad--adsense`} aria-label={placement.label || 'Advertisement'}>
-        <ins
-          className="adsbygoogle"
-          style={{ display: 'block' }}
-          data-ad-client={adsenseClientId}
-          data-ad-slot={placement.adsense_slot_id}
-          data-ad-format={placement.adsense_format || 'auto'}
-          data-full-width-responsive="true"
-        />
+        <AdFrame slot={placement.slot} className="gr-ad__frame--adsense">
+          <ins
+            className="adsbygoogle"
+            style={{ display: 'block', width: '100%', height: '100%' }}
+            data-ad-client={adsenseClientId}
+            data-ad-slot={placement.adsense_slot_id}
+            data-ad-format={format}
+            data-full-width-responsive="true"
+          />
+        </AdFrame>
       </aside>
     )
   }
 
   return (
     <aside className={`${baseCls} gr-ad--placeholder`} aria-hidden>
-      <img
-        src={SLOT_PLACEHOLDER_IMAGES[placement.slot] || '/ads/gold-rates-in-content.svg'}
-        alt=""
-        className="gr-ad__image gr-ad__image--placeholder"
-      />
+      <AdFrame slot={placement.slot}>
+        <img
+          src={SLOT_PLACEHOLDER_IMAGES[placement.slot] || '/ads/gold-rates-in-content.svg'}
+          alt=""
+          className="gr-ad__image gr-ad__image--placeholder"
+        />
+      </AdFrame>
     </aside>
   )
 }

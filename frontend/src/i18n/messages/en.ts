@@ -49,6 +49,7 @@ export const enMessages = {
   'mobile.home': 'Home',
   'mobile.discover': 'Discover',
   'mobile.shop': 'Shop',
+  'mobile.rates': 'Rates',
   'mobile.how': 'How',
   'mobile.join': 'Join',
   'mobile.overview': 'Overview',
