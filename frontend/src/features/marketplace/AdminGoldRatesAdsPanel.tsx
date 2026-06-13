@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   fetchAdminGoldRatesConfig,
   patchAdminGoldRatesConfig,
+  uploadAdminGoldRatesAdImage,
   type AdminGoldRatesPageConfigPayload,
   type GoldRatesAdPlacementDTO,
 } from '@/lib/marketplaceApi'
@@ -24,10 +25,15 @@ const PLACEHOLDER_IMAGES: Record<string, string> = {
 
 type AdMode = GoldRatesAdPlacementDTO['mode']
 
+const AD_IMAGE_ACCEPT = 'image/jpeg,image/png,image/webp'
+
 export function AdminGoldRatesAdsPanel() {
   const [cfg, setCfg] = useState<AdminGoldRatesPageConfigPayload | null>(null)
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
+  const [uploadBusySlot, setUploadBusySlot] = useState<string | null>(null)
+  const [uploadErr, setUploadErr] = useState<Record<string, string>>({})
+  const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({})
 
   const load = useCallback(async () => {
     const data = await fetchAdminGoldRatesConfig()
@@ -44,6 +50,25 @@ export function AdminGoldRatesAdsPanel() {
       const placements = prev.placements.map((p) => (p.slot === slot ? { ...p, ...patch } : p))
       return { ...prev, placements }
     })
+  }
+
+  const uploadPlacementImage = async (slot: string, file: File) => {
+    setUploadBusySlot(slot)
+    setUploadErr((prev) => {
+      const next = { ...prev }
+      delete next[slot]
+      return next
+    })
+    try {
+      const out = await uploadAdminGoldRatesAdImage(file, slot)
+      if (!out.ok) {
+        setUploadErr((prev) => ({ ...prev, [slot]: out.detail }))
+        return
+      }
+      updatePlacement(slot, { image_url: out.image_url })
+    } finally {
+      setUploadBusySlot(null)
+    }
   }
 
   const save = async () => {
@@ -159,8 +184,43 @@ export function AdminGoldRatesAdsPanel() {
 
             {p.mode === 'image' ? (
               <>
+                <div className="admin-field">
+                  <span>Banner image</span>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.65rem', alignItems: 'center' }}>
+                    <input
+                      ref={(el) => {
+                        fileInputRefs.current[p.slot] = el
+                      }}
+                      type="file"
+                      accept={AD_IMAGE_ACCEPT}
+                      disabled={saving || uploadBusySlot === p.slot}
+                      style={{ display: 'none' }}
+                      onChange={(e) => {
+                        const f = e.target.files?.[0]
+                        e.target.value = ''
+                        if (f) void uploadPlacementImage(p.slot, f)
+                      }}
+                    />
+                    <button
+                      type="button"
+                      className="btn btn-ghost"
+                      disabled={saving || uploadBusySlot === p.slot}
+                      onClick={() => fileInputRefs.current[p.slot]?.click()}
+                    >
+                      {uploadBusySlot === p.slot ? 'Uploading…' : 'Upload image file'}
+                    </button>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                      JPEG, PNG, or WebP · max 4 MB
+                    </span>
+                  </div>
+                  {uploadErr[p.slot] ? (
+                    <p className="admin-save-msg" style={{ color: 'var(--danger)', marginTop: '0.35rem' }}>
+                      {uploadErr[p.slot]}
+                    </p>
+                  ) : null}
+                </div>
                 <label className="admin-field">
-                  <span>Image URL</span>
+                  <span>Or image URL</span>
                   <input
                     value={p.image_url ?? ''}
                     onChange={(e) => updatePlacement(p.slot, { image_url: e.target.value })}

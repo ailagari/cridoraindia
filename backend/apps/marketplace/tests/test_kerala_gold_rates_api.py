@@ -2,11 +2,21 @@
 
 from decimal import Decimal
 
+from django.contrib.auth import get_user_model
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.utils import timezone
 from rest_framework.test import APIClient
 
 from apps.marketplace.models import AkgsmaBoardDailySnapshot, KeralaGoldRateDaily
+
+User = get_user_model()
+
+_MIN_PNG = (
+    b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
+    b"\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\nIDATx\x9cc\x00\x01"
+    b"\x00\x00\x05\x00\x01\r\n-\xb4\x00\x00\x00\x00IEND\xaeB`\x82"
+)
 
 
 class KeralaGoldRatesApiTests(TestCase):
@@ -62,3 +72,43 @@ class KeralaGoldRatesApiTests(TestCase):
         body = res.json()
         self.assertIn("placements", body)
         self.assertGreaterEqual(GoldRatesAdPlacement.objects.count(), 1)
+
+
+class AdminGoldRatesAdImageUploadTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.admin = User.objects.create_user(
+            "gold_rates_admin@test.com",
+            "pass",
+            user_type=User.ADMIN,
+            is_staff=True,
+        )
+        self.customer = User.objects.create_user(
+            "gold_rates_cust@test.com",
+            "pass",
+            user_type=User.CUSTOMER,
+        )
+
+    def test_admin_can_upload_ad_image(self):
+        self.client.force_authenticate(self.admin)
+        res = self.client.post(
+            "/api/v1/admin/gold-rates/ad-image/",
+            {
+                "file": SimpleUploadedFile("banner.png", _MIN_PNG, content_type="image/png"),
+                "slot": "top_banner",
+            },
+            format="multipart",
+        )
+        self.assertEqual(res.status_code, 200)
+        body = res.json()
+        self.assertIn("image_url", body)
+        self.assertTrue(str(body["image_url"]).startswith("http"))
+
+    def test_non_admin_forbidden(self):
+        self.client.force_authenticate(self.customer)
+        res = self.client.post(
+            "/api/v1/admin/gold-rates/ad-image/",
+            {"file": SimpleUploadedFile("banner.png", _MIN_PNG, content_type="image/png")},
+            format="multipart",
+        )
+        self.assertEqual(res.status_code, 403)

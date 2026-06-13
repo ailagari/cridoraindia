@@ -1,4 +1,4 @@
-import { apiFetch, authFetch } from '@/lib/api'
+import { apiFetch, authFetch, authUpload } from '@/lib/api'
 
 export type GoldTickerPayload = {
   platform_base_inr_per_gram_22k: string
@@ -331,6 +331,32 @@ export async function patchAdminGoldRatesConfig(
   })
   if (!res.ok) return null
   return (await res.json()) as AdminGoldRatesPageConfigPayload
+}
+
+const GOLD_RATES_AD_IMAGE_MAX_BYTES = 4 * 1024 * 1024
+
+export async function uploadAdminGoldRatesAdImage(
+  file: File,
+  slot?: string,
+): Promise<{ ok: true; image_url: string } | { ok: false; detail: string }> {
+  if (file.size > GOLD_RATES_AD_IMAGE_MAX_BYTES) {
+    return { ok: false, detail: 'Image must be 4 MB or smaller.' }
+  }
+  const fd = new FormData()
+  fd.append('file', file)
+  if (slot?.trim()) {
+    fd.append('slot', slot.trim())
+  }
+  const res = await authUpload('/api/v1/admin/gold-rates/ad-image/', fd)
+  const body = (await res.json().catch(() => ({}))) as { image_url?: string; detail?: string }
+  if (!res.ok) {
+    return { ok: false, detail: body.detail != null ? String(body.detail) : 'Upload failed.' }
+  }
+  const image_url = body.image_url?.trim()
+  if (!image_url) {
+    return { ok: false, detail: 'Upload succeeded but no image URL was returned.' }
+  }
+  return { ok: true, image_url }
 }
 
 export async function fetchMarketplaceProducts(opts?: {
