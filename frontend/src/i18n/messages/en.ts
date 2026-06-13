@@ -669,7 +669,7 @@ export const enMessages = {
   'goldRates.disclaimer':
     'Rates shown are indicative references for Kerala. Actual showroom rates may differ by city, making charges, and GST. Not investment advice.',
   'goldRates.priceChart': 'Weekly & Monthly Graph of Gold Price in Kerala',
-  'goldRates.chartLead': 'Track daily and intraday Kerala board rates. Hover on the line to see the date and price per gram.',
+  'goldRates.chartLead': 'Track daily history plus live Jos Alukkas rates. Hover on the line to see the date and price per gram.',
   'goldRates.metalTabs': 'Chart metal',
   'goldRates.chartRange': 'Chart range',
   'goldRates.chartEmpty': 'Historical chart data will appear as daily rates are recorded (up to 2 years).',
@@ -698,7 +698,7 @@ export const enMessages = {
   'goldRates.faqTitle': 'Common questions',
   'goldRates.faq1q': 'How often are rates updated?',
   'goldRates.faq1a':
-    'Live ticker rates refresh every few minutes when the Kerala board source publishes a change. Daily history rows are recorded once per calendar day.',
+    'Live rates are sourced from Jos Alukkas and refresh about every two minutes when prices change. Charts and today’s row update with the ticker.',
   'goldRates.faq2q': 'What is 22K (916) gold?',
   'goldRates.faq2a':
     '22 karat gold is 91.6% pure — the BIS 916 hallmark standard used for most Indian jewellery.',

@@ -73,7 +73,6 @@ export function FractionalPurchasePanel() {
   const [gramsInput, setGramsInput] = useState('5')
   const [quote, setQuote] = useState<FractionalQuoteDTO | null>(null)
   const [quoteErr, setQuoteErr] = useState('')
-  const [note, setNote] = useState('')
   const [busy, setBusy] = useState(false)
   const [orders, setOrders] = useState<FractionalPurchaseDTO[]>([])
   const [orderMsg, setOrderMsg] = useState('')
@@ -352,7 +351,6 @@ export function FractionalPurchasePanel() {
         mode: inputMode === 'by_grams' ? 'by_grams' : 'by_total_inr',
         grams: inputMode === 'by_grams' ? gramsInput.trim() : undefined,
         total_inr: inputMode === 'by_total_inr' ? inrInput.trim() : undefined,
-        customer_note: note.trim(),
       })
       if (!out.ok) {
         setOrderMsg(out.detail)
@@ -513,8 +511,6 @@ export function FractionalPurchasePanel() {
               ? 'Pay via GPay / PhonePe · paste UTR after payment'
               : 'Pay at showroom · show OTP to jeweller'}
           </p>
-
-          <Input label="Reference note" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Receipt id" />
 
           <Button
             type="button"

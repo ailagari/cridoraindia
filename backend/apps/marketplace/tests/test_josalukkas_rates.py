@@ -1,6 +1,7 @@
 from django.test import SimpleTestCase
 
 from apps.marketplace.josalukkas_rates import (
+    _payload_fingerprint,
     build_spot_payload_from_josalukkas,
     parse_josalukkas_rates_from_html,
 )
@@ -45,6 +46,13 @@ class JosAlukkasRatesParseTests(SimpleTestCase):
         self.assertEqual(payload["source"], "kerala_gold_rate")
         self.assertEqual(payload["gold"]["22K"], 13645.0)
         self.assertEqual(payload["source_updated_at"], "10-06-26, 9:33:21 AM")
+
+    def test_payload_fingerprint_includes_prices(self):
+        parsed = parse_josalukkas_rates_from_html(SAMPLE_HTML)
+        assert parsed is not None
+        fp = _payload_fingerprint(parsed)
+        self.assertIn("13645.0", fp)
+        self.assertIn("10-06-26", fp)
 
     def test_parse_requires_22k(self):
         self.assertIsNone(parse_josalukkas_rates_from_html("<html></html>"))

@@ -328,7 +328,7 @@ def fetch_board_history_payload(*, range_key: str, metal: str = "22K", max_point
         "metal": mk,
         "granularity": "daily",
         "retention_days": _RETENTION_DAYS,
-        "note": "Daily Kerala gold/silver close ₹/g — up to 2 years stored; today updates with live ticker.",
+        "note": "Daily Kerala gold/silver close ₹/g — up to 2 years stored; today updates with Jos Alukkas live ticker.",
         "points": [{k: v for k, v in pt.items() if v is not None} for pt in points],
     }
 
@@ -399,7 +399,7 @@ def latest_board_rates_payload(*, source_prefix: str = "kerala_gold") -> dict | 
             "currency": "INR",
             "unit": "per_gram",
             "source": "kerala_gold_rate_stale",
-            "note": "Last stored Kerala gold rate — feed temporarily unavailable.",
+            "note": "Last stored Jos Alukkas gold rate — feed temporarily unavailable.",
             "rate_date": snap.board_date or snap.snapshot_date.isoformat(),
             "gold": gold,
             "silver": silver,
@@ -417,7 +417,7 @@ def latest_board_rates_payload(*, source_prefix: str = "kerala_gold") -> dict | 
         "currency": "INR",
         "unit": "per_gram",
         "source": "kerala_gold_rate_stale",
-        "note": "Last stored Kerala gold rate — feed temporarily unavailable.",
+        "note": "Last stored Jos Alukkas gold rate — feed temporarily unavailable.",
         "rate_date": row.board_date or "",
         "gold": gold,
         "silver": silver,

@@ -63,8 +63,21 @@ def public_ads_payload() -> dict:
 
 
 def public_kerala_rates_payload() -> dict:
+    from .josalukkas_rates import get_josalukkas_spot_payload_cached
+
+    board_live = get_josalukkas_spot_payload_cached()
     spot = public_spot_prices_payload(include_live_raw=False)
-    board = spot.get("kerala_board") if isinstance(spot.get("kerala_board"), dict) else {}
+    board: dict = {}
+    if isinstance(board_live, dict) and isinstance(board_live.get("gold"), dict):
+        board = {
+            "gold": board_live["gold"],
+            "silver": board_live.get("silver") if isinstance(board_live.get("silver"), dict) else {},
+            "source": board_live.get("source"),
+            "source_updated_at": board_live.get("source_updated_at"),
+            "rate_date": board_live.get("rate_date"),
+        }
+    elif isinstance(spot.get("kerala_board"), dict):
+        board = spot["kerala_board"]
     board_gold = board.get("gold") if isinstance(board.get("gold"), dict) else {}
     board_silver = board.get("silver") if isinstance(board.get("silver"), dict) else {}
     spot_silver = spot.get("silver") if isinstance(spot.get("silver"), dict) else {}
@@ -115,13 +128,6 @@ class MarketplaceKeralaGoldRatesHistoryView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
-        try:
-            from .goodreturns_kerala_rates import maybe_backfill_kerala_history
-
-            maybe_backfill_kerala_history()
-        except Exception:
-            pass
-
         raw_range = (request.query_params.get("range") or "1m").strip()
         raw_metal = (request.query_params.get("metal") or "22K").strip()
         body = fetch_board_history_payload(

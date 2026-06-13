@@ -374,7 +374,7 @@ def public_spot_prices_payload(*, include_live_raw: bool = False) -> dict:
             merged = {
                 **stale,
                 "source": "kerala_gold_rate_stale",
-                "note": "Last stored Kerala gold rate — feed temporarily unavailable.",
+                "note": "Last stored Jos Alukkas gold rate — feed temporarily unavailable.",
             }
             payload = apply_live_adjustments_to_spot_payload(merged, ticker)
             board_raw = merged.get("gold") if isinstance(merged.get("gold"), dict) else {}

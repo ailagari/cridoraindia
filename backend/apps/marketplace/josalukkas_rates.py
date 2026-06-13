@@ -12,16 +12,18 @@ from django.core.cache import cache
 
 logger = logging.getLogger(__name__)
 
-JOSALUKKAS_KERALA_GOLD_URL = "https://www.josalukkasonline.com/gold-rate-today/kerala/"
+# Primary live feed: Jos Alukkas India gold-rate page (same rates shown on Kerala storefront).
+JOSALUKKAS_GOLD_URL = "https://www.josalukkasonline.com/gold-rate-today"
+JOSALUKKAS_KERALA_FALLBACK_URL = "https://www.josalukkasonline.com/gold-rate-today/kerala/"
 
-_CACHE_KEY = "marketplace_josalukkas_kerala_rates_v1"
-_CACHE_KEY_LAST_GOOD = "marketplace_josalukkas_kerala_rates_last_good_v1"
-_CACHE_KEY_FINGERPRINT = "marketplace_josalukkas_kerala_fingerprint_v1"
-_CACHE_KEY_LAST_FETCH_TS = "marketplace_josalukkas_kerala_last_fetch_ts_v1"
+_CACHE_KEY = "marketplace_josalukkas_rates_v2"
+_CACHE_KEY_LAST_GOOD = "marketplace_josalukkas_rates_last_good_v2"
+_CACHE_KEY_FINGERPRINT = "marketplace_josalukkas_rates_fingerprint_v2"
+_CACHE_KEY_LAST_FETCH_TS = "marketplace_josalukkas_rates_last_fetch_ts_v2"
 
-_CACHE_TTL = 300
+_CACHE_TTL = 120
 _CACHE_TTL_LAST_GOOD = 86400 * 7
-_FETCH_MIN_INTERVAL_SEC = 300
+_FETCH_MIN_INTERVAL_SEC = 120
 
 _RE_UPDATED = re.compile(
     r"Updated\s+on:\s*<strong[^>]*>\s*([^<]+?)\s*</strong>",
@@ -55,8 +57,18 @@ def _parse_rate_date(updated_text: str) -> str:
         return ""
 
 
+def _payload_fingerprint(parsed: dict) -> str:
+    gold = parsed.get("gold") if isinstance(parsed.get("gold"), dict) else {}
+    ts = str(parsed.get("source_updated_at") or "").strip()
+    parts = [ts]
+    for key in ("24K", "22K", "18K"):
+        v = gold.get(key)
+        parts.append(str(v) if v is not None else "")
+    return "|".join(parts)
+
+
 def parse_josalukkas_rates_from_html(html: str) -> dict | None:
-    """Parse 24K/22K/18K ₹/g and source update fingerprint from Kerala gold rate page HTML."""
+    """Parse 24K/22K/18K ₹/g and source update fingerprint from Jos Alukkas gold rate HTML."""
     if not html or not isinstance(html, str):
         return None
 
@@ -106,10 +118,14 @@ def _http_get_html(url: str, timeout: float = 12.0) -> str | None:
 
 
 def fetch_josalukkas_rates_from_web() -> dict | None:
-    html = _http_get_html(JOSALUKKAS_KERALA_GOLD_URL)
-    if not html:
-        return None
-    return parse_josalukkas_rates_from_html(html)
+    for url in (JOSALUKKAS_GOLD_URL, JOSALUKKAS_KERALA_FALLBACK_URL):
+        html = _http_get_html(url)
+        if not html:
+            continue
+        parsed = parse_josalukkas_rates_from_html(html)
+        if parsed is not None:
+            return parsed
+    return None
 
 
 def build_spot_payload_from_josalukkas(parsed: dict) -> dict:
@@ -119,7 +135,7 @@ def build_spot_payload_from_josalukkas(parsed: dict) -> dict:
         "currency": "INR",
         "unit": "per_gram",
         "source": str(parsed.get("source") or "kerala_gold_rate"),
-        "note": "Kerala gold rate (24K / 22K / 18K) - indicative reference.",
+        "note": "Jos Alukkas gold rate (24K / 22K / 18K) — indicative India reference.",
         "source_updated_at": str(parsed.get("source_updated_at") or ""),
         "rate_date": str(parsed.get("rate_date") or ""),
         "gold": {str(k): float(v) for k, v in gold_src.items()},
@@ -223,13 +239,13 @@ def get_josalukkas_spot_payload_cached(*, force_fetch: bool = False) -> dict | N
             return db_payload
         return None
 
-    fingerprint = str(live_parsed.get("source_updated_at") or "").strip()
+    fingerprint = _payload_fingerprint(live_parsed)
     live_payload = build_spot_payload_from_josalukkas(live_parsed)
 
     if stored_fp and fingerprint and fingerprint == stored_fp and _payload_has_22k(last_good):
-        unchanged = {**last_good, "source": "kerala_gold_rate"}
-        cache.set(_CACHE_KEY, unchanged, timeout=_CACHE_TTL)
-        return unchanged
+        refreshed = {**last_good, "source": "kerala_gold_rate"}
+        cache.set(_CACHE_KEY, refreshed, timeout=_CACHE_TTL)
+        return refreshed
 
     _store_payload(live_payload, fingerprint=fingerprint)
     return live_payload
