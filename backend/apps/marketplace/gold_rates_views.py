@@ -36,6 +36,9 @@ def _serialize_ad(p: GoldRatesAdPlacement) -> dict:
         "label": p.label,
         "mode": p.mode,
         "manual_html": p.manual_html,
+        "image_url": p.image_url,
+        "image_link_url": p.image_link_url,
+        "image_alt": p.image_alt,
         "adsense_slot_id": p.adsense_slot_id,
         "adsense_format": p.adsense_format or "auto",
         "is_active": p.is_active,
@@ -193,10 +196,20 @@ class AdminGoldRatesPageConfigView(APIView):
                 p, _ = GoldRatesAdPlacement.objects.get_or_create(slot=slot)
                 if "label" in item:
                     p.label = str(item["label"] or "")[:120]
-                if "mode" in item and item["mode"] in (GoldRatesAdPlacement.MODE_MANUAL, GoldRatesAdPlacement.MODE_ADSENSE):
+                if "mode" in item and item["mode"] in (
+                    GoldRatesAdPlacement.MODE_MANUAL,
+                    GoldRatesAdPlacement.MODE_IMAGE,
+                    GoldRatesAdPlacement.MODE_ADSENSE,
+                ):
                     p.mode = item["mode"]
                 if "manual_html" in item:
                     p.manual_html = str(item["manual_html"] or "")
+                if "image_url" in item:
+                    p.image_url = str(item["image_url"] or "")[:512]
+                if "image_link_url" in item:
+                    p.image_link_url = str(item["image_link_url"] or "")[:512]
+                if "image_alt" in item:
+                    p.image_alt = str(item["image_alt"] or "")[:160]
                 if "adsense_slot_id" in item:
                     p.adsense_slot_id = str(item["adsense_slot_id"] or "")[:64]
                 if "adsense_format" in item:

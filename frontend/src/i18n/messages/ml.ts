@@ -695,7 +695,8 @@ export const mlMessages: Record<MessageKey, string> = {
   'goldRates.todayRates': 'ഇന്നത്തെ നിരക്ക് (₹/ഗ്രാം)',
   'goldRates.disclaimer':
     'നിരക്കുകൾ സൂചന മാത്രമാണ്. ഷോറൂം നിരക്കുകൾ города, MC, GST എന്നിവയനുസരിച്ച് വ്യത്യാസപ്പെടാം.',
-  'goldRates.priceChart': 'വില പ്രവണത',
+  'goldRates.priceChart': 'കേരളത്തിലെ സ്വർണ്ണ വില — ആഴ്ച/മാസ ഗ്രാഫ്',
+  'goldRates.chartLead': 'ദൈനംദിന Kerala board നിരക്കുകൾ. തീയതിയും ഗ്രാം വിലയും കാണാൻ ചാർട്ടിൽ hover ചെയ്യുക.',
   'goldRates.metalTabs': 'ചാർട്ട് മെറ്റൽ',
   'goldRates.chartRange': 'ചാർട്ട് പериод',
   'goldRates.chartEmpty': 'ദൈനംദിന നിരക്കുകൾ രേഖപ്പെടുത്തിയാൽ ചാർട്ട് കാണാം (2 വർഷം വരെ).',

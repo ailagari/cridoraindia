@@ -260,8 +260,11 @@ export type GoldRatesAdPlacementDTO = {
   id: number
   slot: string
   label: string
-  mode: 'manual' | 'adsense'
+  mode: 'manual' | 'image' | 'adsense'
   manual_html?: string
+  image_url?: string
+  image_link_url?: string
+  image_alt?: string
   adsense_slot_id?: string
   adsense_format?: string
   is_active: boolean

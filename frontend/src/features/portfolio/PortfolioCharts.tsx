@@ -390,7 +390,7 @@ export function buildGoldSpotPricePoints(
   return out
 }
 
-function formatHistoryXLabel(iso: string, granularity: 'intraday' | 'daily'): string {
+export function formatHistoryXLabel(iso: string, granularity: 'intraday' | 'daily'): string {
   const t = Date.parse(iso)
   if (!Number.isFinite(t)) return '—'
   const d = new Date(t)
@@ -406,12 +406,12 @@ function formatHistoryXLabel(iso: string, granularity: 'intraday' | 'daily'): st
   return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
 }
 
-function axisInrTxt(n: number, masked: boolean): string {
+export function axisInrTxt(n: number, masked: boolean): string {
   if (masked) return '••••'
   return `₹${n.toLocaleString('en-IN', { maximumFractionDigits: Math.abs(n) >= 100 ? 0 : 1 })}`
 }
 
-type HistGeo = {
+export type HistoryChartGeo = {
   lineD: string
   xs: number[]
   ys: number[]
@@ -428,12 +428,12 @@ type HistGeo = {
   lastIdx: number
 }
 
-function buildPortfolioHistoryGeo(
+export function buildHistoryChartGeo(
   points: PortfolioHistoryValuePoint[],
-  investedInr: number,
+  refValueInr: number,
   svgW: number,
   svgH: number,
-): HistGeo | null {
+): HistoryChartGeo | null {
   if (points.length === 0) return null
   const vals = points.map((p) => p.valueInr)
   const n = vals.length
@@ -447,16 +447,16 @@ function buildPortfolioHistoryGeo(
 
   let minV = Math.min(...vals)
   let maxV = Math.max(...vals)
-  if (investedInr > 0) {
-    minV = Math.min(minV, investedInr)
-    maxV = Math.max(maxV, investedInr)
+  if (refValueInr > 0) {
+    minV = Math.min(minV, refValueInr)
+    maxV = Math.max(maxV, refValueInr)
   }
   const pad = Math.max(maxV - minV, 1) * 0.08
   minV = Math.max(0, minV - pad)
   maxV += pad
   const span = maxV - minV || 1
   const mapY = (v: number) => pt + ch - ((v - minV) / span) * ch
-  const baselineY = investedInr > 0 ? mapY(investedInr) : null
+  const baselineY = refValueInr > 0 ? mapY(refValueInr) : null
 
   const xs = points.map((_, i) => (n <= 1 ? pl + cw / 2 : pl + (i / (n - 1)) * cw))
   const ys = vals.map(mapY)
@@ -511,7 +511,7 @@ export function PortfolioHistoryValuationChart({
   const svgW = 340
   const svgH = compact ? 118 : 132
   const geo = useMemo(
-    () => buildPortfolioHistoryGeo(points, investedInr, svgW, svgH),
+    () => buildHistoryChartGeo(points, investedInr, svgW, svgH),
     [investedInr, points, svgH],
   )
 
@@ -794,8 +794,8 @@ export function GoldSpotHistoryThinChart({
   const geo = useMemo(
     () =>
       refPriceInrPerG > 0
-        ? buildPortfolioHistoryGeo(points, refPriceInrPerG, svgW, svgH)
-        : buildPortfolioHistoryGeo(points, -1, svgW, svgH),
+        ? buildHistoryChartGeo(points, refPriceInrPerG, svgW, svgH)
+        : buildHistoryChartGeo(points, -1, svgW, svgH),
     [points, refPriceInrPerG, svgH],
   )
 

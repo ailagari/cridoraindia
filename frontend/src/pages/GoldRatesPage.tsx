@@ -1,10 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { findAdPlacement, GoldRatesAdSlot } from '@/features/goldRates/GoldRatesAdSlot'
-import {
-  buildGoldSpotPricePoints,
-  GoldSpotHistoryThinChart,
-} from '@/features/portfolio/PortfolioCharts'
+import { GoldRatesPriceChart } from '@/features/goldRates/GoldRatesPriceChart'
+import { buildGoldSpotPricePoints } from '@/features/portfolio/PortfolioCharts'
 import { usePublicLocale } from '@/i18n/PublicLocaleProvider'
 import { LIVE_PRICE_POLL_MS } from '@/lib/liveDeskIntervals'
 import {
@@ -25,15 +23,21 @@ type ChartMetal = '22K' | '24K' | '18K' | 'silver999'
 type WeightUnit = 'gram' | 'sovereign' | 'kg'
 type PurityKey = '24K' | '22K' | '18K'
 
-const HISTORY_RANGES: { key: HistoryRange; label: string }[] = [
-  { key: '1d', label: '1D' },
-  { key: '1w', label: '1W' },
-  { key: '1m', label: '1M' },
+const CHART_PRESETS: { key: HistoryRange; label: string }[] = [
+  { key: '1w', label: 'Weekly' },
+  { key: '1m', label: 'Monthly' },
   { key: '3m', label: '3M' },
   { key: '6m', label: '6M' },
   { key: '1y', label: '1Y' },
   { key: '2y', label: '2Y' },
 ]
+
+const METAL_LABELS: Record<ChartMetal, string> = {
+  '22K': '22K Gold',
+  '24K': '24K Gold',
+  '18K': '18K Gold',
+  silver999: 'Silver 999',
+}
 
 const METAL_TABS: { key: ChartMetal; label: string }[] = [
   { key: '22K', label: '22K' },
@@ -285,9 +289,12 @@ export function GoldRatesPage() {
 
           <section className="gr-section gr-section--chart" aria-labelledby="gr-chart">
             <div className="gr-section__head-row">
-              <h2 id="gr-chart" className="gr-section__title">
-                {t('goldRates.priceChart')}
-              </h2>
+              <div>
+                <h2 id="gr-chart" className="gr-section__title">
+                  {t('goldRates.priceChart')}
+                </h2>
+                <p className="gr-section__chart-lead">{t('goldRates.chartLead')}</p>
+              </div>
               <div className="gr-tabs" role="tablist" aria-label={t('goldRates.metalTabs')}>
                 {METAL_TABS.map((m) => (
                   <button
@@ -304,7 +311,15 @@ export function GoldRatesPage() {
               </div>
             </div>
             <div className="gr-ranges" role="group" aria-label={t('goldRates.chartRange')}>
-              {HISTORY_RANGES.map((r) => (
+              <button
+                type="button"
+                className={`gr-range${historyRange === '1d' ? ' gr-range--active' : ''}`}
+                aria-pressed={historyRange === '1d'}
+                onClick={() => setHistoryRange('1d')}
+              >
+                1D
+              </button>
+              {CHART_PRESETS.map((r) => (
                 <button
                   key={r.key}
                   type="button"
@@ -318,12 +333,12 @@ export function GoldRatesPage() {
             </div>
             <div className="gr-chart-wrap">
               {chartPoints.length >= 2 ? (
-                <GoldSpotHistoryThinChart
+                <GoldRatesPriceChart
                   points={chartPoints}
                   granularity={history?.granularity === 'intraday' ? 'intraday' : 'daily'}
-                  masked={false}
-                  ariaLabel={`${chartMetal} Kerala rate chart`}
-                  windowLabel={historyRange.toUpperCase()}
+                  metalLabel={METAL_LABELS[chartMetal]}
+                  rangeLabel={historyRange === '1d' ? '1D' : CHART_PRESETS.find((p) => p.key === historyRange)?.label ?? historyRange.toUpperCase()}
+                  ariaLabel={`${METAL_LABELS[chartMetal]} Kerala rate chart, ${historyRange} range`}
                 />
               ) : (
                 <p className="gr-chart-empty">{t('goldRates.chartEmpty')}</p>

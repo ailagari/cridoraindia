@@ -156,9 +156,9 @@ export function FractionalPurchasePanel() {
       setJewellerInitDone(true)
       return
     }
-    if (knownJewellerIds.length > 0) {
-      const preferred = preferredPaidFractionalJewellerId(orders, wallet, knownJewellerIds)
-      if (preferred != null) setJewellerId(preferred)
+    const preferred = preferredPaidFractionalJewellerId(orders, wallet, knownJewellerIds)
+    if (preferred != null && jewellers.some((j) => j.id === preferred)) {
+      setJewellerId(preferred)
     }
     setJewellerInitDone(true)
   }, [

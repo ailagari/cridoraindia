@@ -374,9 +374,11 @@ class GoldRatesAdPlacement(models.Model):
     """Manual HTML or AdSense slot on the public gold rates page."""
 
     MODE_MANUAL = "manual"
+    MODE_IMAGE = "image"
     MODE_ADSENSE = "adsense"
     MODE_CHOICES = [
         (MODE_MANUAL, "Manual HTML"),
+        (MODE_IMAGE, "Image banner"),
         (MODE_ADSENSE, "Google AdSense"),
     ]
 
@@ -400,6 +402,24 @@ class GoldRatesAdPlacement(models.Model):
         blank=True,
         default="",
         help_text="Raw HTML for sponsored blocks (admin-reviewed only).",
+    )
+    image_url = models.URLField(
+        max_length=512,
+        blank=True,
+        default="",
+        help_text="Banner image URL when mode is Image.",
+    )
+    image_link_url = models.URLField(
+        max_length=512,
+        blank=True,
+        default="",
+        help_text="Optional click-through URL for image banners.",
+    )
+    image_alt = models.CharField(
+        max_length=160,
+        blank=True,
+        default="",
+        help_text="Alt text for image banners.",
     )
     adsense_slot_id = models.CharField(
         max_length=64,
@@ -883,6 +903,15 @@ DEFAULT_GOLD_RATES_AD_SLOTS = (
 )
 
 
+DEFAULT_GOLD_RATES_AD_IMAGES = {
+    GoldRatesAdPlacement.SLOT_TOP_BANNER: "/ads/gold-rates-top-banner.svg",
+    GoldRatesAdPlacement.SLOT_SIDEBAR: "/ads/gold-rates-sidebar.svg",
+    GoldRatesAdPlacement.SLOT_IN_CONTENT_1: "/ads/gold-rates-in-content.svg",
+    GoldRatesAdPlacement.SLOT_IN_CONTENT_2: "/ads/gold-rates-in-content.svg",
+    GoldRatesAdPlacement.SLOT_FOOTER: "/ads/gold-rates-footer.svg",
+}
+
+
 def ensure_default_gold_rates_ad_placements() -> None:
     labels = {
         GoldRatesAdPlacement.SLOT_TOP_BANNER: "Top banner",
@@ -897,7 +926,10 @@ def ensure_default_gold_rates_ad_placements() -> None:
             defaults={
                 "label": labels.get(slot, slot),
                 "sort_order": idx,
-                "is_active": False,
+                "is_active": True,
+                "mode": GoldRatesAdPlacement.MODE_IMAGE,
+                "image_url": DEFAULT_GOLD_RATES_AD_IMAGES.get(slot, ""),
+                "image_alt": labels.get(slot, slot),
             },
         )
 

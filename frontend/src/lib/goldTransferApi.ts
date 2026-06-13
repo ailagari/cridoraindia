@@ -215,6 +215,48 @@ export async function fetchGoldWallet(): Promise<GoldWalletDTO | null> {
   return (await res.json()) as GoldWalletDTO
 }
 
+/** Customer holds vaulted metal at any custodian. */
+export function customerHasVaultHoldings(wallet: GoldWalletDTO | null | undefined): boolean {
+  return (wallet?.vaults ?? []).some((v) => vaultRowTotalGrams(v) > 1e-9)
+}
+
+/** Mirrors server rules for PATCH /api/v1/gold/default-jeweller/. */
+export function canPromoteJewellerToPrimary(
+  wallet: GoldWalletDTO | null | undefined,
+  jewellerId: number,
+): { allowed: boolean; reason?: string } {
+  if (!wallet) return { allowed: false, reason: 'Loading wallet…' }
+  if (wallet.default_jeweller_id === jewellerId) {
+    return { allowed: false, reason: 'Already your primary jeweller.' }
+  }
+  if (!customerHasVaultHoldings(wallet)) return { allowed: true }
+  const secondary = new Set(wallet.secondary_jeweller_ids ?? [])
+  if (secondary.has(jewellerId)) return { allowed: true }
+  const atJeweller = (wallet.vaults ?? []).some(
+    (v) => v.custodian_id === jewellerId && vaultRowTotalGrams(v) > 1e-9,
+  )
+  if (atJeweller) return { allowed: true }
+  return {
+    allowed: false,
+    reason:
+      'Primary jeweller must be one where you already hold a vault (fractional, deposit, or scheme).',
+  }
+}
+
+export async function patchDefaultJeweller(
+  jewellerId: number,
+): Promise<{ ok: true; wallet: GoldWalletDTO } | { ok: false; detail: string }> {
+  const res = await authFetch('/api/v1/gold/default-jeweller/', {
+    method: 'PATCH',
+    jsonBody: { jeweller_id: jewellerId },
+  })
+  const data = (await res.json()) as GoldWalletDTO & { detail?: string }
+  if (!res.ok) {
+    return { ok: false, detail: data.detail != null ? String(data.detail) : 'Could not update primary jeweller.' }
+  }
+  return { ok: true, wallet: data as GoldWalletDTO }
+}
+
 export async function fetchJewellerCustodyVaults(): Promise<JewellerCustodyVaultsPayloadDTO | null> {
   const res = await authFetch('/api/v1/jeweller/custody-vaults/')
   if (!res.ok) return null

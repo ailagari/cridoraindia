@@ -668,7 +668,8 @@ export const enMessages = {
   'goldRates.todayRates': "Today's rates (₹ per gram)",
   'goldRates.disclaimer':
     'Rates shown are indicative references for Kerala. Actual showroom rates may differ by city, making charges, and GST. Not investment advice.',
-  'goldRates.priceChart': 'Price trend',
+  'goldRates.priceChart': 'Weekly & Monthly Graph of Gold Price in Kerala',
+  'goldRates.chartLead': 'Track daily and intraday Kerala board rates. Hover on the line to see the date and price per gram.',
   'goldRates.metalTabs': 'Chart metal',
   'goldRates.chartRange': 'Chart range',
   'goldRates.chartEmpty': 'Historical chart data will appear as daily rates are recorded (up to 2 years).',

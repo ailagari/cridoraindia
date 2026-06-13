@@ -14,6 +14,16 @@ const SLOT_LABELS: Record<string, string> = {
   footer: 'Footer strip',
 }
 
+const PLACEHOLDER_IMAGES: Record<string, string> = {
+  top_banner: '/ads/gold-rates-top-banner.svg',
+  sidebar: '/ads/gold-rates-sidebar.svg',
+  in_content_1: '/ads/gold-rates-in-content.svg',
+  in_content_2: '/ads/gold-rates-in-content.svg',
+  footer: '/ads/gold-rates-footer.svg',
+}
+
+type AdMode = GoldRatesAdPlacementDTO['mode']
+
 export function AdminGoldRatesAdsPanel() {
   const [cfg, setCfg] = useState<AdminGoldRatesPageConfigPayload | null>(null)
   const [saving, setSaving] = useState(false)
@@ -68,8 +78,8 @@ export function AdminGoldRatesAdsPanel() {
       <header>
         <h2 className="admin-panel-title">Gold rates page & ads</h2>
         <p className="admin-panel-lead">
-          Public page at <code>/gold-rates/kerala</code>. Configure SEO copy, Google AdSense, or manual HTML
-          sponsorship blocks per slot.
+          Public page at <code>/gold-rates/kerala</code>. Configure SEO copy, banner images, manual HTML,
+          or Google AdSense per slot.
         </p>
         <p className="admin-panel-lead">
           <a href="/gold-rates/kerala" target="_blank" rel="noreferrer">
@@ -111,66 +121,117 @@ export function AdminGoldRatesAdsPanel() {
             placeholder="ca-pub-xxxxxxxxxxxxxxxx"
           />
         </label>
+        <p className="admin-panel-lead">
+          When a slot is set to Google AdSense mode, it uses this publisher account and the slot ID below.
+          Image and manual HTML modes ignore AdSense.
+        </p>
       </section>
 
-      {cfg.placements.map((p) => (
-        <section key={p.slot} className="admin-card">
-          <h3>{SLOT_LABELS[p.slot] ?? p.slot}</h3>
-          <label className="admin-check">
-            <input
-              type="checkbox"
-              checked={p.is_active}
-              onChange={(e) => updatePlacement(p.slot, { is_active: e.target.checked })}
-            />
-            Active
-          </label>
-          <label className="admin-field">
-            <span>Mode</span>
-            <select
-              value={p.mode}
-              onChange={(e) =>
-                updatePlacement(p.slot, { mode: e.target.value as 'manual' | 'adsense' })
-              }
-            >
-              <option value="manual">Manual HTML</option>
-              <option value="adsense">Google AdSense</option>
-            </select>
-          </label>
-          {p.mode === 'manual' ? (
-            <label className="admin-field">
-              <span>HTML snippet</span>
-              <textarea
-                rows={4}
-                value={p.manual_html ?? ''}
-                onChange={(e) => updatePlacement(p.slot, { manual_html: e.target.value })}
-                placeholder="<div>Sponsored…</div>"
+      {cfg.placements.map((p) => {
+        const previewSrc =
+          p.mode === 'image'
+            ? p.image_url?.trim() || PLACEHOLDER_IMAGES[p.slot] || ''
+            : p.mode === 'adsense' && cfg.adsense_enabled
+              ? ''
+              : PLACEHOLDER_IMAGES[p.slot] || ''
+        return (
+          <section key={p.slot} className="admin-card">
+            <h3>{SLOT_LABELS[p.slot] ?? p.slot}</h3>
+            <label className="admin-check">
+              <input
+                type="checkbox"
+                checked={p.is_active}
+                onChange={(e) => updatePlacement(p.slot, { is_active: e.target.checked })}
               />
+              Active
             </label>
-          ) : (
-            <>
+            <label className="admin-field">
+              <span>Mode</span>
+              <select
+                value={p.mode}
+                onChange={(e) => updatePlacement(p.slot, { mode: e.target.value as AdMode })}
+              >
+                <option value="image">Image banner</option>
+                <option value="manual">Manual HTML</option>
+                <option value="adsense">Google AdSense</option>
+              </select>
+            </label>
+
+            {p.mode === 'image' ? (
+              <>
+                <label className="admin-field">
+                  <span>Image URL</span>
+                  <input
+                    value={p.image_url ?? ''}
+                    onChange={(e) => updatePlacement(p.slot, { image_url: e.target.value })}
+                    placeholder={PLACEHOLDER_IMAGES[p.slot] ?? 'https://…/banner.jpg'}
+                  />
+                </label>
+                <label className="admin-field">
+                  <span>Click-through URL (optional)</span>
+                  <input
+                    value={p.image_link_url ?? ''}
+                    onChange={(e) => updatePlacement(p.slot, { image_link_url: e.target.value })}
+                    placeholder="https://…"
+                  />
+                </label>
+                <label className="admin-field">
+                  <span>Alt text</span>
+                  <input
+                    value={p.image_alt ?? ''}
+                    onChange={(e) => updatePlacement(p.slot, { image_alt: e.target.value })}
+                    placeholder={SLOT_LABELS[p.slot] ?? 'Advertisement'}
+                  />
+                </label>
+              </>
+            ) : null}
+
+            {p.mode === 'manual' ? (
               <label className="admin-field">
-                <span>Ad unit slot ID</span>
-                <input
-                  value={p.adsense_slot_id ?? ''}
-                  onChange={(e) => updatePlacement(p.slot, { adsense_slot_id: e.target.value })}
+                <span>HTML snippet</span>
+                <textarea
+                  rows={4}
+                  value={p.manual_html ?? ''}
+                  onChange={(e) => updatePlacement(p.slot, { manual_html: e.target.value })}
+                  placeholder="<div>Sponsored…</div>"
                 />
               </label>
-              <label className="admin-field">
-                <span>Format</span>
-                <select
-                  value={p.adsense_format ?? 'auto'}
-                  onChange={(e) => updatePlacement(p.slot, { adsense_format: e.target.value })}
-                >
-                  <option value="auto">auto</option>
-                  <option value="horizontal">horizontal</option>
-                  <option value="rectangle">rectangle</option>
-                  <option value="vertical">vertical</option>
-                </select>
-              </label>
-            </>
-          )}
-        </section>
-      ))}
+            ) : null}
+
+            {p.mode === 'adsense' ? (
+              <>
+                <label className="admin-field">
+                  <span>Ad unit slot ID</span>
+                  <input
+                    value={p.adsense_slot_id ?? ''}
+                    onChange={(e) => updatePlacement(p.slot, { adsense_slot_id: e.target.value })}
+                    placeholder="1234567890"
+                  />
+                </label>
+                <label className="admin-field">
+                  <span>Format</span>
+                  <select
+                    value={p.adsense_format ?? 'auto'}
+                    onChange={(e) => updatePlacement(p.slot, { adsense_format: e.target.value })}
+                  >
+                    <option value="auto">auto</option>
+                    <option value="horizontal">horizontal</option>
+                    <option value="rectangle">rectangle</option>
+                    <option value="vertical">vertical</option>
+                  </select>
+                </label>
+              </>
+            ) : null}
+
+            {previewSrc ? (
+              <div className="admin-ad-preview">
+                <span className="admin-ad-preview__label">Preview</span>
+                <img src={previewSrc} alt="" className="admin-ad-preview__img" />
+              </div>
+            ) : null}
+          </section>
+        )
+      })}
 
       <div className="admin-actions">
         <button type="button" className="btn btn-gold" disabled={saving} onClick={() => void save()}>

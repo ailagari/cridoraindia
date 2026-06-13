@@ -105,7 +105,7 @@ export function preferredPaidFractionalJewellerId(
 ): number | null {
   const known = new Set(knownIds)
   const defaultId = wallet?.default_jeweller_id
-  if (defaultId != null && known.has(defaultId)) return defaultId
+  if (defaultId != null && defaultId > 0) return defaultId
   const completed = orders
     .filter((o) => o.status === 'completed' && known.has(o.jeweller.id))
     .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at))
