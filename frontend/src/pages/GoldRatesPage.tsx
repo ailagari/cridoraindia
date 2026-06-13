@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { SeoHead } from '@/components/SeoHead'
 import { findAdPlacement, GoldRatesAdSlot } from '@/features/goldRates/GoldRatesAdSlot'
+import { GoldRatesCityLinks } from '@/components/GoldRatesCityLinks'
 import { GoldRatesPriceChart } from '@/features/goldRates/GoldRatesPriceChart'
 import { buildGoldSpotPricePoints } from '@/features/portfolio/PortfolioCharts'
 import { usePublicLocale } from '@/i18n/PublicLocaleProvider'
+import { useGoldRatesSeoContext } from '@/hooks/useGoldRatesSeoContext'
 import { LIVE_PRICE_POLL_MS } from '@/lib/liveDeskIntervals'
 import {
   fetchGoldRatesAds,
@@ -15,6 +18,17 @@ import {
   type KeralaGoldRatesHistoryPayload,
   type KeralaGoldRatesPayload,
 } from '@/lib/marketplaceApi'
+import {
+  breadcrumbJsonLd,
+  faqJsonLd,
+  goldRatesOgImage,
+  goldRatesItemListJsonLd,
+  goldRatesWebPageJsonLd,
+  newsArticleJsonLd,
+  organizationJsonLd,
+  PAGE_SEO,
+  webSiteJsonLd,
+} from '@/lib/seo'
 import { useLivePoll } from '@/lib/useLivePoll'
 import '@/styles/gold-rates-page.css'
 
@@ -123,7 +137,8 @@ function RateCard({
 }
 
 export function GoldRatesPage() {
-  const { t } = usePublicLocale()
+  const { t, locale } = usePublicLocale()
+  const { seoPath, locale: routeLocale } = useGoldRatesSeoContext()
   const [rates, setRates] = useState<KeralaGoldRatesPayload | null>(null)
   const [ads, setAds] = useState<GoldRatesAdsPayload | null>(null)
   const [historyRange, setHistoryRange] = useState<HistoryRange>('1m')
@@ -163,13 +178,45 @@ export function GoldRatesPage() {
 
   useLivePoll(loadRates, LIVE_PRICE_POLL_MS, true)
 
-  useEffect(() => {
-    document.title = ads?.page_title || t('goldRates.pageTitle')
-    const desc = document.querySelector('meta[name="description"]')
-    if (desc) {
-      desc.setAttribute('content', ads?.page_description || t('goldRates.pageDescription'))
-    }
-  }, [ads, t])
+  const pageTitle =
+    routeLocale === 'ml'
+      ? t('goldRates.pageTitleMl')
+      : ads?.page_title || t('goldRates.pageTitle')
+  const pageDescription =
+    routeLocale === 'ml'
+      ? t('goldRates.pageDescriptionMl')
+      : ads?.page_description || t('goldRates.pageDescription')
+  const seoBase = PAGE_SEO['/gold-rates/kerala']
+
+  const jsonLd = useMemo(
+    () => [
+      organizationJsonLd(),
+      webSiteJsonLd(),
+      goldRatesWebPageJsonLd({
+        title: pageTitle,
+        description: pageDescription,
+        path: '/gold-rates/kerala',
+        dateModified: rates?.source_updated_at ?? rates?.rate_date ?? undefined,
+      }),
+      newsArticleJsonLd({
+        headline: pageTitle,
+        description: pageDescription,
+        path: '/gold-rates/kerala',
+        dateModified: rates?.source_updated_at ?? rates?.rate_date ?? undefined,
+      }),
+      goldRatesItemListJsonLd(),
+      breadcrumbJsonLd([
+        { name: 'Home', path: '/' },
+        { name: 'Kerala gold rates', path: '/gold-rates/kerala' },
+      ]),
+      faqJsonLd([
+        { question: t('goldRates.faq1q'), answer: t('goldRates.faq1a') },
+        { question: t('goldRates.faq2q'), answer: t('goldRates.faq2a') },
+        { question: t('goldRates.faq3q'), answer: t('goldRates.faq3a') },
+      ]),
+    ],
+    [pageTitle, pageDescription, rates, t, locale],
+  )
 
   useEffect(() => {
     refreshHistory()
@@ -243,6 +290,15 @@ export function GoldRatesPage() {
 
   return (
     <div className="gr-page">
+      <SeoHead
+        title={pageTitle}
+        description={pageDescription}
+        path={seoPath}
+        keywords={seoBase.keywords}
+        ogImage={goldRatesOgImage('Kerala Gold Rate Today')}
+        jsonLd={jsonLd}
+        locale={routeLocale}
+      />
       <div className="container gr-page__hero">
         <nav className="gr-breadcrumb" aria-label="Breadcrumb">
           <Link to="/">{t('nav.home')}</Link>
@@ -497,6 +553,8 @@ export function GoldRatesPage() {
             ) : null}
           </section>
 
+          <GoldRatesCityLinks />
+
           <section className="gr-section gr-faq" aria-labelledby="gr-faq">
             <h2 id="gr-faq" className="gr-section__title">
               {t('goldRates.faqTitle')}
@@ -532,6 +590,9 @@ export function GoldRatesPage() {
             </Link>
             <Link to="/marketplace" className="btn btn-ghost btn-sm">
               {t('nav.products')}
+            </Link>
+            <Link to="/gold-rates/india" className="btn btn-ghost btn-sm">
+              {t('goldRatesIndia.breadcrumb')}
             </Link>
           </div>
         </aside>

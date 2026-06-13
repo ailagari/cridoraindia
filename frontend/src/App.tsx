@@ -22,6 +22,9 @@ import { DiscoverPage } from '@/pages/DiscoverPage'
 import { ShopHubPage } from '@/pages/ShopHubPage'
 import { JoinHubPage } from '@/pages/JoinHubPage'
 import { GoldRatesPage } from '@/pages/GoldRatesPage'
+import { GoldRatesIndiaPage } from '@/pages/GoldRatesIndiaPage'
+import { GoldRatesCityPage } from '@/pages/GoldRatesCityPage'
+import { GoldRatesMalayalamRoutes } from '@/components/GoldRatesMalayalamRoutes'
 import { AdminDashboardPage } from '@/pages/AdminDashboardPage'
 import { CustomerDashboardPage } from '@/pages/dashboard/CustomerDashboardPage'
 import { JewellerDashboardPage } from '@/pages/dashboard/JewellerDashboardPage'
@@ -78,7 +81,10 @@ export default function App() {
               <Route path="marketplace/cart" element={<Navigate to="/marketplace?cart=1" replace />} />
               <Route path="marketplace" element={<ProductMarketplacePage />} />
               <Route path="gold-rates/kerala" element={<GoldRatesPage />} />
+              <Route path="gold-rates/india" element={<GoldRatesIndiaPage />} />
+              <Route path="gold-rates/:citySlug" element={<GoldRatesCityPage />} />
               <Route path="gold-rates" element={<Navigate to="/gold-rates/kerala" replace />} />
+              <GoldRatesMalayalamRoutes />
               <Route path="login" element={<LoginPage />} />
               <Route path="signup" element={<SignupPage />} />
               <Route path="jeweller/apply" element={<JewellerApplyPage />} />

@@ -1,10 +1,12 @@
-import { Fragment, useEffect, useMemo, useState } from 'react'
+import { Fragment, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { SeoHead } from '@/components/SeoHead'
 import { useAuth } from '@/context/AuthContext'
 import { usePublicLocale } from '@/i18n/PublicLocaleProvider'
 import type { MessageKey } from '@/i18n/messages/en'
 import { useRefLandingReveal } from '@/hooks/useRefLandingReveal'
 import { dashboardLandingPath } from '@/lib/routes'
+import { organizationJsonLd, PAGE_SEO, webSiteJsonLd } from '@/lib/seo'
 
 function MlAccent({ accentKey, locale }: { accentKey: MessageKey; locale: string }) {
   const { t } = usePublicLocale()
@@ -46,17 +48,9 @@ export function HomePage() {
   const { t, locale } = usePublicLocale()
   useRefLandingReveal(locale)
   const [openFaq, setOpenFaq] = useState<number | null>(null)
+  const homeSeo = PAGE_SEO['/']
 
-  useEffect(() => {
-    document.title = 'Cridora India — Digital Gold Portfolio & Jeweller Engagement Platform'
-    const desc = document.querySelector('meta[name="description"]')
-    if (desc) {
-      desc.setAttribute(
-        'content',
-        'Track your gold portfolio, store bills safely, and stay connected with trusted jewellers. Cridora modernizes customer engagement without replacing your existing systems. Kerala & India.',
-      )
-    }
-  }, [])
+  const homeJsonLd = useMemo(() => [organizationJsonLd(), webSiteJsonLd()], [])
 
   const WHAT_CARDS = useMemo(
     () => [
@@ -193,6 +187,7 @@ export function HomePage() {
 
   return (
     <div className="ref-landing">
+      <SeoHead {...homeSeo} jsonLd={homeJsonLd} locale={locale} />
       {/* HERO */}
       <section className="hero" id="home">
         <div className="hero-inner">
@@ -216,14 +211,14 @@ export function HomePage() {
               <span className="hero-pill">{t('idx.hero.pill5')}</span>
             </div>
             <div className="hero-btns reveal reveal-delay-4">
-              <Link className="btn btn-primary btn-xl" to={exploreHref}>
+              <Link className="btn btn-primary btn-xl" to="/gold-rates/kerala">
+                {t('idx.hero.ctaGoldRates')}
+              </Link>
+              <Link className="btn btn-ghost btn-lg" to={exploreHref}>
                 {t('idx.hero.cta1')}
               </Link>
               <Link className="btn btn-ghost btn-lg" to="/jeweller/apply">
                 {t('idx.hero.cta2')}
-              </Link>
-              <Link className="btn btn-ghost btn-lg" to="/waitlist">
-                {t('idx.hero.cta3')}
               </Link>
             </div>
           </div>

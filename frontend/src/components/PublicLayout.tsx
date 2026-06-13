@@ -1,5 +1,6 @@
 import { useId, useMemo } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { GOLD_RATE_CITIES, goldRateCityPath } from '@/content/goldRateCities'
 import { CridoraLogo } from '@/components/CridoraLogo'
 import { PublicHeaderActions, PublicMobileChrome } from '@/components/PublicMobileChrome'
 import { PublicMobileUserMenu } from '@/components/PublicMobileUserMenu'
@@ -16,7 +17,7 @@ import { marketplaceListingCartHref } from '@/lib/marketplaceCartStorage'
 function PublicLayoutInner() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
-  const { t } = usePublicLocale()
+  const { t, locale } = usePublicLocale()
   const footerMarkGradId = useId().replace(/:/g, '')
 
   const primaryNav = [
@@ -177,11 +178,26 @@ function PublicLayoutInner() {
             <Link className="footer-link" to="/gold-rates/kerala">
               {t('nav.goldRates')}
             </Link>
+            <Link className="footer-link" to="/gold-rates/india">
+              {t('goldRatesCity.allIndia')}
+            </Link>
             <Link className="footer-link" to="/marketplace">
               {t('footer.marketplace')}
             </Link>
             <Link className="footer-link" to="/waitlist">
               {t('footer.waitlist')}
+            </Link>
+          </div>
+
+          <div className="footer-col">
+            <h4>{t('footer.goldRatesCities')}</h4>
+            {GOLD_RATE_CITIES.map((city) => (
+              <Link key={city.slug} className="footer-link" to={goldRateCityPath(city.slug)}>
+                {locale === 'ml' ? city.nameMl : city.nameEn}
+              </Link>
+            ))}
+            <Link className="footer-link" to="/gold-rates/kerala">
+              {t('goldRatesCity.allKerala')}
             </Link>
           </div>
 

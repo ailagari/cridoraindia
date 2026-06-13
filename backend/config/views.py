@@ -4,6 +4,14 @@ from pathlib import Path
 from django.conf import settings
 from django.http import Http404, HttpResponse
 
+from .seo import (
+    gold_rates_feed_xml,
+    gold_rates_og_svg,
+    inject_route_seo,
+    robots_txt,
+    sitemap_xml,
+)
+
 _SPA_BASE_TAG = '<base href="/" />'
 
 
@@ -19,5 +27,31 @@ def _spa_index_html() -> str:
 
 
 def spa_index(request):
+    html = inject_route_seo(_spa_index_html(), request.path)
+    return HttpResponse(html, content_type="text/html; charset=utf-8")
+
+
+def robots_txt_view(request):
     del request
-    return HttpResponse(_spa_index_html(), content_type="text/html; charset=utf-8")
+    return HttpResponse(robots_txt(), content_type="text/plain; charset=utf-8")
+
+
+def sitemap_xml_view(request):
+    del request
+    return HttpResponse(sitemap_xml(), content_type="application/xml; charset=utf-8")
+
+
+def gold_rates_og_svg_view(request):
+    label = (request.GET.get("label") or "Kerala Gold Rate Today").strip()[:120]
+    svg = gold_rates_og_svg(label)
+    response = HttpResponse(svg, content_type="image/svg+xml; charset=utf-8")
+    response["Cache-Control"] = "public, max-age=120"
+    return response
+
+
+def gold_rates_feed_view(request):
+    del request
+    xml = gold_rates_feed_xml()
+    response = HttpResponse(xml, content_type="application/rss+xml; charset=utf-8")
+    response["Cache-Control"] = "public, max-age=300"
+    return response

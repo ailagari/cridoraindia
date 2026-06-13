@@ -21,6 +21,7 @@ export const mlMessages: Record<MessageKey, string> = {
   'footer.platform': 'പ്ലാറ്റ്‌ഫോം',
   'footer.customers': 'ഉപഭോക്താക്കൾക്ക്',
   'footer.company': 'കമ്പനി',
+  'footer.goldRatesCities': 'നഗരം അനുസരിച്ച് സ്വർണ്ണ വില',
   'footer.home': 'ഹോം',
   'footer.discover': 'എന്താണ് ക്രിഡോറ?',
   'footer.howItWorks': 'പ്രവർത്തനരീതി',
@@ -406,6 +407,7 @@ export const mlMessages: Record<MessageKey, string> = {
   'idx.hero.pill4': 'സ്മാർട്ട് അലേർട്ടുകൾ',
   'idx.hero.pill5': 'മാറ്റമില്ലാത്ത സോഫ്റ്റ്‌വെയർ',
   'idx.hero.cta1': 'ഫീച്ചറുകൾ കാണാം',
+  'idx.hero.ctaGoldRates': 'Live gold rate',
   'idx.hero.cta2': 'ജ്വല്ലറി പങ്കാളിയാകൂ',
   'idx.hero.cta3': 'വെയ്റ്റ്‌ലിസ്റ്റിൽ ചേരുക',
   'idx.hero.vaultLabel': 'ആകെ സ്വർണ്ണ നിക്ഷേപം',
@@ -686,9 +688,12 @@ export const mlMessages: Record<MessageKey, string> = {
 
   'nav.goldRates': 'സ്വർണ്ണ നിരക്ക്',
 
-  'goldRates.pageTitle': 'കേരള സ്വർണ്ണ നിരക്ക് ഇന്ന് — 22K, 24K & വെള്ളി | ക്രിഡോറ ഇന്ത്യ',
+  'goldRates.pageTitle': 'കേരള സ്വർണ്ണ വില ഇന്ന് — 22K, 24K & വെള്ളി | ക്രിഡോറ ഇന്ത്യ',
+  'goldRates.pageTitleMl': 'കേരള സ്വർണ്ണ വില ഇന്ന് — Live 22K, 24K & Silver | Cridora India',
   'goldRates.pageDescription':
-    'കേരള സ്വർണ്ണ/വെള്ളി നിരക്കുകൾ, 2 വർഷത്തെ ചരിത്രം, ചാർട്ടുകൾ, കാൽക്കുലേറ്റർ.',
+    'കേരള സ്വർണ്ണ/വെള്ളി നിരക്ക് per gram — 2 വർഷ chart, history, calculator.',
+  'goldRates.pageDescriptionMl':
+    'കേരള സ്വർണ്ണ വില ഇന്ന് — 22K, 24K, 18K, silver per gram. Chart, history, calculator. Cridora India.',
   'goldRates.breadcrumb': 'കേരള സ്വർണ്ണ നിരക്ക്',
   'goldRates.heading': 'കേരള സ്വർണ്ണ നിരക്ക് ഇന്ന്',
   'goldRates.subheading':
@@ -736,4 +741,48 @@ export const mlMessages: Record<MessageKey, string> = {
   'goldRates.sidebar': 'Sidebar',
   'goldRates.sidebarCridora': 'ക്രിഡോറയിൽ ട്രാക്ക് ചെയ്യൂ',
   'goldRates.sidebarCridoraBody': 'ബില്ലുകൾ, live rate portfolio, jeweller connect.',
-}
+
+  'goldRatesIndia.breadcrumb': 'India gold rate',
+  'goldRatesIndia.heading': 'Gold Rate in India Today',
+  'goldRatesIndia.pageTitleMl': 'India gold rate today — Live 22K, 24K | Cridora',
+  'goldRatesIndia.pageDescriptionMl':
+    'India gold rate today — Kerala board 22K, 24K, 18K, silver per gram on Cridora.',
+  'goldRatesIndia.subheading':
+    'Live 24K, 22K, 18K & silver — Kerala board reference, India-facing rates per gram.',
+  'goldRatesIndia.todayRates': "Today's gold rate India (₹/g)",
+  'goldRatesIndia.keralaSection': 'Kerala gold rate — charts & history',
+  'goldRatesIndia.keralaLead':
+    'Detailed Kerala charts, 2-year history, calculator & daily table on our Kerala page.',
+  'goldRatesIndia.keralaCta': 'Kerala gold rate today',
+  'goldRatesIndia.faq1q': 'India gold rate today?',
+  'goldRatesIndia.faq1a':
+    'Live 22K, 24K, 18K per gram from Kerala board reference — refreshed every few minutes.',
+  'goldRatesIndia.faq2q': '22K gold rate calculation?',
+  'goldRatesIndia.faq2a': '22K (916 BIS) is 91.6% pure — standard for Indian jewellery.',
+  'goldRatesIndia.faq3q': 'Kerala gold rate history?',
+  'goldRatesIndia.faq3a': 'Kerala page: charts, 2-year table, jewellery calculator.',
+
+  'goldRatesCity.pageTitle': '{city} Gold Rate Today — Live 22K, 24K | Cridora India',
+  'goldRatesCity.pageTitleMl': '{city} സ്വർണ്ണ വില ഇന്ന് — Live 22K, 24K | Cridora India',
+  'goldRatesCity.pageDescription':
+    'Live gold rate in {city}, Kerala — 22K, 24K, 18K, silver per gram. Cridora India.',
+  'goldRatesCity.pageDescriptionMl':
+    '{goldPrice} ഇന്ന് — 22K, 24K, 18K, silver per gram. Live Kerala board on Cridora.',
+  'goldRatesCity.heading': '{city} Gold Rate Today',
+  'goldRatesCity.headingMl': '{goldPrice} ഇന്ന്',
+  'goldRatesCity.subheading': 'Live gold & silver for {city} ({cityMl}), Kerala board reference.',
+  'goldRatesCity.todayRates': '{city} gold rate today (₹/g)',
+  'goldRatesCity.cityDisclaimer': 'Indicative Kerala board rates; {city} showroom rates may differ.',
+  'goldRatesCity.detailSection': '{city} — charts & history',
+  'goldRatesCity.detailLead': 'Full Kerala charts, 2-year history, calculator on Kerala page.',
+  'goldRatesCity.keralaChartsCta': 'Kerala charts & calculator',
+  'goldRatesCity.linksTitle': 'കേരള നഗരങ്ങൾ — സ്വർണ്ണ വില',
+  'goldRatesCity.linksTitleCompact': 'More cities',
+  'goldRatesCity.linksLead': 'Major Kerala cities — live gold rate pages on Cridora.',
+  'goldRatesCity.allKerala': 'All Kerala rates',
+  'goldRatesCity.allIndia': 'India gold rate',
+  'goldRatesCity.faq1q': '{city} gold rate today?',
+  'goldRatesCity.faq1a': 'Live 22K, 24K, 18K per gram for {city} from Kerala board reference.',
+  'goldRatesCity.faq3q': 'Same rate at {city} jewellers?',
+  'goldRatesCity.faq3a': 'Showroom rates may add making charges and GST.',
+} as const

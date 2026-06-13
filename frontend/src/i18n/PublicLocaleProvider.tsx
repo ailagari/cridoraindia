@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import {
   applyDocumentLocale,
   persistPublicLocale,
@@ -7,6 +8,7 @@ import {
 } from '@/i18n/engine'
 import type { MessageKey } from '@/i18n/messages/en'
 import type { PublicLocale } from '@/i18n/types'
+import { isGoldRatesPath, stripMlPrefix, withMlPrefix } from '@/lib/goldRatesPaths'
 
 type PublicLocaleContextValue = {
   locale: PublicLocale
@@ -67,13 +69,24 @@ export function useOptionalPublicLocale(): PublicLocaleContextValue {
 
 export function LanguageSwitcher({ className }: { className?: string }) {
   const { locale, setLocale } = usePublicLocale()
+  const navigate = useNavigate()
+  const { pathname } = useLocation()
+
+  const switchTo = (next: PublicLocale) => {
+    setLocale(next)
+    if (isGoldRatesPath(pathname)) {
+      const target = next === 'ml' ? withMlPrefix(pathname) : stripMlPrefix(pathname)
+      if (target !== pathname) navigate(target)
+    }
+  }
+
   return (
     <div className={className ?? 'public-lang-switch'} role="group" aria-label="Language">
       <button
         type="button"
         className={`public-lang-switch__btn${locale === 'en' ? ' public-lang-switch__btn--active' : ''}`}
         aria-pressed={locale === 'en'}
-        onClick={() => setLocale('en')}
+        onClick={() => switchTo('en')}
       >
         EN
       </button>
@@ -81,7 +94,7 @@ export function LanguageSwitcher({ className }: { className?: string }) {
         type="button"
         className={`public-lang-switch__btn${locale === 'ml' ? ' public-lang-switch__btn--active' : ''}`}
         aria-pressed={locale === 'ml'}
-        onClick={() => setLocale('ml')}
+        onClick={() => switchTo('ml')}
       >
         ML
       </button>

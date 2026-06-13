@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { authFetch } from '@/lib/api'
 import { useOptionalPublicLocale } from '@/i18n/PublicLocaleProvider'
 import type { MessageKey } from '@/i18n/messages/en'
@@ -222,7 +223,7 @@ export function GoldTickerStrip({ variant = 'public' }: Props) {
   }
 
   return (
-    <div className="gold-ticker gold-ticker--public ref-pub-ticker">
+    <Link to="/gold-rates/kerala" className="gold-ticker gold-ticker--public ref-pub-ticker" aria-label={t('nav.goldRates')}>
       <div
         className="container"
         style={{
@@ -232,6 +233,8 @@ export function GoldTickerStrip({ variant = 'public' }: Props) {
           gap: '0.85rem 1.35rem',
           padding: '0.5rem 0',
           fontSize: '0.78rem',
+          textDecoration: 'none',
+          color: 'inherit',
         }}
       >
         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', gap: '0.5rem 1rem' }}>
@@ -275,6 +278,6 @@ export function GoldTickerStrip({ variant = 'public' }: Props) {
           {t('ticker.indiaFacing', { interval: pollLabel })} · {footPublic}
         </span>
       </div>
-    </div>
+    </Link>
   )
 }
