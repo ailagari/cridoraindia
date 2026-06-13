@@ -20,7 +20,7 @@ import {
   storeUserJson,
 } from '@/lib/api'
 import {
-  claimPushSubscriptionForLoggedInUser,
+  ensureBackgroundPushDelivery,
   initWebPushResubscribeListener,
 } from '@/lib/webPushApi'
 
@@ -110,21 +110,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (loading) return
     if (!user || !getStoredAccess()) return
-    void claimPushSubscriptionForLoggedInUser()
+    void ensureBackgroundPushDelivery({ promptIfNeeded: false })
   }, [loading, user])
 
   useEffect(() => {
     if (loading) return
-    const retryClaim = () => {
+    const retryBackgroundPush = () => {
       if (!user || !getStoredAccess()) return
       if (document.visibilityState !== 'visible') return
-      void claimPushSubscriptionForLoggedInUser()
+      void ensureBackgroundPushDelivery({ promptIfNeeded: false })
     }
-    document.addEventListener('visibilitychange', retryClaim)
-    window.addEventListener('focus', retryClaim)
+    document.addEventListener('visibilitychange', retryBackgroundPush)
+    window.addEventListener('focus', retryBackgroundPush)
     return () => {
-      document.removeEventListener('visibilitychange', retryClaim)
-      window.removeEventListener('focus', retryClaim)
+      document.removeEventListener('visibilitychange', retryBackgroundPush)
+      window.removeEventListener('focus', retryBackgroundPush)
     }
   }, [loading, user])
 
@@ -145,6 +145,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     saveUser(u)
     setUser(u)
+    void ensureBackgroundPushDelivery({ promptIfNeeded: true })
     return u
   }, [])
 

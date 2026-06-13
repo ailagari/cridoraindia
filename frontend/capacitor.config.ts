@@ -42,6 +42,9 @@ const config: CapacitorConfig = {
       smallIcon: 'ic_stat_cridora',
       iconColor: '#D4AF37',
     },
+    PushNotifications: {
+      presentationOptions: ['badge', 'sound', 'alert'],
+    },
   },
   server: {
     androidScheme: 'https',

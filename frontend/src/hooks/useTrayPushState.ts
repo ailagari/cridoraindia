@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { CRIDORA_PUSH_REFRESH_MESSAGE_TYPE } from '@/lib/cridoraSwMessages'
 import {
-  browserNotificationPermission,
   canSubscribeWebPush,
-  claimPushSubscriptionForLoggedInUser,
+  ensureBackgroundPushDelivery,
   fetchWebPushServerStatus,
   getBrowserPushActive,
   isPushPermissionDenied,
@@ -68,16 +67,12 @@ export function useTrayPushState(): TrayPushState {
       setPushSetupIncomplete(incomplete)
       if (
         opts?.autoHeal !== false &&
-        incomplete &&
+        (incomplete || (!active && !denied)) &&
         !denied &&
-        canSubscribeWebPush() &&
-        browserNotificationPermission() === 'granted'
+        canSubscribeWebPush()
       ) {
         try {
-          const claimed = await claimPushSubscriptionForLoggedInUser()
-          if (!claimed) {
-            await registerWebPushSubscription()
-          }
+          await ensureBackgroundPushDelivery({ promptIfNeeded: false })
           const [healed, stillIncomplete] = await Promise.all([
             getBrowserPushActive(),
             isPushSetupIncomplete(),
@@ -120,13 +115,14 @@ export function useTrayPushState(): TrayPushState {
     setBusy(true)
     setError('')
     try {
-      const claimed = await claimPushSubscriptionForLoggedInUser()
-      if (!claimed) {
-        await registerWebPushSubscription({ confirmTray: true })
-      }
-      setPushActive(true)
+      await ensureBackgroundPushDelivery({ promptIfNeeded: true })
+      const [active, incomplete] = await Promise.all([
+        getBrowserPushActive(),
+        isPushSetupIncomplete(),
+      ])
+      setPushActive(active)
+      setPushSetupIncomplete(incomplete)
       setPushBlocked(false)
-      setPushSetupIncomplete(false)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not finish tray setup.')
     } finally {

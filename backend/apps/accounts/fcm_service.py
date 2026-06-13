@@ -56,6 +56,7 @@ def send_fcm_payload(token: str, payload: dict[str, Any]) -> None:
     }
     if image:
         data_payload["image"] = image
+    data_payload = {key: str(value) for key, value in data_payload.items()}
     android_notification = messaging.AndroidNotification(
         channel_id="cridora-alerts",
         tag=tag,
@@ -68,6 +69,8 @@ def send_fcm_payload(token: str, payload: dict[str, Any]) -> None:
         data=data_payload,
         android=messaging.AndroidConfig(
             priority="high",
+            ttl=86400,
+            direct_boot_ok=True,
             notification=android_notification,
         ),
     )

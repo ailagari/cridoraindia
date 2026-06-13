@@ -5,6 +5,7 @@ import { isAppleMobileOrTablet } from '@/lib/platformDetect'
 import { fetchPushDeviceStatus, isDeviceStatusDeliverable, type PushDeviceStatus } from '@/lib/pushDeviceStatus'
 import {
   claimNativePushForLoggedInUser,
+  ensureNativeBackgroundPush,
   getNativePushActive,
   hasNativeTrayPermission,
   isNativeFcmEnabled,
@@ -173,7 +174,7 @@ export function getPushDeliveryLabel(): string {
     }
     return 'Add to Home Screen from Safari to enable tray alerts on iOS.'
   }
-  return 'Browser / installed PWA · Web Push to your system notification tray.'
+  return 'Browser / installed PWA · Web Push reaches your tray even when the browser is closed.'
 }
 
 async function waitForServiceWorkerController(timeoutMs = 8000): Promise<ServiceWorkerRegistration> {
@@ -398,4 +399,39 @@ export function initWebPushResubscribeListener(): () => void {
   }
   navigator.serviceWorker.addEventListener('message', onMessage)
   return () => navigator.serviceWorker.removeEventListener('message', onMessage)
+}
+
+type BackgroundPushOptions = {
+  /** Request OS permission when not yet granted (best after a user tap, e.g. login). */
+  promptIfNeeded?: boolean
+}
+
+/**
+ * Ensure this device can receive tray alerts while the app/browser is closed.
+ * Web Push uses the service worker; Android APK uses FCM.
+ */
+export async function ensureBackgroundPushDelivery(options?: BackgroundPushOptions): Promise<void> {
+  const promptIfNeeded = options?.promptIfNeeded ?? false
+
+  if (nativePushNotificationsSupported()) {
+    await ensureNativeBackgroundPush({ promptIfNeeded })
+    return
+  }
+
+  if (!pushNotificationsSupported()) return
+
+  if (browserNotificationPermission() === 'granted') {
+    if (getStoredAccess()) {
+      const linked = await claimPushSubscriptionForLoggedInUser()
+      if (linked) return
+    }
+    if (canSubscribeWebPush()) {
+      await registerWebPushSubscription().catch(() => undefined)
+    }
+    return
+  }
+
+  if (promptIfNeeded && canSubscribeWebPush() && browserNotificationPermission() === 'default') {
+    await registerWebPushSubscription().catch(() => undefined)
+  }
 }

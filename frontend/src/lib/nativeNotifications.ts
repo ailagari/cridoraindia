@@ -315,6 +315,40 @@ export async function claimNativePushForLoggedInUser(): Promise<void> {
   if (!(await localPermissionGranted())) return
 }
 
+/**
+ * Register FCM for background tray delivery (app closed / phone locked).
+ * Call after login with promptIfNeeded to request permission once.
+ */
+export async function ensureNativeBackgroundPush(options?: { promptIfNeeded?: boolean }): Promise<void> {
+  if (!isNativeAndroid()) return
+  await initNativeNotificationBridge()
+  if (await getNativePushActive()) return
+  if (await isNativePushPermissionDenied()) return
+
+  if (isNativeFcmEnabled()) {
+    if (await pushPermissionGranted()) {
+      await ensureFcmRegistered()
+      return
+    }
+    if (options?.promptIfNeeded) {
+      try {
+        await registerNativePushSubscription()
+      } catch {
+        /* user can enable from the bell */
+      }
+    }
+    return
+  }
+
+  if (options?.promptIfNeeded) {
+    try {
+      await registerNativePushSubscription()
+    } catch {
+      /* foreground-only fallback without google-services */
+    }
+  }
+}
+
 /** Mark feed ids as already shown (avoids duplicate local tray on first poll). */
 export function seedTrayNotifiedIds(ids: string[]): void {
   if (!isNativeAndroid() || ids.length === 0) return
