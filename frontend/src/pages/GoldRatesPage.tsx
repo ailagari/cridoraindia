@@ -1,0 +1,513 @@
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { findAdPlacement, GoldRatesAdSlot } from '@/features/goldRates/GoldRatesAdSlot'
+import {
+  buildGoldSpotPricePoints,
+  GoldSpotHistoryThinChart,
+} from '@/features/portfolio/PortfolioCharts'
+import { usePublicLocale } from '@/i18n/PublicLocaleProvider'
+import { LIVE_PRICE_POLL_MS } from '@/lib/liveDeskIntervals'
+import {
+  fetchGoldRatesAds,
+  fetchKeralaGoldRates,
+  fetchKeralaGoldRatesDaily,
+  fetchKeralaGoldRatesHistory,
+  type GoldRatesAdsPayload,
+  type KeralaGoldRatesDailyRow,
+  type KeralaGoldRatesHistoryPayload,
+  type KeralaGoldRatesPayload,
+} from '@/lib/marketplaceApi'
+import { useLivePoll } from '@/lib/useLivePoll'
+import '@/styles/gold-rates-page.css'
+
+type HistoryRange = '1d' | '1w' | '1m' | '3m' | '6m' | '1y' | '2y'
+type ChartMetal = '22K' | '24K' | '18K' | 'silver999'
+type WeightUnit = 'gram' | 'sovereign' | 'kg'
+type PurityKey = '24K' | '22K' | '18K'
+
+const HISTORY_RANGES: { key: HistoryRange; label: string }[] = [
+  { key: '1d', label: '1D' },
+  { key: '1w', label: '1W' },
+  { key: '1m', label: '1M' },
+  { key: '3m', label: '3M' },
+  { key: '6m', label: '6M' },
+  { key: '1y', label: '1Y' },
+  { key: '2y', label: '2Y' },
+]
+
+const METAL_TABS: { key: ChartMetal; label: string }[] = [
+  { key: '22K', label: '22K' },
+  { key: '24K', label: '24K' },
+  { key: '18K', label: '18K' },
+  { key: 'silver999', label: 'Silver' },
+]
+
+const SOVEREIGN_GRAMS = 8
+const KG_GRAMS = 1000
+
+function fmtInr(n: number, digits = 0): string {
+  return n.toLocaleString('en-IN', {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  })
+}
+
+function parseNum(s: string | number | undefined | null): number | null {
+  if (s == null) return null
+  const n = typeof s === 'number' ? s : Number.parseFloat(String(s))
+  return Number.isFinite(n) ? n : null
+}
+
+function gramsFromInput(weight: number, unit: WeightUnit): number {
+  if (unit === 'sovereign') return weight * SOVEREIGN_GRAMS
+  if (unit === 'kg') return weight * KG_GRAMS
+  return weight
+}
+
+function rateForPurity(rates: KeralaGoldRatesPayload | null, purity: PurityKey): number | null {
+  if (!rates) return null
+  return parseNum(rates.gold[purity])
+}
+
+function ChangeBadge({ changePct }: { changePct: string | null | undefined }) {
+  const n = changePct != null ? Number.parseFloat(changePct) : NaN
+  if (!Number.isFinite(n)) return <span className="gr-change gr-change--flat">—</span>
+  const up = n >= 0
+  return (
+    <span className={`gr-change${up ? ' gr-change--up' : ' gr-change--down'}`}>
+      {up ? '+' : ''}
+      {n.toFixed(2)}%
+    </span>
+  )
+}
+
+function RateCard({
+  title,
+  perGram,
+  changePct,
+  accent,
+}: {
+  title: string
+  perGram: number | null
+  changePct?: string | null
+  accent?: 'gold' | 'silver'
+}) {
+  const g8 = perGram != null ? perGram * SOVEREIGN_GRAMS : null
+  const g10 = perGram != null ? perGram * 10 : null
+  return (
+    <article className={`gr-rate-card gr-rate-card--${accent ?? 'gold'}`}>
+      <header className="gr-rate-card__head">
+        <h3>{title}</h3>
+        <ChangeBadge changePct={changePct} />
+      </header>
+      <p className="gr-rate-card__main">
+        <span className="gr-rate-card__val">{perGram != null ? `₹${fmtInr(perGram, 2)}` : '—'}</span>
+        <span className="gr-rate-card__unit">/ gram</span>
+      </p>
+      <ul className="gr-rate-card__extras">
+        <li>
+          <span>8 g (sovereign)</span>
+          <strong>{g8 != null ? `₹${fmtInr(g8, 0)}` : '—'}</strong>
+        </li>
+        <li>
+          <span>10 g</span>
+          <strong>{g10 != null ? `₹${fmtInr(g10, 0)}` : '—'}</strong>
+        </li>
+      </ul>
+    </article>
+  )
+}
+
+export function GoldRatesPage() {
+  const { t } = usePublicLocale()
+  const [rates, setRates] = useState<KeralaGoldRatesPayload | null>(null)
+  const [ads, setAds] = useState<GoldRatesAdsPayload | null>(null)
+  const [historyRange, setHistoryRange] = useState<HistoryRange>('1m')
+  const [chartMetal, setChartMetal] = useState<ChartMetal>('22K')
+  const [history, setHistory] = useState<KeralaGoldRatesHistoryPayload | null>(null)
+  const [dailyRows, setDailyRows] = useState<KeralaGoldRatesDailyRow[]>([])
+  const [dailyTotal, setDailyTotal] = useState(0)
+  const [dailyLoading, setDailyLoading] = useState(false)
+
+  const [calcWeight, setCalcWeight] = useState('8')
+  const [calcUnit, setCalcUnit] = useState<WeightUnit>('gram')
+  const [calcPurity, setCalcPurity] = useState<PurityKey>('22K')
+  const [calcMcMode, setCalcMcMode] = useState<'per_gram' | 'percent'>('per_gram')
+  const [calcMc, setCalcMc] = useState('0')
+
+  const loadRates = useCallback(() => {
+    void fetchKeralaGoldRates().then(setRates)
+  }, [])
+
+  useEffect(() => {
+    void fetchGoldRatesAds().then(setAds)
+    loadRates()
+  }, [loadRates])
+
+  useLivePoll(loadRates, LIVE_PRICE_POLL_MS, true)
+
+  useEffect(() => {
+    document.title = ads?.page_title || t('goldRates.pageTitle')
+    const desc = document.querySelector('meta[name="description"]')
+    if (desc) {
+      desc.setAttribute('content', ads?.page_description || t('goldRates.pageDescription'))
+    }
+  }, [ads, t])
+
+  useEffect(() => {
+    void fetchKeralaGoldRatesHistory(historyRange, chartMetal).then(setHistory)
+  }, [historyRange, chartMetal])
+
+  const loadDaily = useCallback(async (append: boolean) => {
+    setDailyLoading(true)
+    try {
+      const offset = append ? dailyRows.length : 0
+      const payload = await fetchKeralaGoldRatesDaily(30, offset)
+      if (!payload) return
+      setDailyTotal(payload.total)
+      setDailyRows((prev) => (append ? [...prev, ...payload.rows] : payload.rows))
+    } finally {
+      setDailyLoading(false)
+    }
+  }, [dailyRows.length])
+
+  useEffect(() => {
+    void (async () => {
+      setDailyLoading(true)
+      try {
+        const payload = await fetchKeralaGoldRatesDaily(30, 0)
+        if (!payload) return
+        setDailyTotal(payload.total)
+        setDailyRows(payload.rows)
+      } finally {
+        setDailyLoading(false)
+      }
+    })()
+  }, [])
+
+  const livePrice = useMemo(() => {
+    if (chartMetal === 'silver999') return parseNum(rates?.silver?.['999'])
+    return parseNum(rates?.gold[chartMetal])
+  }, [rates, chartMetal])
+
+  const chartPoints = useMemo(
+    () => buildGoldSpotPricePoints(history, livePrice),
+    [history, livePrice],
+  )
+
+  const calcResult = useMemo(() => {
+    const w = Number.parseFloat(calcWeight)
+    if (!Number.isFinite(w) || w <= 0) return null
+    const grams = gramsFromInput(w, calcUnit)
+    const rate = rateForPurity(rates, calcPurity)
+    if (rate == null) return null
+    const metal = grams * rate
+    const mcVal = Number.parseFloat(calcMc) || 0
+    const making =
+      calcMcMode === 'percent' ? (metal * mcVal) / 100 : mcVal * grams
+    return { grams, rate, metal, making, total: metal + making }
+  }, [calcWeight, calcUnit, calcPurity, calcMc, calcMcMode, rates])
+
+  const placements = ads?.placements ?? []
+  const ad = (slot: string) =>
+    findAdPlacement(placements, slot)
+
+  const updatedLabel =
+    rates?.source_updated_at || rates?.rate_date
+      ? `${rates?.source_updated_at || rates?.rate_date}`
+      : t('goldRates.updatedUnknown')
+
+  return (
+    <div className="gr-page">
+      <div className="container gr-page__hero">
+        <nav className="gr-breadcrumb" aria-label="Breadcrumb">
+          <Link to="/">{t('nav.home')}</Link>
+          <span aria-hidden>›</span>
+          <span>{t('goldRates.breadcrumb')}</span>
+        </nav>
+        <h1 className="gr-page__title">{t('goldRates.heading')}</h1>
+        <p className="gr-page__sub">{t('goldRates.subheading')}</p>
+        <p className="gr-page__meta">
+          {t('goldRates.lastUpdated')}: <strong>{updatedLabel}</strong>
+          {rates?.source ? (
+            <>
+              {' '}
+              · {t('goldRates.source')}: <em>{String(rates.source).replace(/_/g, ' ')}</em>
+            </>
+          ) : null}
+        </p>
+      </div>
+
+      <GoldRatesAdSlot
+        placement={ad('top_banner')}
+        adsenseClientId={ads?.adsense_client_id ?? ''}
+        adsenseEnabled={ads?.adsense_enabled ?? false}
+        className="container"
+      />
+
+      <div className="container gr-page__layout">
+        <div className="gr-page__main">
+          <section className="gr-section" aria-labelledby="gr-live-rates">
+            <h2 id="gr-live-rates" className="gr-section__title">
+              {t('goldRates.todayRates')}
+            </h2>
+            <div className="gr-rate-grid">
+              <RateCard
+                title="24K Gold"
+                perGram={parseNum(rates?.gold['24K'])}
+                changePct={rates?.daily_change?.['24K']?.change_pct}
+              />
+              <RateCard
+                title="22K Gold (916)"
+                perGram={parseNum(rates?.gold['22K'])}
+                changePct={rates?.daily_change?.['22K']?.change_pct}
+              />
+              <RateCard
+                title="18K Gold"
+                perGram={parseNum(rates?.gold['18K'])}
+                changePct={rates?.daily_change?.['18K']?.change_pct}
+              />
+              <RateCard
+                title="Silver 999"
+                perGram={parseNum(rates?.silver?.['999'])}
+                changePct={rates?.daily_change?.silver999?.change_pct}
+                accent="silver"
+              />
+            </div>
+            <p className="gr-disclaimer">{t('goldRates.disclaimer')}</p>
+          </section>
+
+          <GoldRatesAdSlot
+            placement={ad('in_content_1')}
+            adsenseClientId={ads?.adsense_client_id ?? ''}
+            adsenseEnabled={ads?.adsense_enabled ?? false}
+          />
+
+          <section className="gr-section gr-section--chart" aria-labelledby="gr-chart">
+            <div className="gr-section__head-row">
+              <h2 id="gr-chart" className="gr-section__title">
+                {t('goldRates.priceChart')}
+              </h2>
+              <div className="gr-tabs" role="tablist" aria-label={t('goldRates.metalTabs')}>
+                {METAL_TABS.map((m) => (
+                  <button
+                    key={m.key}
+                    type="button"
+                    role="tab"
+                    aria-selected={chartMetal === m.key}
+                    className={`gr-tab${chartMetal === m.key ? ' gr-tab--active' : ''}`}
+                    onClick={() => setChartMetal(m.key)}
+                  >
+                    {m.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="gr-ranges" role="group" aria-label={t('goldRates.chartRange')}>
+              {HISTORY_RANGES.map((r) => (
+                <button
+                  key={r.key}
+                  type="button"
+                  className={`gr-range${historyRange === r.key ? ' gr-range--active' : ''}`}
+                  aria-pressed={historyRange === r.key}
+                  onClick={() => setHistoryRange(r.key)}
+                >
+                  {r.label}
+                </button>
+              ))}
+            </div>
+            <div className="gr-chart-wrap">
+              {chartPoints.length >= 2 ? (
+                <GoldSpotHistoryThinChart
+                  points={chartPoints}
+                  granularity={history?.granularity === 'intraday' ? 'intraday' : 'daily'}
+                  masked={false}
+                  ariaLabel={`${chartMetal} Kerala rate chart`}
+                  windowLabel={historyRange.toUpperCase()}
+                />
+              ) : (
+                <p className="gr-chart-empty">{t('goldRates.chartEmpty')}</p>
+              )}
+            </div>
+            {history?.note ? <p className="gr-chart-note">{history.note}</p> : null}
+          </section>
+
+          <GoldRatesAdSlot
+            placement={ad('in_content_2')}
+            adsenseClientId={ads?.adsense_client_id ?? ''}
+            adsenseEnabled={ads?.adsense_enabled ?? false}
+          />
+
+          <section className="gr-section" aria-labelledby="gr-calculator">
+            <h2 id="gr-calculator" className="gr-section__title">
+              {t('goldRates.calculator')}
+            </h2>
+            <p className="gr-section__lead">{t('goldRates.calculatorLead')}</p>
+            <div className="gr-calc">
+              <div className="gr-calc__fields">
+                <label className="gr-field">
+                  <span>{t('goldRates.calcWeight')}</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.001"
+                    value={calcWeight}
+                    onChange={(e) => setCalcWeight(e.target.value)}
+                  />
+                </label>
+                <label className="gr-field">
+                  <span>{t('goldRates.calcUnit')}</span>
+                  <select value={calcUnit} onChange={(e) => setCalcUnit(e.target.value as WeightUnit)}>
+                    <option value="gram">{t('goldRates.unitGram')}</option>
+                    <option value="sovereign">{t('goldRates.unitSovereign')}</option>
+                    <option value="kg">{t('goldRates.unitKg')}</option>
+                  </select>
+                </label>
+                <label className="gr-field">
+                  <span>{t('goldRates.calcPurity')}</span>
+                  <select value={calcPurity} onChange={(e) => setCalcPurity(e.target.value as PurityKey)}>
+                    <option value="24K">24K</option>
+                    <option value="22K">22K (916)</option>
+                    <option value="18K">18K</option>
+                  </select>
+                </label>
+                <label className="gr-field">
+                  <span>{t('goldRates.calcMcMode')}</span>
+                  <select
+                    value={calcMcMode}
+                    onChange={(e) => setCalcMcMode(e.target.value as 'per_gram' | 'percent')}
+                  >
+                    <option value="per_gram">{t('goldRates.mcPerGram')}</option>
+                    <option value="percent">{t('goldRates.mcPercent')}</option>
+                  </select>
+                </label>
+                <label className="gr-field">
+                  <span>{t('goldRates.calcMc')}</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={calcMc}
+                    onChange={(e) => setCalcMc(e.target.value)}
+                  />
+                </label>
+              </div>
+              <div className="gr-calc__result" aria-live="polite">
+                {calcResult ? (
+                  <>
+                    <div className="gr-calc__row">
+                      <span>{t('goldRates.calcMetal')}</span>
+                      <strong>₹{fmtInr(calcResult.metal, 2)}</strong>
+                    </div>
+                    <div className="gr-calc__row">
+                      <span>{t('goldRates.calcMaking')}</span>
+                      <strong>₹{fmtInr(calcResult.making, 2)}</strong>
+                    </div>
+                    <div className="gr-calc__row gr-calc__row--total">
+                      <span>{t('goldRates.calcTotal')}</span>
+                      <strong>₹{fmtInr(calcResult.total, 2)}</strong>
+                    </div>
+                    <p className="gr-calc__fine">
+                      {fmtInr(calcResult.grams, calcResult.grams >= 1 ? 2 : 3)} g × ₹
+                      {fmtInr(calcResult.rate, 2)}/g ({calcPurity})
+                    </p>
+                  </>
+                ) : (
+                  <p>{t('goldRates.calcWaiting')}</p>
+                )}
+              </div>
+            </div>
+          </section>
+
+          <section className="gr-section" aria-labelledby="gr-history-table">
+            <h2 id="gr-history-table" className="gr-section__title">
+              {t('goldRates.historyTable')}
+            </h2>
+            <p className="gr-section__lead">{t('goldRates.historyTableLead')}</p>
+            <div className="gr-table-wrap">
+              <table className="gr-table">
+                <thead>
+                  <tr>
+                    <th>{t('goldRates.colDate')}</th>
+                    <th>24K</th>
+                    <th>22K</th>
+                    <th>18K</th>
+                    <th>{t('goldRates.colSilver')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {dailyRows.map((row) => (
+                    <tr key={row.date}>
+                      <td>{row.date}</td>
+                      <td>{row.gold_24k ? `₹${fmtInr(Number.parseFloat(row.gold_24k), 2)}` : '—'}</td>
+                      <td>{row.gold_22k ? `₹${fmtInr(Number.parseFloat(row.gold_22k), 2)}` : '—'}</td>
+                      <td>{row.gold_18k ? `₹${fmtInr(Number.parseFloat(row.gold_18k), 2)}` : '—'}</td>
+                      <td>
+                        {row.silver_999 ? `₹${fmtInr(Number.parseFloat(row.silver_999), 2)}` : '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {dailyRows.length < dailyTotal ? (
+              <button
+                type="button"
+                className="btn btn-ghost gr-load-more"
+                disabled={dailyLoading}
+                onClick={() => void loadDaily(true)}
+              >
+                {dailyLoading ? t('goldRates.loading') : t('goldRates.loadMore')}
+              </button>
+            ) : null}
+          </section>
+
+          <section className="gr-section gr-faq" aria-labelledby="gr-faq">
+            <h2 id="gr-faq" className="gr-section__title">
+              {t('goldRates.faqTitle')}
+            </h2>
+            <dl className="gr-faq__list">
+              <div>
+                <dt>{t('goldRates.faq1q')}</dt>
+                <dd>{t('goldRates.faq1a')}</dd>
+              </div>
+              <div>
+                <dt>{t('goldRates.faq2q')}</dt>
+                <dd>{t('goldRates.faq2a')}</dd>
+              </div>
+              <div>
+                <dt>{t('goldRates.faq3q')}</dt>
+                <dd>{t('goldRates.faq3a')}</dd>
+              </div>
+            </dl>
+          </section>
+        </div>
+
+        <aside className="gr-page__sidebar" aria-label={t('goldRates.sidebar')}>
+          <GoldRatesAdSlot
+            placement={ad('sidebar')}
+            adsenseClientId={ads?.adsense_client_id ?? ''}
+            adsenseEnabled={ads?.adsense_enabled ?? false}
+          />
+          <div className="gr-sidebar-card">
+            <h3>{t('goldRates.sidebarCridora')}</h3>
+            <p>{t('goldRates.sidebarCridoraBody')}</p>
+            <Link to="/signup" className="btn btn-gold btn-sm">
+              {t('nav.signUp')}
+            </Link>
+            <Link to="/marketplace" className="btn btn-ghost btn-sm">
+              {t('nav.products')}
+            </Link>
+          </div>
+        </aside>
+      </div>
+
+      <GoldRatesAdSlot
+        placement={ad('footer')}
+        adsenseClientId={ads?.adsense_client_id ?? ''}
+        adsenseEnabled={ads?.adsense_enabled ?? false}
+        className="container"
+      />
+    </div>
+  )
+}

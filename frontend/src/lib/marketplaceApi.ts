@@ -1,4 +1,4 @@
-import { apiFetch } from '@/lib/api'
+import { apiFetch, authFetch } from '@/lib/api'
 
 export type GoldTickerPayload = {
   platform_base_inr_per_gram_22k: string
@@ -18,6 +18,14 @@ export type LiveRawSpotPayload = {
   usd_to_inr_source?: string
 }
 
+export type KeralaBoardPayload = {
+  gold: Record<string, number>
+  silver?: Record<string, number>
+  source?: string
+  source_updated_at?: string
+  rate_date?: string
+}
+
 export type SpotPricesPayload = {
   currency: string
   unit: string
@@ -27,6 +35,8 @@ export type SpotPricesPayload = {
   usd_to_inr_source?: string
   gold: Record<string, number>
   silver?: Record<string, number>
+  /** Raw Kerala gold rate ₹/g (unadjusted board reference). */
+  kerala_board?: KeralaBoardPayload
   ticker_items?: Array<{ label: string; value?: number; text?: string }>
   /** Unadjusted international INR/g ladder — present only on admin spot-prices endpoint. */
   live_raw_spot?: LiveRawSpotPayload | null
@@ -208,6 +218,116 @@ export async function fetchSpotPrices(): Promise<SpotPricesPayload | null> {
     return null
   }
   return (await res.json()) as SpotPricesPayload
+}
+
+export type KeralaGoldRatesPayload = {
+  region: string
+  currency: string
+  unit: string
+  source?: string
+  source_updated_at?: string
+  rate_date?: string
+  gold: Record<string, number>
+  silver?: Record<string, number>
+  daily_change?: Record<string, { change_inr?: string | null; change_pct?: string | null }>
+  latest_point?: Record<string, unknown>
+  note?: string
+}
+
+export type KeralaGoldRatesHistoryPayload = GoldTickerHistoryPayload & {
+  metal?: string
+  latest?: Record<string, unknown>
+}
+
+export type KeralaGoldRatesDailyRow = {
+  date: string
+  gold_24k: string
+  gold_22k: string
+  gold_18k: string
+  silver_999?: string | null
+  source?: string
+}
+
+export type KeralaGoldRatesDailyPayload = {
+  total: number
+  limit: number
+  offset: number
+  retention_days?: number
+  rows: KeralaGoldRatesDailyRow[]
+}
+
+export type GoldRatesAdPlacementDTO = {
+  id: number
+  slot: string
+  label: string
+  mode: 'manual' | 'adsense'
+  manual_html?: string
+  adsense_slot_id?: string
+  adsense_format?: string
+  is_active: boolean
+  sort_order: number
+}
+
+export type GoldRatesAdsPayload = {
+  adsense_enabled: boolean
+  adsense_client_id: string
+  page_title?: string
+  page_description?: string
+  placements: GoldRatesAdPlacementDTO[]
+}
+
+export async function fetchKeralaGoldRates(): Promise<KeralaGoldRatesPayload | null> {
+  const res = await apiFetch('/api/v1/marketplace/kerala-gold-rates/', { cache: 'no-store' })
+  if (!res.ok) return null
+  return (await res.json()) as KeralaGoldRatesPayload
+}
+
+export async function fetchKeralaGoldRatesHistory(
+  range = '1m',
+  metal = '22K',
+): Promise<KeralaGoldRatesHistoryPayload | null> {
+  const params = new URLSearchParams({ range, metal })
+  const res = await apiFetch(`/api/v1/marketplace/kerala-gold-rates/history/?${params}`, { cache: 'no-store' })
+  if (!res.ok) return null
+  return (await res.json()) as KeralaGoldRatesHistoryPayload
+}
+
+export async function fetchKeralaGoldRatesDaily(
+  limit = 60,
+  offset = 0,
+): Promise<KeralaGoldRatesDailyPayload | null> {
+  const params = new URLSearchParams({ limit: String(limit), offset: String(offset) })
+  const res = await apiFetch(`/api/v1/marketplace/kerala-gold-rates/daily/?${params}`, { cache: 'no-store' })
+  if (!res.ok) return null
+  return (await res.json()) as KeralaGoldRatesDailyPayload
+}
+
+export async function fetchGoldRatesAds(): Promise<GoldRatesAdsPayload | null> {
+  const res = await apiFetch('/api/v1/marketplace/gold-rates/ads/', { cache: 'no-store' })
+  if (!res.ok) return null
+  return (await res.json()) as GoldRatesAdsPayload
+}
+
+export type AdminGoldRatesPageConfigPayload = GoldRatesAdsPayload & {
+  updated_at?: string | null
+}
+
+export async function fetchAdminGoldRatesConfig(): Promise<AdminGoldRatesPageConfigPayload | null> {
+  const res = await authFetch('/api/v1/admin/gold-rates/config/', { cache: 'no-store' })
+  if (!res.ok) return null
+  return (await res.json()) as AdminGoldRatesPageConfigPayload
+}
+
+export async function patchAdminGoldRatesConfig(
+  body: Partial<AdminGoldRatesPageConfigPayload>,
+): Promise<AdminGoldRatesPageConfigPayload | null> {
+  const res = await authFetch('/api/v1/admin/gold-rates/config/', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) return null
+  return (await res.json()) as AdminGoldRatesPageConfigPayload
 }
 
 export async function fetchMarketplaceProducts(opts?: {

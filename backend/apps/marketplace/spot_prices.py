@@ -1,4 +1,4 @@
-"""India-facing INR/g gold ticker from global XAU spot + USD→INR (indicative, not IBJA)."""
+"""India-facing INR/g gold ticker from Kerala gold rate feed (admin intl XAU ref optional)."""
 
 from __future__ import annotations
 
@@ -54,13 +54,10 @@ def persist_last_good_live_raw_snapshot(raw_payload: dict) -> None:
 
 
 def get_raw_spot_payload_for_admin_preview() -> dict:
-    """Unadjusted spot-shaped payload for admin UI (cache / stale / DB snapshot only — no external fetch)."""
-    cached = cache.get(_CACHE_KEY_INR)
-    if cached and isinstance(cached.get("gold"), dict) and cached["gold"].get("22K") is not None:
-        return cached
-    stale = cache.get(_CACHE_KEY_LAST_GOOD)
-    if stale and isinstance(stale.get("gold"), dict) and stale["gold"].get("22K") is not None:
-        return stale
+    """Unadjusted international XAU/XAG INR ladder for admin UI only."""
+    data = _build_intl_spot_inr_from_feed()
+    if data is not None:
+        return data
     t = get_or_create_ticker()
     snap = t.last_good_live_raw_snapshot_json
     if isinstance(snap, dict) and isinstance(snap.get("gold"), dict) and snap["gold"].get("22K") is not None:
@@ -76,6 +73,12 @@ def get_raw_spot_payload_for_admin_preview() -> dict:
 
 def invalidate_spot_price_cache() -> None:
     cache.delete(_CACHE_KEY_INR)
+    try:
+        from .josalukkas_rates import invalidate_josalukkas_rates_cache
+
+        invalidate_josalukkas_rates_cache()
+    except Exception:
+        pass
 
 
 DEFAULT_USD_INR = Decimal("83")
@@ -122,7 +125,13 @@ def _usd_to_inr() -> tuple[float, str]:
         return float(DEFAULT_USD_INR), "default_fallback"
 
 
-def _build_spot_inr_from_feed() -> dict | None:
+def _build_board_inr_from_feed() -> dict | None:
+    from .josalukkas_rates import get_josalukkas_spot_payload_cached
+
+    return get_josalukkas_spot_payload_cached()
+
+
+def _build_intl_spot_inr_from_feed() -> dict | None:
     gold_data = _http_get_json(GOLD_API_XAU, timeout=8.0)
     if not gold_data:
         return None
@@ -165,26 +174,34 @@ def _build_spot_inr_from_feed() -> dict | None:
     }
 
 
+def _kerala_gold_source_label(src: str) -> str:
+    if src in ("kerala_gold_rate", "kerala_gold_rate_stale"):
+        return src
+    return "kerala_gold_rate_stale"
+
+
 def _resolve_raw_22k_unadjusted() -> tuple[Decimal | None, str]:
     ticker = get_or_create_ticker()
     cached = cache.get(_CACHE_KEY_INR)
     if cached and isinstance(cached.get("gold"), dict):
         v = cached["gold"].get("22K")
         if v is not None:
-            return Decimal(str(v)), "live_spot"
+            return Decimal(str(v)), _kerala_gold_source_label(str(cached.get("source") or ""))
 
-    data = _build_spot_inr_from_feed()
+    data = _build_board_inr_from_feed()
     if data is not None and data.get("gold", {}).get("22K") is not None:
         persist_last_good_live_raw_snapshot(data)
         cache.set(_CACHE_KEY_INR, data, timeout=_CACHE_TTL)
         cache.set(_CACHE_KEY_LAST_GOOD, data, timeout=_CACHE_TTL_LAST_GOOD)
-        return Decimal(str(data["gold"]["22K"])), "live_spot"
+        return Decimal(str(data["gold"]["22K"])), _kerala_gold_source_label(
+            str(data.get("source") or "")
+        )
 
     stale = cache.get(_CACHE_KEY_LAST_GOOD)
     if stale and isinstance(stale.get("gold"), dict):
         v = stale["gold"].get("22K")
         if v is not None:
-            return Decimal(str(v)), "stale_spot_cache"
+            return Decimal(str(v)), "kerala_gold_rate_stale"
 
     snap = ticker.last_good_live_raw_snapshot_json
     if isinstance(snap, dict):
@@ -192,7 +209,7 @@ def _resolve_raw_22k_unadjusted() -> tuple[Decimal | None, str]:
         if isinstance(gold, dict):
             v = gold.get("22K")
             if v is not None:
-                return Decimal(str(v)), "db_snapshot"
+                return Decimal(str(v)), "kerala_gold_rate_stale"
 
     return None, "none"
 
@@ -337,24 +354,39 @@ def public_spot_prices_payload(*, include_live_raw: bool = False) -> dict:
 
     cached = cache.get(_CACHE_KEY_INR)
     if cached is not None:
-        return _finalize_spot_payload(
-            apply_live_adjustments_to_spot_payload(cached, ticker),
-            include_live_raw=include_live_raw,
-        )
+        gold_block = cached.get("gold")
+        board_raw = dict(gold_block) if isinstance(gold_block, dict) else {}
+        payload = apply_live_adjustments_to_spot_payload(cached, ticker)
+        if board_raw:
+            payload["kerala_board"] = {
+                "gold": board_raw,
+                "silver": dict(cached.get("silver") or {}),
+                "source": cached.get("source"),
+                "source_updated_at": cached.get("source_updated_at"),
+                "rate_date": cached.get("rate_date"),
+            }
+        return _finalize_spot_payload(payload, include_live_raw=include_live_raw)
 
-    data = _build_spot_inr_from_feed()
+    data = _build_board_inr_from_feed()
     if data is None:
         stale = cache.get(_CACHE_KEY_LAST_GOOD)
         if stale is not None:
             merged = {
                 **stale,
-                "source": "stale_cache",
-                "note": "Last successful spot conversion — feed temporarily unavailable.",
+                "source": "kerala_gold_rate_stale",
+                "note": "Last stored Kerala gold rate — feed temporarily unavailable.",
             }
-            return _finalize_spot_payload(
-                apply_live_adjustments_to_spot_payload(merged, ticker),
-                include_live_raw=include_live_raw,
-            )
+            payload = apply_live_adjustments_to_spot_payload(merged, ticker)
+            board_raw = merged.get("gold") if isinstance(merged.get("gold"), dict) else {}
+            if board_raw:
+                payload["kerala_board"] = {
+                    "gold": dict(board_raw),
+                    "silver": dict(merged.get("silver") or {}),
+                    "source": merged.get("source"),
+                    "source_updated_at": merged.get("source_updated_at"),
+                    "rate_date": merged.get("rate_date"),
+                }
+            return _finalize_spot_payload(payload, include_live_raw=include_live_raw)
         return _finalize_spot_payload(
             _platform_ticker_fallback_inr(), include_live_raw=include_live_raw
         )
@@ -363,6 +395,15 @@ def public_spot_prices_payload(*, include_live_raw: bool = False) -> dict:
     cache.set(_CACHE_KEY_INR, data, timeout=_CACHE_TTL)
     cache.set(_CACHE_KEY_LAST_GOOD, data, timeout=_CACHE_TTL_LAST_GOOD)
     payload_out = apply_live_adjustments_to_spot_payload(data, ticker)
+    board_raw = data.get("gold") if isinstance(data.get("gold"), dict) else {}
+    if board_raw:
+        payload_out["kerala_board"] = {
+            "gold": dict(board_raw),
+            "silver": dict(data.get("silver") or {}),
+            "source": data.get("source"),
+            "source_updated_at": data.get("source_updated_at"),
+            "rate_date": data.get("rate_date"),
+        }
     return _finalize_spot_payload(payload_out, include_live_raw=include_live_raw)
 
 

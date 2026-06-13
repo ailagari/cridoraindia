@@ -70,6 +70,8 @@ export const enMessages = {
   'ticker.liveMarket': 'Live market',
   'ticker.indiaFacing': 'India-facing indicative ₹/g · updates every ~{interval}',
   'ticker.basis.manual': 'Admin-set board rate',
+  'ticker.basis.keralaGold': 'Kerala gold rate',
+  'ticker.basis.keralaGoldStale': 'Kerala gold rate (last stored)',
   'ticker.basis.published': 'Published platform rate',
   'ticker.basis.fallback': 'Platform fallback rate',
   'ticker.basis.live': 'Live market',
@@ -350,6 +352,11 @@ export const enMessages = {
   'notifications.noBroadcasts': 'No broadcasts yet. After an admin sends one, it will show here.',
   'notifications.promo': 'Promo',
   'notifications.turnOn': 'Turn on device notifications',
+  'notifications.promptRegion': 'Cridora notification activation',
+  'notifications.promptTitle': 'Get Cridora alerts',
+  'notifications.promptBody':
+    'Turn on notifications for gold rate updates and important news from Cridora. Works for guests and signed-in users on this device.',
+  'notifications.promptActivate': 'Turn on notifications',
   'notifications.turnOnTray': 'Turn on tray notifications',
   'notifications.turningOn': 'Turning on…',
   'notifications.trayRegion': 'Device notification tray',
@@ -645,6 +652,62 @@ export const enMessages = {
   'idx.cta.stat2label': 'To complete KYC',
   'idx.cta.stat3label': 'ERP replacement needed',
   'idx.cta.stat4label': 'Verified partner stores',
+
+  'nav.goldRates': 'Gold rates',
+
+  'goldRates.pageTitle': 'Kerala Gold Rate Today — Live 22K, 24K & Silver | Cridora India',
+  'goldRates.pageDescription':
+    'Live Kerala gold and silver rates per gram with 2-year price history, interactive charts, and jewellery value calculator.',
+  'goldRates.breadcrumb': 'Kerala gold rates',
+  'goldRates.heading': 'Kerala Gold Rate Today',
+  'goldRates.subheading':
+    'Live indicative gold (24K, 22K, 18K) and silver rates for Kerala — updated from published board references with historical charts and calculator.',
+  'goldRates.lastUpdated': 'Last updated',
+  'goldRates.updatedUnknown': 'Awaiting feed',
+  'goldRates.source': 'Source',
+  'goldRates.todayRates': "Today's rates (₹ per gram)",
+  'goldRates.disclaimer':
+    'Rates shown are indicative references for Kerala. Actual showroom rates may differ by city, making charges, and GST. Not investment advice.',
+  'goldRates.priceChart': 'Price trend',
+  'goldRates.metalTabs': 'Chart metal',
+  'goldRates.chartRange': 'Chart range',
+  'goldRates.chartEmpty': 'Historical chart data will appear as daily rates are recorded (up to 2 years).',
+  'goldRates.calculator': 'Gold jewellery calculator',
+  'goldRates.calculatorLead': 'Estimate metal value plus optional making charges for ornaments.',
+  'goldRates.calcWeight': 'Weight',
+  'goldRates.calcUnit': 'Unit',
+  'goldRates.unitGram': 'Grams',
+  'goldRates.unitSovereign': 'Sovereign (8 g)',
+  'goldRates.unitKg': 'Kilogram',
+  'goldRates.calcPurity': 'Purity',
+  'goldRates.calcMcMode': 'Making charge type',
+  'goldRates.mcPerGram': '₹ per gram',
+  'goldRates.mcPercent': '% of metal value',
+  'goldRates.calcMc': 'Making charge',
+  'goldRates.calcMetal': 'Metal value',
+  'goldRates.calcMaking': 'Making charges',
+  'goldRates.calcTotal': 'Estimated total',
+  'goldRates.calcWaiting': 'Enter weight to calculate.',
+  'goldRates.historyTable': 'Daily rate history',
+  'goldRates.historyTableLead': 'Archived daily Kerala board closes — up to two years on record.',
+  'goldRates.colDate': 'Date',
+  'goldRates.colSilver': 'Silver 999',
+  'goldRates.loadMore': 'Load more dates',
+  'goldRates.loading': 'Loading…',
+  'goldRates.faqTitle': 'Common questions',
+  'goldRates.faq1q': 'How often are rates updated?',
+  'goldRates.faq1a':
+    'Live ticker rates refresh every few minutes when the Kerala board source publishes a change. Daily history rows are recorded once per calendar day.',
+  'goldRates.faq2q': 'What is 22K (916) gold?',
+  'goldRates.faq2a':
+    '22 karat gold is 91.6% pure — the BIS 916 hallmark standard used for most Indian jewellery.',
+  'goldRates.faq3q': 'Can I buy gold on Cridora?',
+  'goldRates.faq3a':
+    'Cridora helps you track holdings and connect with verified jewellers. Browse the marketplace or sign up to manage your portfolio.',
+  'goldRates.sidebar': 'Sidebar',
+  'goldRates.sidebarCridora': 'Track gold with Cridora',
+  'goldRates.sidebarCridoraBody':
+    'Save bills, monitor portfolio value against live rates, and stay connected with your jeweller.',
 } as const
 
 export type MessageKey = keyof typeof enMessages

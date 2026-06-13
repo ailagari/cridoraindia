@@ -606,6 +606,16 @@ export function NotificationBell({
           ) : null}
         </div>
       </div>
+      {pushActive && pushServerReady === true && !hidePushRowInBell ? (
+        <div className="notif-push-row" role="status" aria-label={publicUi ? t('notifications.trayRegion') : 'Device notification tray'}>
+          <span className="notif-push-label">
+            {publicUi ? t('notifications.trayOn') : 'Tray notifications on'}
+          </span>
+          <p className="notif-push-detail notif-push-status--on">
+            {publicUi ? t('notifications.trayOnDetail') : deliveryLabel}
+          </p>
+        </div>
+      ) : null}
       {showTrayPushRow ? (
         <div className="notif-push-row" role="region" aria-label={publicUi ? t('notifications.trayRegion') : 'Device notification tray'}>
           {pushPermissionBlocked ? (

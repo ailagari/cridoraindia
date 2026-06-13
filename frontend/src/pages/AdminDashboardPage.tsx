@@ -14,6 +14,7 @@ import { ChangePasswordPanel } from '@/features/auth/ChangePasswordPanel'
 import { AdminNotificationsHubPanel } from '@/features/admin/AdminNotificationsHubPanel'
 import { NotificationSettingsPanel } from '@/features/settings/NotificationSettingsPanel'
 import { AdminGoldTickerPanel, AdminMarketplaceCatalogSetupPanel } from '@/features/marketplace/AdminMarketplaceSection'
+import { AdminGoldRatesAdsPanel } from '@/features/marketplace/AdminGoldRatesAdsPanel'
 import { AdminTreasuryPanel } from '@/features/treasury/AdminTreasuryPanel'
 import { AdminUpiFraudReportsPanel } from '@/features/treasury/AdminUpiFraudReportsPanel'
 import { TablePagination } from '@/components/ui'
@@ -780,6 +781,7 @@ export function AdminDashboardPage() {
         {active === 'fin_fraud_reports' ? <AdminUpiFraudReportsPanel /> : null}
 
         {active === 'plat_gold' ? <AdminGoldTickerPanel /> : null}
+        {active === 'plat_gold_rates' ? <AdminGoldRatesAdsPanel /> : null}
 
         {active === 'mkt_products' ? <AdminMarketplaceCatalogSetupPanel /> : null}
 

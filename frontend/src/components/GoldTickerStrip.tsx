@@ -34,6 +34,10 @@ function liveMarketBasisNote(
   switch (src) {
     case 'manual_ticker':
       return t('ticker.basis.manual')
+    case 'kerala_gold_rate':
+      return t('ticker.basis.keralaGold')
+    case 'kerala_gold_rate_stale':
+      return t('ticker.basis.keralaGoldStale')
     case 'live_spot':
     case 'stale_spot_cache':
     case 'db_snapshot':
@@ -103,7 +107,8 @@ export function GoldTickerStrip({ variant = 'public' }: Props) {
   const intl22 = numFromGold(liveGold, '22K')
   const intl24 = numFromGold(liveGold, '24K')
 
-  const marketGold = spot?.gold
+  const boardGold = spot?.kerala_board?.gold
+  const marketGold = boardGold ?? spot?.gold
   let market22 = numFromGold(marketGold, '22K')
   let market24 = numFromGold(marketGold, '24K')
 
@@ -115,7 +120,8 @@ export function GoldTickerStrip({ variant = 'public' }: Props) {
     }
   }
 
-  const basisSrc = spot?.cridora_base_source ?? adminFallback?.cridora_base_source
+  const basisSrc =
+    spot?.kerala_board?.source ?? spot?.cridora_base_source ?? adminFallback?.cridora_base_source
   const footPublic = liveMarketBasisNote(basisSrc, t)
   const footAdmin = adminPublishedBasisNote(basisSrc)
 

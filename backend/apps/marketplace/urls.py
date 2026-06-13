@@ -1,6 +1,13 @@
 from django.urls import path
 
 from .spot_prices import MarketplaceSpotPricesView
+from .gold_rates_views import (
+    AdminGoldRatesPageConfigView,
+    MarketplaceGoldRatesAdsView,
+    MarketplaceKeralaGoldRatesDailyView,
+    MarketplaceKeralaGoldRatesHistoryView,
+    MarketplaceKeralaGoldRatesView,
+)
 from .views import (
     AdminGoldTickerView,
     AdminGoldPricePushView,
@@ -29,6 +36,10 @@ from .redemption_views import (
 
 urlpatterns = [
     path("marketplace/spot-prices/", MarketplaceSpotPricesView.as_view()),
+    path("marketplace/kerala-gold-rates/", MarketplaceKeralaGoldRatesView.as_view()),
+    path("marketplace/kerala-gold-rates/history/", MarketplaceKeralaGoldRatesHistoryView.as_view()),
+    path("marketplace/kerala-gold-rates/daily/", MarketplaceKeralaGoldRatesDailyView.as_view()),
+    path("marketplace/gold-rates/ads/", MarketplaceGoldRatesAdsView.as_view()),
     path("marketplace/catalog-meta/", MarketplaceCatalogMetaView.as_view()),
     path("marketplace/gold-ticker/history/", MarketplaceGoldTickerHistoryView.as_view()),
     path("marketplace/gold-ticker/", MarketplaceGoldTickerPublicView.as_view()),
@@ -59,6 +70,7 @@ urlpatterns = [
     path("jeweller/marketplace/products/<int:pk>/", JewellerProductDetailView.as_view()),
     path("admin/gold-ticker/", AdminGoldTickerView.as_view()),
     path("admin/gold-ticker/send-price-notification/", AdminGoldPricePushView.as_view()),
+    path("admin/gold-rates/config/", AdminGoldRatesPageConfigView.as_view()),
     path("admin/spot-prices/", AdminSpotPricesView.as_view()),
     path("admin/marketplace/products/", AdminMarketplaceProductListView.as_view()),
     path(

@@ -338,6 +338,93 @@ class KeralaGoldRateDaily(models.Model):
         return f"{self.rate_date.isoformat()} · 22K ₹{self.inr_per_gram_22k}/g"
 
 
+class GoldRatesPageConfig(models.Model):
+    """Singleton settings for the public Kerala gold rates page (SEO + AdSense)."""
+
+    adsense_enabled = models.BooleanField(
+        default=False,
+        help_text="When on, active AdSense placements render using the client ID below.",
+    )
+    adsense_client_id = models.CharField(
+        max_length=64,
+        blank=True,
+        default="",
+        help_text="Google AdSense publisher ID, e.g. ca-pub-xxxxxxxx.",
+    )
+    page_title = models.CharField(
+        max_length=160,
+        blank=True,
+        default="Kerala Gold Rate Today — Live 22K, 24K & Silver",
+    )
+    page_description = models.CharField(
+        max_length=320,
+        blank=True,
+        default="Live Kerala gold and silver rates per gram with 2-year history, charts, and jewellery value calculator.",
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Gold rates page config"
+
+    def __str__(self) -> str:
+        return "Gold rates page config"
+
+
+class GoldRatesAdPlacement(models.Model):
+    """Manual HTML or AdSense slot on the public gold rates page."""
+
+    MODE_MANUAL = "manual"
+    MODE_ADSENSE = "adsense"
+    MODE_CHOICES = [
+        (MODE_MANUAL, "Manual HTML"),
+        (MODE_ADSENSE, "Google AdSense"),
+    ]
+
+    SLOT_TOP_BANNER = "top_banner"
+    SLOT_SIDEBAR = "sidebar"
+    SLOT_IN_CONTENT_1 = "in_content_1"
+    SLOT_IN_CONTENT_2 = "in_content_2"
+    SLOT_FOOTER = "footer"
+    SLOT_CHOICES = [
+        (SLOT_TOP_BANNER, "Top banner"),
+        (SLOT_SIDEBAR, "Sidebar"),
+        (SLOT_IN_CONTENT_1, "In content (after rates)"),
+        (SLOT_IN_CONTENT_2, "In content (after chart)"),
+        (SLOT_FOOTER, "Footer strip"),
+    ]
+
+    slot = models.CharField(max_length=32, choices=SLOT_CHOICES, unique=True)
+    label = models.CharField(max_length=120, blank=True, default="")
+    mode = models.CharField(max_length=16, choices=MODE_CHOICES, default=MODE_MANUAL)
+    manual_html = models.TextField(
+        blank=True,
+        default="",
+        help_text="Raw HTML for sponsored blocks (admin-reviewed only).",
+    )
+    adsense_slot_id = models.CharField(
+        max_length=64,
+        blank=True,
+        default="",
+        help_text="AdSense ad unit slot ID when mode is AdSense.",
+    )
+    adsense_format = models.CharField(
+        max_length=24,
+        blank=True,
+        default="auto",
+        help_text="AdSense data-ad-format, e.g. auto, horizontal, rectangle.",
+    )
+    is_active = models.BooleanField(default=True)
+    sort_order = models.PositiveSmallIntegerField(default=0)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["sort_order", "slot"]
+        verbose_name = "Gold rates ad placement"
+
+    def __str__(self) -> str:
+        return f"{self.slot} ({self.mode})"
+
+
 class MetalPurity(models.Model):
     """Admin-managed hallmark / fineness options (Django admin). Jewellers enable subsets on their pricing profile."""
 
@@ -780,6 +867,39 @@ class GoldRateHistory(models.Model):
 def get_or_create_ticker() -> GoldTickerConfig:
     obj, _ = GoldTickerConfig.objects.get_or_create(pk=1)
     return obj
+
+
+def get_or_create_gold_rates_page_config() -> GoldRatesPageConfig:
+    obj, _ = GoldRatesPageConfig.objects.get_or_create(pk=1)
+    return obj
+
+
+DEFAULT_GOLD_RATES_AD_SLOTS = (
+    GoldRatesAdPlacement.SLOT_TOP_BANNER,
+    GoldRatesAdPlacement.SLOT_SIDEBAR,
+    GoldRatesAdPlacement.SLOT_IN_CONTENT_1,
+    GoldRatesAdPlacement.SLOT_IN_CONTENT_2,
+    GoldRatesAdPlacement.SLOT_FOOTER,
+)
+
+
+def ensure_default_gold_rates_ad_placements() -> None:
+    labels = {
+        GoldRatesAdPlacement.SLOT_TOP_BANNER: "Top banner",
+        GoldRatesAdPlacement.SLOT_SIDEBAR: "Sidebar",
+        GoldRatesAdPlacement.SLOT_IN_CONTENT_1: "After rate cards",
+        GoldRatesAdPlacement.SLOT_IN_CONTENT_2: "After chart",
+        GoldRatesAdPlacement.SLOT_FOOTER: "Footer strip",
+    }
+    for idx, slot in enumerate(DEFAULT_GOLD_RATES_AD_SLOTS):
+        GoldRatesAdPlacement.objects.get_or_create(
+            slot=slot,
+            defaults={
+                "label": labels.get(slot, slot),
+                "sort_order": idx,
+                "is_active": False,
+            },
+        )
 
 
 def jeweller_profile_for(user):

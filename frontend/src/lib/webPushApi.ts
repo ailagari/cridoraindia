@@ -264,7 +264,7 @@ export function initWebPushResubscribeListener(): () => void {
   const onMessage = (event: MessageEvent) => {
     const t = event.data && typeof event.data === 'object' ? (event.data as { type?: string }).type : null
     if (t !== CRIDORA_PUSH_RESUBSCRIBE_MESSAGE_TYPE) return
-    if (!getStoredAccess() && browserNotificationPermission() !== 'granted') return
+    if (browserNotificationPermission() !== 'granted') return
     void registerWebPushSubscription().catch(() => undefined)
   }
   navigator.serviceWorker.addEventListener('message', onMessage)

@@ -21,12 +21,14 @@ import { JewellerApplyPage } from '@/pages/JewellerApplyPage'
 import { DiscoverPage } from '@/pages/DiscoverPage'
 import { ShopHubPage } from '@/pages/ShopHubPage'
 import { JoinHubPage } from '@/pages/JoinHubPage'
+import { GoldRatesPage } from '@/pages/GoldRatesPage'
 import { AdminDashboardPage } from '@/pages/AdminDashboardPage'
 import { CustomerDashboardPage } from '@/pages/dashboard/CustomerDashboardPage'
 import { JewellerDashboardPage } from '@/pages/dashboard/JewellerDashboardPage'
 import { DashboardIndexRedirect } from '@/pages/dashboard/DashboardIndexRedirect'
 import { RedirectPreserveSearch } from '@/pages/dashboard/RedirectPreserveSearch'
 import { NativeNotificationBridge } from '@/components/NativeNotificationBridge'
+import { PushActivationPrompt } from '@/components/PushActivationPrompt'
 import { NativeAppSplash } from '@/components/NativeAppSplash'
 import { NativeAppEntryRoute } from '@/components/NativeAppEntryRoute'
 import { isNativePlatform } from '@/lib/capacitorPlatform'
@@ -55,6 +57,7 @@ export default function App() {
       <ThemeProvider>
         <ToastProvider>
         <AuthProvider>
+          <PushActivationPrompt />
           <NativeAppSplash />
           <NativeAppEntryRoute />
           <Routes>
@@ -74,6 +77,8 @@ export default function App() {
               <Route path="marketplace/product/:productId" element={<MarketplaceProductDetailPage />} />
               <Route path="marketplace/cart" element={<Navigate to="/marketplace?cart=1" replace />} />
               <Route path="marketplace" element={<ProductMarketplacePage />} />
+              <Route path="gold-rates/kerala" element={<GoldRatesPage />} />
+              <Route path="gold-rates" element={<Navigate to="/gold-rates/kerala" replace />} />
               <Route path="login" element={<LoginPage />} />
               <Route path="signup" element={<SignupPage />} />
               <Route path="jeweller/apply" element={<JewellerApplyPage />} />
