@@ -6,6 +6,12 @@ import { jewellerStorefrontFeatureChips } from '@/features/marketplace/jewellerM
 import { LIVE_STOREFRONT_GRID_POLL_MS } from '@/lib/liveDeskIntervals'
 import { fetchVerifiedJewellers, type JewellerStorefrontDTO } from '@/lib/marketplaceApi'
 import { useLiveCridoraBase } from '@/hooks/useLiveCridoraBase'
+import {
+  canPromoteJewellerToPrimary,
+  fetchGoldWallet,
+  patchDefaultJeweller,
+  type GoldWalletDTO,
+} from '@/lib/goldTransferApi'
 
 function formatInr(n: number, fractionDigits = 0): string {
   return n.toLocaleString('en-IN', { maximumFractionDigits: fractionDigits })
@@ -53,14 +59,25 @@ function dashEmpty(s: string): string {
 type CardProps = {
   j: JewellerStorefrontDTO
   variant: 'public' | 'customer_dashboard'
+  wallet?: GoldWalletDTO | null
+  defaultBusyId?: number | null
+  onSetDefault?: (jewellerId: number) => void
 }
 
-function JewellerMarketplaceCard({ j, variant }: CardProps) {
+function JewellerMarketplaceCard({ j, variant, wallet, defaultBusyId, onSetDefault }: CardProps) {
   const tags = jewellerStorefrontFeatureChips(j)
   const cred =
     j.credibility_score && j.credibility_score.trim() !== '' ? `${j.credibility_score}/100` : null
   const years =
     j.metric_years_active && parseNum(j.metric_years_active) > 0 ? `${j.metric_years_active} yr` : null
+
+  const isPrimary = variant === 'customer_dashboard' && wallet?.default_jeweller_id === j.id
+  const isSecondary =
+    variant === 'customer_dashboard' && (wallet?.secondary_jeweller_ids ?? []).includes(j.id)
+  const setDefaultGate =
+    variant === 'customer_dashboard' && j.id > 0 && wallet
+      ? canPromoteJewellerToPrimary(wallet, j.id)
+      : { allowed: false as const }
 
   return (
     <article className="jm-card card">
@@ -83,6 +100,19 @@ function JewellerMarketplaceCard({ j, variant }: CardProps) {
               >
                 Verified
               </span>
+              {isPrimary ? (
+                <span
+                  className="kyb-pill kyb-pill--ok"
+                  style={{ fontSize: '0.58rem', padding: '0.15rem 0.45rem', background: 'var(--gold-bg)' }}
+                >
+                  Primary
+                </span>
+              ) : null}
+              {isSecondary ? (
+                <span className="jm-card__cred" title="You hold a vault with this jeweller">
+                  Secondary
+                </span>
+              ) : null}
               {cred ? <span className="jm-card__cred">Trust {cred}</span> : null}
             </div>
           </div>
@@ -189,15 +219,31 @@ function JewellerMarketplaceCard({ j, variant }: CardProps) {
             >
               {variant === 'customer_dashboard' ? 'Buy gold' : 'Invest'}
             </Link>
-            <button
-              type="button"
-              className="btn btn-ghost"
-              disabled
-              style={{ opacity: 0.55 }}
-              title="Set default jeweller (coming soon)"
-            >
-              Set default
-            </button>
+            {variant === 'customer_dashboard' && j.id > 0 && onSetDefault ? (
+              <button
+                type="button"
+                className="btn btn-ghost"
+                disabled={!setDefaultGate.allowed || defaultBusyId != null}
+                title={
+                  isPrimary
+                    ? 'Already your primary jeweller'
+                    : setDefaultGate.reason ?? 'Set as your primary default jeweller'
+                }
+                onClick={() => onSetDefault(j.id)}
+              >
+                {defaultBusyId === j.id ? 'Saving…' : isPrimary ? 'Primary' : 'Set as primary'}
+              </button>
+            ) : variant === 'public' ? (
+              <button
+                type="button"
+                className="btn btn-ghost"
+                disabled
+                style={{ opacity: 0.55 }}
+                title="Sign up and choose a primary jeweller from your dashboard"
+              >
+                Set default
+              </button>
+            ) : null}
             <Link
               to={
                 j.id > 0
@@ -223,13 +269,22 @@ type Props = {
   intro?: string
   /** Customer dashboard: CTAs open fractional buy / catalogue inside `/userdashboard`. */
   variant?: 'public' | 'customer_dashboard'
+  /** Optional wallet snapshot from parent (avoids duplicate fetch). */
+  wallet?: GoldWalletDTO | null
+  onWalletChange?: (wallet: GoldWalletDTO) => void
 }
 
-export function JewellerMarketplaceGrid({ intro, variant = 'public' }: Props) {
+export function JewellerMarketplaceGrid({ intro, variant = 'public', wallet: walletProp, onWalletChange }: Props) {
   const [rows, setRows] = useState<JewellerStorefrontDTO[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCity, setSelectedCity] = useState('All Cities')
   const [sortBy, setSortBy] = useState<JewellerSortKey>('name')
+  const [walletLocal, setWalletLocal] = useState<GoldWalletDTO | null>(null)
+  const [defaultBusyId, setDefaultBusyId] = useState<number | null>(null)
+  const [setDefaultMsg, setSetDefaultMsg] = useState('')
+  const [setDefaultErr, setSetDefaultErr] = useState('')
+
+  const wallet = variant === 'customer_dashboard' ? (walletProp ?? walletLocal) : null
 
   const { data: liveBase } = useLiveCridoraBase()
 
@@ -241,6 +296,43 @@ export function JewellerMarketplaceGrid({ intro, variant = 'public' }: Props) {
   useEffect(() => {
     void refresh()
   }, [refresh])
+
+  useEffect(() => {
+    if (variant !== 'customer_dashboard' || walletProp != null) return
+    void fetchGoldWallet().then((w) => {
+      if (w) setWalletLocal(w)
+    })
+  }, [variant, walletProp])
+
+  useEffect(() => {
+    if (walletProp != null) setWalletLocal(walletProp)
+  }, [walletProp])
+
+  const onSetDefault = useCallback(
+    async (jewellerId: number) => {
+      setSetDefaultMsg('')
+      setSetDefaultErr('')
+      const gate = canPromoteJewellerToPrimary(wallet, jewellerId)
+      if (!gate.allowed) {
+        setSetDefaultErr(gate.reason ?? 'Cannot set primary jeweller.')
+        return
+      }
+      setDefaultBusyId(jewellerId)
+      try {
+        const out = await patchDefaultJeweller(jewellerId)
+        if (!out.ok) {
+          setSetDefaultErr(out.detail)
+          return
+        }
+        setWalletLocal(out.wallet)
+        onWalletChange?.(out.wallet)
+        setSetDefaultMsg('Primary jeweller updated.')
+      } finally {
+        setDefaultBusyId(null)
+      }
+    },
+    [onWalletChange, wallet],
+  )
 
   useEffect(() => {
     const id = window.setInterval(() => {
@@ -391,6 +483,14 @@ export function JewellerMarketplaceGrid({ intro, variant = 'public' }: Props) {
           Showing <strong style={{ color: 'var(--text)' }}>{filteredSorted.length}</strong> partners
           {selectedCity !== 'All Cities' ? ` · ${selectedCity}` : ''}
         </p>
+        {setDefaultMsg ? (
+          <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--success)' }}>{setDefaultMsg}</p>
+        ) : null}
+        {setDefaultErr ? (
+          <p className="form-error" style={{ margin: 0 }}>
+            {setDefaultErr}
+          </p>
+        ) : null}
       </div>
 
       {filteredSorted.length === 0 ? (
@@ -404,6 +504,9 @@ export function JewellerMarketplaceGrid({ intro, variant = 'public' }: Props) {
               key={j.id <= 0 ? `demo-${j.business_name}` : j.id}
               j={j}
               variant={variant}
+              wallet={wallet}
+              defaultBusyId={defaultBusyId}
+              onSetDefault={variant === 'customer_dashboard' ? (id) => void onSetDefault(id) : undefined}
             />
           ))}
         </div>

@@ -74,7 +74,23 @@ export function CustomerVaultsPanel() {
             <div key={`${v.custodian_id}`} className="card" style={{ padding: '1.15rem 1.25rem', borderRadius: 18 }}>
               <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: '0.75rem' }}>
                 <div>
-                  <h3 style={{ margin: 0, fontSize: '1.05rem' }}>{v.custodian_label || `Jeweller #${v.custodian_id}`}</h3>
+                  <h3 style={{ margin: 0, fontSize: '1.05rem' }}>
+                    {v.custodian_label || `Jeweller #${v.custodian_id}`}
+                    {v.is_primary_custodian ? (
+                      <span
+                        style={{
+                          marginLeft: 8,
+                          fontSize: '0.62rem',
+                          fontWeight: 800,
+                          letterSpacing: '0.06em',
+                          color: 'var(--gold-lo)',
+                          verticalAlign: 'middle',
+                        }}
+                      >
+                        PRIMARY
+                      </span>
+                    ) : null}
+                  </h3>
                   <p style={{ margin: '0.35rem 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                     Custodian ID <span className="tabular">{v.custodian_id}</span>
                   </p>

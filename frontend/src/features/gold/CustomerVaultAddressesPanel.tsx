@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import QRCode from 'qrcode'
 import { useAuth } from '@/context/AuthContext'
 import { usePublicLayoutMax767 } from '@/hooks/usePublicLayoutMax767'
@@ -185,7 +185,8 @@ export function CustomerVaultAddressesPanel() {
           <p style={{ margin: '0 0 0.75rem', fontSize: '0.82rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
             Gold sent to this ID lands in your vault with{' '}
             <strong>{wallet.vaults?.find((v) => v.is_primary_custodian)?.custodian_label ?? 'your primary jeweller'}</strong>
-            . Set primary under jeweller preferences when you have multiple vaults.
+            . Change primary under{' '}
+            <Link to="/userdashboard?section=shop_jewellers">Search jeweller</Link> when you have multiple vaults.
           </p>
           <QrBlock value={primaryGlobal} label="Primary vault card" />
         </div>
