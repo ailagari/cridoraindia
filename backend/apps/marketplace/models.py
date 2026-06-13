@@ -21,18 +21,6 @@ class GoldTickerConfig(models.Model):
         default=Decimal("7245.50"),
         help_text="Legacy fallback raw 22K ₹/g only when no live snapshot exists.",
     )
-    admin_markup_percent = models.DecimalField(
-        max_digits=8,
-        decimal_places=3,
-        default=Decimal("0"),
-        help_text="Deprecated — use live_metal_adjustments_json.",
-    )
-    admin_markup_inr_per_gram = models.DecimalField(
-        max_digits=12,
-        decimal_places=2,
-        default=Decimal("0"),
-        help_text="Deprecated — use live_metal_adjustments_json.",
-    )
     live_metal_adjustments_json = models.JSONField(
         default=dict,
         blank=True,
@@ -125,10 +113,6 @@ class GoldTickerConfig(models.Model):
     max_gold_alerts_per_day = models.PositiveSmallIntegerField(
         default=3,
         help_text="Max gold-rate / holding gain inbox+push alerts per customer per day.",
-    )
-    enable_fun_notifications = models.BooleanField(
-        default=False,
-        help_text="Deprecated: use enable_educational_engagement on ingest.",
     )
     enable_educational_engagement = models.BooleanField(
         default=False,
@@ -290,6 +274,68 @@ class GoldRateDailySnapshot(models.Model):
 
     def __str__(self) -> str:
         return f"{self.snapshot_date.isoformat()} · ₹{self.close_inr}/g"
+
+
+class AkgsmaBoardRateHistory(models.Model):
+    """Sampled AKGSMA Kerala board ₹/g (18K, 22K, 24K, silver) for charts."""
+
+    recorded_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    inr_per_gram_22k = models.DecimalField(max_digits=12, decimal_places=2)
+    inr_per_gram_18k = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    inr_per_gram_24k = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    silver_999_inr = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    board_date = models.CharField(max_length=32, blank=True, default="")
+    source = models.CharField(max_length=64, blank=True, default="")
+
+    class Meta:
+        ordering = ["-recorded_at"]
+        verbose_name_plural = "AKGSMA board rate history"
+
+    def __str__(self) -> str:
+        return f"{self.recorded_at.isoformat()} · 22K ₹{self.inr_per_gram_22k}/g"
+
+
+class AkgsmaBoardDailySnapshot(models.Model):
+    """Daily OHLC for AKGSMA 22K board rate (1-year retention)."""
+
+    snapshot_date = models.DateField(unique=True, db_index=True)
+    open_inr_22k = models.DecimalField(max_digits=12, decimal_places=2)
+    high_inr_22k = models.DecimalField(max_digits=12, decimal_places=2)
+    low_inr_22k = models.DecimalField(max_digits=12, decimal_places=2)
+    close_inr_22k = models.DecimalField(max_digits=12, decimal_places=2)
+    close_inr_18k = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    close_inr_24k = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    silver_999_inr = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    board_date = models.CharField(max_length=32, blank=True, default="")
+    source = models.CharField(max_length=64, blank=True, default="")
+    sample_count = models.PositiveIntegerField(default=0)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-snapshot_date"]
+        verbose_name_plural = "AKGSMA board daily snapshots"
+
+    def __str__(self) -> str:
+        return f"{self.snapshot_date.isoformat()} · 22K ₹{self.close_inr_22k}/g"
+
+
+class KeralaGoldRateDaily(models.Model):
+    """Daily Kerala gold/silver ₹/g for public SEO page (Goodreturns + board feeds)."""
+
+    rate_date = models.DateField(unique=True, db_index=True)
+    inr_per_gram_24k = models.DecimalField(max_digits=12, decimal_places=2)
+    inr_per_gram_22k = models.DecimalField(max_digits=12, decimal_places=2)
+    inr_per_gram_18k = models.DecimalField(max_digits=12, decimal_places=2)
+    silver_999_inr = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    source = models.CharField(max_length=64, blank=True, default="")
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-rate_date"]
+        verbose_name_plural = "Kerala gold rate daily (public)"
+
+    def __str__(self) -> str:
+        return f"{self.rate_date.isoformat()} · 22K ₹{self.inr_per_gram_22k}/g"
 
 
 class MetalPurity(models.Model):

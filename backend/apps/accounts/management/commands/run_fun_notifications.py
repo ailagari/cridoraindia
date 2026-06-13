@@ -24,9 +24,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         ticker = get_or_create_ticker()
-        if not ticker.enable_fun_notifications and not getattr(
-            ticker, "enable_educational_engagement", False
-        ):
+        if not ticker.enable_educational_engagement:
             self.stdout.write(
                 "Fun/educational engagement disabled on ticker (enable_educational_engagement)."
             )
