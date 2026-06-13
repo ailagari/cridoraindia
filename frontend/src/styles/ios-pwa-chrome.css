@@ -90,6 +90,14 @@ html.ios.pwa-standalone {
   background: color-mix(in srgb, var(--gold-hi) 17%, transparent);
 }
 
+.pub-ref .public-bottom-item--shop .mobile-tab-ico {
+  transform: translateY(-5px);
+}
+
+.pub-ref .public-bottom-item--shop.public-bottom-item--active .mobile-tab-ico {
+  transform: translateY(-7px);
+}
+
 .pub-ref .public-hub-tabs {
   padding-left: max(5vw, var(--sal));
   padding-right: max(5vw, var(--sar));
@@ -153,6 +161,11 @@ html.ios.pwa-standalone {
   }
 
   .pub-ref .public-bottom-item--active .mobile-tab-ico {
+    transform: none;
+  }
+
+  .pub-ref .public-bottom-item--shop .mobile-tab-ico,
+  .pub-ref .public-bottom-item--shop.public-bottom-item--active .mobile-tab-ico {
     transform: none;
   }
 }

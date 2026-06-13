@@ -7,17 +7,13 @@ import type { AppNotification } from '@/lib/mockNotifications'
 import { useAuth } from '@/context/AuthContext'
 import { authFetch } from '@/lib/api'
 import {
-  fetchWebPushServerStatus,
   canSubscribeWebPush,
-  getBrowserPushActive,
   getPushDeliveryLabel,
-  isPushPermissionDenied,
   openNativeNotificationSettings,
-  pushNotificationsSupported,
   pushPermissionBlockedHint,
   pushSetupHint,
-  registerWebPushSubscription,
 } from '@/lib/webPushApi'
+import { useTrayPushState } from '@/hooks/useTrayPushState'
 import { nativePushNotificationsSupported } from '@/lib/nativeNotifications'
 import { CRIDORA_PUSH_REFRESH_MESSAGE_TYPE } from '@/lib/cridoraSwMessages'
 import { notifyBellFeedUpdates, seedTrayNotifiedIds } from '@/lib/nativeNotifications'
@@ -200,13 +196,20 @@ export function NotificationBell({
   const [platformItems, setPlatformItems] = useState<AppNotification[]>([])
   const [adminFeedError, setAdminFeedError] = useState('')
   const [platformFeedError, setPlatformFeedError] = useState('')
-  const [pushActive, setPushActive] = useState(false)
-  const [pushBusy, setPushBusy] = useState(false)
-  const [pushError, setPushError] = useState('')
-  const [pushServerReady, setPushServerReady] = useState<boolean | null>(null)
+  const {
+    serverReady: pushServerReady,
+    pushActive,
+    pushBlocked: pushPermissionBlocked,
+    pushSetupIncomplete,
+    busy: pushBusy,
+    error: pushError,
+    canEnable: canEnableTrayPush,
+    activate: enablePush,
+    finishSetup,
+    refresh: refreshPushState,
+  } = useTrayPushState()
   const [pushTestBusy, setPushTestBusy] = useState(false)
   const [pushTestMsg, setPushTestMsg] = useState('')
-  const [pushPermissionBlocked, setPushPermissionBlocked] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
   /** Bottom sheet on narrow viewports (PWA / mobile dashboards). */
   const [useSheetLayout, setUseSheetLayout] = useState(false)
@@ -294,41 +297,10 @@ export function NotificationBell({
     })
   }, [usePlatformFeed, uiT, categoryFilter])
 
-  const refreshPushState = useCallback(async () => {
-    if (!pushNotificationsSupported()) {
-      setPushActive(false)
-      setPushPermissionBlocked(false)
-      return
-    }
-    try {
-      setPushError('')
-      const [on, denied] = await Promise.all([getBrowserPushActive(), isPushPermissionDenied()])
-      setPushActive(on)
-      setPushPermissionBlocked(denied)
-    } catch {
-      setPushActive(false)
-      setPushPermissionBlocked(false)
-    }
-  }, [])
-
   useEffect(() => {
     if (!open) return
     void refreshPushState()
   }, [open, refreshPushState])
-
-  useEffect(() => {
-    if (!open) {
-      return
-    }
-    let cancelled = false
-    setPushServerReady(null)
-    void fetchWebPushServerStatus().then((s) => {
-      if (!cancelled) setPushServerReady(s.configured)
-    })
-    return () => {
-      cancelled = true
-    }
-  }, [open])
 
   useEffect(() => {
     const mq = window.matchMedia(MOBILE_SHEET_MQ)
@@ -430,28 +402,9 @@ export function NotificationBell({
     void loadPlatformFeed()
   }, [open, usePlatformFeed, loadPlatformFeed])
 
-  const enablePush = useCallback(async () => {
-    setPushBusy(true)
-    setPushError('')
-    try {
-      await registerWebPushSubscription({ confirmTray: true })
-      setPushActive(true)
-      setPushPermissionBlocked(false)
-    } catch (e) {
-      setPushError(e instanceof Error ? e.message : 'Could not enable push.')
-      const denied = await isPushPermissionDenied().catch(() => false)
-      setPushPermissionBlocked(denied)
-    } finally {
-      setPushBusy(false)
-    }
-  }, [])
-
   const openPushSettings = useCallback(async () => {
-    const opened = await openNativeNotificationSettings()
-    if (!opened && blockedHint) {
-      setPushError(blockedHint)
-    }
-  }, [blockedHint])
+    await openNativeNotificationSettings()
+  }, [])
 
   const sendAdminTestPush = useCallback(async () => {
     setPushTestBusy(true)
@@ -584,11 +537,10 @@ export function NotificationBell({
   ) : null
 
   const showTrayPushRow =
-    !hidePushRowInBell && pushServerReady === true && !pushActive
+    !hidePushRowInBell && pushServerReady && (!pushActive || pushSetupIncomplete)
   const pushSupported = canSubscribeWebPush()
-  const canEnableTrayPush =
-    pushSupported && !pushActive && !pushPermissionBlocked
-  const showTrayInstallHint = showTrayPushRow && !pushActive && !pushSupported && Boolean(setupHint)
+  const showTrayInstallHint =
+    showTrayPushRow && !pushActive && !pushSetupIncomplete && !pushSupported && Boolean(setupHint)
 
   const feedError = adminFeedError || platformFeedError
 
@@ -606,7 +558,7 @@ export function NotificationBell({
           ) : null}
         </div>
       </div>
-      {pushActive && pushServerReady === true && !hidePushRowInBell ? (
+      {pushActive && !pushSetupIncomplete && pushServerReady && !hidePushRowInBell ? (
         <div className="notif-push-row" role="status" aria-label={publicUi ? t('notifications.trayRegion') : 'Device notification tray'}>
           <span className="notif-push-label">
             {publicUi ? t('notifications.trayOn') : 'Tray notifications on'}
@@ -635,6 +587,25 @@ export function NotificationBell({
                   {publicUi ? t('notifications.openSettings') : 'Open app settings'}
                 </button>
               ) : null}
+            </>
+          ) : pushSetupIncomplete ? (
+            <>
+              <span className="notif-push-label">
+                {publicUi ? t('notifications.trayOff') : 'Notification tray'}
+              </span>
+              <p className="notif-push-detail">
+                {publicUi
+                  ? 'Finish setup to link this device for tray alerts.'
+                  : 'Permission granted, but this device is not linked for delivery yet.'}
+              </p>
+              <button
+                type="button"
+                className="btn btn-primary notif-push-btn"
+                disabled={pushBusy}
+                onClick={() => void finishSetup()}
+              >
+                {pushBusy ? (publicUi ? t('notifications.turningOn') : 'Finishing…') : 'Finish setup'}
+              </button>
             </>
           ) : canEnableTrayPush ? (
             <>
@@ -690,7 +661,7 @@ export function NotificationBell({
       ) : null}
       {pushError ? <p className="form-error notif-panel-hint">{pushError}</p> : null}
       {feedError ? <p className="form-error notif-panel-hint">{feedError}</p> : null}
-      {useAdminFeed && user && pushActive && pushServerReady === true ? (
+      {useAdminFeed && user && pushActive && !pushSetupIncomplete && pushServerReady ? (
         <div className="notif-push-row" style={{ marginTop: '0.5rem', flexWrap: 'wrap' }}>
           <button
             type="button"

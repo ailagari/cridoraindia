@@ -5,6 +5,7 @@ import { PushNotifications } from '@capacitor/push-notifications'
 import { authFetch, apiFetch, getStoredAccess } from '@/lib/api'
 import { readStoredPublicLocale } from '@/i18n/engine'
 import { isNativeAndroid } from '@/lib/capacitorPlatform'
+import { fetchPushDeviceStatus, isDeviceStatusDeliverable } from '@/lib/pushDeviceStatus'
 import type { AppNotification } from '@/lib/mockNotifications'
 
 const CHANNEL_ID = 'cridora-alerts'
@@ -175,12 +176,21 @@ function attachPushListeners(): void {
   })
 
   PushNotifications.addListener('pushNotificationReceived', (notification) => {
+    if (document.visibilityState !== 'visible') {
+      return
+    }
     const tag =
       typeof notification.data?.tag === 'string' ? notification.data.tag : 'cridora-default'
     const stableId =
       typeof notification.data?.id === 'string' ? notification.data.id : tag
-    const title = notification.title ?? 'Cridora'
-    const body = notification.body ?? 'Open Cridora for details.'
+    const title =
+      typeof notification.data?.title === 'string' && notification.data.title.trim()
+        ? notification.data.title.trim()
+        : (notification.title ?? 'Cridora')
+    const body =
+      typeof notification.data?.body === 'string' && notification.data.body.trim()
+        ? notification.data.body.trim()
+        : (notification.body ?? 'Open Cridora for details.')
     const url =
       typeof notification.data?.url === 'string' ? notification.data.url : '/'
     const image =
@@ -263,12 +273,29 @@ export async function registerNativePushSubscription(): Promise<void> {
   }
 }
 
-export async function getNativePushActive(): Promise<boolean> {
+export function getNativeFcmToken(): string | null {
+  return lastFcmToken
+}
+
+/** True when the user granted tray permission locally (FCM and/or local notifications). */
+export async function hasNativeTrayPermission(): Promise<boolean> {
   if (!isNativeAndroid()) return false
   if (isNativeFcmEnabled()) {
-    return pushPermissionGranted()
+    if (await pushPermissionGranted()) return true
   }
   return localPermissionGranted()
+}
+
+export async function getNativePushActive(): Promise<boolean> {
+  if (!isNativeAndroid()) return false
+  if (!isNativeFcmEnabled()) {
+    return localPermissionGranted()
+  }
+  if (!(await pushPermissionGranted())) return false
+  const token = lastFcmToken
+  if (!token) return false
+  const status = await fetchPushDeviceStatus({ token })
+  return isDeviceStatusDeliverable(status)
 }
 
 export async function claimNativePushForLoggedInUser(): Promise<void> {

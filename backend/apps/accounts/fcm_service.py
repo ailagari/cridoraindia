@@ -47,6 +47,15 @@ def send_fcm_payload(token: str, payload: dict[str, Any]) -> None:
     tag = str(payload.get("tag") or "cridora-default")
     stable_id = str(payload.get("id") or tag)
     image = str(payload.get("image") or "").strip() or None
+    data_payload = {
+        "title": title,
+        "body": body,
+        "url": url,
+        "tag": tag,
+        "id": stable_id,
+    }
+    if image:
+        data_payload["image"] = image
     android_notification = messaging.AndroidNotification(
         channel_id="cridora-alerts",
         tag=tag,
@@ -56,7 +65,7 @@ def send_fcm_payload(token: str, payload: dict[str, Any]) -> None:
     message = messaging.Message(
         token=token,
         notification=messaging.Notification(title=title, body=body, image=image),
-        data={"url": url, "tag": tag, "id": stable_id, **({"image": image} if image else {})},
+        data=data_payload,
         android=messaging.AndroidConfig(
             priority="high",
             notification=android_notification,

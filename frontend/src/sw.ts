@@ -37,6 +37,8 @@ self.addEventListener('message', (event: ExtendableMessageEvent) => {
         badge: iconHref,
         tag,
         vibrate: [120, 60, 120],
+        renotify: true,
+        requireInteraction: false,
         data: { url: targetUrl, tag },
       } as NotificationOptions),
     )
@@ -98,9 +100,13 @@ self.addEventListener('push', (event: PushEvent) => {
       data = { ...fallback, ...parsed }
     }
   } catch {
-    const text = event.data?.text()
-    if (text) {
-      data = { ...fallback, body: text }
+    try {
+      const text = event.data?.text()
+      if (text) {
+        data = { ...fallback, body: text }
+      }
+    } catch {
+      /* use fallback payload */
     }
   }
   const title = (data.title || fallback.title || 'Cridora').trim() || 'Cridora'
@@ -122,13 +128,25 @@ self.addEventListener('push', (event: PushEvent) => {
     icon: imageHref || iconHref,
     badge: iconHref,
     vibrate: [180, 80, 120],
+    renotify: true,
+    requireInteraction: false,
     data: { url: targetUrl, tag, notification_id: notificationId },
     tag,
     ...(imageHref ? { image: imageHref } : {}),
   } as NotificationOptions
   event.waitUntil(
     (async () => {
-      await self.registration.showNotification(title, notifyOpts)
+      try {
+        await self.registration.showNotification(title, notifyOpts)
+      } catch {
+        await self.registration.showNotification('Cridora', {
+          body: 'Open Cridora for details.',
+          icon: iconHref,
+          badge: iconHref,
+          tag: 'cridora-fallback',
+          data: { url: targetUrl, tag: 'cridora-fallback' },
+        } as NotificationOptions)
+      }
       if (notificationId) {
         await postTrayAck({
           event: 'tray_delivered',

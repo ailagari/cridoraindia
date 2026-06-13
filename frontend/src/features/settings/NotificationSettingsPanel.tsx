@@ -1,16 +1,13 @@
 import { useCallback, useEffect, useState } from 'react'
 import {
   canSubscribeWebPush,
-  fetchWebPushServerStatus,
-  getBrowserPushActive,
   getPushDeliveryLabel,
-  isPushPermissionDenied,
   openNativeNotificationSettings,
   pushNotificationsSupported,
   pushPermissionBlockedHint,
   pushSetupHint,
-  registerWebPushSubscription,
 } from '@/lib/webPushApi'
+import { useTrayPushState } from '@/hooks/useTrayPushState'
 import { nativePushNotificationsSupported } from '@/lib/nativeNotifications'
 import {
   fetchInboxPreferences,
@@ -31,11 +28,17 @@ export function NotificationSettingsPanel({
   const [loadErr, setLoadErr] = useState('')
   const [saveMsg, setSaveMsg] = useState('')
   const [busy, setBusy] = useState(false)
-  const [pushActive, setPushActive] = useState(false)
-  const [pushBusy, setPushBusy] = useState(false)
-  const [pushErr, setPushErr] = useState('')
-  const [serverReady, setServerReady] = useState<boolean | null>(null)
-  const [pushBlocked, setPushBlocked] = useState(false)
+  const {
+    serverReady,
+    pushActive,
+    pushBlocked,
+    pushSetupIncomplete,
+    busy: pushBusy,
+    error: pushErr,
+    canEnable,
+    activate,
+    finishSetup,
+  } = useTrayPushState()
 
   const load = useCallback(async () => {
     setLoadErr('')
@@ -49,11 +52,6 @@ export function NotificationSettingsPanel({
 
   useEffect(() => {
     void load()
-    void fetchWebPushServerStatus().then((s) => setServerReady(s.configured))
-    if (pushNotificationsSupported()) {
-      void getBrowserPushActive().then(setPushActive)
-      void isPushPermissionDenied().then(setPushBlocked)
-    }
   }, [load])
 
   const saveToggle = async (key: keyof NotificationPreferencesDTO, value: boolean) => {
@@ -68,22 +66,6 @@ export function NotificationSettingsPanel({
     }
     setPrefs(out.data)
     setSaveMsg('Saved.')
-  }
-
-  const enablePush = async () => {
-    setPushBusy(true)
-    setPushErr('')
-    try {
-      await registerWebPushSubscription({ confirmTray: true })
-      setPushActive(true)
-      setPushBlocked(false)
-    } catch (e) {
-      setPushErr(e instanceof Error ? e.message : 'Could not enable push.')
-      const denied = await isPushPermissionDenied().catch(() => false)
-      setPushBlocked(denied)
-    } finally {
-      setPushBusy(false)
-    }
   }
 
   if (loadErr && !prefs) {
@@ -141,7 +123,7 @@ export function NotificationSettingsPanel({
         </p>
         {serverReady === false ? (
           <p className="form-error">Push is not configured on this server.</p>
-        ) : pushActive ? (
+        ) : pushActive && !pushSetupIncomplete ? (
           <p style={{ margin: 0, color: 'var(--text-muted)' }}>Tray notifications are on for this device.</p>
         ) : pushBlocked ? (
           <>
@@ -159,8 +141,12 @@ export function NotificationSettingsPanel({
               </button>
             ) : null}
           </>
-        ) : pushNotificationsSupported() && canSubscribeWebPush() ? (
-          <button type="button" className="btn btn-primary" disabled={pushBusy} onClick={() => void enablePush()}>
+        ) : pushSetupIncomplete ? (
+          <button type="button" className="btn btn-primary" disabled={pushBusy} onClick={() => void finishSetup()}>
+            {pushBusy ? 'Finishing…' : 'Finish setup'}
+          </button>
+        ) : pushNotificationsSupported() && canSubscribeWebPush() && canEnable ? (
+          <button type="button" className="btn btn-primary" disabled={pushBusy} onClick={() => void activate()}>
             {pushBusy ? 'Turning on…' : 'Turn on tray notifications'}
           </button>
         ) : pushSetupHint() ? (

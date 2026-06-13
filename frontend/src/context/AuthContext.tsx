@@ -113,6 +113,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     void claimPushSubscriptionForLoggedInUser()
   }, [loading, user])
 
+  useEffect(() => {
+    if (loading) return
+    const retryClaim = () => {
+      if (!user || !getStoredAccess()) return
+      if (document.visibilityState !== 'visible') return
+      void claimPushSubscriptionForLoggedInUser()
+    }
+    document.addEventListener('visibilitychange', retryClaim)
+    window.addEventListener('focus', retryClaim)
+    return () => {
+      document.removeEventListener('visibilitychange', retryClaim)
+      window.removeEventListener('focus', retryClaim)
+    }
+  }, [loading, user])
+
   const persistSession = useCallback((data: Record<string, unknown>) => {
     const access = String(data.access ?? '')
     const refresh = String(data.refresh ?? '')

@@ -17,7 +17,7 @@ function topForPath(
     return [
       { to: '/', label: t('mobile.overview') },
       { to: '/gold-rates/kerala', label: t('mobile.rates') },
-      { to: '/how-it-works', label: t('mobile.flow') },
+      { to: '/#how', label: t('mobile.flow') },
       { to: '/waitlist', label: t('nav.waitlist') },
     ]
   }
@@ -57,7 +57,9 @@ function topForPath(
   }
   if (pathname.startsWith('/how-it-works')) {
     return [
-      { to: '/how-it-works', label: t('mobile.flow') },
+      { to: '/', label: t('mobile.home') },
+      { to: '/#how', label: t('mobile.flow') },
+      { to: '/discover', label: t('mobile.discover') },
       { to: '/jewellers', label: t('mobile.network') },
       { to: '/waitlist', label: t('nav.waitlist') },
     ]
@@ -73,7 +75,7 @@ function topForPath(
     return [
       { to: '/', label: t('mobile.overview') },
       { to: '/waitlist', label: t('nav.waitlist') },
-      { to: '/how-it-works', label: t('mobile.flow') },
+      { to: '/#how', label: t('mobile.flow') },
     ]
   }
   return []
@@ -156,7 +158,7 @@ export function PublicMobileChrome() {
         <NavLink
           to="/shop"
           className={({ isActive }) =>
-            `public-bottom-item${isShopPath || isActive ? ' public-bottom-item--active' : ''}`
+            `public-bottom-item public-bottom-item--shop${isShopPath || isActive ? ' public-bottom-item--active' : ''}`
           }
         >
           {({ isActive }) => (
@@ -180,21 +182,6 @@ export function PublicMobileChrome() {
                 <PublicTabIcon tab="rates" active={isRatesPath || isActive} />
               </span>
               <span className="mobile-tab-label">{t('mobile.rates')}</span>
-            </>
-          )}
-        </NavLink>
-        <NavLink
-          to="/how-it-works"
-          className={({ isActive }) =>
-            `public-bottom-item${isActive ? ' public-bottom-item--active' : ''}`
-          }
-        >
-          {({ isActive }) => (
-            <>
-              <span className="mobile-tab-ico">
-                <PublicTabIcon tab="how" active={isActive} />
-              </span>
-              <span className="mobile-tab-label">{t('mobile.how')}</span>
             </>
           )}
         </NavLink>

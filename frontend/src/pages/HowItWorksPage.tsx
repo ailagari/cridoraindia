@@ -54,6 +54,14 @@ export function HowItWorksPage() {
         </p>
       </header>
 
+      <nav className="how-page__hub-links" aria-label="Explore Cridora">
+        <Link to="/">{t('mobile.home')}</Link>
+        <Link to="/#how">{t('mobile.flow')}</Link>
+        <Link to="/discover">{t('mobile.discover')}</Link>
+        <Link to="/shop">{t('mobile.shop')}</Link>
+        <Link to="/join">{t('mobile.join')}</Link>
+      </nav>
+
       <section className="how-page__section" aria-labelledby="how-customers">
         <h2 id="how-customers" className="how-page__section-head">
           {t('how.customersHeading')}

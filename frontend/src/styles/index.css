@@ -6866,6 +6866,31 @@ select.input {
   color: var(--gold-light);
 }
 
+/* Center shop tab — 5-item public bottom nav */
+.public-bottom-item--shop {
+  position: relative;
+}
+
+.public-bottom-item--shop .mobile-tab-ico {
+  width: 3rem;
+  height: 2.35rem;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--gold-light) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--gold-light) 28%, transparent);
+  box-shadow: 0 8px 22px color-mix(in srgb, var(--gold-light) 18%, transparent);
+  transform: translateY(-5px);
+}
+
+.public-bottom-item--shop.public-bottom-item--active .mobile-tab-ico {
+  transform: translateY(-7px);
+  background: color-mix(in srgb, var(--gold-light) 24%, transparent);
+  box-shadow: 0 10px 26px color-mix(in srgb, var(--gold-light) 26%, transparent);
+}
+
+.public-bottom-item--shop .mobile-tab-label {
+  font-weight: 800;
+}
+
 .dash-content--with-bottom {
   padding-bottom: 2.5rem;
 }
@@ -6884,6 +6909,11 @@ select.input {
 
   .dash-bottom-item--active .mobile-tab-ico,
   .public-bottom-item--active .mobile-tab-ico {
+    transform: none;
+  }
+
+  .public-bottom-item--shop .mobile-tab-ico,
+  .public-bottom-item--shop.public-bottom-item--active .mobile-tab-ico {
     transform: none;
   }
 }

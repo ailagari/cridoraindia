@@ -55,6 +55,7 @@ def send_push_payload(subscription: WebPushSubscription, payload: dict[str, Any]
         vapid_private_key=_vapid_signer(),
         vapid_claims={"sub": settings.WEB_PUSH_VAPID_CONTACT.strip()},
         ttl=_WEB_PUSH_TTL_SECONDS,
+        headers={"Urgency": "high"},
     )
 
 

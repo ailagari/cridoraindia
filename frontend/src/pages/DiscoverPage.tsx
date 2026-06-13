@@ -64,7 +64,7 @@ export function DiscoverPage() {
         <p style={{ marginTop: '1.75rem', fontSize: '0.88rem', color: 'var(--text-muted)' }}>
           <Link to="/features">Platform features</Link>
           {' · '}
-          <Link to="/how-it-works">How it works</Link>
+          <Link to="/#how">How it works</Link>
         </p>
       </div>
     )
@@ -131,7 +131,7 @@ export function DiscoverPage() {
       <p style={{ marginTop: '2rem', fontSize: '0.88rem', color: 'var(--text-muted)' }}>
         <Link to="/features">Platform features</Link>
         {' · '}
-        <Link to="/how-it-works">How it works</Link>
+        <Link to="/#how">How it works</Link>
       </p>
     </div>
   )

@@ -1,9 +1,12 @@
 import { apiFetch, authFetch, getStoredAccess } from '@/lib/api'
 import { readStoredPublicLocale, translate } from '@/i18n/engine'
 import { CRIDORA_PUSH_RESUBSCRIBE_MESSAGE_TYPE, CRIDORA_SHOW_LOCAL_TRAY_MESSAGE_TYPE } from '@/lib/cridoraSwMessages'
+import { isAppleMobileOrTablet } from '@/lib/platformDetect'
+import { fetchPushDeviceStatus, isDeviceStatusDeliverable, type PushDeviceStatus } from '@/lib/pushDeviceStatus'
 import {
   claimNativePushForLoggedInUser,
   getNativePushActive,
+  hasNativeTrayPermission,
   isNativeFcmEnabled,
   isNativePushPermissionDenied,
   nativePushNotificationsSupported,
@@ -47,6 +50,10 @@ export type WebPushServerStatus = {
   publicKey: string | null
 }
 
+export type { PushDeviceStatus }
+
+export { fetchPushDeviceStatus }
+
 export async function fetchWebPushServerStatus(): Promise<WebPushServerStatus> {
   if (nativePushNotificationsSupported()) {
     const res = await apiFetch('/api/v1/push/native-status/', { cache: 'no-store' })
@@ -69,6 +76,18 @@ export async function fetchWebPushServerStatus(): Promise<WebPushServerStatus> {
   return { configured, publicKey }
 }
 
+
+async function verifyWebPushServerRegistration(endpoint: string): Promise<void> {
+  const status = await fetchPushDeviceStatus({ endpoint })
+  if (!isDeviceStatusDeliverable(status)) {
+    throw new Error(
+      getStoredAccess()
+        ? 'Tray alerts are not linked to your account yet. Tap Finish setup to retry.'
+        : 'Server did not register this device for tray alerts. Check your connection and try again.',
+    )
+  }
+}
+
 export function pushNotificationsSupported(): boolean {
   if (nativePushNotificationsSupported()) return true
   if (typeof window === 'undefined') return false
@@ -80,7 +99,7 @@ export function pushNotificationsSupported(): boolean {
 export function canSubscribeWebPush(): boolean {
   if (nativePushNotificationsSupported()) return true
   if (!pushNotificationsSupported()) return false
-  if (likelyIosMobile() && !displayModeStandalone()) return false
+  if (isAppleMobileOrTablet() && !displayModeStandalone()) return false
   return true
 }
 
@@ -90,10 +109,9 @@ export function browserNotificationPermission(): NotificationPermission | null {
   return Notification.permission
 }
 
-/** iPad/iPhone/iPod (excludes desktop Safari). */
+/** @deprecated Use isAppleMobileOrTablet from platformDetect. */
 export function likelyIosMobile(): boolean {
-  if (typeof navigator === 'undefined') return false
-  return /iPad|iPhone|iPod/i.test(navigator.userAgent)
+  return isAppleMobileOrTablet()
 }
 
 /** True when the PWA runs full-screen from Add to Home Screen (or similar). */
@@ -115,7 +133,7 @@ export function pushSetupHint(): string | null {
   if (!window.isSecureContext) {
     return 'Open Cridora over HTTPS — insecure origins cannot receive push notifications.'
   }
-  if (!pushNotificationsSupported() && likelyIosMobile()) {
+  if (!pushNotificationsSupported() && isAppleMobileOrTablet()) {
     if (!displayModeStandalone()) {
       return 'On iPhone/iPad: open this site in Safari → Share → Add to Home Screen, then launch Cridora from the home screen icon (not the Safari tab). Web Push works only from that installed app on iOS 16.4+.'
     }
@@ -132,7 +150,7 @@ export function pushPermissionBlockedHint(): string | null {
   if (nativePushNotificationsSupported()) {
     return 'Notifications are blocked for Cridora. Open app settings and turn on Notifications.'
   }
-  if (likelyIosMobile()) {
+  if (isAppleMobileOrTablet()) {
     if (displayModeStandalone()) {
       return 'Notifications are blocked. Open Settings → Notifications → Cridora and allow alerts.'
     }
@@ -147,15 +165,30 @@ export function getPushDeliveryLabel(): string {
     if (isNativeFcmEnabled()) {
       return 'Android app · alerts appear in your phone notification tray.'
     }
-    return 'Android app · tray alerts (enable server push via google-services.json for background delivery).'
+    return 'Android app · tray alerts while the app is open. Rebuild with google-services.json for background delivery.'
   }
-  if (likelyIosMobile()) {
+  if (isAppleMobileOrTablet()) {
     if (displayModeStandalone()) {
       return 'Installed app · Web Push to your notification tray (iOS 16.4+).'
     }
     return 'Add to Home Screen from Safari to enable tray alerts on iOS.'
   }
   return 'Browser / installed PWA · Web Push to your system notification tray.'
+}
+
+async function waitForServiceWorkerController(timeoutMs = 8000): Promise<ServiceWorkerRegistration> {
+  const reg = await navigator.serviceWorker.ready
+  if (navigator.serviceWorker.controller) return reg
+  await new Promise<void>((resolve) => {
+    const timer = window.setTimeout(resolve, timeoutMs)
+    const onController = () => {
+      window.clearTimeout(timer)
+      navigator.serviceWorker.removeEventListener('controllerchange', onController)
+      resolve()
+    }
+    navigator.serviceWorker.addEventListener('controllerchange', onController)
+  })
+  return navigator.serviceWorker.ready
 }
 
 async function refreshServiceWorkerRegistration(): Promise<ServiceWorkerRegistration> {
@@ -166,7 +199,20 @@ async function refreshServiceWorkerRegistration(): Promise<ServiceWorkerRegistra
   } catch {
     /* ignore transient network errors */
   }
-  return navigator.serviceWorker.ready
+  return waitForServiceWorkerController()
+}
+
+async function postTrayViaServiceWorker(title: string, body: string, tag: string, url: string): Promise<boolean> {
+  const controller = navigator.serviceWorker.controller
+  if (!controller) return false
+  controller.postMessage({
+    type: CRIDORA_SHOW_LOCAL_TRAY_MESSAGE_TYPE,
+    title,
+    body,
+    tag,
+    url,
+  })
+  return true
 }
 
 /** Show a one-time confirmation in the OS notification tray after the user enables alerts. */
@@ -197,8 +243,13 @@ export async function showTrayWelcomeNotification(): Promise<void> {
     badge: iconHref,
     tag,
     vibrate: [120, 60, 120],
+    renotify: true,
     data: { url: '/', tag },
   } as NotificationOptions
+
+  if (isAppleMobileOrTablet() && displayModeStandalone()) {
+    if (await postTrayViaServiceWorker(title, body, tag, '/')) return
+  }
 
   try {
     await reg.showNotification(title, notifyOpts)
@@ -207,16 +258,7 @@ export async function showTrayWelcomeNotification(): Promise<void> {
     /* iOS installed PWA often requires the service worker context */
   }
 
-  const controller = navigator.serviceWorker.controller
-  if (controller) {
-    controller.postMessage({
-      type: CRIDORA_SHOW_LOCAL_TRAY_MESSAGE_TYPE,
-      title,
-      body,
-      tag,
-      url: '/',
-    })
-  }
+  await postTrayViaServiceWorker(title, body, tag, '/')
 }
 
 type RegisterPushOptions = {
@@ -251,19 +293,23 @@ export async function registerWebPushSubscription(options?: RegisterPushOptions)
   }
   const reg = await refreshServiceWorkerRegistration()
   const existing = await reg.pushManager.getSubscription()
-  if (existing) {
-    await existing.unsubscribe()
+  let sub = existing
+  if (!existing) {
+    sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(pub),
+    })
   }
-  const sub = await reg.pushManager.subscribe({
-    userVisibleOnly: true,
-    applicationServerKey: urlBase64ToUint8Array(pub),
-  })
+  if (!sub) {
+    throw new Error('Could not create a push subscription on this device.')
+  }
   const json = sub.toJSON()
   const res = await postPushSubscribe(json as Record<string, unknown>)
   if (!res.ok) {
     const err = (await res.json().catch(() => ({}))) as { detail?: string }
     throw new Error(err.detail ?? `Subscribe failed (${res.status})`)
   }
+  await verifyWebPushServerRegistration(sub.endpoint)
   if (options?.confirmTray) {
     await showTrayWelcomeNotification()
   }
@@ -283,20 +329,22 @@ export async function unregisterWebPushSubscription(): Promise<void> {
 }
 
 /** Associate the current browser Push subscription with the logged-in account (after sign-in). */
-export async function claimPushSubscriptionForLoggedInUser(): Promise<void> {
+export async function claimPushSubscriptionForLoggedInUser(): Promise<boolean> {
   if (nativePushNotificationsSupported()) {
     await claimNativePushForLoggedInUser()
-    return
+    return getNativePushActive()
   }
-  if (!getStoredAccess()) return
-  if (!pushNotificationsSupported()) return
-  if (browserNotificationPermission() !== 'granted') return
+  if (!getStoredAccess()) return false
+  if (!pushNotificationsSupported()) return false
+  if (browserNotificationPermission() !== 'granted') return false
   const reg = await navigator.serviceWorker.ready
   const sub = await reg.pushManager.getSubscription()
-  if (!sub) return
+  if (!sub) return false
   const json = sub.toJSON() as Record<string, unknown>
   const res = await authFetch('/api/v1/push/subscribe/', { method: 'POST', jsonBody: json })
-  if (!res.ok) return
+  if (!res.ok) return false
+  const status = await fetchPushDeviceStatus({ endpoint: sub.endpoint })
+  return status.registered && status.linked_to_user
 }
 
 export async function getBrowserPushActive(): Promise<boolean> {
@@ -307,7 +355,26 @@ export async function getBrowserPushActive(): Promise<boolean> {
   if (browserNotificationPermission() !== 'granted') return false
   const reg = await navigator.serviceWorker.ready
   const sub = await reg.pushManager.getSubscription()
-  return sub !== null
+  if (!sub) return false
+  const status = await fetchPushDeviceStatus({ endpoint: sub.endpoint })
+  return isDeviceStatusDeliverable(status)
+}
+
+/** Local permission granted but server registration missing or not linked to account. */
+export async function isPushSetupIncomplete(): Promise<boolean> {
+  if (nativePushNotificationsSupported()) {
+    if (await isNativePushPermissionDenied()) return false
+    return !(await getNativePushActive()) && (await hasNativeTrayPermission())
+  }
+  if (!pushNotificationsSupported()) return false
+  if (browserNotificationPermission() !== 'granted') return false
+  const reg = await navigator.serviceWorker.ready
+  const sub = await reg.pushManager.getSubscription()
+  if (!sub) return false
+  const status = await fetchPushDeviceStatus({ endpoint: sub.endpoint })
+  if (!status.registered) return true
+  if (getStoredAccess() && !status.linked_to_user) return true
+  return false
 }
 
 /** Whether notification permission is denied on this device (browser or native shell). */

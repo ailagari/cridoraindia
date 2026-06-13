@@ -3,9 +3,11 @@ import { CRIDORA_PUSH_REFRESH_MESSAGE_TYPE } from '@/lib/cridoraSwMessages'
 import {
   browserNotificationPermission,
   canSubscribeWebPush,
+  claimPushSubscriptionForLoggedInUser,
   fetchWebPushServerStatus,
   getBrowserPushActive,
   isPushPermissionDenied,
+  isPushSetupIncomplete,
   pushNotificationsSupported,
   registerWebPushSubscription,
 } from '@/lib/webPushApi'
@@ -14,12 +16,14 @@ type TrayPushState = {
   serverReady: boolean
   pushActive: boolean
   pushBlocked: boolean
+  pushSetupIncomplete: boolean
   checked: boolean
   busy: boolean
   error: string
   canEnable: boolean
   refresh: (opts?: { autoHeal?: boolean }) => Promise<void>
   activate: () => Promise<void>
+  finishSetup: () => Promise<void>
   clearError: () => void
 }
 
@@ -30,6 +34,7 @@ export function useTrayPushState(): TrayPushState {
   const [serverReady, setServerReady] = useState(false)
   const [pushActive, setPushActive] = useState(false)
   const [pushBlocked, setPushBlocked] = useState(false)
+  const [pushSetupIncomplete, setPushSetupIncomplete] = useState(false)
   const [checked, setChecked] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -39,6 +44,7 @@ export function useTrayPushState(): TrayPushState {
       setServerReady(false)
       setPushActive(false)
       setPushBlocked(false)
+      setPushSetupIncomplete(false)
       setChecked(true)
       return
     }
@@ -48,30 +54,44 @@ export function useTrayPushState(): TrayPushState {
       if (!status.configured) {
         setPushActive(false)
         setPushBlocked(false)
+        setPushSetupIncomplete(false)
         setChecked(true)
         return
       }
-      const [active, denied] = await Promise.all([getBrowserPushActive(), isPushPermissionDenied()])
+      const [active, denied, incomplete] = await Promise.all([
+        getBrowserPushActive(),
+        isPushPermissionDenied(),
+        isPushSetupIncomplete(),
+      ])
       setPushActive(active)
       setPushBlocked(denied)
+      setPushSetupIncomplete(incomplete)
       if (
         opts?.autoHeal !== false &&
-        !active &&
+        incomplete &&
         !denied &&
         canSubscribeWebPush() &&
         browserNotificationPermission() === 'granted'
       ) {
         try {
-          await registerWebPushSubscription()
-          const healed = await getBrowserPushActive()
+          const claimed = await claimPushSubscriptionForLoggedInUser()
+          if (!claimed) {
+            await registerWebPushSubscription()
+          }
+          const [healed, stillIncomplete] = await Promise.all([
+            getBrowserPushActive(),
+            isPushSetupIncomplete(),
+          ])
           setPushActive(healed)
-        } catch {
-          /* user can retry from the prompt or bell */
+          setPushSetupIncomplete(stillIncomplete)
+        } catch (e) {
+          setError(e instanceof Error ? e.message : 'Could not finish tray setup.')
         }
       }
     } catch {
       setServerReady(false)
       setPushActive(false)
+      setPushSetupIncomplete(false)
     } finally {
       setChecked(true)
     }
@@ -84,10 +104,31 @@ export function useTrayPushState(): TrayPushState {
       await registerWebPushSubscription({ confirmTray: true })
       setPushActive(true)
       setPushBlocked(false)
+      setPushSetupIncomplete(false)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not enable notifications.')
       const denied = await isPushPermissionDenied().catch(() => false)
       setPushBlocked(denied)
+      const incomplete = await isPushSetupIncomplete().catch(() => false)
+      setPushSetupIncomplete(incomplete)
+    } finally {
+      setBusy(false)
+    }
+  }, [])
+
+  const finishSetup = useCallback(async () => {
+    setBusy(true)
+    setError('')
+    try {
+      const claimed = await claimPushSubscriptionForLoggedInUser()
+      if (!claimed) {
+        await registerWebPushSubscription({ confirmTray: true })
+      }
+      setPushActive(true)
+      setPushBlocked(false)
+      setPushSetupIncomplete(false)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not finish tray setup.')
     } finally {
       setBusy(false)
     }
@@ -122,18 +163,20 @@ export function useTrayPushState(): TrayPushState {
     return () => navigator.serviceWorker.removeEventListener('message', onMessage)
   }, [refresh])
 
-  const canEnable = canSubscribeWebPush() && !pushBlocked && !pushActive
+  const canEnable = canSubscribeWebPush() && !pushBlocked && !pushActive && !pushSetupIncomplete
 
   return {
     serverReady,
     pushActive,
     pushBlocked,
+    pushSetupIncomplete,
     checked,
     busy,
     error,
     canEnable,
     refresh,
     activate,
+    finishSetup,
     clearError,
   }
 }

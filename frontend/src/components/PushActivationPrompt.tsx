@@ -9,16 +9,26 @@ import { nativePushNotificationsSupported } from '@/lib/nativeNotifications'
  */
 export function PushActivationPrompt() {
   const { t } = useOptionalPublicLocale()
-  const { serverReady, pushActive, pushBlocked, checked, busy, error, canEnable, activate } =
-    useTrayPushState()
+  const {
+    serverReady,
+    pushActive,
+    pushBlocked,
+    pushSetupIncomplete,
+    checked,
+    busy,
+    error,
+    canEnable,
+    activate,
+    finishSetup,
+  } = useTrayPushState()
 
-  if (!checked || !serverReady || pushActive) return null
+  if (!checked || !serverReady || (pushActive && !pushSetupIncomplete)) return null
 
   const setupHint = pushSetupHint()
   const blockedHint = pushPermissionBlockedHint()
-  const showInstallHint = !canEnable && !pushBlocked && Boolean(setupHint)
+  const showInstallHint = !canEnable && !pushBlocked && !pushSetupIncomplete && Boolean(setupHint)
 
-  if (!canEnable && !pushBlocked && !showInstallHint) return null
+  if (!canEnable && !pushBlocked && !pushSetupIncomplete && !showInstallHint) return null
 
   return (
     <div className="push-activation-bar" role="region" aria-label={t('notifications.promptRegion')}>
@@ -27,6 +37,14 @@ export function PushActivationPrompt() {
           <p className="push-activation-bar-title">{t('notifications.promptTitle')}</p>
           {pushBlocked ? (
             <p className="push-activation-bar-detail">{blockedHint ?? t('notifications.blocked')}</p>
+          ) : pushSetupIncomplete ? (
+            <>
+              <p className="push-activation-bar-detail">
+                Notifications are allowed on this device but not linked for delivery yet. Finish setup to receive tray
+                alerts.
+              </p>
+              <p className="push-activation-bar-hint">{getPushDeliveryLabel()}</p>
+            </>
           ) : showInstallHint ? (
             <p className="push-activation-bar-detail">{setupHint}</p>
           ) : (
@@ -45,6 +63,15 @@ export function PushActivationPrompt() {
               onClick={() => void openNativeNotificationSettings()}
             >
               {t('notifications.openSettings')}
+            </button>
+          ) : pushSetupIncomplete ? (
+            <button
+              type="button"
+              className="btn btn-primary push-activation-bar-btn"
+              disabled={busy}
+              onClick={() => void finishSetup()}
+            >
+              {busy ? t('notifications.turningOn') : 'Finish setup'}
             </button>
           ) : canEnable ? (
             <button
