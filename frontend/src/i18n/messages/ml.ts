@@ -370,6 +370,7 @@ export const mlMessages: Record<MessageKey, string> = {
   'notifications.promptBody':
     'ഗോൾഡ് റേറ്റ് അപ്ഡേറ്റുകളും Cridora-യുടെ പ്രധാന വാർത്തകളും ലഭിക്കാൻ notifications ഓൺ ചെയ്യുക. ഈ device-ൽ guest-കൾക്കും signed-in users-നും പ്രയോഗിക്കും.',
   'notifications.promptActivate': 'notifications ഓൺ ചെയ്യുക',
+  'notifications.promptDismiss': 'അറിയിപ്പ് prompt അടയ്ക്കുക',
   'notifications.turnOnTray': 'tray notifications ഓൺ ചെയ്യുക',
   'notifications.turningOn': 'ഓൺ ചെയ്യുന്നു…',
   'notifications.trayRegion': 'Device notification tray',

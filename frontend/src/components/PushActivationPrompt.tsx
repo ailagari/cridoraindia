@@ -1,7 +1,27 @@
+import { useCallback, useState } from 'react'
 import { useOptionalPublicLocale } from '@/i18n/PublicLocaleProvider'
 import { useTrayPushState } from '@/hooks/useTrayPushState'
 import { getPushDeliveryLabel, openNativeNotificationSettings, pushSetupHint, pushPermissionBlockedHint } from '@/lib/webPushApi'
 import { nativePushNotificationsSupported } from '@/lib/nativeNotifications'
+
+const SESSION_DISMISS_KEY = 'cridora_push_prompt_dismissed'
+
+function isPushPromptDismissedThisSession(): boolean {
+  if (typeof sessionStorage === 'undefined') return false
+  try {
+    return sessionStorage.getItem(SESSION_DISMISS_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
+function dismissPushPromptForSession(): void {
+  try {
+    sessionStorage.setItem(SESSION_DISMISS_KEY, '1')
+  } catch {
+    /* private mode */
+  }
+}
 
 /**
  * Prompts visitors and signed-in users to enable tray notifications until activated.
@@ -9,6 +29,11 @@ import { nativePushNotificationsSupported } from '@/lib/nativeNotifications'
  */
 export function PushActivationPrompt() {
   const { t } = useOptionalPublicLocale()
+  const [dismissedThisSession, setDismissedThisSession] = useState(isPushPromptDismissedThisSession)
+  const dismissForSession = useCallback(() => {
+    dismissPushPromptForSession()
+    setDismissedThisSession(true)
+  }, [])
   const {
     serverReady,
     pushActive,
@@ -22,7 +47,7 @@ export function PushActivationPrompt() {
     finishSetup,
   } = useTrayPushState()
 
-  if (!checked || !serverReady || (pushActive && !pushSetupIncomplete)) return null
+  if (dismissedThisSession || !checked || !serverReady || (pushActive && !pushSetupIncomplete)) return null
 
   const setupHint = pushSetupHint()
   const blockedHint = pushPermissionBlockedHint()
@@ -33,6 +58,14 @@ export function PushActivationPrompt() {
   return (
     <div className="push-activation-bar" role="region" aria-label={t('notifications.promptRegion')}>
       <div className="push-activation-bar-inner card">
+        <button
+          type="button"
+          className="push-activation-bar-close"
+          aria-label={t('notifications.promptDismiss')}
+          onClick={dismissForSession}
+        >
+          ✕
+        </button>
         <div className="push-activation-bar-copy">
           <p className="push-activation-bar-title">{t('notifications.promptTitle')}</p>
           {pushBlocked ? (

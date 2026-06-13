@@ -8057,6 +8057,7 @@ select.input {
 
 .push-activation-bar-inner {
   pointer-events: auto;
+  position: relative;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -8064,11 +8065,40 @@ select.input {
   gap: 0.75rem 1rem;
   max-width: min(720px, 100%);
   margin: 0 auto;
-  padding: 0.85rem 1rem;
+  padding: 0.85rem 2.15rem 0.85rem 1rem;
   border-radius: 14px;
   border: 1px solid rgba(212, 168, 92, 0.35);
   background: var(--pwa-bar-bg, var(--card));
   box-shadow: var(--pwa-bar-shadow, 0 12px 40px rgba(0, 0, 0, 0.35));
+}
+
+.push-activation-bar-close {
+  position: absolute;
+  top: 0.45rem;
+  right: 0.45rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.65rem;
+  height: 1.65rem;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.push-activation-bar-close:hover {
+  color: var(--text-silk, var(--text));
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.push-activation-bar-close:focus-visible {
+  outline: 2px solid rgba(212, 168, 92, 0.55);
+  outline-offset: 2px;
 }
 
 .push-activation-bar-copy {

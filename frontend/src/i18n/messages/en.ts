@@ -359,6 +359,7 @@ export const enMessages = {
   'notifications.promptBody':
     'Turn on notifications for gold rate updates and important news from Cridora. Works for guests and signed-in users on this device.',
   'notifications.promptActivate': 'Turn on notifications',
+  'notifications.promptDismiss': 'Dismiss notification prompt',
   'notifications.turnOnTray': 'Turn on tray notifications',
   'notifications.turningOn': 'Turning on…',
   'notifications.trayRegion': 'Device notification tray',
