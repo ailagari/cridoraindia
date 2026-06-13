@@ -296,7 +296,7 @@ class AkgsmaBoardRateHistory(models.Model):
 
 
 class AkgsmaBoardDailySnapshot(models.Model):
-    """Daily OHLC for AKGSMA 22K board rate (1-year retention)."""
+    """Daily OHLC for AKGSMA 22K board rate (2-year retention)."""
 
     snapshot_date = models.DateField(unique=True, db_index=True)
     open_inr_22k = models.DecimalField(max_digits=12, decimal_places=2)
