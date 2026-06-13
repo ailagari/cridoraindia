@@ -4,13 +4,11 @@ import { GoldRatesPage } from '@/pages/GoldRatesPage'
 import { GoldRatesIndiaPage } from '@/pages/GoldRatesIndiaPage'
 import { GoldRatesCityPage } from '@/pages/GoldRatesCityPage'
 
-/** Malayalam hreflang routes under `/ml/gold-rates/...` */
-export function GoldRatesMalayalamRoutes() {
-  return (
-    <Route path="ml" element={<MalayalamLocaleLayout />}>
-      <Route path="gold-rates/kerala" element={<GoldRatesPage />} />
-      <Route path="gold-rates/india" element={<GoldRatesIndiaPage />} />
-      <Route path="gold-rates/:citySlug" element={<GoldRatesCityPage />} />
-    </Route>
-  )
-}
+/** Malayalam hreflang routes under `/ml/gold-rates/...` (Route JSX for use inside `<Routes>`). */
+export const goldRatesMalayalamRoutes = (
+  <Route path="ml" element={<MalayalamLocaleLayout />}>
+    <Route path="gold-rates/kerala" element={<GoldRatesPage />} />
+    <Route path="gold-rates/india" element={<GoldRatesIndiaPage />} />
+    <Route path="gold-rates/:citySlug" element={<GoldRatesCityPage />} />
+  </Route>
+)
