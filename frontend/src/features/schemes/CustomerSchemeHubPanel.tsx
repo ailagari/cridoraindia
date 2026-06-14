@@ -37,6 +37,8 @@ import { fetchPlatformFeatures, isFeatureEnabled } from '@/lib/platformFeatures'
 import { LIVE_BALANCE_POLL_MS } from '@/lib/liveDeskIntervals'
 import { useLivePoll } from '@/lib/useLivePoll'
 import { SchemeEnrollmentPicker } from './SchemeEnrollmentPicker'
+import { CustomerSchemeContributionsTable } from './CustomerSchemeContributionsTable'
+import { useCounterOtpCountdown } from '@/features/invest/useCounterOtpCountdown'
 
 const VISIBLE_STATUSES = new Set(['active', 'pending_admission', 'plan_month_complete'])
 
@@ -106,6 +108,9 @@ export function CustomerSchemeHubPanel() {
   const [successToast, setSuccessToast] = useState('')
   const [otpPolicySeconds, setOtpPolicySeconds] = useState<number | null>(null)
   const [busy, setBusy] = useState(false)
+  const [ledgerEnrollmentId, setLedgerEnrollmentId] = useState<number | ''>('')
+
+  const otpCountdown = useCounterOtpCountdown(otpReveal?.expiresAt ?? null)
 
   const schemesEnabled = isFeatureEnabled(featureFlags, 'golden_scheme')
   const fractionalUpiEnabled = isFeatureEnabled(featureFlags, 'fractional_upi_reconciliation')
@@ -393,6 +398,11 @@ export function CustomerSchemeHubPanel() {
     )
   }
 
+  const ledgerContributions = useMemo(() => {
+    if (ledgerEnrollmentId === '') return contributions
+    return contributions.filter((c) => c.enrollment_id === ledgerEnrollmentId)
+  }, [contributions, ledgerEnrollmentId])
+
   const showUpiStep = Boolean(activeUpiContribution && isCustomerInflightUpi(activeUpiContribution))
   const showCounterFlow = Boolean(lastContribution && isCustomerCounterAwaiting(lastContribution))
 
@@ -547,7 +557,7 @@ export function CustomerSchemeHubPanel() {
       </Card>
 
       {pendingEnrollments.length > 0 ? (
-        <Card style={{ marginBottom: 'var(--sp-5)', maxWidth: 560 }}>
+        <Card style={{ marginBottom: 'var(--sp-5)', maxWidth: 960 }}>
           <CardHeader title="Awaiting jeweller" />
           <ul className="dash-list" style={{ margin: 0 }}>
             {pendingEnrollments.map((e) => (
@@ -563,6 +573,47 @@ export function CustomerSchemeHubPanel() {
           </ul>
         </Card>
       ) : null}
+
+      <Card style={{ maxWidth: 960 }}>
+        <CardHeader title="Deposit history" />
+        <p className="dash-muted" style={{ marginTop: 0 }}>
+          All scheme payments and their status. Tap a deposit to resume UPI, generate counter OTP, or view proof.
+        </p>
+        {enrollments.length > 1 ? (
+          <div className="scheme-ledger-filter" style={{ marginBottom: 'var(--sp-4)', maxWidth: 320 }}>
+            <label className="form-label" htmlFor="scheme-ledger-filter">
+              Filter by scheme
+            </label>
+            <select
+              id="scheme-ledger-filter"
+              className="ds-input"
+              value={ledgerEnrollmentId === '' ? '' : String(ledgerEnrollmentId)}
+              onChange={(e) =>
+                setLedgerEnrollmentId(e.target.value ? Number.parseInt(e.target.value, 10) : '')
+              }
+            >
+              <option value="">All schemes</option>
+              {enrollments.map((e) => (
+                <option key={e.id} value={e.id}>
+                  {e.offering.display_name} · {e.jeweller.business_name}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : null}
+        <CustomerSchemeContributionsTable
+          contributions={ledgerContributions}
+          busy={busy}
+          setBusy={setBusy}
+          otpRevealId={otpReveal?.paymentId ?? null}
+          otpCountdownExpired={otpCountdown.expired}
+          onRefresh={async () => {
+            await reloadContributions()
+            await reloadEnrollments()
+          }}
+          onSuccess={(text) => setSuccessToast(text)}
+        />
+      </Card>
 
       <Card style={{ maxWidth: 560 }}>
         <button

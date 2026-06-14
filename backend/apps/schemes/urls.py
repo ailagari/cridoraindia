@@ -35,10 +35,12 @@ from apps.schemes.views_jeweller import (
     JewellerSchemeConfirmBonusView,
     JewellerSchemeContributionApproveView,
     JewellerSchemeContributionRejectView,
+    JewellerSchemeContributionsLedgerView,
     JewellerSchemeContributionsPendingReconciliationView,
     JewellerSchemeContributionsPendingUpiView,
     JewellerSchemeContributionsPendingView,
     JewellerSchemeContributionVerifyView,
+    JewellerSchemeEnrollmentsLedgerView,
     JewellerSchemeOfferingDetailView,
     JewellerSchemeOfferingEnrollmentsView,
     JewellerSchemeOfferingsView,
@@ -97,6 +99,14 @@ urlpatterns = [
         JewellerSchemeOfferingEnrollmentsView.as_view(),
     ),
     path("jeweller/schemes/requests/", JewellerSchemeRequestCreateView.as_view()),
+    path(
+        "jeweller/schemes/enrollments/",
+        JewellerSchemeEnrollmentsLedgerView.as_view(),
+    ),
+    path(
+        "jeweller/schemes/contributions/",
+        JewellerSchemeContributionsLedgerView.as_view(),
+    ),
     path(
         "jeweller/schemes/contributions/pending/",
         JewellerSchemeContributionsPendingView.as_view(),

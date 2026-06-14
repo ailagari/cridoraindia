@@ -102,6 +102,10 @@ export type SchemeContributionDTO = {
   id: number
   reference: string
   enrollment_id: number
+  offering_id?: number
+  scheme_name?: string
+  jeweller_name?: string
+  enrollment_status?: string
   calendar_month: string
   deposit_sequence_in_month: number
   amount_inr: string
@@ -116,6 +120,7 @@ export type SchemeContributionDTO = {
   customer_note: string
   created_at: string
   completed_at: string | null
+  jeweller_verified_at?: string | null
   payee_upi_vpa?: string
   payment_note?: string
   payment_expires_at?: string | null
@@ -123,6 +128,13 @@ export type SchemeContributionDTO = {
   otp?: string
   otp_expires_at?: string
   otp_ttl_seconds?: number
+  customer?: {
+    id: number
+    email: string
+    name: string
+    cridora_member_id: string
+    phone?: string
+  }
   payment?: {
     reference: string
     payee_vpa: string
@@ -133,6 +145,26 @@ export type SchemeContributionDTO = {
     payment_expires_at: string | null
     expired: boolean
   }
+}
+
+export type SchemeJewellerEnrollmentLedgerDTO = SchemeJewellerEnrollmentDTO & {
+  deposit_count: number
+  completed_deposit_count: number
+  total_deposited_inr: string
+  last_deposit_at: string | null
+}
+
+export type SchemeLedgerSummary = {
+  pending_count: number
+  completed_count: number
+  cancelled_count: number
+  pending_action_count?: number
+}
+
+export type SchemeEnrollmentLedgerSummary = {
+  ongoing_count: number
+  finished_count: number
+  pending_admission_count: number
 }
 
 export type SchemePresetDTO = {
@@ -318,6 +350,45 @@ export function fetchJewellerPendingSchemeContributions() {
   return schemesFetch<{ results: SchemeContributionDTO[] }>(
     '/api/v1/jeweller/schemes/contributions/pending/',
   )
+}
+
+export function fetchJewellerSchemeContributionsLedger(params?: {
+  bucket?: 'pending' | 'completed' | 'cancelled'
+  offering_id?: number
+  enrollment_id?: number
+  customer_id?: number
+  status?: string
+  q?: string
+}) {
+  const sp = new URLSearchParams()
+  if (params?.bucket) sp.set('bucket', params.bucket)
+  if (params?.offering_id) sp.set('offering_id', String(params.offering_id))
+  if (params?.enrollment_id) sp.set('enrollment_id', String(params.enrollment_id))
+  if (params?.customer_id) sp.set('customer_id', String(params.customer_id))
+  if (params?.status) sp.set('status', params.status)
+  if (params?.q) sp.set('q', params.q)
+  const q = sp.toString() ? `?${sp}` : ''
+  return schemesFetch<{ results: SchemeContributionDTO[]; summary: SchemeLedgerSummary }>(
+    `/api/v1/jeweller/schemes/contributions/${q}`,
+  )
+}
+
+export function fetchJewellerSchemeEnrollmentsLedger(params?: {
+  bucket?: 'ongoing' | 'finished'
+  offering_id?: number
+  status?: string
+  q?: string
+}) {
+  const sp = new URLSearchParams()
+  if (params?.bucket) sp.set('bucket', params.bucket)
+  if (params?.offering_id) sp.set('offering_id', String(params.offering_id))
+  if (params?.status) sp.set('status', params.status)
+  if (params?.q) sp.set('q', params.q)
+  const q = sp.toString() ? `?${sp}` : ''
+  return schemesFetch<{
+    results: SchemeJewellerEnrollmentLedgerDTO[]
+    summary: SchemeEnrollmentLedgerSummary
+  }>(`/api/v1/jeweller/schemes/enrollments/${q}`)
 }
 
 export function fetchJewellerPendingSchemeUpi() {

@@ -1,118 +1,148 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Button, Card, CardHeader, Feedback } from '@/components/ui'
+import { Card, CardHeader, Feedback } from '@/components/ui'
+import { DashSegmentPair } from '@/components/DashSegmentPair'
+import { JewellerSchemeCustomersLedger } from '@/features/schemes/JewellerSchemeCustomersLedger'
 import { JewellerSchemeEnrollPanel } from '@/features/schemes/JewellerSchemeEnrollPanel'
+import { JewellerSchemePaymentsLedger } from '@/features/schemes/JewellerSchemePaymentsLedger'
 import {
-  approveSchemeContribution,
-  fetchJewellerPendingSchemeContributions,
-  fetchJewellerPendingSchemeUpi,
-  rejectSchemeContribution,
-  verifySchemeContributionOtp,
-  type SchemeContributionDTO,
+  fetchJewellerSchemeContributionsLedger,
+  type SchemeLedgerSummary,
 } from '@/lib/schemesApi'
 import { LIVE_BALANCE_POLL_MS } from '@/lib/liveDeskIntervals'
 import { useLivePoll } from '@/lib/useLivePoll'
 
-export function JewellerSchemeDeskPanel() {
-  const [counter, setCounter] = useState<SchemeContributionDTO[]>([])
-  const [upi, setUpi] = useState<SchemeContributionDTO[]>([])
-  const [otpInputs, setOtpInputs] = useState<Record<number, string>>({})
-  const [err, setErr] = useState('')
-  const [msg, setMsg] = useState('')
+const DESK_TABS = [
+  { id: 'queue', label: 'Action queue' },
+  { id: 'customers', label: 'Customers' },
+  { id: 'payments', label: 'Payments' },
+  { id: 'enroll', label: 'Add customers' },
+] as const
 
-  const reload = useCallback(async () => {
+type DeskTab = (typeof DESK_TABS)[number]['id']
+
+export function JewellerSchemeDeskPanel() {
+  const [tab, setTab] = useState<DeskTab>('queue')
+  const [summary, setSummary] = useState<SchemeLedgerSummary | null>(null)
+  const [customerFilter, setCustomerFilter] = useState<number | null>(null)
+  const [msg, setMsg] = useState('')
+  const [err, setErr] = useState('')
+
+  const reloadSummary = useCallback(async () => {
     try {
-      const [c, u] = await Promise.all([
-        fetchJewellerPendingSchemeContributions(),
-        fetchJewellerPendingSchemeUpi(),
-      ])
-      setCounter(c.results)
-      setUpi(u.results)
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Load failed')
+      const data = await fetchJewellerSchemeContributionsLedger({ bucket: 'pending' })
+      setSummary(data.summary)
+    } catch {
+      setSummary(null)
     }
   }, [])
 
   useEffect(() => {
-    void reload()
-  }, [reload])
+    void reloadSummary()
+  }, [reloadSummary])
 
-  useLivePoll(reload, LIVE_BALANCE_POLL_MS, true)
+  useLivePoll(reloadSummary, LIVE_BALANCE_POLL_MS, tab !== 'enroll')
 
-  const verify = async (id: number) => {
-    setErr('')
-    try {
-      await verifySchemeContributionOtp(id, otpInputs[id] ?? '')
-      setMsg('Contribution verified.')
-      await reload()
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Verify failed')
-    }
+  const viewCustomerPayments = (customerId: number) => {
+    setCustomerFilter(customerId)
+    setTab('payments')
   }
 
   return (
-    <div className="dash-panel-max">
-      <Card>
+    <div className="dash-panel-max scheme-desk-panel">
+      <Card className="scheme-desk-hero">
         <CardHeader title="Schemes desk" />
-        <p className="dash-muted" style={{ marginTop: 0 }}>
-          Verify counter OTP and approve UPI scheme deposits — same workflow as the fractional purchase desk.
+        <p className="scheme-desk-hero__lead">
+          Manage scheme customers, verify deposits, and review payment history — same workflow as fractional purchases.
         </p>
+        {summary ? (
+          <div className="scheme-desk-hero__stats" role="status">
+            <span className="scheme-desk-stat">
+              <strong className="tabular">{summary.pending_action_count ?? 0}</strong>
+              <span>need action</span>
+            </span>
+            <span className="scheme-desk-stat">
+              <strong className="tabular">{summary.pending_count}</strong>
+              <span>open deposits</span>
+            </span>
+            <span className="scheme-desk-stat">
+              <strong className="tabular">{summary.completed_count}</strong>
+              <span>completed</span>
+            </span>
+          </div>
+        ) : null}
         {msg ? <Feedback tone="success">{msg}</Feedback> : null}
         {err ? <Feedback tone="error">{err}</Feedback> : null}
       </Card>
 
-      <JewellerSchemeEnrollPanel />
+      <DashSegmentPair
+        ariaLabel="Schemes desk sections"
+        className="scheme-desk-tabs"
+        items={DESK_TABS.map((t) => ({
+          id: t.id,
+          label:
+            t.id === 'queue' && summary?.pending_action_count
+              ? `${t.label} (${summary.pending_action_count})`
+              : t.label,
+        }))}
+        value={tab}
+        onChange={(id) => {
+          setErr('')
+          setMsg('')
+          if (id !== 'payments') setCustomerFilter(null)
+          setTab(id as DeskTab)
+        }}
+      />
 
-      <Card>
-        <CardHeader title="Awaiting counter OTP" />
-        <ul className="dash-list">
-          {counter.map((c) => (
-            <li key={c.id} className="dash-list-item" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
-              <div>
-                <strong>{c.reference}</strong> — ₹{c.amount_inr}
-              </div>
-              <input
-                className="ds-input"
-                placeholder="6-digit OTP from customer"
-                value={otpInputs[c.id] ?? ''}
-                onChange={(e) =>
-                  setOtpInputs((prev) => ({ ...prev, [c.id]: e.target.value }))
-                }
-              />
-              <Button size="sm" onClick={() => void verify(c.id)}>
-                Verify & credit
-              </Button>
-            </li>
-          ))}
-          {counter.length === 0 ? <p className="dash-muted">No counter queue.</p> : null}
-        </ul>
-      </Card>
+      {tab === 'queue' ? (
+        <Card>
+          <CardHeader title="Pending deposits" />
+          <p className="dash-muted" style={{ marginTop: 0 }}>
+            Counter OTP verification and UPI proof review for deposits awaiting your action.
+          </p>
+          <JewellerSchemePaymentsLedger
+            queueOnly
+            onMsg={(text) => {
+              setMsg(text)
+              void reloadSummary()
+            }}
+            onErr={setErr}
+          />
+        </Card>
+      ) : null}
 
-      <Card>
-        <h3 className="dash-card-title">UPI pending review</h3>
-        <ul className="dash-list">
-          {upi.map((c) => (
-            <li key={c.id} className="dash-list-item">
-              <div>
-                <strong>{c.reference}</strong> — ₹{c.amount_inr}
-                {c.upi_utr ? <span className="dash-muted"> UTR {c.upi_utr}</span> : null}
-              </div>
-              <div className="dash-list-actions">
-                <Button size="sm" onClick={() => void approveSchemeContribution(c.id).then(reload)}>
-                  Approve
-                </Button>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  onClick={() => void rejectSchemeContribution(c.id).then(reload)}
-                >
-                  Reject
-                </Button>
-              </div>
-            </li>
-          ))}
-          {upi.length === 0 ? <p className="dash-muted">No UPI queue.</p> : null}
-        </ul>
-      </Card>
+      {tab === 'customers' ? (
+        <Card>
+          <CardHeader title="Scheme customers" />
+          <p className="dash-muted" style={{ marginTop: 0 }}>
+            Search customers across schemes. Ongoing includes active savers; finished includes redeemed or closed plans.
+          </p>
+          <JewellerSchemeCustomersLedger onSelectCustomer={viewCustomerPayments} />
+        </Card>
+      ) : null}
+
+      {tab === 'payments' ? (
+        <Card>
+          <CardHeader title="Payment ledger" />
+          <p className="dash-muted" style={{ marginTop: 0 }}>
+            Full deposit history — pending, completed, and cancelled — with search and scheme filters.
+          </p>
+          {customerFilter ? (
+            <p className="scheme-desk-ledger__hint">
+              Filtered to one customer.{' '}
+              <button type="button" className="btn btn-ghost btn--sm" onClick={() => setCustomerFilter(null)}>
+                Show all
+              </button>
+            </p>
+          ) : null}
+          <JewellerSchemePaymentsLedger
+            customerFilter={customerFilter}
+            onMsg={setMsg}
+            onErr={setErr}
+          />
+        </Card>
+      ) : null}
+
+      {tab === 'enroll' ? <JewellerSchemeEnrollPanel /> : null}
     </div>
   )
 }

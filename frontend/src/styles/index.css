@@ -2413,6 +2413,71 @@ select.input {
   border-top: 1px solid var(--border-soft);
 }
 
+.scheme-desk-panel {
+  display: grid;
+  gap: var(--sp-4);
+}
+
+.scheme-desk-hero__lead {
+  margin: 0 0 var(--sp-4);
+  color: var(--text-muted);
+  font-size: var(--ts-sm);
+  line-height: 1.55;
+  max-width: 52ch;
+}
+
+.scheme-desk-hero__stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-3) var(--sp-5);
+  margin-bottom: var(--sp-3);
+}
+
+.scheme-desk-stat {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 5.5rem;
+}
+
+.scheme-desk-stat strong {
+  font-size: 1.35rem;
+  color: var(--gold-light);
+  line-height: 1.1;
+}
+
+.scheme-desk-stat span {
+  font-size: var(--ts-caption);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.scheme-desk-tabs {
+  margin-bottom: 0;
+}
+
+.scheme-desk-ledger {
+  display: grid;
+  gap: var(--sp-4);
+}
+
+.scheme-desk-ledger__toolbar {
+  display: grid;
+  gap: var(--sp-4);
+}
+
+.scheme-desk-ledger__filters {
+  display: grid;
+  gap: var(--sp-3);
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.scheme-desk-ledger__hint {
+  margin: 0;
+  font-size: var(--ts-sm);
+  color: var(--text-muted);
+}
+
 .fractional-jeweller-picker {
   display: grid;
   gap: var(--sp-4);

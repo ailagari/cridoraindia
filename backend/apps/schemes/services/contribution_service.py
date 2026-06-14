@@ -109,7 +109,7 @@ def create_contribution(
     return contribution
 
 
-def serialize_contribution(c: SchemeContribution) -> dict:
+def _contribution_base_row(c: SchemeContribution) -> dict:
     return {
         "id": c.id,
         "reference": c.order_reference,
@@ -134,4 +134,42 @@ def serialize_contribution(c: SchemeContribution) -> dict:
             c.payment_expires_at.isoformat() if c.payment_expires_at else None
         ),
         "upi_utr": c.upi_utr or "",
+        "jeweller_verified_at": (
+            c.jeweller_verified_at.isoformat() if c.jeweller_verified_at else None
+        ),
     }
+
+
+def serialize_contribution(c: SchemeContribution) -> dict:
+    return enrich_contribution_context(c, _contribution_base_row(c))
+
+
+def enrich_contribution_context(c: SchemeContribution, row: dict | None = None) -> dict:
+    base = dict(row if row is not None else _contribution_base_row(c))
+    try:
+        enrollment = c.enrollment
+        offering = enrollment.offering
+        jeweller = offering.jeweller
+        base["scheme_name"] = offering.display_name or offering.scheme_template.name
+        base["offering_id"] = offering.id
+        base["jeweller_name"] = jeweller.business_name or jeweller.email or ""
+        base["enrollment_status"] = enrollment.status
+    except Exception:
+        pass
+    return base
+
+
+def enrich_contribution_for_jeweller(c: SchemeContribution) -> dict:
+    row = enrich_contribution_context(c)
+    try:
+        customer = c.enrollment.customer
+        row["customer"] = {
+            "id": customer.id,
+            "email": customer.email,
+            "name": f"{customer.first_name} {customer.last_name}".strip() or customer.email,
+            "cridora_member_id": customer.cridora_member_id or "",
+            "phone": customer.phone or "",
+        }
+    except Exception:
+        pass
+    return row

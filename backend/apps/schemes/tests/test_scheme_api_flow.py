@@ -357,6 +357,62 @@ class SchemeApiFlowTests(TestCase):
         self.assertEqual(pay.json()["payee_vpa"], "schemejeweller@okicici")
         self.assertTrue(pay.json()["can_submit_proof"])
 
+    def test_jeweller_ledger_lists_contributions_and_enrollments(self):
+        set_feature_flags({"golden_scheme": True, "fractional_upi_reconciliation": True})
+        design = _minimal_design()
+        published = SchemeTemplate.objects.create(
+            slug="ledger-scheme",
+            name="Ledger Scheme",
+            scheme_design=design,
+            scheme_rules=compile_scheme_design(design),
+            flow_summary=human_flow_summary(design),
+            status=SchemeTemplate.STATUS_PUBLISHED,
+        )
+        offering = JewellerSchemeOffering.objects.create(
+            jeweller=self.jeweller,
+            scheme_template=published,
+            display_name="Ledger Scheme",
+            design_snapshot=design,
+            rules_snapshot=compile_scheme_design(design),
+        )
+
+        self.client.force_authenticate(self.customer)
+        enrollment = self.client.post(
+            "/api/v1/schemes/enrollments/",
+            {"offering_id": offering.id},
+            format="json",
+        )
+        enrollment_id = enrollment.json()["id"]
+
+        self.client.force_authenticate(self.jeweller)
+        self.client.post(
+            f"/api/v1/jeweller/schemes/offerings/{offering.id}/enrollments/",
+            {"customer_id": self.customer.id},
+            format="json",
+        )
+
+        self.client.force_authenticate(self.customer)
+        self.client.post(
+            "/api/v1/schemes/contributions/",
+            {
+                "enrollment_id": enrollment_id,
+                "amount_inr": 5000,
+                "payment_method": "upi",
+            },
+            format="json",
+        )
+
+        self.client.force_authenticate(self.jeweller)
+        customers = self.client.get("/api/v1/jeweller/schemes/enrollments/?bucket=ongoing")
+        self.assertEqual(customers.status_code, 200)
+        self.assertEqual(len(customers.json()["results"]), 1)
+        self.assertEqual(customers.json()["results"][0]["deposit_count"], 1)
+
+        payments = self.client.get("/api/v1/jeweller/schemes/contributions/?bucket=pending")
+        self.assertEqual(payments.status_code, 200)
+        self.assertEqual(len(payments.json()["results"]), 1)
+        self.assertIn("scheme_name", payments.json()["results"][0])
+
     def test_feature_gate_blocks_jeweller_offerings_when_disabled(self):
         set_feature_flags({"golden_scheme": False})
         self.client.force_authenticate(self.jeweller)

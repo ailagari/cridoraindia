@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from django.contrib.auth import get_user_model
 from django.db import transaction
+from django.db.models import Count, Max, Q, Sum
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
@@ -26,7 +27,10 @@ from apps.schemes.services.contribution_completion import (
     apply_bonus_confirmation,
     apply_contribution_completion,
 )
-from apps.schemes.services.contribution_service import serialize_contribution
+from apps.schemes.services.contribution_service import (
+    enrich_contribution_for_jeweller,
+    serialize_contribution,
+)
 from apps.schemes.services.enrollment_service import (
     create_offering,
     jeweller_admit_customer,
@@ -276,14 +280,219 @@ class JewellerSchemeRequestCreateView(APIView):
 
 
 def _enrich_contribution_row(c: SchemeContribution) -> dict:
-    row = serialize_contribution(c)
-    row["customer"] = {
-        "email": c.customer.email,
-        "name": f"{c.customer.first_name} {c.customer.last_name}".strip(),
-        "cridora_member_id": c.customer.cridora_member_id or "",
-    }
-    row["enrollment_id"] = c.enrollment_id
+    row = enrich_contribution_for_jeweller(c)
+    try:
+        row["otp_expires_at"] = c.counter_otp.expires_at.isoformat()
+    except Exception:
+        row["otp_expires_at"] = None
     return row
+
+
+JEWELLER_PENDING_CONTRIBUTION_STATUSES = (
+    SchemeContribution.AWAITING_COUNTER,
+    SchemeContribution.PENDING_PAYMENT,
+    SchemeContribution.SIGNAL_RECEIVED,
+    SchemeContribution.PENDING_REVIEW,
+    SchemeContribution.NEEDS_MANUAL_VERIFICATION,
+    SchemeContribution.AWAITING_UTR_VERIFY,
+    SchemeContribution.PROOF_REJECTED,
+    SchemeContribution.ON_HOLD,
+)
+
+JEWELLER_COMPLETED_CONTRIBUTION_STATUSES = (SchemeContribution.COMPLETED,)
+
+JEWELLER_CANCELLED_CONTRIBUTION_STATUSES = (
+    SchemeContribution.CANCELLED,
+    SchemeContribution.REJECTED,
+)
+
+ONGOING_ENROLLMENT_STATUSES = (
+    CustomerSchemeEnrollment.STATUS_PENDING_ADMISSION,
+    CustomerSchemeEnrollment.STATUS_ACTIVE,
+    CustomerSchemeEnrollment.STATUS_PLAN_MONTH_COMPLETE,
+)
+
+FINISHED_ENROLLMENT_STATUSES = (
+    CustomerSchemeEnrollment.STATUS_REDEEMED,
+    CustomerSchemeEnrollment.STATUS_CANCELLED,
+    CustomerSchemeEnrollment.STATUS_DEFAULTED,
+)
+
+
+class JewellerSchemeContributionsLedgerView(APIView):
+    """Payment ledger: pending, completed, and cancelled scheme deposits."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        err = _require_jeweller(request)
+        if err:
+            return err
+        blocked = require_feature_enabled("golden_scheme")
+        if blocked is not None:
+            return blocked
+
+        base = SchemeContribution.objects.filter(
+            enrollment__offering__jeweller=request.user,
+        ).select_related(
+            "enrollment__customer",
+            "enrollment__offering__jeweller",
+            "enrollment__offering__scheme_template",
+            "counter_otp",
+        )
+
+        offering_id = request.query_params.get("offering_id")
+        enrollment_id = request.query_params.get("enrollment_id")
+        customer_id = request.query_params.get("customer_id")
+        status_filter = (request.query_params.get("status") or "").strip()
+        bucket = (request.query_params.get("bucket") or "").strip().lower()
+        q = (request.query_params.get("q") or "").strip()
+
+        if offering_id:
+            base = base.filter(enrollment__offering_id=offering_id)
+        if enrollment_id:
+            base = base.filter(enrollment_id=enrollment_id)
+        if customer_id:
+            base = base.filter(enrollment__customer_id=customer_id)
+        if status_filter:
+            base = base.filter(status=status_filter)
+        elif bucket == "pending":
+            base = base.filter(status__in=JEWELLER_PENDING_CONTRIBUTION_STATUSES)
+        elif bucket == "completed":
+            base = base.filter(status__in=JEWELLER_COMPLETED_CONTRIBUTION_STATUSES)
+        elif bucket == "cancelled":
+            base = base.filter(status__in=JEWELLER_CANCELLED_CONTRIBUTION_STATUSES)
+
+        if q:
+            base = base.filter(
+                Q(reference__icontains=q)
+                | Q(upi_utr__icontains=q)
+                | Q(enrollment__customer__cridora_member_id__icontains=q)
+                | Q(enrollment__customer__email__icontains=q)
+                | Q(enrollment__customer__first_name__icontains=q)
+                | Q(enrollment__customer__last_name__icontains=q)
+                | Q(enrollment__customer__phone__icontains=q)
+            )
+
+        pending_filter = base.filter(status__in=JEWELLER_PENDING_CONTRIBUTION_STATUSES)
+        completed_filter = base.filter(status__in=JEWELLER_COMPLETED_CONTRIBUTION_STATUSES)
+        cancelled_filter = base.filter(status__in=JEWELLER_CANCELLED_CONTRIBUTION_STATUSES)
+
+        if bucket == "pending":
+            rows_qs = pending_filter.order_by("-created_at")[:100]
+            rows = [_enrich_contribution_row(c) for c in rows_qs]
+        elif bucket == "completed":
+            rows_qs = completed_filter.order_by("-jeweller_verified_at", "-created_at")[:100]
+            rows = [_enrich_contribution_row(c) for c in rows_qs]
+        elif bucket == "cancelled":
+            rows_qs = cancelled_filter.order_by("-updated_at")[:100]
+            rows = [_enrich_contribution_row(c) for c in rows_qs]
+        else:
+            rows = []
+
+        return Response(
+            {
+                "results": rows,
+                "summary": {
+                    "pending_count": pending_filter.count(),
+                    "completed_count": completed_filter.count(),
+                    "cancelled_count": cancelled_filter.count(),
+                    "pending_action_count": pending_filter.filter(
+                        status__in=(
+                            SchemeContribution.AWAITING_COUNTER,
+                            SchemeContribution.PENDING_REVIEW,
+                            SchemeContribution.NEEDS_MANUAL_VERIFICATION,
+                            SchemeContribution.AWAITING_UTR_VERIFY,
+                        )
+                    ).count(),
+                },
+            }
+        )
+
+
+class JewellerSchemeEnrollmentsLedgerView(APIView):
+    """Customer enrollments across all schemes — search and ongoing/finished filters."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        err = _require_jeweller(request)
+        if err:
+            return err
+        blocked = require_feature_enabled("golden_scheme")
+        if blocked is not None:
+            return blocked
+
+        qs = (
+            CustomerSchemeEnrollment.objects.filter(offering__jeweller=request.user)
+            .select_related("customer", "offering__scheme_template")
+            .annotate(
+                deposit_count=Count("contributions"),
+                completed_deposit_count=Count(
+                    "contributions",
+                    filter=Q(contributions__status=SchemeContribution.COMPLETED),
+                ),
+                total_deposited_inr=Sum(
+                    "contributions__amount_inr",
+                    filter=Q(contributions__status=SchemeContribution.COMPLETED),
+                ),
+                last_deposit_at=Max("contributions__created_at"),
+            )
+        )
+
+        offering_id = request.query_params.get("offering_id")
+        bucket = (request.query_params.get("bucket") or "").strip().lower()
+        status_filter = (request.query_params.get("status") or "").strip()
+        q = (request.query_params.get("q") or "").strip()
+
+        if offering_id:
+            qs = qs.filter(offering_id=offering_id)
+        if status_filter:
+            qs = qs.filter(status=status_filter)
+        elif bucket == "ongoing":
+            qs = qs.filter(status__in=ONGOING_ENROLLMENT_STATUSES)
+        elif bucket == "finished":
+            qs = qs.filter(status__in=FINISHED_ENROLLMENT_STATUSES)
+
+        if q:
+            qs = qs.filter(
+                Q(customer__cridora_member_id__icontains=q)
+                | Q(customer__email__icontains=q)
+                | Q(customer__first_name__icontains=q)
+                | Q(customer__last_name__icontains=q)
+                | Q(customer__phone__icontains=q)
+                | Q(offering__display_name__icontains=q)
+            )
+
+        ongoing_filter = qs.filter(status__in=ONGOING_ENROLLMENT_STATUSES)
+        finished_filter = qs.filter(status__in=FINISHED_ENROLLMENT_STATUSES)
+        pending_admission_filter = qs.filter(
+            status=CustomerSchemeEnrollment.STATUS_PENDING_ADMISSION
+        )
+
+        rows = []
+        for e in qs.order_by("-started_at")[:100]:
+            row = serialize_enrollment_for_jeweller(e)
+            row["deposit_count"] = int(getattr(e, "deposit_count", 0) or 0)
+            row["completed_deposit_count"] = int(
+                getattr(e, "completed_deposit_count", 0) or 0
+            )
+            total = getattr(e, "total_deposited_inr", None)
+            row["total_deposited_inr"] = str(total) if total is not None else "0.00"
+            last = getattr(e, "last_deposit_at", None)
+            row["last_deposit_at"] = last.isoformat() if last else None
+            rows.append(row)
+
+        return Response(
+            {
+                "results": rows,
+                "summary": {
+                    "ongoing_count": ongoing_filter.count(),
+                    "finished_count": finished_filter.count(),
+                    "pending_admission_count": pending_admission_filter.count(),
+                },
+            }
+        )
 
 
 class JewellerSchemeContributionsPendingView(APIView):

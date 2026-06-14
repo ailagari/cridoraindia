@@ -23,6 +23,7 @@ from apps.schemes.models import (
 from apps.schemes.scheme_counter_otp import issue_counter_otp
 from apps.schemes.services.contribution_service import (
     create_contribution,
+    enrich_contribution_context,
     quote_contribution,
     serialize_contribution,
 )
@@ -279,7 +280,7 @@ class CustomerSchemeContributionsView(APIView):
         status = request.query_params.get("status")
         if status:
             qs = qs.filter(status=status)
-        return Response([serialize_contribution(c) for c in qs[:50]])
+        return Response([enrich_contribution_context(c) for c in qs[:100]])
 
     def post(self, request):
         err = _require_customer(request)
