@@ -1,5 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Button, Card, Input } from '@/components/ui'
+import {
+  Badge,
+  Button,
+  Card,
+  CardHeader,
+  DashboardPanel,
+  DashboardWidget,
+  EmptyState,
+  Feedback,
+  Input,
+  PageHeader,
+  TabBar,
+} from '@/components/ui'
 import {
   approveAdminSchemeRequest,
   createAdminSchemeTemplate,
@@ -7,6 +19,7 @@ import {
   deleteAdminSchemeTemplate,
   deprecateAdminSchemeTemplate,
   duplicateAdminSchemeTemplate,
+  fetchAdminSchemeOverview,
   fetchAdminSchemeRequests,
   fetchAdminSchemeTemplates,
   fetchSchemePresets,
@@ -27,11 +40,22 @@ import { SchemeFlowPreview } from './SchemeFlowPreview'
 type Tab = 'templates' | 'designer' | 'requests'
 type StatusFilter = 'all' | 'draft' | 'published' | 'deprecated'
 
+function templateStatusTone(status: string): 'success' | 'warning' | 'neutral' {
+  if (status === 'published') return 'success'
+  if (status === 'draft') return 'warning'
+  return 'neutral'
+}
+
 export function AdminSchemeProgramsPanel() {
   const [tab, setTab] = useState<Tab>('templates')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [templates, setTemplates] = useState<SchemeTemplateDTO[]>([])
   const [presets, setPresets] = useState<SchemePresetDTO[]>([])
+  const [overview, setOverview] = useState<{
+    templates_published: number
+    active_enrollments: number
+    pending_requests: number
+  } | null>(null)
   const [requests, setRequests] = useState<
     Array<{ id: number; jeweller_name: string; title: string; status: string; description: string }>
   >([])
@@ -46,14 +70,16 @@ export function AdminSchemeProgramsPanel() {
   const reload = useCallback(async () => {
     setErr('')
     try {
-      const [t, p, r] = await Promise.all([
+      const [t, p, r, o] = await Promise.all([
         fetchAdminSchemeTemplates(),
         fetchSchemePresets(),
         fetchAdminSchemeRequests('pending'),
+        fetchAdminSchemeOverview(),
       ])
       setTemplates(t)
       setPresets(p)
       setRequests(r)
+      setOverview(o)
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Load failed')
     }
@@ -62,6 +88,15 @@ export function AdminSchemeProgramsPanel() {
   useEffect(() => {
     void reload()
   }, [reload])
+
+  const counts = useMemo(
+    () => ({
+      draft: templates.filter((t) => t.status === 'draft').length,
+      published: templates.filter((t) => t.status === 'published').length,
+      deprecated: templates.filter((t) => t.status === 'deprecated').length,
+    }),
+    [templates],
+  )
 
   const filteredTemplates = useMemo(() => {
     if (statusFilter === 'all') return templates
@@ -203,159 +238,247 @@ export function AdminSchemeProgramsPanel() {
   }
 
   return (
-    <div className="dash-panel-max">
-      <div className="dash-segment-row" style={{ marginBottom: '1rem' }}>
-        {(['templates', 'designer', 'requests'] as Tab[]).map((k) => (
-          <button
-            key={k}
-            type="button"
-            className={tab === k ? 'dash-segment is-active' : 'dash-segment'}
-            onClick={() => setTab(k)}
-          >
-            {k === 'templates' ? 'Templates' : k === 'designer' ? 'Designer' : 'Requests'}
-          </button>
-        ))}
+    <DashboardPanel>
+      <PageHeader
+        eyebrow="Marketplace"
+        title="Programs & risks"
+        subtitle="Design investment scheme templates, publish to the jeweller catalog, and review custom scheme requests."
+        actions={
+          <Button variant="primary" size="sm" onClick={startNewDraft}>
+            New draft
+          </Button>
+        }
+      />
+
+      <div className="admin-dash-widgets">
+        <DashboardWidget
+          label="Published templates"
+          value={overview?.templates_published ?? counts.published}
+          tone="gold"
+          meta="Live in jeweller catalog"
+        />
+        <DashboardWidget
+          label="Active enrollments"
+          value={overview?.active_enrollments ?? '—'}
+          tone="success"
+          meta="Customers in scheme cycles"
+        />
+        <DashboardWidget
+          label="Draft templates"
+          value={counts.draft}
+          meta="Awaiting publish"
+        />
+        <DashboardWidget
+          label="Pending requests"
+          value={overview?.pending_requests ?? requests.length}
+          tone={requests.length > 0 ? 'gold' : 'default'}
+          meta="Jeweller proposals"
+          action={
+            requests.length > 0 ? (
+              <Button variant="ghost" size="sm" onClick={() => setTab('requests')}>
+                Review
+              </Button>
+            ) : null
+          }
+        />
       </div>
 
-      {err ? <p className="form-error">{err}</p> : null}
+      <Card style={{ marginBottom: 'var(--sp-4)' }}>
+        <TabBar
+          variant="segmented"
+          active={tab}
+          onChange={(k) => setTab(k as Tab)}
+          tabs={[
+            { key: 'templates', label: 'Templates' },
+            { key: 'designer', label: 'Designer' },
+            { key: 'requests', label: 'Requests', badge: requests.length },
+          ]}
+        />
+      </Card>
+
+      {err ? <Feedback tone="error">{err}</Feedback> : null}
 
       {tab === 'templates' ? (
-        <Card>
-          <h2 className="dash-card-title">Published & draft schemes</h2>
-          <div className="dash-segment-row" style={{ marginBottom: '0.75rem' }}>
-            {(['all', 'draft', 'published', 'deprecated'] as StatusFilter[]).map((f) => (
-              <button
-                key={f}
-                type="button"
-                className={statusFilter === f ? 'dash-segment is-active' : 'dash-segment'}
-                onClick={() => setStatusFilter(f)}
-              >
-                {f === 'all' ? 'All' : f.charAt(0).toUpperCase() + f.slice(1)}
-              </button>
-            ))}
-          </div>
-          <div style={{ marginBottom: '0.75rem' }}>
-            <Button size="sm" onClick={startNewDraft}>
-              New draft
-            </Button>
-          </div>
-          <ul className="dash-list">
-            {filteredTemplates.map((t) => (
-              <li key={t.id} className="dash-list-item">
-                <div>
-                  <strong>{t.name}</strong>
-                  <span className="dash-muted"> — {t.status}</span>
-                  <p className="dash-muted" style={{ margin: '0.25rem 0 0' }}>
-                    {t.flow_summary}
-                  </p>
-                </div>
-                <div className="dash-list-actions" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
-                  {t.status === 'draft' ? (
-                    <>
-                      <Button size="sm" onClick={() => void publish(t.id)} disabled={busy}>
-                        Publish
+        <>
+          <Card>
+            <CardHeader
+              title="Scheme templates"
+              action={
+                <Button variant="primary" size="sm" onClick={startNewDraft}>
+                  New draft
+                </Button>
+              }
+            />
+            <TabBar
+              variant="segmented"
+              active={statusFilter}
+              onChange={(k) => setStatusFilter(k as StatusFilter)}
+              tabs={[
+                { key: 'all', label: `All (${templates.length})` },
+                { key: 'draft', label: `Draft (${counts.draft})` },
+                { key: 'published', label: `Published (${counts.published})` },
+                { key: 'deprecated', label: `Deprecated (${counts.deprecated})` },
+              ]}
+            />
+            <div style={{ display: 'grid', gap: 'var(--sp-2)', marginTop: 'var(--sp-4)' }}>
+              {filteredTemplates.map((t) => (
+                <div key={t.id} className="transaction-row" style={{ gridTemplateColumns: 'minmax(0, 1fr) auto' }}>
+                  <div className="transaction-row__main">
+                    <span className="transaction-row__title">{t.name}</span>
+                    <span className="transaction-row__meta">{t.flow_summary || 'No flow summary yet'}</span>
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--sp-2)', alignItems: 'center', justifyContent: 'flex-end' }}>
+                    <Badge tone={templateStatusTone(t.status)}>{t.status}</Badge>
+                    {t.status === 'draft' ? (
+                      <>
+                        <Button size="sm" variant="primary" onClick={() => void publish(t.id)} disabled={busy} loading={busy}>
+                          Publish
+                        </Button>
+                        <Button size="sm" variant="danger" onClick={() => void removeDraft(t.id)} disabled={busy}>
+                          Delete
+                        </Button>
+                      </>
+                    ) : null}
+                    {t.status === 'published' ? (
+                      <Button size="sm" variant="ghost" onClick={() => void deprecate(t.id)} disabled={busy}>
+                        Deprecate
                       </Button>
-                      <Button size="sm" variant="secondary" onClick={() => void removeDraft(t.id)} disabled={busy}>
-                        Delete
+                    ) : null}
+                    {t.status === 'published' || t.status === 'deprecated' ? (
+                      <Button size="sm" variant="secondary" onClick={() => void duplicate(t.id, t.name)} disabled={busy}>
+                        Duplicate
                       </Button>
-                    </>
-                  ) : null}
-                  {t.status === 'published' ? (
-                    <Button size="sm" variant="secondary" onClick={() => void deprecate(t.id)} disabled={busy}>
-                      Deprecate
+                    ) : null}
+                    <Button size="sm" variant="secondary" onClick={() => openTemplate(t)}>
+                      Open
                     </Button>
-                  ) : null}
-                  {t.status === 'published' || t.status === 'deprecated' ? (
-                    <Button size="sm" variant="secondary" onClick={() => void duplicate(t.id, t.name)} disabled={busy}>
-                      Duplicate
-                    </Button>
-                  ) : null}
-                  <Button size="sm" variant="secondary" onClick={() => openTemplate(t)}>
-                    Open
-                  </Button>
+                  </div>
                 </div>
-              </li>
-            ))}
-            {filteredTemplates.length === 0 ? (
-              <p className="dash-muted">No schemes match this filter.</p>
-            ) : null}
-          </ul>
-          <div style={{ marginTop: '1rem', display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-            {presets.map((p) => (
-              <Button key={p.key} size="sm" variant="secondary" onClick={() => void loadPreset(p.key)}>
-                {p.label}
-              </Button>
-            ))}
-          </div>
-        </Card>
+              ))}
+              {filteredTemplates.length === 0 ? (
+                <EmptyState
+                  title="No schemes match this filter"
+                  description="Create a new draft or start from a preset below."
+                  action={
+                    <Button variant="primary" size="sm" onClick={startNewDraft}>
+                      New draft
+                    </Button>
+                  }
+                />
+              ) : null}
+            </div>
+          </Card>
+
+          <Card style={{ marginTop: 'var(--sp-4)' }}>
+            <CardHeader title="Quick-start presets" />
+            <p className="dash-coming__text" style={{ marginTop: 0, marginBottom: 'var(--sp-3)' }}>
+              Seed a draft from a platform preset, then customise in the designer before publishing.
+            </p>
+            <div className="pf-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 'var(--sp-3)' }}>
+              {presets.map((p) => (
+                <button
+                  key={p.key}
+                  type="button"
+                  className="transaction-row"
+                  style={{
+                    gridTemplateColumns: '1fr',
+                    textAlign: 'left',
+                    border: '1px solid var(--silk-06)',
+                    cursor: busy ? 'wait' : 'pointer',
+                  }}
+                  disabled={busy}
+                  onClick={() => void loadPreset(p.key)}
+                >
+                  <span className="transaction-row__title">{p.label}</span>
+                  <span className="transaction-row__meta">{p.description}</span>
+                </button>
+              ))}
+            </div>
+          </Card>
+        </>
       ) : null}
 
       {tab === 'designer' ? (
-        <div className="scheme-designer-grid">
+        <div className="onboarding-flow">
           {isReadOnlyDesigner ? (
-            <Card style={{ gridColumn: '1 / -1' }}>
-              <p className="dash-muted">
-                This scheme is {editingStatus}. Published schemes cannot be edited directly.
-              </p>
-              <Button
-                size="sm"
-                style={{ marginTop: '0.5rem' }}
-                onClick={() => editingId && void duplicate(editingId, name)}
-                disabled={busy || !editingId}
-              >
-                Duplicate as draft to edit
-              </Button>
-            </Card>
+            <div className="notice n-info">
+              This scheme is <strong>{editingStatus}</strong> and cannot be edited in place. Duplicate it as a draft to
+              make changes, then publish the new version.
+              <div style={{ marginTop: 'var(--sp-3)' }}>
+                <Button
+                  size="sm"
+                  variant="primary"
+                  onClick={() => editingId && void duplicate(editingId, name)}
+                  disabled={busy || !editingId}
+                >
+                  Duplicate as draft
+                </Button>
+              </div>
+            </div>
           ) : null}
-          <SchemeInputCard design={design} onChange={isReadOnlyDesigner ? () => {} : setDesign} />
-          <SchemeBonusCard design={design} onChange={isReadOnlyDesigner ? () => {} : setDesign} />
-          <SchemeOutputCard design={design} onChange={isReadOnlyDesigner ? () => {} : setDesign} />
-          <SchemeFlowPreview design={design} preview={preview} />
-          <Card style={{ gridColumn: '1 / -1' }}>
+
+          <Card>
+            <CardHeader
+              title={editingId ? `Editing: ${name}` : 'New scheme draft'}
+              action={
+                <Button onClick={() => void saveDraft()} disabled={busy || isReadOnlyDesigner} loading={busy} variant="primary">
+                  Save draft
+                </Button>
+              }
+            />
             <Input
               label="Scheme name"
               value={name}
               onChange={(e) => !isReadOnlyDesigner && setName(e.target.value)}
               disabled={isReadOnlyDesigner}
             />
-            <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.5rem' }}>
-              <Button onClick={() => void saveDraft()} disabled={busy || isReadOnlyDesigner}>
-                Save draft
-              </Button>
-            </div>
           </Card>
+
+          <div className="pf-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 'var(--sp-4)' }}>
+            <SchemeInputCard design={design} onChange={isReadOnlyDesigner ? () => {} : setDesign} />
+            <SchemeBonusCard design={design} onChange={isReadOnlyDesigner ? () => {} : setDesign} />
+            <SchemeOutputCard design={design} onChange={isReadOnlyDesigner ? () => {} : setDesign} />
+            <SchemeFlowPreview design={design} preview={preview} />
+          </div>
         </div>
       ) : null}
 
       {tab === 'requests' ? (
         <Card>
-          <h2 className="dash-card-title">Jeweller scheme requests</h2>
-          <ul className="dash-list">
+          <CardHeader title="Jeweller scheme requests" />
+          <p className="dash-coming__text" style={{ marginTop: 0, marginBottom: 'var(--sp-3)' }}>
+            Custom scheme proposals from jewellers awaiting admin review.
+          </p>
+          <div style={{ display: 'grid', gap: 'var(--sp-2)' }}>
             {requests.map((r) => (
-              <li key={r.id} className="dash-list-item">
-                <div>
-                  <strong>{r.title}</strong> — {r.jeweller_name}
-                  <p className="dash-muted">{r.description || 'No description'}</p>
+              <div key={r.id} className="transaction-row" style={{ gridTemplateColumns: 'minmax(0, 1fr) auto' }}>
+                <div className="transaction-row__main">
+                  <span className="transaction-row__title">{r.title}</span>
+                  <span className="transaction-row__meta">
+                    {r.jeweller_name}
+                    {r.description ? ` · ${r.description}` : ''}
+                  </span>
                 </div>
-                <div className="dash-list-actions" style={{ display: 'flex', gap: '0.35rem' }}>
-                  <Button size="sm" onClick={() => void reviewRequest(r.id, 'approve')} disabled={busy}>
+                <div className="transaction-row__action" style={{ gap: 'var(--sp-2)' }}>
+                  <Badge tone="warning">{r.status}</Badge>
+                  <Button size="sm" variant="primary" onClick={() => void reviewRequest(r.id, 'approve')} disabled={busy}>
                     Approve
                   </Button>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => void reviewRequest(r.id, 'reject')}
-                    disabled={busy}
-                  >
+                  <Button size="sm" variant="ghost" onClick={() => void reviewRequest(r.id, 'reject')} disabled={busy}>
                     Reject
                   </Button>
                 </div>
-              </li>
+              </div>
             ))}
-            {requests.length === 0 ? <p className="dash-muted">No pending requests.</p> : null}
-          </ul>
+            {requests.length === 0 ? (
+              <EmptyState
+                title="No pending requests"
+                description="Jeweller proposals will appear here when submitted from the scheme catalog."
+              />
+            ) : null}
+          </div>
         </Card>
       ) : null}
-    </div>
+    </DashboardPanel>
   )
 }

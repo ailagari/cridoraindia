@@ -211,6 +211,14 @@ export function fetchAdminSchemeRequests(status?: string) {
   >(`/api/v1/admin/schemes/requests/${q}`)
 }
 
+export function fetchAdminSchemeOverview() {
+  return schemesFetch<{
+    templates_published: number
+    active_enrollments: number
+    pending_requests: number
+  }>('/api/v1/admin/schemes/enrollments/overview/')
+}
+
 export function approveAdminSchemeRequest(id: number, adminNotes?: string) {
   return schemesFetch<{ id: number; status: string }>(
     `/api/v1/admin/schemes/requests/${id}/approve/`,
