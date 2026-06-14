@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Button, Card, CardHeader, EmptyState, Feedback, Input, PageHeader, Select } from '@/components/ui'
+import { Button, Badge, Card, CardHeader, EmptyState, Feedback, Input, PageHeader, Select, statusTone } from '@/components/ui'
 import {
   createJewellerSchemeOffering,
   fetchJewellerSchemeCatalog,
@@ -156,47 +156,91 @@ export function JewellerSchemeCatalogPanel() {
             description="Platform admin must publish scheme templates before they appear here. Check Programs & risks in the admin dashboard, or adjust your search filters."
           />
         ) : (
-          <ul className="dash-list" style={{ marginTop: '1rem' }}>
-            {catalog.map((t) => (
-              <li key={t.id} className="dash-list-item" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.5rem', flexWrap: 'wrap' }}>
-                  <div>
-                    <strong>{t.name}</strong>
-                    {t.category ? <span className="dash-muted"> · {t.category}</span> : null}
-                    <p className="dash-muted">{t.flow_summary}</p>
+          <div
+            className="pf-grid"
+            style={{
+              gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+              gap: 'var(--sp-4)',
+              marginTop: 'var(--sp-4)',
+            }}
+          >
+            {catalog.map((t) => {
+              const adopted = enrolledIds.has(t.id)
+              const expanded = expandedId === t.id
+              return (
+                <Card
+                  key={t.id}
+                  style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}
+                >
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 'var(--sp-2)' }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        gap: 'var(--sp-2)',
+                        alignItems: 'flex-start',
+                        justifyContent: 'space-between',
+                      }}
+                    >
+                      <h3 className="dash-card-title" style={{ margin: 0, lineHeight: 1.3, flex: '1 1 12rem' }}>
+                        {t.name}
+                      </h3>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
+                        {t.category ? <Badge tone="gold">{t.category}</Badge> : null}
+                        {adopted ? <Badge tone="success">In showroom</Badge> : null}
+                      </div>
+                    </div>
+                    <p className="dash-muted" style={{ margin: 0, lineHeight: 1.45, fontSize: 'var(--ts-sm)' }}>
+                      {t.flow_summary}
+                    </p>
+                    {expanded && detail?.id === t.id ? (
+                      <div
+                        style={{
+                          marginTop: 'var(--sp-2)',
+                          padding: 'var(--sp-3)',
+                          background: 'var(--silk-06)',
+                          borderRadius: 'var(--r-md)',
+                          border: '1px solid var(--border-soft)',
+                        }}
+                      >
+                        {detail.description ? (
+                          <p className="dash-muted" style={{ margin: '0 0 var(--sp-2)' }}>
+                            {detail.description}
+                          </p>
+                        ) : null}
+                        <p className="ds-field__hint" style={{ margin: 0, lineHeight: 1.45 }}>
+                          <strong>Flow:</strong> {detail.flow_summary}
+                        </p>
+                      </div>
+                    ) : null}
                   </div>
-                  <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      gap: 'var(--sp-2)',
+                      flexWrap: 'wrap',
+                      marginTop: 'var(--sp-4)',
+                      paddingTop: 'var(--sp-3)',
+                      borderTop: '1px solid var(--border-soft)',
+                    }}
+                  >
                     <Button size="sm" variant="secondary" onClick={() => void toggleDetail(t.id)}>
-                      {expandedId === t.id ? 'Hide' : 'Preview'}
+                      {expanded ? 'Hide preview' : 'Preview'}
                     </Button>
-                    {enrolledIds.has(t.id) ? (
-                      <span className="dash-badge">Selected</span>
+                    {adopted ? (
+                      <span className="ds-field__hint" style={{ margin: 0, alignSelf: 'center' }}>
+                        Already added
+                      </span>
                     ) : (
                       <Button size="sm" variant="primary" onClick={() => void adopt(t.id)} disabled={busy}>
                         Add to showroom
                       </Button>
                     )}
                   </div>
-                </div>
-                {expandedId === t.id && detail?.id === t.id ? (
-                  <div
-                    style={{
-                      marginTop: '0.75rem',
-                      padding: '0.75rem',
-                      background: 'var(--silk-06)',
-                      borderRadius: 'var(--r-md)',
-                      border: '1px solid var(--border-soft)',
-                    }}
-                  >
-                    {detail.description ? <p className="dash-muted">{detail.description}</p> : null}
-                    <p className="dash-muted" style={{ marginTop: '0.5rem' }}>
-                      <strong>Flow:</strong> {detail.flow_summary}
-                    </p>
-                  </div>
-                ) : null}
-              </li>
-            ))}
-          </ul>
+                </Card>
+              )
+            })}
+          </div>
         )}
       </Card>
 
@@ -215,40 +259,80 @@ export function JewellerSchemeCatalogPanel() {
           Active offerings appear to customers under Invest → Scheme. Use the schemes desk to verify counter OTP and UPI
           deposits.
         </p>
-        <ul className="dash-list" style={{ marginTop: '1rem' }}>
-          {offerings.map((o) => (
-            <li key={o.id} className="dash-list-item">
-              <div>
-                <strong>{o.display_name}</strong>
-                <p className="dash-muted">{o.flow_summary}</p>
-              </div>
-              <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', alignItems: 'center' }}>
-                <span className="dash-badge">{o.status}</span>
-                {o.status === 'active' ? (
-                  <Button size="sm" variant="secondary" onClick={() => void setOfferingStatus(o.id, 'paused')} disabled={busy}>
-                    Pause
-                  </Button>
-                ) : null}
-                {o.status === 'paused' ? (
-                  <Button size="sm" onClick={() => void setOfferingStatus(o.id, 'active')} disabled={busy}>
-                    Resume
-                  </Button>
-                ) : null}
-                {o.status !== 'withdrawn' ? (
-                  <Button size="sm" variant="secondary" onClick={() => void setOfferingStatus(o.id, 'withdrawn')} disabled={busy}>
-                    Withdraw
-                  </Button>
-                ) : null}
-              </div>
-            </li>
-          ))}
-          {offerings.length === 0 ? (
-            <EmptyState
-              title="No schemes selected yet"
-              description="Choose one or more schemes from the library above. They will become available for customer enrollment once status is active."
-            />
-          ) : null}
-        </ul>
+        {offerings.length === 0 ? (
+          <EmptyState
+            title="No schemes selected yet"
+            description="Choose one or more schemes from the library above. They will become available for customer enrollment once status is active."
+          />
+        ) : (
+          <div
+            className="pf-grid"
+            style={{
+              gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+              gap: 'var(--sp-4)',
+              marginTop: 'var(--sp-4)',
+            }}
+          >
+            {offerings.map((o) => (
+              <Card
+                key={o.id}
+                style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}
+              >
+                <div style={{ flex: 1 }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      gap: 'var(--sp-2)',
+                      alignItems: 'flex-start',
+                      justifyContent: 'space-between',
+                      marginBottom: 'var(--sp-2)',
+                    }}
+                  >
+                    <h3 className="dash-card-title" style={{ margin: 0, lineHeight: 1.3, flex: '1 1 12rem' }}>
+                      {o.display_name}
+                    </h3>
+                    <Badge tone={statusTone(o.status)}>{o.status}</Badge>
+                  </div>
+                  <p className="dash-muted" style={{ margin: 0, lineHeight: 1.45, fontSize: 'var(--ts-sm)' }}>
+                    {o.flow_summary}
+                  </p>
+                  {o.customer_facing_note ? (
+                    <p className="ds-field__hint" style={{ margin: 'var(--sp-2) 0 0', lineHeight: 1.45 }}>
+                      {o.customer_facing_note}
+                    </p>
+                  ) : null}
+                </div>
+                <div
+                  style={{
+                    display: 'flex',
+                    gap: 'var(--sp-2)',
+                    flexWrap: 'wrap',
+                    marginTop: 'var(--sp-4)',
+                    paddingTop: 'var(--sp-3)',
+                    borderTop: '1px solid var(--border-soft)',
+                  }}
+                >
+                  {o.status === 'active' ? (
+                    <Button size="sm" variant="secondary" onClick={() => void setOfferingStatus(o.id, 'paused')} disabled={busy}>
+                      Pause
+                    </Button>
+                  ) : null}
+                  {o.status === 'paused' ? (
+                    <Button size="sm" variant="primary" onClick={() => void setOfferingStatus(o.id, 'active')} disabled={busy}>
+                      Resume
+                    </Button>
+                  ) : null}
+                  {o.status !== 'withdrawn' ? (
+                    <Button size="sm" variant="ghost" onClick={() => void setOfferingStatus(o.id, 'withdrawn')} disabled={busy}>
+                      Withdraw
+                    </Button>
+                  ) : null}
+                </div>
+              </Card>
+            ))}
+          </div>
+        )}
       </Card>
     </div>
   )
