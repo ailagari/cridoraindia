@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { useOptionalPublicLocale } from '@/i18n/PublicLocaleProvider'
@@ -211,8 +211,21 @@ export function NotificationBell({
   const [pushTestBusy, setPushTestBusy] = useState(false)
   const [pushTestMsg, setPushTestMsg] = useState('')
   const rootRef = useRef<HTMLDivElement>(null)
+  const bellBtnRef = useRef<HTMLButtonElement>(null)
+  const panelRef = useRef<HTMLDivElement>(null)
+  const [dropdownAnchor, setDropdownAnchor] = useState<{ top: number; right: number } | null>(null)
   /** Bottom sheet on narrow viewports (PWA / mobile dashboards). */
   const [useSheetLayout, setUseSheetLayout] = useState(false)
+
+  const updateDropdownAnchor = useCallback(() => {
+    const btn = bellBtnRef.current
+    if (!btn) return
+    const rect = btn.getBoundingClientRect()
+    setDropdownAnchor({
+      top: rect.bottom + 8,
+      right: Math.max(8, window.innerWidth - rect.right),
+    })
+  }, [])
 
   const setupHint = pushSetupHint()
   const blockedHint = pushPermissionBlockedHint()
@@ -310,10 +323,30 @@ export function NotificationBell({
     return () => mq.removeEventListener('change', sync)
   }, [])
 
+  useLayoutEffect(() => {
+    if (!open || useSheetLayout) {
+      setDropdownAnchor(null)
+      return
+    }
+    updateDropdownAnchor()
+  }, [open, useSheetLayout, updateDropdownAnchor])
+
+  useEffect(() => {
+    if (!open || useSheetLayout) return
+    window.addEventListener('resize', updateDropdownAnchor)
+    window.addEventListener('scroll', updateDropdownAnchor, true)
+    return () => {
+      window.removeEventListener('resize', updateDropdownAnchor)
+      window.removeEventListener('scroll', updateDropdownAnchor, true)
+    }
+  }, [open, useSheetLayout, updateDropdownAnchor])
+
   useEffect(() => {
     if (!open || useSheetLayout) return
     const onDoc = (e: MouseEvent) => {
-      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false)
+      const target = e.target as Node
+      if (rootRef.current?.contains(target) || panelRef.current?.contains(target)) return
+      setOpen(false)
     }
     document.addEventListener('mousedown', onDoc)
     return () => document.removeEventListener('mousedown', onDoc)
@@ -770,10 +803,30 @@ export function NotificationBell({
         )
       : null
 
+  const dropdownPortal =
+    open && !useSheetLayout && dropdownAnchor && typeof document !== 'undefined'
+      ? createPortal(
+          <div
+            ref={panelRef}
+            className="notif-panel notif-panel--anchored card"
+            role="dialog"
+            aria-labelledby="notif-panel-heading"
+            style={{
+              top: dropdownAnchor.top,
+              right: dropdownAnchor.right,
+            }}
+          >
+            {panelInner}
+          </div>,
+          document.body,
+        )
+      : null
+
   return (
     <>
       <div className="notif-bell-wrap" ref={rootRef}>
         <button
+          ref={bellBtnRef}
           type="button"
           className={`notif-bell-btn${compact ? ' notif-bell-btn--compact' : ''}`}
           aria-expanded={open}
@@ -797,12 +850,8 @@ export function NotificationBell({
           </span>
           {unread > 0 ? <span className="notif-bell-badge">{unread > 9 ? '9+' : unread}</span> : null}
         </button>
-        {open && !useSheetLayout ? (
-          <div className="notif-panel card" role="dialog" aria-labelledby="notif-panel-heading">
-            {panelInner}
-          </div>
-        ) : null}
       </div>
+      {dropdownPortal}
       {sheetPortal}
     </>
   )

@@ -6995,6 +6995,13 @@ select.input {
   backdrop-filter: blur(16px);
 }
 
+.notif-panel--anchored {
+  position: fixed;
+  top: 0;
+  right: 0;
+  z-index: 600;
+}
+
 .notif-panel .notif-item-body {
   color: rgba(226, 232, 245, 0.92);
 }
