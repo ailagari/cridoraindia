@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Button, Card, CardHeader, EmptyState, Feedback, Input, PageHeader, Select } from '@/components/ui'
-import { DashSegmentPair } from '@/components/DashSegmentPair'
+import { DashSegmentPair, type DashSegmentItem } from '@/components/DashSegmentPair'
 import { UpiPaymentStep } from '@/features/upi/UpiPaymentStep'
 import { useCounterOtpCountdown } from '@/features/invest/useCounterOtpCountdown'
 import { fetchVerifiedJewellers, type JewellerStorefrontDTO } from '@/lib/marketplaceApi'
@@ -25,10 +25,10 @@ import { CustomerSchemeProgressCard } from './CustomerSchemeProgressCard'
 
 const VISIBLE_STATUSES = new Set(['active', 'plan_month_complete'])
 
-const PAYMENT_METHODS = [
+const PAYMENT_METHODS: DashSegmentItem[] = [
   { id: 'upi', label: 'Pay online (UPI)' },
   { id: 'counter', label: 'Pay at counter' },
-] as const
+]
 
 const INFLIGHT_UPI_STATUSES = new Set([
   'pending_payment',
@@ -92,7 +92,7 @@ export function CustomerSchemeHubPanel() {
 
   useEffect(() => {
     void fetchPlatformFeatures().then((f) => {
-      setSchemesEnabled(isFeatureEnabled(f, 'golden_scheme'))
+      setSchemesEnabled(isFeatureEnabled(f?.flags, 'golden_scheme'))
       setFeatureReady(true)
     })
   }, [])
@@ -449,7 +449,7 @@ export function CustomerSchemeHubPanel() {
                 {otp ? (
                   <p className="ds-field__hint">
                     Counter OTP: <strong className="tabular">{otp}</strong>
-                    {otpCountdown.label ? ` · ${otpCountdown.label}` : null}
+                    {otpExpiresAt && !otpCountdown.expired ? ` · expires in ${otpCountdown.labelMmSs}` : null}
                   </p>
                 ) : null}
                 <Button type="button" variant="ghost" block disabled={busy} onClick={() => void cancelCounterDeposit()}>
