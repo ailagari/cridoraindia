@@ -760,6 +760,14 @@ html[data-theme='light'] .ref-dash-shell .topbar .tb-logo-name .dash-brand-India
     display: inline-flex !important;
   }
 
+  .ref-dash-shell .tb-logo-name {
+    display: none;
+  }
+
+  .ref-dash-shell .dash-mobile-username {
+    display: none !important;
+  }
+
   .ref-dash-shell .dash-content .hero {
     padding: 18px 16px;
   }

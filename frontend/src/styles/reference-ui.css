@@ -424,7 +424,7 @@ html[data-theme='light'] .pub-ref .tt-k {
 @media (max-width: 767px) {
   .pub-ref .nav {
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-columns: auto minmax(0, 1fr);
     align-items: center;
     padding: 0 max(0.65rem, env(safe-area-inset-left)) 0 max(0.65rem, env(safe-area-inset-right));
     gap: 0.35rem;
@@ -434,21 +434,16 @@ html[data-theme='light'] .pub-ref .tt-k {
   .pub-ref .nav-logo {
     justify-self: start;
     min-width: 0;
+    flex-shrink: 0;
   }
 
-  .pub-ref .nav-end {
-    justify-self: end;
-    min-width: 0;
-    gap: 0.2rem;
-  }
-
-  .pub-ref .nav.nav--signed-in {
-    grid-template-columns: auto 1fr;
-  }
-
+  .pub-ref .nav-end,
   .pub-ref .nav.nav--signed-in .nav-end {
     grid-column: 2;
     justify-self: end;
+    min-width: 0;
+    flex-shrink: 0;
+    gap: 0.2rem;
   }
 
   .pub-ref .public-hub-tabs {
@@ -1094,7 +1089,16 @@ html[data-theme='light'] .ref-dash-shell .tt-knob {
 
   .ref-dash-shell .tb-end {
     min-width: 0;
-    flex-shrink: 1;
+    flex-shrink: 0;
+    margin-left: auto;
+  }
+
+  .ref-dash-shell .dash-mobile-actions {
+    flex-shrink: 0;
+  }
+
+  .ref-dash-shell .dash-mobile-user-menu {
+    flex-shrink: 0;
   }
 
   .ref-dash-shell .main.dash-content {

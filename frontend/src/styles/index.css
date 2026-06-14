@@ -7392,6 +7392,14 @@ select.input {
   align-items: center;
   gap: 0.65rem;
   margin-left: auto;
+  flex-shrink: 0;
+}
+
+.public-header-utility {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-shrink: 0;
 }
 
 .public-lang-switch {
@@ -7556,25 +7564,30 @@ select.input {
   }
 
   .public-mobile-username {
-    display: block;
-    min-width: 0;
-    justify-self: center;
-    text-align: center;
-    font-size: 0.76rem;
-    font-weight: 700;
-    letter-spacing: 0.03em;
-    color: var(--text-muted);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    padding: 0 0.15rem;
+    display: none !important;
+  }
+
+  .public-header-utility {
+    display: none !important;
   }
 
   .public-header-end {
-    margin-left: 0;
+    margin-left: auto;
     justify-self: end;
     min-width: 0;
-    flex-shrink: 1;
+    flex-shrink: 0;
+    gap: 0.35rem;
+  }
+
+  .public-mobile-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    flex-shrink: 0;
+  }
+
+  .public-mobile-user-menu {
+    flex-shrink: 0;
   }
 
   .pub-ref .marketplace-cart-nav-icon {
@@ -7584,12 +7597,6 @@ select.input {
 
   header .container nav.public-nav-desktop {
     display: none;
-  }
-
-  .public-mobile-actions {
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
   }
 
   .public-desktop-bell {
@@ -7738,18 +7745,7 @@ select.input {
   }
 
   .dash-mobile-username {
-    display: block;
-    min-width: 0;
-    justify-self: center;
-    text-align: center;
-    font-size: 0.76rem;
-    font-weight: 700;
-    letter-spacing: 0.03em;
-    color: var(--text-muted);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    padding: 0 0.15rem;
+    display: none !important;
   }
 
   .dash-topbar-end {
@@ -7759,6 +7755,7 @@ select.input {
 
   .dash-mobile-actions {
     display: flex;
+    flex-shrink: 0;
   }
 
   .dash-topbar-right {

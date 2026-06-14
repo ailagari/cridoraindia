@@ -30,7 +30,6 @@ function PublicLayoutInner() {
   ] as const
 
   const dashboardHref = user ? dashboardLandingPath(user) : '/'
-  const guestLabel = t('nav.guest')
   const marketplaceCartCount = useMarketplaceCartBadgeCount()
   const location = useLocation()
   const cartLinkTo = useMemo(
@@ -53,16 +52,14 @@ function PublicLayoutInner() {
           ))}
         </nav>
 
-        {!user ? (
-          <span className="public-mobile-username">{guestLabel}</span>
-        ) : null}
-
         <div className="nav-end public-header-end">
           {user ? (
             <MarketplaceCartNavIcon to={cartLinkTo} count={marketplaceCartCount} label={t('nav.cart')} />
           ) : null}
-          <LanguageSwitcher />
-          <ThemeToggle />
+          <div className="public-header-utility">
+            <LanguageSwitcher />
+            <ThemeToggle />
+          </div>
           <div className="public-mobile-actions">
             <PublicHeaderActions />
             <PublicMobileUserMenu />

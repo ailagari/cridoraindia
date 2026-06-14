@@ -242,10 +242,6 @@ export function DashboardLayout({
 
           {role === 'customer' ? <GoldTickerStrip variant="customer" /> : null}
 
-          <span className="dash-mobile-username" title={user?.first_name?.trim() || undefined}>
-            {user?.first_name?.trim() || 'Account'}
-          </span>
-
           <div className="tb-end">
             <div className="dash-mobile-actions">
               <NotificationBell compact role={role} />
