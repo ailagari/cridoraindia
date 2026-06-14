@@ -133,7 +133,9 @@ export type SchemeContributionDTO = {
     payment_expires_at: string | null
     expired: boolean
   }
-export type SchemeContributionDTO = {
+}
+
+export type SchemePresetDTO = {
   key: string
   label: string
   description: string
