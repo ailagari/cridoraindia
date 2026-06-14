@@ -25,4 +25,4 @@ ENV DJANGO_SETTINGS_MODULE=config.settings
 ENV DJANGO_DEBUG=false
 WORKDIR /app/backend
 EXPOSE 8000
-CMD sh -c "python manage.py migrate --noinput && python manage.py collectstatic --noinput && exec gunicorn config.wsgi:application --bind 0.0.0.0:${PORT:-8000} --workers 2"
+CMD sh -c "python manage.py migrate --noinput && python manage.py collectstatic --noinput && python manage.py ensure_media_root && exec gunicorn config.wsgi:application --bind 0.0.0.0:${PORT:-8000} --workers 2"
