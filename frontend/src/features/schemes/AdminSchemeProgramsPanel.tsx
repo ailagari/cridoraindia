@@ -103,7 +103,11 @@ export function AdminSchemeProgramsPanel() {
     return templates.filter((t) => t.status === statusFilter)
   }, [templates, statusFilter])
 
-  const isReadOnlyDesigner = editingStatus === 'published' || editingStatus === 'deprecated'
+  const isPublishedOrDeprecated =
+    editingStatus === 'published' || editingStatus === 'deprecated'
+
+  const saveLabel =
+    editingStatus === 'draft' || !editingId ? 'Save draft' : 'Save changes'
 
   const runPreview = async () => {
     try {
@@ -137,7 +141,6 @@ export function AdminSchemeProgramsPanel() {
   }
 
   const saveDraft = async () => {
-    if (isReadOnlyDesigner) return
     setBusy(true)
     setErr('')
     try {
@@ -344,13 +347,18 @@ export function AdminSchemeProgramsPanel() {
                         Deprecate
                       </Button>
                     ) : null}
+                    {t.status === 'deprecated' ? (
+                      <Button size="sm" variant="primary" onClick={() => void publish(t.id)} disabled={busy}>
+                        Re-publish
+                      </Button>
+                    ) : null}
                     {t.status === 'published' || t.status === 'deprecated' ? (
                       <Button size="sm" variant="secondary" onClick={() => void duplicate(t.id, t.name)} disabled={busy}>
                         Duplicate
                       </Button>
                     ) : null}
                     <Button size="sm" variant="secondary" onClick={() => openTemplate(t)}>
-                      Open
+                      {t.status === 'draft' ? 'Open' : 'Edit'}
                     </Button>
                   </div>
                 </div>
@@ -400,20 +408,10 @@ export function AdminSchemeProgramsPanel() {
 
       {tab === 'designer' ? (
         <div className="onboarding-flow">
-          {isReadOnlyDesigner ? (
+          {isPublishedOrDeprecated ? (
             <div className="notice n-info">
-              This scheme is <strong>{editingStatus}</strong> and cannot be edited in place. Duplicate it as a draft to
-              make changes, then publish the new version.
-              <div style={{ marginTop: 'var(--sp-3)' }}>
-                <Button
-                  size="sm"
-                  variant="primary"
-                  onClick={() => editingId && void duplicate(editingId, name)}
-                  disabled={busy || !editingId}
-                >
-                  Duplicate as draft
-                </Button>
-              </div>
+              This scheme is <strong>{editingStatus}</strong>. Saving updates the catalog for jewellers. Customers
+              already enrolled keep the terms from when they joined.
             </div>
           ) : null}
 
@@ -421,8 +419,8 @@ export function AdminSchemeProgramsPanel() {
             <CardHeader
               title={editingId ? `Editing: ${name}` : 'New scheme draft'}
               action={
-                <Button onClick={() => void saveDraft()} disabled={busy || isReadOnlyDesigner} loading={busy} variant="primary">
-                  Save draft
+                <Button onClick={() => void saveDraft()} disabled={busy} loading={busy} variant="primary">
+                  {saveLabel}
                 </Button>
               }
             />
@@ -431,16 +429,15 @@ export function AdminSchemeProgramsPanel() {
                 label="Scheme name"
                 value={name}
                 placeholder="e.g. 11+1 Jewellery Pool"
-                onChange={(e) => !isReadOnlyDesigner && setName(e.target.value)}
-                disabled={isReadOnlyDesigner}
+                onChange={(e) => setName(e.target.value)}
               />
             </div>
           </Card>
 
           <div className="pf-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 'var(--sp-4)' }}>
-            <SchemeInputCard design={design} onChange={isReadOnlyDesigner ? () => {} : setDesign} disabled={isReadOnlyDesigner} />
-            <SchemeBonusCard design={design} onChange={isReadOnlyDesigner ? () => {} : setDesign} disabled={isReadOnlyDesigner} />
-            <SchemeOutputCard design={design} onChange={isReadOnlyDesigner ? () => {} : setDesign} disabled={isReadOnlyDesigner} />
+            <SchemeInputCard design={design} onChange={setDesign} />
+            <SchemeBonusCard design={design} onChange={setDesign} />
+            <SchemeOutputCard design={design} onChange={setDesign} />
             <SchemeFlowPreview design={design} preview={preview} />
           </div>
         </div>

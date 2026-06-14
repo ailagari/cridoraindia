@@ -25,6 +25,19 @@ def effective_design(offering: JewellerSchemeOffering) -> dict:
     return offering.design_snapshot or offering.scheme_template.scheme_design or {}
 
 
+def sync_offering_snapshots_from_template(template: SchemeTemplate) -> int:
+    """Refresh jeweller offering snapshots after a published template is edited."""
+    design = template.scheme_design or {}
+    rules = template.scheme_rules or compile_scheme_design(design)
+    updated = 0
+    for offering in JewellerSchemeOffering.objects.filter(scheme_template=template):
+        offering.design_snapshot = design
+        offering.rules_snapshot = rules
+        offering.save(update_fields=["design_snapshot", "rules_snapshot"])
+        updated += 1
+    return updated
+
+
 @transaction.atomic
 def create_offering(
     jeweller: User,

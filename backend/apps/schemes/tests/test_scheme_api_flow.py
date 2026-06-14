@@ -94,6 +94,42 @@ class SchemeApiFlowTests(TestCase):
         self.assertEqual(delete_draft.status_code, 204)
         self.assertFalse(SchemeTemplate.objects.filter(pk=self.draft.id).exists())
 
+    def test_edit_published_template_syncs_offerings(self):
+        design = _minimal_design()
+        published = SchemeTemplate.objects.create(
+            slug="edit-published",
+            name="Published Edit",
+            scheme_design=design,
+            scheme_rules=compile_scheme_design(design),
+            flow_summary=human_flow_summary(design),
+            status=SchemeTemplate.STATUS_PUBLISHED,
+        )
+        offering = JewellerSchemeOffering.objects.create(
+            jeweller=self.jeweller,
+            scheme_template=published,
+            display_name="Old name",
+            design_snapshot={"old": True},
+            rules_snapshot={"old": True},
+        )
+        new_design = dict(design)
+        new_design["input"] = {**(design.get("input") or {}), "min_deposit_inr": 1000}
+
+        self.client.force_authenticate(self.admin)
+        res = self.client.patch(
+            f"/api/v1/admin/schemes/templates/{published.id}/",
+            {"name": "Updated Published", "scheme_design": new_design},
+            format="json",
+        )
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.json()["name"], "Updated Published")
+        self.assertEqual(res.json().get("offerings_synced"), 1)
+
+        offering.refresh_from_db()
+        published.refresh_from_db()
+        self.assertEqual(offering.design_snapshot, new_design)
+        self.assertEqual(offering.rules_snapshot, published.scheme_rules)
+        self.assertEqual(published.status, SchemeTemplate.STATUS_PUBLISHED)
+
     def test_jeweller_catalog_adopt_idempotent(self):
         design = _minimal_design()
         published = SchemeTemplate.objects.create(

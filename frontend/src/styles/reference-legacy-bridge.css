@@ -16,6 +16,8 @@ html[data-theme='light'] {
   --bg-deep: var(--page);
   --bg-navy: var(--s1);
   --bg-elevated: var(--s2);
+  --surface: var(--s2);
+  --bg: var(--s1);
 
   --border-soft: var(--b0);
   --border: var(--b0);
@@ -116,6 +118,9 @@ html[data-theme='light'] {
 
   --silk-06: var(--s1);
   --silk-10: var(--inp);
+
+  --surface: var(--s0);
+  --bg: var(--s0);
 
   --navy-40: rgba(248, 250, 252, 0.95);
   --navy-45: rgba(241, 245, 249, 0.98);

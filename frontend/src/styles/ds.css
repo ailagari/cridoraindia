@@ -750,9 +750,43 @@ html[data-theme='light'] .ds-card {
   padding-right: 40px;
   cursor: pointer;
 }
-.ds-field__select option {
-  background: var(--surface);
-  color: var(--text);
+html[data-theme='dark'] .ds-field__select {
+  color-scheme: dark;
+  background-color: var(--s2);
+  color: var(--ink);
+}
+html[data-theme='light'] .ds-field__select {
+  color-scheme: light;
+  background-color: var(--s0);
+  color: var(--ink);
+}
+html[data-theme='dark'] .ds-field__select option {
+  background-color: var(--s2);
+  color: var(--ink);
+}
+html[data-theme='light'] .ds-field__select option {
+  background-color: var(--s0);
+  color: var(--ink);
+}
+html[data-theme='dark'] .ds-field__select option:checked,
+html[data-theme='dark'] .ds-field__select option:hover,
+html[data-theme='dark'] .ds-field__select option:focus {
+  background-color: var(--s3);
+  color: var(--ink);
+}
+html[data-theme='light'] .ds-field__select option:checked,
+html[data-theme='light'] .ds-field__select option:hover,
+html[data-theme='light'] .ds-field__select option:focus {
+  background-color: var(--s2);
+  color: var(--ink);
+}
+html[data-theme='dark'] .ds-field__select-wrap::after {
+  border-right-color: var(--ink2);
+  border-bottom-color: var(--ink2);
+}
+html[data-theme='light'] .ds-field__select-wrap::after {
+  border-right-color: var(--ink3);
+  border-bottom-color: var(--ink3);
 }
 .ds-field__input--error {
   border-color: var(--danger);
@@ -1188,6 +1222,29 @@ label.field textarea:focus {
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 2px var(--gold-glow-25);
+}
+
+html[data-theme='dark'] .field select,
+html[data-theme='dark'] label.field select {
+  color-scheme: dark;
+  background-color: var(--s2);
+  color: var(--ink);
+}
+html[data-theme='light'] .field select,
+html[data-theme='light'] label.field select {
+  color-scheme: light;
+  background-color: var(--s0);
+  color: var(--ink);
+}
+html[data-theme='dark'] .field select option,
+html[data-theme='dark'] label.field select option {
+  background-color: var(--s2);
+  color: var(--ink);
+}
+html[data-theme='light'] .field select option,
+html[data-theme='light'] label.field select option {
+  background-color: var(--s0);
+  color: var(--ink);
 }
 
 .form-error,

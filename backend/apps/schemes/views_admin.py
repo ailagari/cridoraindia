@@ -17,6 +17,7 @@ from apps.schemes.models import (
     SchemeRequest,
     SchemeTemplate,
 )
+from apps.schemes.services.enrollment_service import sync_offering_snapshots_from_template
 from apps.schemes.services.presets import list_presets, preset_design
 from apps.schemes.services.scheme_design_compiler import (
     compile_scheme_design,
@@ -110,11 +111,7 @@ class AdminSchemeTemplateDetailView(APIView):
         t = SchemeTemplate.objects.filter(pk=pk).first()
         if not t:
             return Response({"detail": "Not found."}, status=404)
-        if t.status == SchemeTemplate.STATUS_PUBLISHED:
-            return Response(
-                {"detail": "Deprecate published scheme before editing, or create a new draft."},
-                status=400,
-            )
+        design_changed = False
         if "name" in request.data:
             t.name = request.data["name"]
         if "description" in request.data:
@@ -131,8 +128,17 @@ class AdminSchemeTemplateDetailView(APIView):
             t.scheme_design = design
             t.scheme_rules = compile_scheme_design(design)
             t.flow_summary = human_flow_summary(design)
+            design_changed = True
+        elif any(k in request.data for k in ("name", "description", "category")):
+            t.flow_summary = human_flow_summary(t.scheme_design or {})
         t.save()
-        return Response(_serialize_template(t))
+        offerings_synced = 0
+        if design_changed and t.status == SchemeTemplate.STATUS_PUBLISHED:
+            offerings_synced = sync_offering_snapshots_from_template(t)
+        payload = _serialize_template(t)
+        if offerings_synced:
+            payload["offerings_synced"] = offerings_synced
+        return Response(payload)
 
     def delete(self, request, pk):
         err = _require_admin(request)
@@ -178,7 +184,11 @@ class AdminSchemeTemplatePublishView(APIView):
         t.published_at = timezone.now()
         t.published_by = request.user
         t.save()
-        return Response(_serialize_template(t))
+        offerings_synced = sync_offering_snapshots_from_template(t)
+        payload = _serialize_template(t)
+        if offerings_synced:
+            payload["offerings_synced"] = offerings_synced
+        return Response(payload)
 
 
 def _unique_template_slug(base: str) -> str:
