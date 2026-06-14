@@ -18,9 +18,13 @@ export function CustomerSchemeProgressCard({ enrollment, active, onSelect }: Pro
     >
       <h3 className="dash-card-title">{e.offering.display_name}</h3>
       <p className="dash-muted">{e.jeweller.business_name}</p>
-      {e.status !== 'active' ? (
+      {e.status !== 'active' || !e.payments_enabled ? (
         <p>
-          <span className="dash-badge">{e.status.replace(/_/g, ' ')}</span>
+          <span className="dash-badge">
+            {e.status === 'pending_admission'
+              ? 'Awaiting jeweller'
+              : e.status.replace(/_/g, ' ')}
+          </span>
         </p>
       ) : null}
       <p>

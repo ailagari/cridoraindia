@@ -29,6 +29,9 @@ from apps.schemes.services.contribution_completion import (
 from apps.schemes.services.contribution_service import serialize_contribution
 from apps.schemes.services.enrollment_service import (
     create_offering,
+    jeweller_admit_customer,
+    resolve_verified_customer,
+    serialize_enrollment_for_jeweller,
     serialize_offering_brief,
 )
 
@@ -180,6 +183,77 @@ class JewellerSchemeOfferingDetailView(APIView):
             offering.jeweller_overrides = {**offering.jeweller_overrides, **filtered}
         offering.save()
         return Response(serialize_offering_brief(offering))
+
+
+class JewellerSchemeOfferingEnrollmentsView(APIView):
+    """List and admit customers on a jeweller scheme offering."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        err = _require_jeweller(request)
+        if err:
+            return err
+        blocked = require_feature_enabled("golden_scheme")
+        if blocked is not None:
+            return blocked
+        offering = (
+            JewellerSchemeOffering.objects.filter(pk=pk, jeweller=request.user)
+            .select_related("scheme_template")
+            .first()
+        )
+        if not offering:
+            return Response({"detail": "Not found."}, status=404)
+        status_filter = (request.query_params.get("status") or "").strip()
+        qs = offering.enrollments.select_related("customer", "offering__jeweller")
+        if status_filter:
+            qs = qs.filter(status=status_filter)
+        else:
+            qs = qs.filter(
+                status__in=(
+                    CustomerSchemeEnrollment.STATUS_PENDING_ADMISSION,
+                    CustomerSchemeEnrollment.STATUS_ACTIVE,
+                    CustomerSchemeEnrollment.STATUS_PLAN_MONTH_COMPLETE,
+                )
+            )
+        rows = [serialize_enrollment_for_jeweller(e) for e in qs.order_by("-started_at")]
+        return Response(rows)
+
+    def post(self, request, pk):
+        err = _require_jeweller(request)
+        if err:
+            return err
+        blocked = require_feature_enabled("golden_scheme")
+        if blocked is not None:
+            return blocked
+        offering = (
+            JewellerSchemeOffering.objects.filter(pk=pk, jeweller=request.user)
+            .select_related("scheme_template")
+            .first()
+        )
+        if not offering:
+            return Response({"detail": "Not found."}, status=404)
+
+        customer_id = request.data.get("customer_id")
+        try:
+            cid = int(customer_id) if customer_id is not None else None
+        except (TypeError, ValueError):
+            cid = None
+        customer = resolve_verified_customer(
+            customer_id=cid,
+            cridora_member_id=str(request.data.get("cridora_member_id") or ""),
+            phone=str(request.data.get("phone") or ""),
+        )
+        if not customer:
+            return Response(
+                {"detail": "Verified customer not found. Use Cridora ID or phone."},
+                status=404,
+            )
+        try:
+            enrollment = jeweller_admit_customer(request.user, offering, customer)
+        except ValueError as e:
+            return Response({"detail": str(e)}, status=400)
+        return Response(serialize_enrollment_for_jeweller(enrollment), status=201)
 
 
 class JewellerSchemeRequestCreateView(APIView):

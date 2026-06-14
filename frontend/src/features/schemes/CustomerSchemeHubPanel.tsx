@@ -1,29 +1,31 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Button, Card, CardHeader, EmptyState, Feedback, Input, PageHeader, Select } from '@/components/ui'
+import { Button, Card, CardHeader, EmptyState, Feedback, Input, PageHeader } from '@/components/ui'
 import { DashSegmentPair, type DashSegmentItem } from '@/components/DashSegmentPair'
 import { UpiPaymentStep } from '@/features/upi/UpiPaymentStep'
 import { useCounterOtpCountdown } from '@/features/invest/useCounterOtpCountdown'
-import { fetchVerifiedJewellers, type JewellerStorefrontDTO } from '@/lib/marketplaceApi'
 import {
   cancelSchemeContribution,
   createSchemeContribution,
   enrollCustomerScheme,
   fetchCustomerSchemeContributions,
   fetchCustomerSchemeEnrollments,
-  fetchCustomerSchemeOfferings,
-  issueSchemeCounterOtp,
+  fetchCustomerSchemeNetworkOfferings,
   quoteSchemeContribution,
+  issueSchemeCounterOtp,
+  searchCustomerSchemeOfferings,
   type SchemeContributionDTO,
   type SchemeEnrollmentDTO,
+  type SchemeNetworkJewellerDTO,
   type SchemeOfferingDTO,
+  type SchemeSearchResultDTO,
 } from '@/lib/schemesApi'
 import { fetchPlatformFeatures, isFeatureEnabled } from '@/lib/platformFeatures'
 import { LIVE_BALANCE_POLL_MS } from '@/lib/liveDeskIntervals'
 import { useLivePoll } from '@/lib/useLivePoll'
 import { CustomerSchemeProgressCard } from './CustomerSchemeProgressCard'
 
-const VISIBLE_STATUSES = new Set(['active', 'plan_month_complete'])
+const VISIBLE_STATUSES = new Set(['active', 'pending_admission', 'plan_month_complete'])
 
 const PAYMENT_METHODS: DashSegmentItem[] = [
   { id: 'upi', label: 'Pay online (UPI)' },
@@ -41,6 +43,10 @@ const INFLIGHT_UPI_STATUSES = new Set([
 ])
 
 const UPI_PAYMENT_SECTION_ID = 'scheme-upi-payment-step'
+
+function canPayEnrollment(e: SchemeEnrollmentDTO): boolean {
+  return e.status === 'active' && e.payments_enabled
+}
 
 function resetPaymentState(setters: {
   setOtp: (v: string) => void
@@ -64,17 +70,53 @@ function parseJewellerIdFromUrl(raw: string | null): number | '' {
   return Number.isFinite(n) && n > 0 ? n : ''
 }
 
+function OfferingJoinRow({
+  offering,
+  jewellerName,
+  enrolled,
+  busy,
+  onJoin,
+}: {
+  offering: SchemeOfferingDTO
+  jewellerName: string
+  enrolled: boolean
+  busy: boolean
+  onJoin: (offeringId: number) => void
+}) {
+  return (
+    <li className="dash-list-item">
+      <div>
+        <strong>{offering.display_name}</strong>
+        <p className="dash-muted">
+          {jewellerName} · {offering.flow_summary}
+        </p>
+        {offering.customer_facing_note ? (
+          <p className="ds-field__hint" style={{ margin: '0.25rem 0 0' }}>
+            {offering.customer_facing_note}
+          </p>
+        ) : null}
+      </div>
+      {enrolled ? (
+        <span className="dash-muted">Joined</span>
+      ) : (
+        <Button size="sm" variant="primary" onClick={() => onJoin(offering.id)} disabled={busy}>
+          Request to join
+        </Button>
+      )}
+    </li>
+  )
+}
+
 export function CustomerSchemeHubPanel() {
   const [params] = useSearchParams()
   const jewellerFromUrl = params.get('jeweller_id')
 
   const [featureReady, setFeatureReady] = useState(false)
   const [schemesEnabled, setSchemesEnabled] = useState(false)
-  const [jewellers, setJewellers] = useState<JewellerStorefrontDTO[]>([])
-  const [jewellerId, setJewellerId] = useState<number | ''>('')
-  const [jewellerInitDone, setJewellerInitDone] = useState(false)
-  const userPickedJewellerRef = useRef(false)
-  const [offerings, setOfferings] = useState<SchemeOfferingDTO[]>([])
+  const [networkJewellers, setNetworkJewellers] = useState<SchemeNetworkJewellerDTO[]>([])
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState<SchemeSearchResultDTO[]>([])
+  const [searchBusy, setSearchBusy] = useState(false)
   const [enrollments, setEnrollments] = useState<SchemeEnrollmentDTO[]>([])
   const [selectedEnrollment, setSelectedEnrollment] = useState<SchemeEnrollmentDTO | null>(null)
   const [amount, setAmount] = useState('5000')
@@ -87,6 +129,7 @@ export function CustomerSchemeHubPanel() {
   const [msg, setMsg] = useState('')
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
+  const urlJewellerHandled = useRef(false)
 
   const otpCountdown = useCounterOtpCountdown(otpExpiresAt)
 
@@ -103,8 +146,18 @@ export function CustomerSchemeHubPanel() {
     setEnrollments(visible)
     setSelectedEnrollment((prev) => {
       if (prev && visible.some((r) => r.id === prev.id)) return prev
-      return visible[0] ?? null
+      const payable = visible.find((r) => canPayEnrollment(r))
+      return payable ?? visible[0] ?? null
     })
+  }, [])
+
+  const reloadNetwork = useCallback(async () => {
+    try {
+      const data = await fetchCustomerSchemeNetworkOfferings()
+      setNetworkJewellers(data.jewellers)
+    } catch {
+      setNetworkJewellers([])
+    }
   }, [])
 
   const refreshInflightContributions = useCallback(async (enrollmentId: number) => {
@@ -124,26 +177,29 @@ export function CustomerSchemeHubPanel() {
   }, [])
 
   useEffect(() => {
-    void fetchVerifiedJewellers().then(setJewellers)
     void reloadEnrollments()
-  }, [reloadEnrollments])
+    void reloadNetwork()
+  }, [reloadEnrollments, reloadNetwork])
 
   useEffect(() => {
-    if (jewellerInitDone || jewellers.length === 0) return
+    if (urlJewellerHandled.current || networkJewellers.length === 0) return
     const fromUrl = parseJewellerIdFromUrl(jewellerFromUrl)
-    if (fromUrl && jewellers.some((j) => j.id === fromUrl)) {
-      setJewellerId(fromUrl)
+    if (fromUrl && networkJewellers.some((j) => j.id === fromUrl)) {
+      urlJewellerHandled.current = true
     }
-    setJewellerInitDone(true)
-  }, [jewellers, jewellerFromUrl, jewellerInitDone])
+  }, [networkJewellers, jewellerFromUrl])
 
   const enrolledOfferingIds = useMemo(
     () => new Set(enrollments.map((e) => e.offering.id)),
     [enrollments],
   )
 
-  const activeEnrollments = useMemo(
-    () => enrollments.filter((e) => e.status === 'active'),
+  const payableEnrollments = useMemo(
+    () => enrollments.filter((e) => canPayEnrollment(e)),
+    [enrollments],
+  )
+  const pendingEnrollments = useMemo(
+    () => enrollments.filter((e) => e.status === 'pending_admission'),
     [enrollments],
   )
   const awaitingEnrollments = useMemo(
@@ -151,23 +207,8 @@ export function CustomerSchemeHubPanel() {
     [enrollments],
   )
 
-  const availableOfferings = useMemo(
-    () => offerings.filter((o) => !enrolledOfferingIds.has(o.id) && o.status === 'active'),
-    [offerings, enrolledOfferingIds],
-  )
-
   useEffect(() => {
-    if (!jewellerId) {
-      setOfferings([])
-      return
-    }
-    void fetchCustomerSchemeOfferings(jewellerId)
-      .then(setOfferings)
-      .catch(() => setOfferings([]))
-  }, [jewellerId])
-
-  useEffect(() => {
-    if (!selectedEnrollment || !amount || selectedEnrollment.status !== 'active') {
+    if (!selectedEnrollment || !amount || !canPayEnrollment(selectedEnrollment)) {
       setQuote(null)
       return
     }
@@ -177,13 +218,13 @@ export function CustomerSchemeHubPanel() {
   }, [selectedEnrollment, amount])
 
   useEffect(() => {
-    if (!selectedEnrollment || selectedEnrollment.status !== 'active') return
+    if (!selectedEnrollment || !canPayEnrollment(selectedEnrollment)) return
     void refreshInflightContributions(selectedEnrollment.id)
   }, [selectedEnrollment, refreshInflightContributions])
 
   useLivePoll(() => {
     void reloadEnrollments()
-    if (selectedEnrollment?.status === 'active') {
+    if (selectedEnrollment && canPayEnrollment(selectedEnrollment)) {
       void refreshInflightContributions(selectedEnrollment.id)
     }
   }, LIVE_BALANCE_POLL_MS, Boolean(selectedEnrollment))
@@ -198,7 +239,7 @@ export function CustomerSchemeHubPanel() {
       setMsg,
       setErr,
     })
-    if (e.status === 'active') void refreshInflightContributions(e.id)
+    if (canPayEnrollment(e)) void refreshInflightContributions(e.id)
   }
 
   const enroll = async (offeringId: number) => {
@@ -208,7 +249,11 @@ export function CustomerSchemeHubPanel() {
       const e = await enrollCustomerScheme(offeringId)
       selectEnrollment(e)
       await reloadEnrollments()
-      setMsg('Joined scheme successfully.')
+      setMsg(
+        e.payments_enabled
+          ? 'Joined scheme successfully.'
+          : 'Join request sent. Your jeweller will add you before you can start paying.',
+      )
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Could not join scheme')
     } finally {
@@ -216,8 +261,28 @@ export function CustomerSchemeHubPanel() {
     }
   }
 
+  const runSearch = async () => {
+    const q = searchQuery.trim()
+    if (q.length < 2) {
+      setErr('Enter at least 2 characters to search.')
+      return
+    }
+    setSearchBusy(true)
+    setErr('')
+    try {
+      const rows = await searchCustomerSchemeOfferings(q)
+      setSearchResults(rows)
+      if (rows.length === 0) setMsg('No schemes matched your search.')
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Search failed')
+      setSearchResults([])
+    } finally {
+      setSearchBusy(false)
+    }
+  }
+
   const createDeposit = async () => {
-    if (!selectedEnrollment || selectedEnrollment.status !== 'active') return
+    if (!selectedEnrollment || !canPayEnrollment(selectedEnrollment)) return
     setBusy(true)
     setErr('')
     setMsg('')
@@ -317,80 +382,131 @@ export function CustomerSchemeHubPanel() {
     activeUpiContribution &&
     INFLIGHT_UPI_STATUSES.has(activeUpiContribution.status)
 
+  const urlJewellerId = parseJewellerIdFromUrl(jewellerFromUrl)
+  const sortedNetwork = [...networkJewellers].sort((a, b) => {
+    if (urlJewellerId && a.id === urlJewellerId) return -1
+    if (urlJewellerId && b.id === urlJewellerId) return 1
+    if (a.role === 'primary') return -1
+    if (b.role === 'primary') return 1
+    return a.business_name.localeCompare(b.business_name, 'en')
+  })
+
   return (
     <div className="dash-panel-max">
       <PageHeader
         eyebrow="Invest"
         title="Investment schemes"
-        subtitle="Join a jeweller scheme and deposit anytime — same counter OTP and UPI flow as fractional gold purchases."
+        subtitle="Schemes from your primary and secondary jewellers. Request to join others — your jeweller must add you before you can pay."
       />
 
       {enrollments.length === 0 ? (
         <Card>
           <EmptyState
             title="No schemes yet"
-            description="Pick a jeweller below and join an available scheme to start saving."
+            description="Browse schemes from your jewellers below or search other partners to request joining."
           />
         </Card>
       ) : (
         <>
-          {renderEnrollmentGroup('Active schemes', activeEnrollments)}
+          {renderEnrollmentGroup('Ready to pay', payableEnrollments)}
+          {renderEnrollmentGroup('Waiting for jeweller approval', pendingEnrollments)}
           {renderEnrollmentGroup('Awaiting bonus or redemption', awaitingEnrollments)}
         </>
       )}
 
       <Card>
-        <CardHeader title="Join a scheme" />
-        <div className="ds-form ds-form--compact">
-          <Select
-            label="Jeweller"
-            value={jewellerId === '' ? '' : String(jewellerId)}
-            onChange={(e) => {
-              userPickedJewellerRef.current = true
-              setJewellerId(e.target.value ? Number(e.target.value) : '')
-            }}
-          >
-            <option value="">Select jeweller</option>
-            {jewellers.map((j) => (
-              <option key={j.id} value={j.id}>
-                {j.business_name || `Jeweller #${j.id}`}
-              </option>
-            ))}
-          </Select>
-        </div>
-        {jewellerId ? (
-          <ul className="dash-list" style={{ marginTop: '1rem' }}>
-            {availableOfferings.map((o) => (
-              <li key={o.id} className="dash-list-item">
-                <div>
-                  <strong>{o.display_name}</strong>
-                  <p className="dash-muted">{o.flow_summary}</p>
-                  {o.customer_facing_note ? (
-                    <p className="ds-field__hint" style={{ margin: '0.25rem 0 0' }}>
-                      {o.customer_facing_note}
-                    </p>
-                  ) : null}
-                </div>
-                <Button size="sm" variant="primary" onClick={() => void enroll(o.id)} disabled={busy}>
-                  Join scheme
-                </Button>
-              </li>
-            ))}
-            {availableOfferings.length === 0 ? (
-              <EmptyState
-                title="No schemes available"
-                description="This jeweller has not added active schemes yet. Try another jeweller or ask them to select schemes from their catalog."
-              />
-            ) : null}
-          </ul>
+        <CardHeader title="Your jewellers' schemes" />
+        <p className="dash-muted" style={{ marginTop: 0 }}>
+          Primary and secondary jewellers where you hold gold or were onboarded.
+        </p>
+        {sortedNetwork.length === 0 ? (
+          <EmptyState
+            title="No linked jewellers"
+            description="Set a primary jeweller in settings or buy fractional gold to see their schemes here. You can still search other jewellers below."
+          />
         ) : (
-          <p className="dash-muted" style={{ marginTop: '1rem' }}>
-            Select a jeweller to see schemes you can join.
-          </p>
+          sortedNetwork.map((j) => {
+            const available = j.offerings.filter(
+              (o) => !enrolledOfferingIds.has(o.id) && o.status === 'active',
+            )
+            if (j.offerings.length === 0) return null
+            return (
+              <div key={j.id} style={{ marginTop: '1rem' }}>
+                <h3 className="dash-card-title">
+                  {j.business_name}
+                  <span className="dash-muted" style={{ fontWeight: 400, marginLeft: '0.5rem' }}>
+                    {j.role === 'primary' ? 'Primary' : 'Secondary'}
+                    {[j.city, j.state].filter(Boolean).length
+                      ? ` · ${[j.city, j.state].filter(Boolean).join(', ')}`
+                      : ''}
+                  </span>
+                </h3>
+                <ul className="dash-list">
+                  {available.map((o) => (
+                    <OfferingJoinRow
+                      key={o.id}
+                      offering={o}
+                      jewellerName={j.business_name}
+                      enrolled={enrolledOfferingIds.has(o.id)}
+                      busy={busy}
+                      onJoin={(id) => void enroll(id)}
+                    />
+                  ))}
+                  {available.length === 0 ? (
+                    <p className="dash-muted">You have joined all active schemes from this jeweller.</p>
+                  ) : null}
+                </ul>
+              </div>
+            )
+          })
         )}
       </Card>
 
-      {selectedEnrollment?.status === 'active' ? (
+      <Card>
+        <CardHeader title="Search other jewellers" />
+        <div className="ds-form ds-form--compact">
+          <Input
+            label="Search schemes or jewellers"
+            placeholder="e.g. 11+1, Golden, Mumbai"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') void runSearch()
+            }}
+          />
+          <Button variant="secondary" onClick={() => void runSearch()} disabled={searchBusy}>
+            {searchBusy ? 'Searching…' : 'Search'}
+          </Button>
+        </div>
+        {searchResults.length > 0 ? (
+          <ul className="dash-list" style={{ marginTop: '1rem' }}>
+            {searchResults.map((row) => (
+              <OfferingJoinRow
+                key={row.offering.id}
+                offering={row.offering}
+                jewellerName={`${row.jeweller.business_name}${
+                  row.jeweller.is_network_jeweller ? ' · Your jeweller' : ''
+                }`}
+                enrolled={enrolledOfferingIds.has(row.offering.id)}
+                busy={busy}
+                onJoin={(id) => void enroll(id)}
+              />
+            ))}
+          </ul>
+        ) : null}
+      </Card>
+
+      {selectedEnrollment?.status === 'pending_admission' ? (
+        <Card>
+          <p className="dash-muted" style={{ margin: 0 }}>
+            You requested <strong>{selectedEnrollment.offering.display_name}</strong> at{' '}
+            <strong>{selectedEnrollment.jeweller.business_name}</strong>. Ask your jeweller to add you
+            from their Schemes desk (Cridora ID or phone) — deposits unlock after they admit you.
+          </p>
+        </Card>
+      ) : null}
+
+      {selectedEnrollment && canPayEnrollment(selectedEnrollment) ? (
         <Card>
           <CardHeader title={`Add deposit — ${selectedEnrollment.offering.display_name}`} />
           <div className="ds-form ds-form--compact">

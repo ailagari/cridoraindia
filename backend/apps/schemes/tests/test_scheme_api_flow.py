@@ -211,11 +211,29 @@ class SchemeApiFlowTests(TestCase):
         e2 = self.client.post("/api/v1/schemes/enrollments/", {"offering_id": o2.id}, format="json")
         self.assertEqual(e1.status_code, 201)
         self.assertEqual(e2.status_code, 201)
+        self.assertEqual(e1.json()["status"], "pending_admission")
+        self.assertFalse(e1.json()["payments_enabled"])
+
+        self.client.force_authenticate(self.jeweller)
+        admit1 = self.client.post(
+            f"/api/v1/jeweller/schemes/offerings/{o1.id}/enrollments/",
+            {"customer_id": self.customer.id},
+            format="json",
+        )
+        admit2 = self.client.post(
+            f"/api/v1/jeweller/schemes/offerings/{o2.id}/enrollments/",
+            {"customer_id": self.customer.id},
+            format="json",
+        )
+        self.assertEqual(admit1.status_code, 201)
+        self.assertEqual(admit2.status_code, 201)
+        self.assertTrue(admit1.json()["payments_enabled"])
 
         enroll1 = CustomerSchemeEnrollment.objects.get(pk=e1.json()["id"])
         enroll1.status = CustomerSchemeEnrollment.STATUS_PLAN_MONTH_COMPLETE
         enroll1.save(update_fields=["status"])
 
+        self.client.force_authenticate(self.customer)
         all_rows = self.client.get("/api/v1/schemes/enrollments/")
         self.assertEqual(all_rows.status_code, 200)
         self.assertEqual(len(all_rows.json()), 2)
@@ -225,6 +243,58 @@ class SchemeApiFlowTests(TestCase):
 
         complete_only = self.client.get("/api/v1/schemes/enrollments/?status=plan_month_complete")
         self.assertEqual(len(complete_only.json()), 1)
+
+    def test_customer_join_pending_until_jeweller_admits_payment(self):
+        design = _minimal_design()
+        published = SchemeTemplate.objects.create(
+            slug="admit-flow",
+            name="Admit Flow",
+            scheme_design=design,
+            scheme_rules=compile_scheme_design(design),
+            flow_summary=human_flow_summary(design),
+            status=SchemeTemplate.STATUS_PUBLISHED,
+        )
+        offering = JewellerSchemeOffering.objects.create(
+            jeweller=self.jeweller,
+            scheme_template=published,
+            display_name="Admit Flow",
+            design_snapshot=design,
+            rules_snapshot=compile_scheme_design(design),
+        )
+
+        self.client.force_authenticate(self.customer)
+        join = self.client.post(
+            "/api/v1/schemes/enrollments/",
+            {"offering_id": offering.id},
+            format="json",
+        )
+        self.assertEqual(join.status_code, 201)
+        enrollment_id = join.json()["id"]
+
+        blocked_quote = self.client.post(
+            "/api/v1/schemes/contributions/quote/",
+            {"enrollment_id": enrollment_id, "amount_inr": 5000},
+            format="json",
+        )
+        self.assertEqual(blocked_quote.status_code, 404)
+
+        self.client.force_authenticate(self.jeweller)
+        admit = self.client.post(
+            f"/api/v1/jeweller/schemes/offerings/{offering.id}/enrollments/",
+            {"customer_id": self.customer.id},
+            format="json",
+        )
+        self.assertEqual(admit.status_code, 201)
+        self.assertTrue(admit.json()["payments_enabled"])
+
+        self.client.force_authenticate(self.customer)
+        quote = self.client.post(
+            "/api/v1/schemes/contributions/quote/",
+            {"enrollment_id": enrollment_id, "amount_inr": 5000},
+            format="json",
+        )
+        self.assertEqual(quote.status_code, 200)
+        self.assertIn("total_inr", quote.json())
 
     def test_feature_gate_blocks_jeweller_offerings_when_disabled(self):
         set_feature_flags({"golden_scheme": False})

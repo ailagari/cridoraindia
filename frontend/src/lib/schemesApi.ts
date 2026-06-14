@@ -39,6 +39,8 @@ export type SchemeOfferingDTO = {
 export type SchemeEnrollmentDTO = {
   id: number
   status: string
+  payments_enabled: boolean
+  admitted_at: string | null
   current_cycle_number: number
   current_plan_month: number
   cycle_anchor_date: string
@@ -59,6 +61,41 @@ export type SchemeEnrollmentDTO = {
     is_customer_month: boolean
     is_bonus_month: boolean
   }>
+}
+
+export type SchemeJewellerEnrollmentDTO = SchemeEnrollmentDTO & {
+  customer: {
+    id: number
+    label: string
+    cridora_member_id: string
+    phone: string
+  }
+}
+
+export type SchemeNetworkJewellerDTO = {
+  id: number
+  business_name: string
+  city: string
+  state: string
+  role: 'primary' | 'secondary'
+  offerings: SchemeOfferingDTO[]
+}
+
+export type SchemeNetworkOfferingsDTO = {
+  primary_jeweller_id: number | null
+  secondary_jeweller_ids: number[]
+  jewellers: SchemeNetworkJewellerDTO[]
+}
+
+export type SchemeSearchResultDTO = {
+  offering: SchemeOfferingDTO
+  jeweller: {
+    id: number
+    business_name: string
+    city: string
+    state: string
+    is_network_jeweller: boolean
+  }
 }
 
 export type SchemeContributionDTO = {
@@ -96,9 +133,7 @@ export type SchemeContributionDTO = {
     payment_expires_at: string | null
     expired: boolean
   }
-}
-
-export type SchemePresetDTO = {
+export type SchemeContributionDTO = {
   key: string
   label: string
   description: string
@@ -317,6 +352,26 @@ export function confirmSchemeBonus(id: number) {
   )
 }
 
+export function fetchJewellerSchemeOfferingEnrollments(
+  offeringId: number,
+  status?: string,
+) {
+  const q = status ? `?status=${encodeURIComponent(status)}` : ''
+  return schemesFetch<SchemeJewellerEnrollmentDTO[]>(
+    `/api/v1/jeweller/schemes/offerings/${offeringId}/enrollments/${q}`,
+  )
+}
+
+export function jewellerAdmitCustomerToScheme(
+  offeringId: number,
+  body: { customer_id?: number; cridora_member_id?: string; phone?: string },
+) {
+  return schemesFetch<SchemeJewellerEnrollmentDTO>(
+    `/api/v1/jeweller/schemes/offerings/${offeringId}/enrollments/`,
+    { method: 'POST', jsonBody: body },
+  )
+}
+
 // Customer
 export function fetchCustomerSchemeContributions(enrollmentId?: number, status?: string) {
   const sp = new URLSearchParams()
@@ -336,6 +391,16 @@ export function cancelSchemeContribution(id: number) {
 export function fetchCustomerSchemeOfferings(jewellerId: number) {
   return schemesFetch<SchemeOfferingDTO[]>(
     `/api/v1/schemes/offerings/?jeweller_id=${jewellerId}`,
+  )
+}
+
+export function fetchCustomerSchemeNetworkOfferings() {
+  return schemesFetch<SchemeNetworkOfferingsDTO>('/api/v1/schemes/offerings/network/')
+}
+
+export function searchCustomerSchemeOfferings(q: string) {
+  return schemesFetch<SchemeSearchResultDTO[]>(
+    `/api/v1/schemes/offerings/search/?q=${encodeURIComponent(q)}`,
   )
 }
 

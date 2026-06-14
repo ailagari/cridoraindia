@@ -13,6 +13,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.accounts.models import User
+from apps.accounts.services.jeweller_referral import customer_secondary_jeweller_ids
 from apps.accounts.platform_features import require_feature_enabled
 from apps.schemes.models import (
     CustomerSchemeEnrollment,
@@ -26,6 +27,7 @@ from apps.schemes.services.contribution_service import (
     serialize_contribution,
 )
 from apps.schemes.services.enrollment_service import (
+    customer_network_jeweller_ids,
     enroll_customer,
     serialize_enrollment,
     serialize_offering_brief,
@@ -43,6 +45,122 @@ def _require_customer(request):
     if blocked is not None:
         return blocked
     return None
+
+
+def _payable_enrollment(customer, enrollment_id):
+    return CustomerSchemeEnrollment.objects.filter(
+        pk=enrollment_id,
+        customer=customer,
+        status=CustomerSchemeEnrollment.STATUS_ACTIVE,
+        payments_enabled=True,
+    ).select_related("offering__scheme_template", "offering__jeweller").first()
+
+
+class CustomerSchemeNetworkOfferingsView(APIView):
+    """Schemes from the customer's primary and secondary jewellers."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        err = _require_customer(request)
+        if err:
+            return err
+        customer = request.user
+        jeweller_ids = customer_network_jeweller_ids(customer)
+        jewellers_payload = []
+        for jid in jeweller_ids:
+            jeweller = UserModel.objects.filter(
+                pk=jid,
+                user_type=User.JEWELLER,
+                kyc_status=User.KYC_VERIFIED,
+            ).first()
+            if not jeweller:
+                continue
+            offerings = JewellerSchemeOffering.objects.filter(
+                jeweller_id=jid,
+                status=JewellerSchemeOffering.STATUS_ACTIVE,
+            ).select_related("scheme_template", "jeweller")
+            role = (
+                "primary"
+                if customer.default_jeweller_id == jid
+                else "secondary"
+            )
+            jewellers_payload.append(
+                {
+                    "id": jeweller.id,
+                    "business_name": jeweller.business_name or jeweller.email,
+                    "city": (jeweller.city or "").strip(),
+                    "state": (jeweller.state or "").strip(),
+                    "role": role,
+                    "offerings": [serialize_offering_brief(o) for o in offerings],
+                }
+            )
+        return Response(
+            {
+                "primary_jeweller_id": customer.default_jeweller_id,
+                "secondary_jeweller_ids": customer_secondary_jeweller_ids(customer),
+                "jewellers": jewellers_payload,
+            }
+        )
+
+
+class CustomerSchemeOfferingsSearchView(APIView):
+    """Search active scheme offerings across all verified jewellers."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        err = _require_customer(request)
+        if err:
+            return err
+        q = (request.query_params.get("q") or "").strip()
+        if len(q) < 2:
+            return Response(
+                {"detail": "Enter at least 2 characters to search."},
+                status=400,
+            )
+        qs = (
+            JewellerSchemeOffering.objects.filter(
+                status=JewellerSchemeOffering.STATUS_ACTIVE,
+                jeweller__user_type=User.JEWELLER,
+                jeweller__kyc_status=User.KYC_VERIFIED,
+            )
+            .select_related("scheme_template", "jeweller")
+            .order_by("jeweller__business_name", "display_name")
+        )
+        q_lower = q.lower()
+        results = []
+        network_ids = set(customer_network_jeweller_ids(request.user))
+        for offering in qs[:200]:
+            jeweller = offering.jeweller
+            t = offering.scheme_template
+            haystack = " ".join(
+                [
+                    offering.display_name or "",
+                    t.name or "",
+                    t.flow_summary or "",
+                    jeweller.business_name or "",
+                    jeweller.city or "",
+                    jeweller.state or "",
+                ]
+            ).lower()
+            if q_lower not in haystack:
+                continue
+            results.append(
+                {
+                    "offering": serialize_offering_brief(offering),
+                    "jeweller": {
+                        "id": jeweller.id,
+                        "business_name": jeweller.business_name or jeweller.email,
+                        "city": (jeweller.city or "").strip(),
+                        "state": (jeweller.state or "").strip(),
+                        "is_network_jeweller": jeweller.id in network_ids,
+                    },
+                }
+            )
+            if len(results) >= 40:
+                break
+        return Response(results)
 
 
 class CustomerSchemeOfferingsView(APIView):
@@ -131,13 +249,12 @@ class CustomerSchemeContributionQuoteView(APIView):
                 {"detail": "enrollment_id and amount_inr are required."},
                 status=400,
             )
-        enrollment = CustomerSchemeEnrollment.objects.filter(
-            pk=enrollment_id,
-            customer=request.user,
-            status=CustomerSchemeEnrollment.STATUS_ACTIVE,
-        ).first()
+        enrollment = _payable_enrollment(request.user, enrollment_id)
         if not enrollment:
-            return Response({"detail": "Active enrollment not found."}, status=404)
+            return Response(
+                {"detail": "Active enrollment with payment access not found."},
+                status=404,
+            )
         try:
             total = Decimal(str(amount))
             quote = quote_contribution(enrollment, total)
@@ -179,13 +296,12 @@ class CustomerSchemeContributionsView(APIView):
                 {"detail": "enrollment_id, amount_inr, and payment_method required."},
                 status=400,
             )
-        enrollment = CustomerSchemeEnrollment.objects.filter(
-            pk=enrollment_id,
-            customer=request.user,
-            status=CustomerSchemeEnrollment.STATUS_ACTIVE,
-        ).first()
+        enrollment = _payable_enrollment(request.user, enrollment_id)
         if not enrollment:
-            return Response({"detail": "Active enrollment not found."}, status=404)
+            return Response(
+                {"detail": "Active enrollment with payment access not found."},
+                status=404,
+            )
         try:
             contribution = create_contribution(
                 enrollment,

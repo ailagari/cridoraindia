@@ -23,6 +23,8 @@ from apps.schemes.views_customer import (
     CustomerSchemeContributionSubmitUtrView,
     CustomerSchemeEnrollmentDetailView,
     CustomerSchemeEnrollmentsView,
+    CustomerSchemeNetworkOfferingsView,
+    CustomerSchemeOfferingsSearchView,
     CustomerSchemeOfferingsView,
     CustomerSchemeRedemptionConfirmView,
     CustomerSchemeRedemptionQuoteView,
@@ -38,6 +40,7 @@ from apps.schemes.views_jeweller import (
     JewellerSchemeContributionsPendingView,
     JewellerSchemeContributionVerifyView,
     JewellerSchemeOfferingDetailView,
+    JewellerSchemeOfferingEnrollmentsView,
     JewellerSchemeOfferingsView,
     JewellerSchemeRedemptionsView,
     JewellerSchemeRequestCreateView,
@@ -89,6 +92,10 @@ urlpatterns = [
         "jeweller/schemes/offerings/<int:pk>/",
         JewellerSchemeOfferingDetailView.as_view(),
     ),
+    path(
+        "jeweller/schemes/offerings/<int:pk>/enrollments/",
+        JewellerSchemeOfferingEnrollmentsView.as_view(),
+    ),
     path("jeweller/schemes/requests/", JewellerSchemeRequestCreateView.as_view()),
     path(
         "jeweller/schemes/contributions/pending/",
@@ -120,6 +127,8 @@ urlpatterns = [
     ),
     path("jeweller/schemes/redemptions/", JewellerSchemeRedemptionsView.as_view()),
     # Customer
+    path("schemes/offerings/network/", CustomerSchemeNetworkOfferingsView.as_view()),
+    path("schemes/offerings/search/", CustomerSchemeOfferingsSearchView.as_view()),
     path("schemes/offerings/", CustomerSchemeOfferingsView.as_view()),
     path("schemes/enrollments/", CustomerSchemeEnrollmentsView.as_view()),
     path("schemes/enrollments/<int:pk>/", CustomerSchemeEnrollmentDetailView.as_view()),

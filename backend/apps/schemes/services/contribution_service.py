@@ -30,7 +30,11 @@ def _jeweller_mc_defaults(jeweller) -> tuple[Decimal, Decimal]:
     )
 
 
+from apps.schemes.services.enrollment_service import assert_payments_allowed
+
+
 def quote_contribution(enrollment, total_inr: Decimal) -> dict:
+    assert_payments_allowed(enrollment)
     engine = UnifiedSchemeEngine(enrollment.rules_snapshot or {})
     mc_pg, mc_pct = _jeweller_mc_defaults(enrollment.offering.jeweller)
     ov = enrollment.offering.jeweller_overrides or {}
@@ -55,6 +59,7 @@ def create_contribution(
     payment_method: str,
     customer_note: str = "",
 ) -> SchemeContribution:
+    assert_payments_allowed(enrollment)
     q = quote_contribution(enrollment, total_inr)
     today = timezone.localdate()
     cal = _calendar_month(today)

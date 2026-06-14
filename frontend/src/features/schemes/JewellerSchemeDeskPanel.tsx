@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Button, Card, CardHeader, Feedback } from '@/components/ui'
+import { JewellerSchemeEnrollPanel } from '@/features/schemes/JewellerSchemeEnrollPanel'
 import {
   approveSchemeContribution,
   fetchJewellerPendingSchemeContributions,
@@ -58,6 +59,8 @@ export function JewellerSchemeDeskPanel() {
         {msg ? <Feedback tone="success">{msg}</Feedback> : null}
         {err ? <Feedback tone="error">{err}</Feedback> : null}
       </Card>
+
+      <JewellerSchemeEnrollPanel />
 
       <Card>
         <CardHeader title="Awaiting counter OTP" />

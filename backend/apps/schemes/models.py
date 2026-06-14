@@ -146,12 +146,14 @@ class JewellerSchemeOffering(models.Model):
 
 class CustomerSchemeEnrollment(models.Model):
     STATUS_ACTIVE = "active"
+    STATUS_PENDING_ADMISSION = "pending_admission"
     STATUS_PLAN_MONTH_COMPLETE = "plan_month_complete"
     STATUS_REDEEMED = "redeemed"
     STATUS_CANCELLED = "cancelled"
     STATUS_DEFAULTED = "defaulted"
     STATUS_CHOICES = [
         (STATUS_ACTIVE, "Active"),
+        (STATUS_PENDING_ADMISSION, "Pending admission"),
         (STATUS_PLAN_MONTH_COMPLETE, "Plan month complete"),
         (STATUS_REDEEMED, "Redeemed"),
         (STATUS_CANCELLED, "Cancelled"),
@@ -179,6 +181,16 @@ class CustomerSchemeEnrollment(models.Model):
     rules_snapshot = models.JSONField(default=dict, blank=True)
     started_at = models.DateTimeField(auto_now_add=True)
     completed_at = models.DateTimeField(null=True, blank=True)
+    payments_enabled = models.BooleanField(default=False, db_index=True)
+    admitted_at = models.DateTimeField(null=True, blank=True)
+    admitted_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="admitted_scheme_enrollments",
+        limit_choices_to={"user_type": "jeweller"},
+    )
 
     class Meta:
         ordering = ["-started_at"]
