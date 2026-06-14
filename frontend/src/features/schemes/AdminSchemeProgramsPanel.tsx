@@ -63,6 +63,7 @@ export function AdminSchemeProgramsPanel() {
   const [name, setName] = useState('New scheme')
   const [editingId, setEditingId] = useState<number | null>(null)
   const [editingStatus, setEditingStatus] = useState<string | null>(null)
+  const [editSnapshot, setEditSnapshot] = useState<{ name: string; design: SchemeDesign } | null>(null)
   const [preview, setPreview] = useState<Record<string, unknown> | null>(null)
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
@@ -109,6 +110,14 @@ export function AdminSchemeProgramsPanel() {
   const saveLabel =
     editingStatus === 'draft' || !editingId ? 'Save draft' : 'Save changes'
 
+  const isDirty = useMemo(() => {
+    if (!editSnapshot) return false
+    return (
+      name !== editSnapshot.name ||
+      JSON.stringify(design) !== JSON.stringify(editSnapshot.design)
+    )
+  }, [name, design, editSnapshot])
+
   const runPreview = async () => {
     try {
       const out = await previewAdminSchemeDesign(editingId, design)
@@ -129,6 +138,7 @@ export function AdminSchemeProgramsPanel() {
     setEditingStatus(t.status)
     setName(t.name)
     setDesign(t.scheme_design)
+    setEditSnapshot({ name: t.name, design: t.scheme_design })
     setTab('designer')
   }
 
@@ -137,7 +147,20 @@ export function AdminSchemeProgramsPanel() {
     setEditingStatus('draft')
     setName('New scheme')
     setDesign(EMPTY_SCHEME_DESIGN)
+    setEditSnapshot({ name: 'New scheme', design: EMPTY_SCHEME_DESIGN })
     setTab('designer')
+  }
+
+  const cancelEdit = () => {
+    if (isDirty && !window.confirm('Discard unsaved changes?')) return
+    setTab('templates')
+    setEditingId(null)
+    setEditingStatus(null)
+    setName('New scheme')
+    setDesign(EMPTY_SCHEME_DESIGN)
+    setEditSnapshot(null)
+    setPreview(null)
+    setErr('')
   }
 
   const saveDraft = async () => {
@@ -146,10 +169,12 @@ export function AdminSchemeProgramsPanel() {
     try {
       if (editingId) {
         await updateAdminSchemeTemplate(editingId, { name, scheme_design: design })
+        setEditSnapshot({ name, design })
       } else {
         const t = await createAdminSchemeTemplate({ name, description: '', scheme_design: design })
         setEditingId(t.id)
         setEditingStatus('draft')
+        setEditSnapshot({ name, design })
       }
       await reload()
       setTab('templates')
@@ -419,9 +444,14 @@ export function AdminSchemeProgramsPanel() {
             <CardHeader
               title={editingId ? `Editing: ${name}` : 'New scheme draft'}
               action={
-                <Button onClick={() => void saveDraft()} disabled={busy} loading={busy} variant="primary">
-                  {saveLabel}
-                </Button>
+                <div style={{ display: 'flex', gap: 'var(--sp-2)', flexWrap: 'wrap' }}>
+                  <Button variant="ghost" onClick={cancelEdit} disabled={busy}>
+                    Cancel
+                  </Button>
+                  <Button onClick={() => void saveDraft()} disabled={busy} loading={busy} variant="primary">
+                    {saveLabel}
+                  </Button>
+                </div>
               }
             />
             <div className="ds-form ds-form--compact">
