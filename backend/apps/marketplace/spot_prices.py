@@ -277,16 +277,35 @@ def _finalize_spot_payload(payload: dict, *, include_live_raw: bool) -> dict:
     return payload
 
 
+def _positive_manual_rate(value) -> float | None:
+    if value is None:
+        return None
+    try:
+        v = float(value)
+    except (TypeError, ValueError):
+        return None
+    return v if v > 0 else None
+
+
 def _manual_ticker_spot_payload(ticker) -> dict:
     k22 = float(ticker.ticker_manual_22k_inr_per_gram)
-    if ticker.ticker_manual_24k_inr_per_gram is not None and float(
-        ticker.ticker_manual_24k_inr_per_gram
-    ) > 0:
-        k24 = float(ticker.ticker_manual_24k_inr_per_gram)
-    else:
+    k24 = _positive_manual_rate(ticker.ticker_manual_24k_inr_per_gram)
+    if k24 is None:
         k24 = k22 / 0.916
+    k18 = _positive_manual_rate(ticker.ticker_manual_18k_inr_per_gram)
+    if k18 is None:
+        k18 = k24 * GOLD_KARAT_PURITY["18K"]
     k24 = round(k24, 2)
     k22_r = round(k22, 2)
+    k18_r = round(k18, 2)
+
+    silver: dict[str, float] = {}
+    s999 = _positive_manual_rate(ticker.ticker_manual_silver_999_inr_per_gram)
+    if s999 is not None:
+        s999_r = round(s999, 3)
+        silver["999"] = s999_r
+        silver["925"] = round(s999_r * SILVER_FINENESS["925"], 3)
+
     return {
         "currency": "INR",
         "unit": "per_gram",
@@ -296,9 +315,9 @@ def _manual_ticker_spot_payload(ticker) -> dict:
             "24K": k24,
             "22K": k22_r,
             "21K": round(k24 * GOLD_KARAT_PURITY["21K"], 2),
-            "18K": round(k24 * GOLD_KARAT_PURITY["18K"], 2),
+            "18K": k18_r,
         },
-        "silver": {},
+        "silver": silver,
     }
 
 

@@ -86,6 +86,8 @@ class GoldTickerReadSerializer(serializers.ModelSerializer):
             "manual_ticker_enabled",
             "ticker_manual_22k_inr_per_gram",
             "ticker_manual_24k_inr_per_gram",
+            "ticker_manual_18k_inr_per_gram",
+            "ticker_manual_silver_999_inr_per_gram",
             "gold_deposit_yield_apr_percent",
             "gold_loan_interest_apr_percent",
             "gold_loan_processing_fee_percent",
@@ -225,6 +227,8 @@ class GoldTickerAdminSerializer(serializers.ModelSerializer):
             "manual_ticker_enabled",
             "ticker_manual_22k_inr_per_gram",
             "ticker_manual_24k_inr_per_gram",
+            "ticker_manual_18k_inr_per_gram",
+            "ticker_manual_silver_999_inr_per_gram",
             "gold_deposit_yield_apr_percent",
             "gold_loan_interest_apr_percent",
             "gold_loan_processing_fee_percent",
@@ -278,6 +282,16 @@ class GoldTickerAdminSerializer(serializers.ModelSerializer):
         if key_24 not in attrs and self.instance is not None:
             k24 = self.instance.ticker_manual_24k_inr_per_gram
 
+        key_18 = "ticker_manual_18k_inr_per_gram"
+        k18 = attrs.get(key_18) if key_18 in attrs else None
+        if key_18 not in attrs and self.instance is not None:
+            k18 = self.instance.ticker_manual_18k_inr_per_gram
+
+        key_silver = "ticker_manual_silver_999_inr_per_gram"
+        s999 = attrs.get(key_silver) if key_silver in attrs else None
+        if key_silver not in attrs and self.instance is not None:
+            s999 = self.instance.ticker_manual_silver_999_inr_per_gram
+
         if enabled:
             if k22 is None or k22 <= Decimal("0"):
                 raise serializers.ValidationError(
@@ -288,6 +302,14 @@ class GoldTickerAdminSerializer(serializers.ModelSerializer):
         if k24 is not None and k24 <= Decimal("0"):
             raise serializers.ValidationError(
                 {key_24: "Leave blank or enter a positive 24K ₹/g."}
+            )
+        if k18 is not None and k18 <= Decimal("0"):
+            raise serializers.ValidationError(
+                {key_18: "Leave blank or enter a positive 18K ₹/g."}
+            )
+        if s999 is not None and s999 <= Decimal("0"):
+            raise serializers.ValidationError(
+                {key_silver: "Leave blank or enter a positive silver 999 ₹/g."}
             )
 
         min_ltv = attrs.get("gold_loan_ltv_min_percent")

@@ -8,7 +8,7 @@ class GoldTickerConfig(models.Model):
     """
     Live metal ticker plus platform fees and storefront disclosures (admin: Ticker & fees).
 
-    Manual mode: admin 22K (optional 24K) is the reference for gold ticker rows.
+    Manual mode: admin-set 22K/18K/24K gold and optional silver 999 ₹/g (925 derived when silver set).
 
     Live mode: global spot feed supplies raw ₹/g per metal; admin applies per-metal deduction
     (percent or fixed ₹/g, toggle per metal). Last successful raw snapshot is stored for emergency
@@ -218,6 +218,20 @@ class GoldTickerConfig(models.Model):
         null=True,
         blank=True,
         help_text="Optional manual 24K ₹/g; if empty, 24K is derived as 22K ÷ 0.916.",
+    )
+    ticker_manual_18k_inr_per_gram = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Optional manual 18K ₹/g; if empty, 18K is derived from 24K × 0.75.",
+    )
+    ticker_manual_silver_999_inr_per_gram = models.DecimalField(
+        max_digits=12,
+        decimal_places=3,
+        null=True,
+        blank=True,
+        help_text="Optional manual silver 999 ₹/g; if set, 925 is derived as 999 × 0.925.",
     )
     updated_at = models.DateTimeField(auto_now=True)
 

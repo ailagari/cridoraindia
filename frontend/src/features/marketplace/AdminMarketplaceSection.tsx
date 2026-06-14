@@ -38,6 +38,8 @@ type AdminTickerPayload = {
   manual_ticker_enabled?: boolean
   ticker_manual_22k_inr_per_gram?: string | null
   ticker_manual_24k_inr_per_gram?: string | null
+  ticker_manual_18k_inr_per_gram?: string | null
+  ticker_manual_silver_999_inr_per_gram?: string | null
   gold_deposit_yield_apr_percent?: string
   gold_loan_interest_apr_percent?: string
   gold_loan_processing_fee_percent?: string
@@ -215,20 +217,39 @@ function AdminFormSuccessBanner({
   )
 }
 
-/** Matches backend _manual_ticker_spot_payload karat ladder. */
-function manualTickerGoldLadder(manual22: string, manual24: string): Record<string, number> | null {
+/** Matches backend _manual_ticker_spot_payload karat and silver ladder. */
+function manualTickerRates(
+  manual22: string,
+  manual24: string,
+  manual18: string,
+  manualSilver999: string,
+): {
+  gold: Record<string, number>
+  silver: Record<string, number>
+} | null {
   const k22 = Number.parseFloat(manual22)
   if (!Number.isFinite(k22) || k22 <= 0) return null
   let k24 = Number.parseFloat(manual24)
   if (!Number.isFinite(k24) || k24 <= 0) k24 = k22 / 0.916
+  let k18 = Number.parseFloat(manual18)
+  if (!Number.isFinite(k18) || k18 <= 0) k18 = k24 * 0.75
   const k24r = Math.round(k24 * 100) / 100
   const k22r = Math.round(k22 * 100) / 100
-  return {
+  const k18r = Math.round(k18 * 100) / 100
+  const gold = {
     '24K': k24r,
     '22K': k22r,
     '21K': Math.round(k24r * 0.875 * 100) / 100,
-    '18K': Math.round(k24r * 0.75 * 100) / 100,
+    '18K': k18r,
   }
+  const silver: Record<string, number> = {}
+  const s999 = Number.parseFloat(manualSilver999)
+  if (Number.isFinite(s999) && s999 > 0) {
+    const s999r = Math.round(s999 * 1000) / 1000
+    silver['999'] = s999r
+    silver['925'] = Math.round(s999r * 0.925 * 1000) / 1000
+  }
+  return { gold, silver }
 }
 
 function AdminPublishedRatesSummary(props: {
@@ -236,12 +257,22 @@ function AdminPublishedRatesSummary(props: {
   previewRows: LivePreviewRow[] | undefined
   manual22Draft: string
   manual24Draft: string
+  manual18Draft: string
+  manualSilver999Draft: string
   rawPreviewSource?: string
 }) {
-  const { manualOn, previewRows, manual22Draft, manual24Draft, rawPreviewSource } = props
+  const {
+    manualOn,
+    previewRows,
+    manual22Draft,
+    manual24Draft,
+    manual18Draft,
+    manualSilver999Draft,
+    rawPreviewSource,
+  } = props
 
   if (manualOn) {
-    const ladder = manualTickerGoldLadder(manual22Draft, manual24Draft)
+    const rates = manualTickerRates(manual22Draft, manual24Draft, manual18Draft, manualSilver999Draft)
     return (
       <div
         className="card"
@@ -254,9 +285,9 @@ function AdminPublishedRatesSummary(props: {
         }}
       >
         <p style={{ margin: '0 0 0.45rem', fontWeight: 700, fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-          Manual gold ₹/g
+          Manual board ₹/g
         </p>
-        {!ladder ? (
+        {!rates ? (
           <p style={{ margin: 0, fontSize: '0.76rem', color: 'var(--text-muted)' }}>Enter 22K to preview.</p>
         ) : (
           <div className="dash-table-scroll">
@@ -272,15 +303,25 @@ function AdminPublishedRatesSummary(props: {
                   <tr key={k}>
                     <td style={{ fontWeight: 600 }}>Gold {k}</td>
                     <td className="tabular" style={{ color: 'var(--gold-light)', fontWeight: 700 }}>
-                      ₹{formatFinal('gold', ladder[k])}
+                      ₹{formatFinal('gold', rates.gold[k])}
                     </td>
                   </tr>
                 ))}
-                <tr>
-                  <td colSpan={2} style={{ fontSize: '0.72rem', color: 'var(--text-muted)', paddingTop: 6 }}>
-                    Silver N/A in manual mode.
-                  </td>
-                </tr>
+                {(['999', '925'] as const).map((k) => (
+                  <tr key={k}>
+                    <td style={{ fontWeight: 600 }}>Silver {k}</td>
+                    <td className="tabular" style={{ color: 'var(--gold-light)', fontWeight: 700 }}>
+                      {rates.silver[k] != null ? `₹${formatFinal('silver', rates.silver[k])}` : '—'}
+                    </td>
+                  </tr>
+                ))}
+                {Object.keys(rates.silver).length === 0 ? (
+                  <tr>
+                    <td colSpan={2} style={{ fontSize: '0.72rem', color: 'var(--text-muted)', paddingTop: 6 }}>
+                      Silver omitted until you enter 999 ₹/g (925 is derived as 999 × 0.925).
+                    </td>
+                  </tr>
+                ) : null}
               </tbody>
             </table>
           </div>
@@ -353,6 +394,8 @@ export function AdminGoldTickerPanel() {
   const [manualOn, setManualOn] = useState(false)
   const [manual22Draft, setManual22Draft] = useState('')
   const [manual24Draft, setManual24Draft] = useState('')
+  const [manual18Draft, setManual18Draft] = useState('')
+  const [manualSilver999Draft, setManualSilver999Draft] = useState('')
   const [depositYieldDraft, setDepositYieldDraft] = useState('0')
   const [loanAprDraft, setLoanAprDraft] = useState('0')
   const [loanFeeDraft, setLoanFeeDraft] = useState('0')
@@ -378,6 +421,8 @@ export function AdminGoldTickerPanel() {
     setManualOn(Boolean(j.manual_ticker_enabled))
     setManual22Draft(j.ticker_manual_22k_inr_per_gram ?? '')
     setManual24Draft(j.ticker_manual_24k_inr_per_gram ?? '')
+    setManual18Draft(j.ticker_manual_18k_inr_per_gram ?? '')
+    setManualSilver999Draft(j.ticker_manual_silver_999_inr_per_gram ?? '')
     setDepositYieldDraft(j.gold_deposit_yield_apr_percent ?? '0')
     setLoanAprDraft(j.gold_loan_interest_apr_percent ?? '0')
     setLoanFeeDraft(j.gold_loan_processing_fee_percent ?? '0')
@@ -433,6 +478,10 @@ export function AdminGoldTickerPanel() {
         manual_ticker_enabled: manualOn,
         ticker_manual_22k_inr_per_gram: manual22Draft.trim() || null,
         ticker_manual_24k_inr_per_gram: manual24Draft.trim() ? manual24Draft.trim() : null,
+        ticker_manual_18k_inr_per_gram: manual18Draft.trim() ? manual18Draft.trim() : null,
+        ticker_manual_silver_999_inr_per_gram: manualSilver999Draft.trim()
+          ? manualSilver999Draft.trim()
+          : null,
         gold_deposit_yield_apr_percent: depositYieldDraft.trim(),
         gold_loan_interest_apr_percent: loanAprDraft.trim(),
         gold_loan_processing_fee_percent: loanFeeDraft.trim(),
@@ -467,7 +516,7 @@ export function AdminGoldTickerPanel() {
           Configure live metal rates, alerts, and <strong>all platform fees and storefront disclosures</strong> here.{' '}
           <strong>Fractional investment markup</strong> (above) applies on top of jeweller board rates for vault purchases.{' '}
           <strong>Live:</strong> markup on international raw spot, then deduction — jewellers and customers see the published
-          live market column. <strong>Manual:</strong> fixed 22K/24K gold only (no row rules). Push alerts are configured under{' '}
+          live market column. <strong>Manual:</strong> fixed gold (22K/18K/24K) and optional silver board rates (no row rules). Push alerts are configured under{' '}
           <strong>Pushes &amp; alerts</strong>.
         </p>
         {data ? (
@@ -555,6 +604,24 @@ export function AdminGoldTickerPanel() {
                 inputMode="decimal"
               />
             </label>
+            <label className="field">
+              <span>18K ₹/g (optional)</span>
+              <input
+                value={manual18Draft}
+                onChange={(e) => setManual18Draft(e.target.value)}
+                placeholder="Leave blank to derive from 24K × 0.75"
+                inputMode="decimal"
+              />
+            </label>
+            <label className="field">
+              <span>Silver 999 ₹/g (optional)</span>
+              <input
+                value={manualSilver999Draft}
+                onChange={(e) => setManualSilver999Draft(e.target.value)}
+                placeholder="925 derived as 999 × 0.925"
+                inputMode="decimal"
+              />
+            </label>
           </div>
         ) : null}
       </div>
@@ -567,6 +634,8 @@ export function AdminGoldTickerPanel() {
             previewRows={data.live_spot_raw_preview?.rows}
             manual22Draft={manual22Draft}
             manual24Draft={manual24Draft}
+            manual18Draft={manual18Draft}
+            manualSilver999Draft={manualSilver999Draft}
             rawPreviewSource={data.live_spot_raw_preview?.source}
           />
         </>
