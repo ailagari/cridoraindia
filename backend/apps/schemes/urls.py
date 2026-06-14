@@ -9,6 +9,7 @@ from apps.schemes.views_admin import (
     AdminSchemeRequestRejectView,
     AdminSchemeTemplateDeprecateView,
     AdminSchemeTemplateDetailView,
+    AdminSchemeTemplateDuplicateView,
     AdminSchemeTemplateListCreateView,
     AdminSchemeTemplatePreviewView,
     AdminSchemeTemplatePublishView,
@@ -57,6 +58,10 @@ urlpatterns = [
     path(
         "admin/schemes/templates/<int:pk>/deprecate/",
         AdminSchemeTemplateDeprecateView.as_view(),
+    ),
+    path(
+        "admin/schemes/templates/<int:pk>/duplicate/",
+        AdminSchemeTemplateDuplicateView.as_view(),
     ),
     path(
         "admin/schemes/templates/<int:pk>/preview/",

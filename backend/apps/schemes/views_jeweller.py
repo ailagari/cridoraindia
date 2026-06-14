@@ -109,6 +109,9 @@ class JewellerSchemeOfferingsView(APIView):
         err = _require_jeweller(request)
         if err:
             return err
+        blocked = require_feature_enabled("golden_scheme")
+        if blocked is not None:
+            return blocked
         qs = JewellerSchemeOffering.objects.filter(jeweller=request.user).select_related(
             "scheme_template"
         )
@@ -118,6 +121,9 @@ class JewellerSchemeOfferingsView(APIView):
         err = _require_jeweller(request)
         if err:
             return err
+        blocked = require_feature_enabled("golden_scheme")
+        if blocked is not None:
+            return blocked
         template_id = request.data.get("template_id")
         if not template_id:
             return Response({"detail": "template_id is required."}, status=400)
@@ -146,6 +152,9 @@ class JewellerSchemeOfferingDetailView(APIView):
         err = _require_jeweller(request)
         if err:
             return err
+        blocked = require_feature_enabled("golden_scheme")
+        if blocked is not None:
+            return blocked
         offering = JewellerSchemeOffering.objects.filter(
             pk=pk, jeweller=request.user
         ).select_related("scheme_template").first()

@@ -975,6 +975,11 @@ export function JewellerRatesSchemesPanel() {
                       />
                       <span>Offer on storefront</span>
                     </label>
+                    <p className="dash-muted" style={{ marginBottom: '1rem', fontSize: '0.85rem' }}>
+                      This section controls marketing copy on your public storefront. To adopt platform
+                      investment schemes for customer enrollment, go to{' '}
+                      <Link to="/dashboard/jeweller?section=mkt_schemes">Marketplace → Scheme catalog</Link>.
+                    </p>
                     <div style={{ display: 'grid', gap: '0.85rem', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' }}>
                       <label className="field">
                         <span>Duration (months)</span>

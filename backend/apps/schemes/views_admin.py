@@ -13,6 +13,7 @@ from rest_framework.views import APIView
 from apps.accounts.services.admin_access import user_is_platform_admin
 from apps.schemes.models import (
     CustomerSchemeEnrollment,
+    JewellerSchemeOffering,
     SchemeRequest,
     SchemeTemplate,
 )
@@ -133,6 +134,30 @@ class AdminSchemeTemplateDetailView(APIView):
         t.save()
         return Response(_serialize_template(t))
 
+    def delete(self, request, pk):
+        err = _require_admin(request)
+        if err:
+            return err
+        t = SchemeTemplate.objects.filter(pk=pk).first()
+        if not t:
+            return Response({"detail": "Not found."}, status=404)
+        if t.status != SchemeTemplate.STATUS_DRAFT:
+            return Response(
+                {
+                    "detail": "Only draft templates can be deleted. Deprecate published schemes instead.",
+                },
+                status=400,
+            )
+        if JewellerSchemeOffering.objects.filter(scheme_template=t).exists():
+            return Response(
+                {
+                    "detail": "Cannot delete: jewellers have adopted this template. Deprecate instead.",
+                },
+                status=400,
+            )
+        t.delete()
+        return Response(status=204)
+
 
 class AdminSchemeTemplatePublishView(APIView):
     permission_classes = [IsAuthenticated]
@@ -154,6 +179,46 @@ class AdminSchemeTemplatePublishView(APIView):
         t.published_by = request.user
         t.save()
         return Response(_serialize_template(t))
+
+
+def _unique_template_slug(base: str) -> str:
+    slug = slugify(base)[:80] or "scheme"
+    if not SchemeTemplate.objects.filter(slug=slug).exists():
+        return slug
+    for i in range(2, 100):
+        candidate = f"{slug[:74]}-copy-{i}"[:80]
+        if not SchemeTemplate.objects.filter(slug=candidate).exists():
+            return candidate
+    return f"{slug[:70]}-copy-{timezone.now().strftime('%H%M%S')}"[:80]
+
+
+class AdminSchemeTemplateDuplicateView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        err = _require_admin(request)
+        if err:
+            return err
+        source = SchemeTemplate.objects.filter(pk=pk).first()
+        if not source:
+            return Response({"detail": "Not found."}, status=404)
+        name = (request.data.get("name") or f"{source.name} (copy)").strip()
+        slug = _unique_template_slug(request.data.get("slug") or name)
+        design = source.scheme_design or {}
+        rules = compile_scheme_design(design)
+        t = SchemeTemplate.objects.create(
+            slug=slug,
+            name=name,
+            description=source.description,
+            category=source.category,
+            icon_key=source.icon_key,
+            sort_order=source.sort_order,
+            scheme_design=design,
+            scheme_rules=rules,
+            flow_summary=human_flow_summary(design),
+            status=SchemeTemplate.STATUS_DRAFT,
+        )
+        return Response(_serialize_template(t), status=201)
 
 
 class AdminSchemeTemplateDeprecateView(APIView):

@@ -151,6 +151,26 @@ export function publishAdminSchemeTemplate(id: number) {
   })
 }
 
+export function deprecateAdminSchemeTemplate(id: number) {
+  return schemesFetch<SchemeTemplateDTO>(`/api/v1/admin/schemes/templates/${id}/deprecate/`, {
+    method: 'POST',
+    jsonBody: {},
+  })
+}
+
+export function duplicateAdminSchemeTemplate(id: number, name?: string) {
+  return schemesFetch<SchemeTemplateDTO>(`/api/v1/admin/schemes/templates/${id}/duplicate/`, {
+    method: 'POST',
+    jsonBody: name ? { name } : {},
+  })
+}
+
+export function deleteAdminSchemeTemplate(id: number) {
+  return schemesFetch<void>(`/api/v1/admin/schemes/templates/${id}/`, {
+    method: 'DELETE',
+  })
+}
+
 export function previewAdminSchemeDesign(
   id: number | null,
   scheme_design: SchemeDesign,
@@ -191,6 +211,20 @@ export function fetchAdminSchemeRequests(status?: string) {
   >(`/api/v1/admin/schemes/requests/${q}`)
 }
 
+export function approveAdminSchemeRequest(id: number, adminNotes?: string) {
+  return schemesFetch<{ id: number; status: string }>(
+    `/api/v1/admin/schemes/requests/${id}/approve/`,
+    { method: 'POST', jsonBody: adminNotes ? { admin_notes: adminNotes } : {} },
+  )
+}
+
+export function rejectAdminSchemeRequest(id: number, adminNotes?: string) {
+  return schemesFetch<{ id: number; status: string }>(
+    `/api/v1/admin/schemes/requests/${id}/reject/`,
+    { method: 'POST', jsonBody: adminNotes ? { admin_notes: adminNotes } : {} },
+  )
+}
+
 // Jeweller
 export function fetchJewellerSchemeCatalog(params?: { q?: string; category?: string }) {
   const sp = new URLSearchParams()
@@ -214,6 +248,25 @@ export function createJewellerSchemeOffering(body: {
     method: 'POST',
     jsonBody: body,
   })
+}
+
+export function updateJewellerSchemeOffering(
+  id: number,
+  body: {
+    status?: 'active' | 'paused' | 'withdrawn'
+    display_name?: string
+    customer_facing_note?: string
+    jeweller_overrides?: Record<string, unknown>
+  },
+) {
+  return schemesFetch<SchemeOfferingDTO>(`/api/v1/jeweller/schemes/offerings/${id}/`, {
+    method: 'PATCH',
+    jsonBody: body,
+  })
+}
+
+export function fetchJewellerSchemeCatalogDetail(id: number) {
+  return schemesFetch<SchemeTemplateDTO>(`/api/v1/jeweller/schemes/catalog/${id}/`)
 }
 
 export function fetchJewellerPendingSchemeContributions() {

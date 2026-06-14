@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Button, Card, Input } from '@/components/ui'
 import { fetchVerifiedJewellers, type JewellerStorefrontDTO } from '@/lib/marketplaceApi'
 import {
@@ -6,16 +6,32 @@ import {
   enrollCustomerScheme,
   fetchCustomerSchemeEnrollments,
   fetchCustomerSchemeOfferings,
+  fetchSchemeContributionPayment,
   issueSchemeCounterOtp,
   quoteSchemeContribution,
+  submitSchemeContributionUtr,
   type SchemeEnrollmentDTO,
   type SchemeOfferingDTO,
 } from '@/lib/schemesApi'
 import { CustomerSchemeProgressCard } from './CustomerSchemeProgressCard'
-import {
-  fetchSchemeContributionPayment,
-  submitSchemeContributionUtr,
-} from '@/lib/schemesApi'
+
+const VISIBLE_STATUSES = new Set(['active', 'plan_month_complete'])
+
+function resetPaymentState(setters: {
+  setOtp: (v: string) => void
+  setUtr: (v: string) => void
+  setUpiUri: (v: string) => void
+  setLastContributionId: (v: number | null) => void
+  setMsg: (v: string) => void
+  setErr: (v: string) => void
+}) {
+  setters.setOtp('')
+  setters.setUtr('')
+  setters.setUpiUri('')
+  setters.setLastContributionId(null)
+  setters.setMsg('')
+  setters.setErr('')
+}
 
 export function CustomerSchemeHubPanel() {
   const [jewellers, setJewellers] = useState<JewellerStorefrontDTO[]>([])
@@ -35,15 +51,38 @@ export function CustomerSchemeHubPanel() {
   const [busy, setBusy] = useState(false)
 
   const reloadEnrollments = useCallback(async () => {
-    const rows = await fetchCustomerSchemeEnrollments('active')
-    setEnrollments(rows)
-    if (rows.length && !selectedEnrollment) setSelectedEnrollment(rows[0])
-  }, [selectedEnrollment])
+    const rows = await fetchCustomerSchemeEnrollments()
+    const visible = rows.filter((r) => VISIBLE_STATUSES.has(r.status))
+    setEnrollments(visible)
+    setSelectedEnrollment((prev) => {
+      if (prev && visible.some((r) => r.id === prev.id)) return prev
+      return visible[0] ?? null
+    })
+  }, [])
 
   useEffect(() => {
     void fetchVerifiedJewellers().then(setJewellers)
     void reloadEnrollments()
   }, [reloadEnrollments])
+
+  const enrolledOfferingIds = useMemo(
+    () => new Set(enrollments.map((e) => e.offering.id)),
+    [enrollments],
+  )
+
+  const activeEnrollments = useMemo(
+    () => enrollments.filter((e) => e.status === 'active'),
+    [enrollments],
+  )
+  const awaitingEnrollments = useMemo(
+    () => enrollments.filter((e) => e.status === 'plan_month_complete'),
+    [enrollments],
+  )
+
+  const availableOfferings = useMemo(
+    () => offerings.filter((o) => !enrolledOfferingIds.has(o.id)),
+    [offerings, enrolledOfferingIds],
+  )
 
   useEffect(() => {
     if (!jewellerId) {
@@ -54,7 +93,7 @@ export function CustomerSchemeHubPanel() {
   }, [jewellerId])
 
   useEffect(() => {
-    if (!selectedEnrollment || !amount) {
+    if (!selectedEnrollment || !amount || selectedEnrollment.status !== 'active') {
       setQuote(null)
       return
     }
@@ -63,12 +102,17 @@ export function CustomerSchemeHubPanel() {
       .catch(() => setQuote(null))
   }, [selectedEnrollment, amount])
 
+  const selectEnrollment = (e: SchemeEnrollmentDTO) => {
+    setSelectedEnrollment(e)
+    resetPaymentState({ setOtp, setUtr, setUpiUri, setLastContributionId, setMsg, setErr })
+  }
+
   const enroll = async (offeringId: number) => {
     setBusy(true)
     setErr('')
     try {
       const e = await enrollCustomerScheme(offeringId)
-      setSelectedEnrollment(e)
+      selectEnrollment(e)
       await reloadEnrollments()
       setMsg('Enrolled successfully.')
     } catch (e) {
@@ -79,7 +123,7 @@ export function CustomerSchemeHubPanel() {
   }
 
   const contribute = async () => {
-    if (!selectedEnrollment) return
+    if (!selectedEnrollment || selectedEnrollment.status !== 'active') return
     setBusy(true)
     setErr('')
     try {
@@ -106,6 +150,25 @@ export function CustomerSchemeHubPanel() {
     }
   }
 
+  const renderEnrollmentGroup = (title: string, rows: SchemeEnrollmentDTO[]) => {
+    if (rows.length === 0) return null
+    return (
+      <>
+        <h3 className="dash-card-title" style={{ margin: '0.5rem 0' }}>
+          {title}
+        </h3>
+        {rows.map((e) => (
+          <CustomerSchemeProgressCard
+            key={e.id}
+            enrollment={e}
+            active={selectedEnrollment?.id === e.id}
+            onSelect={() => selectEnrollment(e)}
+          />
+        ))}
+      </>
+    )
+  }
+
   return (
     <div className="dash-panel-max">
       <Card>
@@ -113,14 +176,16 @@ export function CustomerSchemeHubPanel() {
         <p className="dash-muted">Join a jeweller scheme and deposit anytime — amounts roll into monthly buckets.</p>
       </Card>
 
-      {enrollments.map((e) => (
-        <CustomerSchemeProgressCard
-          key={e.id}
-          enrollment={e}
-          active={selectedEnrollment?.id === e.id}
-          onSelect={() => setSelectedEnrollment(e)}
-        />
-      ))}
+      {enrollments.length === 0 ? (
+        <Card>
+          <p className="dash-muted">You have no active schemes yet. Join one below.</p>
+        </Card>
+      ) : (
+        <>
+          {renderEnrollmentGroup('Active schemes', activeEnrollments)}
+          {renderEnrollmentGroup('Awaiting bonus or redemption', awaitingEnrollments)}
+        </>
+      )}
 
       <Card>
         <h3 className="dash-card-title">Join a scheme</h3>
@@ -140,7 +205,7 @@ export function CustomerSchemeHubPanel() {
           </select>
         </label>
         <ul className="dash-list">
-          {offerings.map((o) => (
+          {availableOfferings.map((o) => (
             <li key={o.id} className="dash-list-item">
               <div>
                 <strong>{o.display_name}</strong>
@@ -151,10 +216,13 @@ export function CustomerSchemeHubPanel() {
               </Button>
             </li>
           ))}
+          {jewellerId && availableOfferings.length === 0 ? (
+            <p className="dash-muted">No new schemes available from this jeweller.</p>
+          ) : null}
         </ul>
       </Card>
 
-      {selectedEnrollment ? (
+      {selectedEnrollment?.status === 'active' ? (
         <Card>
           <h3 className="dash-card-title">Add deposit — {selectedEnrollment.offering.display_name}</h3>
           <Input label="Amount ₹" value={amount} onChange={(e) => setAmount(e.target.value)} />
@@ -210,6 +278,12 @@ export function CustomerSchemeHubPanel() {
               </Button>
             </div>
           ) : null}
+        </Card>
+      ) : selectedEnrollment?.status === 'plan_month_complete' ? (
+        <Card>
+          <p className="dash-muted">
+            This scheme cycle is complete. Contact your jeweller for bonus confirmation and redemption.
+          </p>
         </Card>
       ) : null}
 

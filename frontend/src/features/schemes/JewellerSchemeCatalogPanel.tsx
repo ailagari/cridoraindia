@@ -1,9 +1,11 @@
-import { useCallback, useEffect, useState } from 'react'
-import { Button, Card } from '@/components/ui'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Button, Card, Input } from '@/components/ui'
 import {
   createJewellerSchemeOffering,
   fetchJewellerSchemeCatalog,
+  fetchJewellerSchemeCatalogDetail,
   fetchJewellerSchemeOfferings,
+  updateJewellerSchemeOffering,
   type SchemeOfferingDTO,
   type SchemeTemplateDTO,
 } from '@/lib/schemesApi'
@@ -11,24 +13,43 @@ import {
 export function JewellerSchemeCatalogPanel() {
   const [catalog, setCatalog] = useState<SchemeTemplateDTO[]>([])
   const [offerings, setOfferings] = useState<SchemeOfferingDTO[]>([])
+  const [search, setSearch] = useState('')
+  const [category, setCategory] = useState('')
+  const [expandedId, setExpandedId] = useState<number | null>(null)
+  const [detail, setDetail] = useState<SchemeTemplateDTO | null>(null)
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
 
+  const categories = useMemo(() => {
+    const set = new Set(catalog.map((t) => t.category).filter(Boolean))
+    return Array.from(set).sort()
+  }, [catalog])
+
   const reload = useCallback(async () => {
     try {
-      const [c, o] = await Promise.all([fetchJewellerSchemeCatalog(), fetchJewellerSchemeOfferings()])
+      const [c, o] = await Promise.all([
+        fetchJewellerSchemeCatalog({
+          q: search.trim() || undefined,
+          category: category || undefined,
+        }),
+        fetchJewellerSchemeOfferings(),
+      ])
       setCatalog(c)
       setOfferings(o)
+      setErr('')
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Load failed')
     }
-  }, [])
+  }, [search, category])
 
   useEffect(() => {
-    void reload()
+    const t = window.setTimeout(() => void reload(), 300)
+    return () => window.clearTimeout(t)
   }, [reload])
 
-  const enroll = async (templateId: number) => {
+  const enrolledIds = new Set(offerings.map((o) => o.template_id))
+
+  const adopt = async (templateId: number) => {
     setBusy(true)
     try {
       await createJewellerSchemeOffering({ template_id: templateId })
@@ -40,7 +61,34 @@ export function JewellerSchemeCatalogPanel() {
     }
   }
 
-  const enrolledIds = new Set(offerings.map((o) => o.template_id))
+  const toggleDetail = async (id: number) => {
+    if (expandedId === id) {
+      setExpandedId(null)
+      setDetail(null)
+      return
+    }
+    setExpandedId(id)
+    try {
+      const d = await fetchJewellerSchemeCatalogDetail(id)
+      setDetail(d)
+    } catch {
+      setDetail(null)
+    }
+  }
+
+  const setOfferingStatus = async (id: number, status: 'active' | 'paused' | 'withdrawn') => {
+    const labels = { active: 'Resume', paused: 'Pause', withdrawn: 'Withdraw' }
+    if (!window.confirm(`${labels[status] === 'Withdraw' ? 'Withdraw' : labels[status]} this offering?`)) return
+    setBusy(true)
+    try {
+      await updateJewellerSchemeOffering(id, { status })
+      await reload()
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Update failed')
+    } finally {
+      setBusy(false)
+    }
+  }
 
   return (
     <div className="dash-panel-max">
@@ -48,22 +96,58 @@ export function JewellerSchemeCatalogPanel() {
         <h2 className="dash-card-title">Scheme catalog</h2>
         <p className="dash-muted">Browse published platform schemes and add them to your showroom.</p>
         {err ? <p className="form-error">{err}</p> : null}
-        <ul className="dash-list">
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', marginTop: '0.75rem' }}>
+          <Input
+            label="Search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Scheme name…"
+          />
+          <label className="form-label">
+            Category
+            <select className="form-input" value={category} onChange={(e) => setCategory(e.target.value)}>
+              <option value="">All categories</option>
+              {categories.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <ul className="dash-list" style={{ marginTop: '1rem' }}>
           {catalog.map((t) => (
-            <li key={t.id} className="dash-list-item">
-              <div>
-                <strong>{t.name}</strong>
-                <p className="dash-muted">{t.flow_summary}</p>
+            <li key={t.id} className="dash-list-item" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <div>
+                  <strong>{t.name}</strong>
+                  {t.category ? <span className="dash-muted"> · {t.category}</span> : null}
+                  <p className="dash-muted">{t.flow_summary}</p>
+                </div>
+                <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
+                  <Button size="sm" variant="secondary" onClick={() => void toggleDetail(t.id)}>
+                    {expandedId === t.id ? 'Hide' : 'Preview'}
+                  </Button>
+                  {enrolledIds.has(t.id) ? (
+                    <span className="dash-badge">Adopted</span>
+                  ) : (
+                    <Button size="sm" onClick={() => void adopt(t.id)} disabled={busy}>
+                      Select scheme
+                    </Button>
+                  )}
+                </div>
               </div>
-              {enrolledIds.has(t.id) ? (
-                <span className="dash-badge">Active</span>
-              ) : (
-                <Button size="sm" onClick={() => void enroll(t.id)} disabled={busy}>
-                  Select scheme
-                </Button>
-              )}
+              {expandedId === t.id && detail?.id === t.id ? (
+                <div style={{ marginTop: '0.75rem', padding: '0.75rem', background: 'var(--surface-muted, #f5f5f5)', borderRadius: 6 }}>
+                  {detail.description ? <p className="dash-muted">{detail.description}</p> : null}
+                  <p className="dash-muted" style={{ marginTop: '0.5rem' }}>
+                    <strong>Flow:</strong> {detail.flow_summary}
+                  </p>
+                </div>
+              ) : null}
             </li>
           ))}
+          {catalog.length === 0 ? <p className="dash-muted">No published schemes match your filters.</p> : null}
         </ul>
       </Card>
 
@@ -76,7 +160,24 @@ export function JewellerSchemeCatalogPanel() {
                 <strong>{o.display_name}</strong>
                 <p className="dash-muted">{o.flow_summary}</p>
               </div>
-              <span className="dash-badge">{o.status}</span>
+              <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                <span className="dash-badge">{o.status}</span>
+                {o.status === 'active' ? (
+                  <Button size="sm" variant="secondary" onClick={() => void setOfferingStatus(o.id, 'paused')} disabled={busy}>
+                    Pause
+                  </Button>
+                ) : null}
+                {o.status === 'paused' ? (
+                  <Button size="sm" onClick={() => void setOfferingStatus(o.id, 'active')} disabled={busy}>
+                    Resume
+                  </Button>
+                ) : null}
+                {o.status !== 'withdrawn' ? (
+                  <Button size="sm" variant="secondary" onClick={() => void setOfferingStatus(o.id, 'withdrawn')} disabled={busy}>
+                    Withdraw
+                  </Button>
+                ) : null}
+              </div>
             </li>
           ))}
           {offerings.length === 0 ? <p className="dash-muted">No schemes selected yet.</p> : null}

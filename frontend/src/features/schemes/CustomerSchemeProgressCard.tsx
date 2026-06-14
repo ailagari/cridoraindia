@@ -18,6 +18,11 @@ export function CustomerSchemeProgressCard({ enrollment, active, onSelect }: Pro
     >
       <h3 className="dash-card-title">{e.offering.display_name}</h3>
       <p className="dash-muted">{e.jeweller.business_name}</p>
+      {e.status !== 'active' ? (
+        <p>
+          <span className="dash-badge">{e.status.replace(/_/g, ' ')}</span>
+        </p>
+      ) : null}
       <p>
         Month <strong>{e.current_plan_month}</strong>
         {e.offering.scheme_design?.plan_timeline?.customer_months
