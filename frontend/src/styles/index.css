@@ -10135,3 +10135,95 @@ select.input {
   object-fit: contain;
   object-position: center;
 }
+
+.admin-gold-ad-slot__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.65rem;
+}
+
+.admin-gold-ad-slot__head h3 {
+  margin: 0;
+}
+
+.admin-gold-ad-slot__active {
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.admin-ad-mode-toggle {
+  display: inline-flex;
+  gap: 0.35rem;
+  padding: 0.2rem;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg) 70%, transparent);
+  margin-bottom: 0.75rem;
+}
+
+.admin-ad-mode-toggle__btn {
+  border: none;
+  border-radius: 8px;
+  padding: 0.38rem 0.85rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: transparent;
+  color: var(--text-muted);
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.admin-ad-mode-toggle__btn:hover {
+  color: var(--text);
+  background: color-mix(in srgb, var(--surface) 80%, transparent);
+}
+
+.admin-ad-mode-toggle__btn--active {
+  color: var(--gold-light);
+  background: color-mix(in srgb, var(--gold) 14%, transparent);
+  box-shadow: 0 2px 12px color-mix(in srgb, var(--gold) 16%, transparent);
+}
+
+.admin-ad-live-preview {
+  margin-bottom: 0.85rem;
+  padding: 0.75rem;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg) 55%, transparent);
+}
+
+.admin-ad-live-preview--inactive {
+  opacity: 0.72;
+}
+
+.admin-ad-live-preview__stage {
+  width: 100%;
+}
+
+.admin-ad-live-preview__stage .gr-ad {
+  margin: 0;
+}
+
+.admin-gold-ad-slot__fields {
+  display: grid;
+  gap: 0.1rem;
+}
+
+.admin-gold-ad-slot__attach-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  align-items: center;
+}
+
+.admin-gold-ad-slot__hint {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.admin-gold-ad-slot__err {
+  color: var(--danger);
+  margin-top: 0.35rem;
+}
