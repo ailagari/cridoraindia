@@ -1,20 +1,30 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Button, Card, CardHeader, EmptyState, Input } from '@/components/ui'
-import { DashSegmentPair } from '@/components/DashSegmentPair'
-import { UpiPaymentStep } from '@/features/upi/UpiPaymentStep'
-import { useCounterOtpCountdown } from '@/features/invest/useCounterOtpCountdown'
-import { MobileDashboardCancelButton } from '@/features/dashboard/MobileDashboardCancelButton'
+import { CustomerActiveUpiPayment } from '@/features/invest/CustomerActiveUpiPayment'
+import { CustomerCounterPaymentFlow } from '@/features/invest/CustomerCounterPaymentFlow'
+import { CustomerPaymentMethodField } from '@/features/invest/CustomerPaymentMethodField'
+import { CustomerResumeUpiBar } from '@/features/invest/CustomerResumeUpiBar'
+import {
+  cancelCustomerPendingPayment,
+  customerPaymentPlacedMessage,
+  CUSTOMER_PAYMENT_METHODS,
+  formatCustomerPaymentInr,
+  isCustomerCounterAwaiting,
+  isCustomerInflightUpi,
+  isCustomerResumableUpi,
+  issueCustomerCounterOtp,
+  type CounterOtpReveal,
+} from '@/features/invest/customerPaymentFlow'
+import { fetchFractionalCounterOtpPolicy } from '@/lib/fractionalPurchaseApi'
 import { usePublicLayoutMax767 } from '@/hooks/usePublicLayoutMax767'
 import { fetchVerifiedJewellers, type JewellerStorefrontDTO } from '@/lib/marketplaceApi'
 import {
-  cancelSchemeContribution,
   createSchemeContribution,
   enrollCustomerScheme,
   fetchCustomerSchemeContributions,
   fetchCustomerSchemeEnrollments,
   fetchCustomerSchemeNetworkOfferings,
-  issueSchemeCounterOtp,
   quoteSchemeContribution,
   searchCustomerSchemeOfferings,
   type SchemeContributionDTO,
@@ -30,33 +40,10 @@ import { SchemeEnrollmentPicker } from './SchemeEnrollmentPicker'
 
 const VISIBLE_STATUSES = new Set(['active', 'pending_admission', 'plan_month_complete'])
 
-const PAYMENT_METHODS = [
-  { id: 'upi', label: 'Pay online (UPI)' },
-  { id: 'counter', label: 'Pay at counter' },
-] as const
-
-const INFLIGHT_UPI_STATUSES = new Set([
-  'pending_payment',
-  'signal_received',
-  'pending_review',
-  'needs_manual_verification',
-  'awaiting_utr_verify',
-  'proof_rejected',
-  'on_hold',
-])
-
-const RESUMABLE_UPI_STATUSES = new Set(['pending_payment', 'signal_received', 'proof_rejected'])
-
 const UPI_PAYMENT_SECTION_ID = 'scheme-upi-payment-step'
 
 function canPayEnrollment(e: SchemeEnrollmentDTO): boolean {
   return e.status === 'active' && e.payments_enabled
-}
-
-function formatInr(s: string): string {
-  const n = Number.parseFloat(s)
-  if (!Number.isFinite(n)) return s
-  return n.toLocaleString('en-IN', { maximumFractionDigits: 2 })
 }
 
 function OfferingJoinRow({
@@ -115,8 +102,9 @@ export function CustomerSchemeHubPanel() {
   const [depositMsg, setDepositMsg] = useState('')
   const [lastContribution, setLastContribution] = useState<SchemeContributionDTO | null>(null)
   const [activeUpiContribution, setActiveUpiContribution] = useState<SchemeContributionDTO | null>(null)
-  const [otpReveal, setOtpReveal] = useState<{ contributionId: number; otp: string; expiresAt: string } | null>(null)
+  const [otpReveal, setOtpReveal] = useState<CounterOtpReveal | null>(null)
   const [successToast, setSuccessToast] = useState('')
+  const [otpPolicySeconds, setOtpPolicySeconds] = useState<number | null>(null)
   const [busy, setBusy] = useState(false)
 
   const schemesEnabled = isFeatureEnabled(featureFlags, 'golden_scheme')
@@ -124,14 +112,18 @@ export function CustomerSchemeHubPanel() {
   const fractionalCounterEnabled = isFeatureEnabled(featureFlags, 'fractional_counter')
 
   const paymentMethods = useMemo(() => {
-    return PAYMENT_METHODS.filter((m) => {
+    return CUSTOMER_PAYMENT_METHODS.filter((m) => {
       if (m.id === 'upi') return fractionalUpiEnabled
       if (m.id === 'counter') return fractionalCounterEnabled
       return true
     })
   }, [fractionalCounterEnabled, fractionalUpiEnabled])
 
-  const otpCountdown = useCounterOtpCountdown(otpReveal?.expiresAt ?? null)
+  useEffect(() => {
+    void fetchFractionalCounterOtpPolicy().then((r) => {
+      if (r.ok) setOtpPolicySeconds(r.otp_ttl_seconds)
+    })
+  }, [])
 
   useEffect(() => {
     void fetchPlatformFeatures().then((f) => {
@@ -169,18 +161,14 @@ export function CustomerSchemeHubPanel() {
   const reloadContributions = useCallback(async () => {
     const rows = await fetchCustomerSchemeContributions()
     setContributions(rows)
-    const upiInflight = rows.find(
-      (c) => c.payment_method === 'upi' && INFLIGHT_UPI_STATUSES.has(c.status),
-    )
-    const counterInflight = rows.find(
-      (c) => c.payment_method === 'counter' && c.status === 'awaiting_counter',
-    )
+    const upiInflight = rows.find((c) => isCustomerInflightUpi(c))
+    const counterInflight = rows.find((c) => isCustomerCounterAwaiting(c))
     setActiveUpiContribution(upiInflight ?? null)
     if (counterInflight) {
       setLastContribution(counterInflight)
       if (counterInflight.otp && counterInflight.otp_expires_at) {
         setOtpReveal({
-          contributionId: counterInflight.id,
+          paymentId: counterInflight.id,
           otp: counterInflight.otp,
           expiresAt: counterInflight.otp_expires_at,
         })
@@ -219,14 +207,9 @@ export function CustomerSchemeHubPanel() {
   )
 
   const resumeUpiContribution = useMemo(
-    () =>
-      contributions.find(
-        (c) => c.payment_method === 'upi' && RESUMABLE_UPI_STATUSES.has(c.status),
-      ) ?? null,
+    () => contributions.find((c) => isCustomerResumableUpi(c)) ?? null,
     [contributions],
   )
-
-  const resumePaymentCountdown = useCounterOtpCountdown(resumeUpiContribution?.payment_expires_at ?? null)
 
   const runQuote = useCallback(async () => {
     setQuoteErr('')
@@ -333,14 +316,10 @@ export function CustomerSchemeHubPanel() {
       })
       setLastContribution(c)
       setOtpReveal(null)
-      if (paymentMethod === 'upi') {
-        setActiveUpiContribution(c)
-        setDepositMsg(`${c.reference} · Pay ₹${formatInr(c.amount_inr)} via UPI, then paste UTR below.`)
-      } else {
-        setDepositMsg(`${c.reference} · Pay ₹${formatInr(c.amount_inr)} at counter, then tap Generate OTP.`)
-      }
+      setDepositMsg(customerPaymentPlacedMessage(c))
       await reloadEnrollments()
       await reloadContributions()
+      if (paymentMethod === 'upi') setActiveUpiContribution(c)
     } catch (e) {
       setDepositMsg(e instanceof Error ? e.message : 'Deposit failed')
     } finally {
@@ -352,34 +331,34 @@ export function CustomerSchemeHubPanel() {
     setDepositMsg('')
     setBusy(true)
     try {
-      const withOtp = await issueSchemeCounterOtp(contributionId)
-      if (withOtp.otp && withOtp.otp_expires_at) {
-        setOtpReveal({
-          contributionId: withOtp.id,
-          otp: withOtp.otp,
-          expiresAt: withOtp.otp_expires_at,
-        })
+      const out = await issueCustomerCounterOtp('scheme', contributionId)
+      if (!out.ok) {
+        setDepositMsg(out.detail)
+        setOtpReveal(null)
+        return
       }
-      setLastContribution(withOtp)
-    } catch (e) {
-      setDepositMsg(e instanceof Error ? e.message : 'Could not issue OTP')
-      setOtpReveal(null)
+      setOtpReveal(out.data)
+      const row = contributions.find((c) => c.id === contributionId) ?? lastContribution
+      if (row) setLastContribution({ ...row, id: contributionId })
     } finally {
       setBusy(false)
       await reloadContributions()
     }
   }
 
-  const cancelCounterDeposit = async (contribution: SchemeContributionDTO) => {
+  const cancelPendingPayment = async (contribution: SchemeContributionDTO) => {
     setBusy(true)
     try {
-      await cancelSchemeContribution(contribution.id)
+      const out = await cancelCustomerPendingPayment('scheme', contribution)
+      if (!out.ok) {
+        setDepositMsg(out.detail)
+        return
+      }
       setLastContribution(null)
+      setActiveUpiContribution(null)
       setOtpReveal(null)
-      setSuccessToast('Deposit cancelled.')
+      setSuccessToast(out.data.detail)
       await reloadContributions()
-    } catch (e) {
-      setDepositMsg(e instanceof Error ? e.message : 'Could not cancel')
     } finally {
       setBusy(false)
     }
@@ -414,8 +393,8 @@ export function CustomerSchemeHubPanel() {
     )
   }
 
-  const showUpiStep =
-    activeUpiContribution && INFLIGHT_UPI_STATUSES.has(activeUpiContribution.status)
+  const showUpiStep = Boolean(activeUpiContribution && isCustomerInflightUpi(activeUpiContribution))
+  const showCounterFlow = Boolean(lastContribution && isCustomerCounterAwaiting(lastContribution))
 
   const urlJewellerId = jewellerFromUrl ? Number.parseInt(jewellerFromUrl, 10) : null
   const sortedNetwork = [...networkJewellers].sort((a, b) => {
@@ -433,6 +412,11 @@ export function CustomerSchemeHubPanel() {
           <h1 className="page-header__title">Scheme deposit</h1>
           <p className="page-header__sub">Pay into your jeweller savings scheme · UPI or counter</p>
         </div>
+        {otpPolicySeconds != null ? (
+          <span className="badge badge--neutral" title="Counter OTP validity">
+            OTP {Math.round(otpPolicySeconds / 60)} min
+          </span>
+        ) : null}
       </div>
 
       <Card style={{ marginBottom: 'var(--sp-5)', maxWidth: 560 }}>
@@ -477,7 +461,7 @@ export function CustomerSchemeHubPanel() {
                   <div className="fractional-buy-quote-stack">
                     {quote.metal_rate_inr_per_gram && quote.metal_rate_inr_per_gram !== '0' ? (
                       <p className="fractional-buy-quote-row" style={{ color: 'var(--text-muted)' }}>
-                        Rate/g <strong className="tabular">₹{formatInr(quote.metal_rate_inr_per_gram)}</strong>
+                        Rate/g <strong className="tabular">₹{formatCustomerPaymentInr(quote.metal_rate_inr_per_gram)}</strong>
                       </p>
                     ) : null}
                     {quote.gold_grams && quote.gold_grams !== '0.000000' ? (
@@ -487,41 +471,28 @@ export function CustomerSchemeHubPanel() {
                     ) : null}
                     {quote.gst_inr && quote.gst_inr !== '0.00' ? (
                       <p className="fractional-buy-quote-row" style={{ color: 'var(--text-muted)' }}>
-                        GST ({quote.gst_percent ?? '0'}%) <strong className="tabular">₹{formatInr(quote.gst_inr)}</strong>
+                        GST ({quote.gst_percent ?? '0'}%) <strong className="tabular">₹{formatCustomerPaymentInr(quote.gst_inr)}</strong>
                       </p>
                     ) : null}
                     {quote.making_charge_inr && quote.making_charge_inr !== '0.00' ? (
                       <p className="fractional-buy-quote-row" style={{ color: 'var(--text-muted)' }}>
-                        Making charge <strong className="tabular">₹{formatInr(quote.making_charge_inr)}</strong>
+                        Making charge <strong className="tabular">₹{formatCustomerPaymentInr(quote.making_charge_inr)}</strong>
                       </p>
                     ) : null}
                     <p className="fractional-buy-quote-row fractional-buy-quote-total" style={{ fontWeight: 800 }}>
-                      Total <span className="tabular">₹{formatInr(quote.total_inr)}</span>
+                      Total <span className="tabular">₹{formatCustomerPaymentInr(quote.total_inr)}</span>
                     </p>
                   </div>
                 </Card>
               ) : null}
 
-              {paymentMethods.length > 0 ? (
-                <fieldset style={{ border: 'none', padding: 0, margin: 0 }}>
-                  <legend className="fractional-buy-legend">Payment method</legend>
-                  <DashSegmentPair
-                    items={paymentMethods}
-                    value={paymentMethod}
-                    onChange={(id) => setPaymentMethod(id as 'upi' | 'counter')}
-                    ariaLabel="Payment method"
-                    className="fractional-buy-payment-segments"
-                  />
-                </fieldset>
-              ) : null}
+              <CustomerPaymentMethodField
+                methods={paymentMethods}
+                value={paymentMethod}
+                onChange={setPaymentMethod}
+              />
 
-              <p style={{ margin: 0, fontSize: 'var(--ts-caption)', color: 'var(--text-faint)', lineHeight: 1.4 }}>
-                {paymentMethod === 'upi'
-                  ? 'Pay via GPay / PhonePe · paste UTR after payment'
-                  : 'Pay at showroom · show OTP to jeweller'}
-              </p>
-
-              {!showUpiStep && !(lastContribution?.status === 'awaiting_counter') ? (
+              {!showUpiStep && !showCounterFlow ? (
                 <Button type="button" variant="primary" block disabled={busy || !quote} onClick={() => void placeDeposit()}>
                   Place deposit
                 </Button>
@@ -534,78 +505,37 @@ export function CustomerSchemeHubPanel() {
               ) : null}
 
               {showUpiStep && activeUpiContribution ? (
-                <div ref={upiPaymentRef} id={UPI_PAYMENT_SECTION_ID}>
-                  <UpiPaymentStep
-                    kind="scheme"
-                    paymentId={activeUpiContribution.id}
-                    busy={busy}
-                    setBusy={setBusy}
-                    sectionId={UPI_PAYMENT_SECTION_ID}
-                    onSubmitted={() => {
-                      void reloadEnrollments()
-                      void reloadContributions()
-                    }}
-                    onExpired={() => {
-                      setActiveUpiContribution(null)
-                      void reloadContributions()
-                    }}
-                    onSuccess={(text) => setSuccessToast(text)}
-                    onError={(text) => setDepositMsg(text)}
-                  />
-                </div>
+                <CustomerActiveUpiPayment
+                  kind="scheme"
+                  paymentId={activeUpiContribution.id}
+                  busy={busy}
+                  setBusy={setBusy}
+                  sectionId={UPI_PAYMENT_SECTION_ID}
+                  sectionRef={upiPaymentRef}
+                  onSubmitted={() => {
+                    void reloadEnrollments()
+                    void reloadContributions()
+                  }}
+                  onExpired={() => {
+                    setActiveUpiContribution(null)
+                    void reloadContributions()
+                  }}
+                  onSuccess={(text) => setSuccessToast(text)}
+                  onError={(text) => setDepositMsg(text)}
+                />
               ) : null}
 
-              {lastContribution?.payment_method === 'counter' && lastContribution.status === 'awaiting_counter' ? (
-                <div className="dash-form-stack" style={{ marginTop: '0.5rem' }}>
-                  <Button
-                    type="button"
-                    variant="primary"
-                    block
-                    disabled={busy || (otpReveal?.contributionId === lastContribution.id && !otpCountdown.expired)}
-                    onClick={() => void issueOtp(lastContribution.id)}
-                  >
-                    {otpReveal?.contributionId === lastContribution.id && otpCountdown.expired
-                      ? 'Generate new verification OTP'
-                      : otpReveal?.contributionId === lastContribution.id && !otpCountdown.expired
-                        ? 'OTP active — use timer below'
-                        : 'Generate verification OTP'}
-                  </Button>
-                  <MobileDashboardCancelButton
-                    block
-                    busy={busy}
-                    label="Cancel deposit"
-                    confirmMessage="Cancel this counter deposit? You can place a new one later."
-                    onCancel={() => void cancelCounterDeposit(lastContribution)}
-                  />
-                </div>
-              ) : null}
-
-              {otpReveal ? (
-                <Card
-                  tone="accent"
-                  style={{ opacity: otpCountdown.expired ? 0.65 : 1, border: '1px solid var(--gold-line-20)' }}
-                  role="status"
-                  aria-live="polite"
-                >
-                  <p style={{ margin: '0 0 var(--sp-2)', fontSize: 'var(--ts-caption)', color: 'var(--text-muted)', fontWeight: 500 }}>
-                    Show to jeweller
-                  </p>
-                  <p className="tabular" style={{ margin: '0 0 var(--sp-2)', fontSize: 'var(--ts-display)', fontWeight: 700, letterSpacing: '0.25em' }}>
-                    {otpReveal.otp}
-                  </p>
-                  <p style={{ margin: '0 0 var(--sp-3)', fontSize: 'var(--ts-caption)', color: otpCountdown.expired ? 'var(--danger)' : 'var(--text-muted)' }}>
-                    {otpCountdown.expired ? 'Expired' : `${otpCountdown.labelMmSs} remaining`}
-                  </p>
-                  <Button
-                    type="button"
-                    variant="primary"
-                    block
-                    disabled={busy || !otpCountdown.expired}
-                    onClick={() => void issueOtp(otpReveal.contributionId)}
-                  >
-                    {otpCountdown.expired ? 'New OTP' : 'Active'}
-                  </Button>
-                </Card>
+              {showCounterFlow && lastContribution ? (
+                <CustomerCounterPaymentFlow
+                  paymentId={lastContribution.id}
+                  referenceLabel={lastContribution.reference}
+                  busy={busy}
+                  otpReveal={otpReveal}
+                  onIssueOtp={(id) => void issueOtp(id)}
+                  onCancel={() => void cancelPendingPayment(lastContribution)}
+                  cancelLabel="Cancel deposit"
+                  cancelConfirmMessage="Cancel this counter deposit? You can place a new one later."
+                />
               ) : null}
             </>
           ) : payableEnrollments.length === 0 ? (
@@ -718,40 +648,15 @@ export function CustomerSchemeHubPanel() {
         </div>
       ) : null}
 
-      {narrow && resumeUpiContribution && !resumePaymentCountdown.expired ? (
-        <div className="upi-continue-payment-bar" role="region" aria-label="Pending UPI payment">
-          <div className="upi-continue-payment-bar__copy">
-            <p className="upi-continue-payment-bar__title">{resumeUpiContribution.reference}</p>
-            <p className="upi-continue-payment-bar__meta tabular">
-              ₹{formatInr(resumeUpiContribution.amount_inr)} · {resumePaymentCountdown.labelMmSs} left
-            </p>
-          </div>
-          <div className="upi-continue-payment-bar__actions">
-            <Button type="button" variant="primary" disabled={busy} onClick={scrollToUpiPayment}>
-              Continue payment
-            </Button>
-            <MobileDashboardCancelButton
-              block
-              busy={busy}
-              label="Cancel payment"
-              confirmMessage="Cancel this payment? You can start a new one later."
-              onCancel={async () => {
-                if (!resumeUpiContribution) return
-                setBusy(true)
-                try {
-                  await cancelSchemeContribution(resumeUpiContribution.id)
-                  setActiveUpiContribution(null)
-                  setSuccessToast('Payment cancelled.')
-                  await reloadContributions()
-                } catch (e) {
-                  setDepositMsg(e instanceof Error ? e.message : 'Cancel failed')
-                } finally {
-                  setBusy(false)
-                }
-              }}
-            />
-          </div>
-        </div>
+      {narrow && resumeUpiContribution ? (
+        <CustomerResumeUpiBar
+          reference={resumeUpiContribution.reference}
+          amountInr={resumeUpiContribution.amount_inr}
+          expiresAt={resumeUpiContribution.payment_expires_at}
+          busy={busy}
+          onContinue={scrollToUpiPayment}
+          onCancel={() => void cancelPendingPayment(resumeUpiContribution)}
+        />
       ) : null}
     </div>
   )

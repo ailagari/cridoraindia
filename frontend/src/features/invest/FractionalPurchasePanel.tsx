@@ -3,16 +3,27 @@ import { useSearchParams } from 'react-router-dom'
 import { fetchVerifiedJewellers, type JewellerStorefrontDTO } from '@/lib/marketplaceApi'
 import {
   fractionalCreateOrder,
-  fractionalIssueCounterOtp,
   fractionalListOrders,
   fractionalQuote,
   fetchFractionalCounterOtpPolicy,
   type FractionalPurchaseDTO,
   type FractionalQuoteDTO,
 } from '@/lib/fractionalPurchaseApi'
-import { DashSegmentPair } from '@/components/DashSegmentPair'
-import { UpiPaymentStep } from '@/features/upi/UpiPaymentStep'
-import { cancelFractionalOrder } from '@/features/upi/upiPaymentApi'
+import { CustomerActiveUpiPayment } from '@/features/invest/CustomerActiveUpiPayment'
+import { CustomerCounterPaymentFlow } from '@/features/invest/CustomerCounterPaymentFlow'
+import { CustomerPaymentMethodField } from '@/features/invest/CustomerPaymentMethodField'
+import { CustomerResumeUpiBar } from '@/features/invest/CustomerResumeUpiBar'
+import {
+  cancelCustomerPendingPayment,
+  customerPaymentPlacedMessage,
+  CUSTOMER_PAYMENT_METHODS,
+  formatCustomerPaymentInr,
+  isCustomerCounterAwaiting,
+  isCustomerInflightUpi,
+  isCustomerResumableUpi,
+  issueCustomerCounterOtp,
+  type CounterOtpReveal,
+} from '@/features/invest/customerPaymentFlow'
 import { FractionalJewellerPicker } from '@/features/invest/FractionalJewellerPicker'
 import { CustomerFractionalOrdersTable } from '@/features/invest/CustomerFractionalOrdersTable'
 import {
@@ -27,32 +38,8 @@ import { fetchGoldWallet, type GoldWalletDTO } from '@/lib/goldTransferApi'
 import { LIVE_BALANCE_POLL_MS } from '@/lib/liveDeskIntervals'
 import { useLivePoll } from '@/lib/useLivePoll'
 import { formatJewellerMetalRateAsOf } from '@/features/marketplace/productPricing'
-import { MobileDashboardCancelButton } from '@/features/dashboard/MobileDashboardCancelButton'
 import { Button, Card, CardHeader, Input } from '@/components/ui'
 import { fetchPlatformFeatures, isFeatureEnabled } from '@/lib/platformFeatures'
-
-function formatInr(s: string): string {
-  const n = Number.parseFloat(s)
-  if (!Number.isFinite(n)) return s
-  return n.toLocaleString('en-IN', { maximumFractionDigits: 2 })
-}
-
-const PAYMENT_METHODS = [
-  { id: 'upi', label: 'Pay online (UPI)' },
-  { id: 'counter', label: 'Pay at counter' },
-] as const
-
-const INFLIGHT_UPI_STATUSES = new Set([
-  'pending_payment',
-  'signal_received',
-  'pending_review',
-  'needs_manual_verification',
-  'awaiting_utr_verify',
-  'proof_rejected',
-  'on_hold',
-])
-
-const RESUMABLE_UPI_STATUSES = new Set(['pending_payment', 'signal_received', 'proof_rejected'])
 
 const UPI_PAYMENT_SECTION_ID = 'fractional-upi-payment-step'
 
@@ -78,7 +65,7 @@ export function FractionalPurchasePanel() {
   const [orderMsg, setOrderMsg] = useState('')
   const [lastOrder, setLastOrder] = useState<FractionalPurchaseDTO | null>(null)
   const [balanceHint, setBalanceHint] = useState('')
-  const [otpReveal, setOtpReveal] = useState<{ orderId: number; otp: string; expiresAt: string } | null>(null)
+  const [otpReveal, setOtpReveal] = useState<CounterOtpReveal | null>(null)
   const [otpPolicySeconds, setOtpPolicySeconds] = useState<number | null>(null)
   const [paymentMethod, setPaymentMethod] = useState<'upi' | 'counter'>('upi')
   const [successToast, setSuccessToast] = useState('')
@@ -90,7 +77,7 @@ export function FractionalPurchasePanel() {
   const fractionalUpiEnabled = isFeatureEnabled(featureFlags, 'fractional_upi_reconciliation')
   const fractionalCounterEnabled = isFeatureEnabled(featureFlags, 'fractional_counter')
   const paymentMethods = useMemo(() => {
-    return PAYMENT_METHODS.filter((m) => {
+    return CUSTOMER_PAYMENT_METHODS.filter((m) => {
       if (m.id === 'upi') return fractionalUpiEnabled
       if (m.id === 'counter') return fractionalCounterEnabled
       return true
@@ -189,11 +176,11 @@ export function FractionalPurchasePanel() {
   }, [])
 
   useEffect(() => {
-    const oid = otpReveal?.orderId
-    if (oid == null) return
-    const row = orders.find((x) => x.id === oid)
+    const pid = otpReveal?.paymentId
+    if (pid == null) return
+    const row = orders.find((x) => x.id === pid)
     if (row && row.status !== 'awaiting_counter') setOtpReveal(null)
-  }, [orders, otpReveal?.orderId])
+  }, [orders, otpReveal?.paymentId])
 
   useEffect(() => {
     if (!lastOrder) return
@@ -204,7 +191,7 @@ export function FractionalPurchasePanel() {
       void refreshWalletHint()
     }
     setLastOrder(row)
-    if (row.payment_method === 'upi' && INFLIGHT_UPI_STATUSES.has(row.status)) {
+    if (row.payment_method === 'upi' && isCustomerInflightUpi(row)) {
       setActiveUpiOrder(row)
     } else if (row.status === 'completed' || row.status === 'cancelled') {
       setActiveUpiOrder(null)
@@ -212,17 +199,17 @@ export function FractionalPurchasePanel() {
   }, [lastOrder, orders, refreshWalletHint])
 
   useEffect(() => {
-    const oid = otpReveal?.orderId
-    if (oid == null) return
-    const row = orders.find((x) => x.id === oid)
+    const pid = otpReveal?.paymentId
+    if (pid == null) return
+    const row = orders.find((x) => x.id === pid)
     if (row?.status === 'completed') {
       setOtpReveal(null)
-      if (lastOrder?.id !== oid) {
+      if (lastOrder?.id !== pid) {
         setSuccessToast(`${row.reference} completed — ${row.grams} g credited.`)
       }
       void refreshWalletHint()
     }
-  }, [lastOrder?.id, orders, otpReveal?.orderId, refreshWalletHint])
+  }, [lastOrder?.id, orders, otpReveal?.paymentId, refreshWalletHint])
 
   useEffect(() => {
     if (!activeUpiOrder) return
@@ -232,32 +219,21 @@ export function FractionalPurchasePanel() {
 
   useEffect(() => {
     if (!ordersLoaded || activeUpiOrder) return
-    const pending = orders.find(
-      (o) => o.payment_method === 'upi' && RESUMABLE_UPI_STATUSES.has(o.status),
-    )
+    const pending = orders.find((o) => isCustomerResumableUpi(o))
     if (pending) setActiveUpiOrder(pending)
   }, [activeUpiOrder, orders, ordersLoaded])
 
   const resumeUpiOrder = useMemo(
-    () =>
-      orders.find(
-        (o) => o.payment_method === 'upi' && RESUMABLE_UPI_STATUSES.has(o.status),
-      ) ?? null,
+    () => orders.find((o) => isCustomerResumableUpi(o)) ?? null,
     [orders],
   )
-
-  const resumePaymentCountdown = useCounterOtpCountdown(resumeUpiOrder?.payment_expires_at ?? null)
 
   const cancelResumeUpiOrder = useCallback(async () => {
     if (!resumeUpiOrder) return
     setBusy(true)
     setOrderMsg('')
     try {
-      const out = await cancelFractionalOrder(
-        resumeUpiOrder.id,
-        resumeUpiOrder.payment_method,
-        resumeUpiOrder.status,
-      )
+      const out = await cancelCustomerPendingPayment('fractional', resumeUpiOrder)
       if (!out.ok) {
         setOrderMsg(out.detail)
         return
@@ -357,12 +333,8 @@ export function FractionalPurchasePanel() {
         return
       }
       setLastOrder(out.data)
-      if (out.data.payment_method === 'upi') {
-        setActiveUpiOrder(out.data)
-        setOrderMsg(`${out.data.reference} · Pay ₹${formatInr(out.data.total_inr)} via UPI, then paste UTR below.`)
-      } else {
-        setOrderMsg(`${out.data.reference} · Pay ₹${formatInr(out.data.total_inr)} at counter, then tap Generate OTP.`)
-      }
+      setOrderMsg(customerPaymentPlacedMessage({ ...out.data, amount_inr: out.data.total_inr }))
+      if (out.data.payment_method === 'upi') setActiveUpiOrder(out.data)
       await refreshOrders()
       const w = await fetchGoldWallet()
       if (w) setBalanceHint(w.balance_grams)
@@ -375,25 +347,40 @@ export function FractionalPurchasePanel() {
     setOrderMsg('')
     setBusy(true)
     try {
-      const out = await fractionalIssueCounterOtp(orderId)
+      const out = await issueCustomerCounterOtp('fractional', orderId)
       if (!out.ok) {
         setOrderMsg(out.detail)
         setOtpReveal(null)
         return
       }
-      setOtpReveal({
-        orderId: out.data.id,
-        otp: out.data.otp,
-        expiresAt: out.data.otp_expires_at,
-      })
-      if (typeof out.data.otp_ttl_seconds === 'number' && Number.isFinite(out.data.otp_ttl_seconds)) {
-        setOtpPolicySeconds(out.data.otp_ttl_seconds)
-      }
+      setOtpReveal(out.data)
     } finally {
       setBusy(false)
       await refreshOrders()
     }
   }
+
+  const cancelPendingPayment = async (order: FractionalPurchaseDTO) => {
+    setBusy(true)
+    setOrderMsg('')
+    try {
+      const out = await cancelCustomerPendingPayment('fractional', order)
+      if (!out.ok) {
+        setOrderMsg(out.detail)
+        return
+      }
+      setLastOrder(null)
+      setActiveUpiOrder(null)
+      setOtpReveal(null)
+      setSuccessToast(out.data.detail)
+      await refreshOrders()
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const showUpiStep = Boolean(activeUpiOrder && isCustomerInflightUpi(activeUpiOrder))
+  const showCounterFlow = Boolean(lastOrder && isCustomerCounterAwaiting(lastOrder))
 
   return (
     <div className="dash-panel-max fractional-buy-panel">
@@ -472,7 +459,7 @@ export function FractionalPurchasePanel() {
               </p>
               <div className="fractional-buy-quote-stack">
                 <p className="fractional-buy-quote-row" style={{ color: 'var(--text-muted)' }}>
-                  Rate/g <strong className="tabular">₹{formatInr(quote.metal_rate_inr_per_gram)}</strong>
+                  Rate/g <strong className="tabular">₹{formatCustomerPaymentInr(quote.metal_rate_inr_per_gram)}</strong>
                   <span style={{ fontSize: 'var(--ts-caption)', marginLeft: 6 }}>
                     · updated{' '}
                     {formatJewellerMetalRateAsOf(
@@ -484,136 +471,62 @@ export function FractionalPurchasePanel() {
                   Weight <strong className="tabular">{quote.grams} g</strong>
                 </p>
                 <p className="fractional-buy-quote-row" style={{ color: 'var(--text-muted)' }}>
-                  GST ({quote.gst_percent}%) <strong className="tabular">₹{formatInr(quote.gst_inr)}</strong>
+                  GST ({quote.gst_percent}%) <strong className="tabular">₹{formatCustomerPaymentInr(quote.gst_inr)}</strong>
                 </p>
                 <p className="fractional-buy-quote-row fractional-buy-quote-total" style={{ fontWeight: 800 }}>
-                  Total <span className="tabular">₹{formatInr(quote.total_inr)}</span>
+                  Total <span className="tabular">₹{formatCustomerPaymentInr(quote.total_inr)}</span>
                 </p>
               </div>
             </Card>
           ) : null}
 
-          {paymentMethods.length > 0 ? (
-            <fieldset style={{ border: 'none', padding: 0, margin: 0 }}>
-              <legend className="fractional-buy-legend">Payment method</legend>
-              <DashSegmentPair
-                items={paymentMethods}
-                value={paymentMethod}
-                onChange={(id) => setPaymentMethod(id as 'upi' | 'counter')}
-                ariaLabel="Payment method"
-                className="fractional-buy-payment-segments"
-              />
-            </fieldset>
+          <CustomerPaymentMethodField
+            methods={paymentMethods}
+            value={paymentMethod}
+            onChange={setPaymentMethod}
+          />
+
+          {!showUpiStep && !showCounterFlow ? (
+            <Button
+              type="button"
+              variant="primary"
+              block
+              disabled={busy || !quote}
+              onClick={() => void submitOrder()}
+            >
+              Place order
+            </Button>
           ) : null}
-
-          <p style={{ margin: 0, fontSize: 'var(--ts-caption)', color: 'var(--text-faint)', lineHeight: 1.4 }}>
-            {paymentMethod === 'upi'
-              ? 'Pay via GPay / PhonePe · paste UTR after payment'
-              : 'Pay at showroom · show OTP to jeweller'}
-          </p>
-
-          <Button
-            type="button"
-            variant="primary"
-            block
-            disabled={busy || !quote}
-            onClick={() => void submitOrder()}
-          >
-            Place order
-          </Button>
 
           {orderMsg ? <p className="ds-feedback ds-feedback--success" role="status">{orderMsg}</p> : null}
 
-          {activeUpiOrder && INFLIGHT_UPI_STATUSES.has(activeUpiOrder.status) ? (
-            <div ref={upiPaymentRef}>
-              <UpiPaymentStep
-                kind="fractional"
-                paymentId={activeUpiOrder.id}
-                busy={busy}
-                setBusy={setBusy}
-                sectionId={UPI_PAYMENT_SECTION_ID}
-                onSubmitted={() => void refreshOrders()}
-                onExpired={() => {
-                  setActiveUpiOrder(null)
-                  void refreshOrders()
-                }}
-                onSuccess={(msg) => setSuccessToast(msg)}
-                onError={(msg) => setOrderMsg(msg)}
-              />
-            </div>
+          {showUpiStep && activeUpiOrder ? (
+            <CustomerActiveUpiPayment
+              kind="fractional"
+              paymentId={activeUpiOrder.id}
+              busy={busy}
+              setBusy={setBusy}
+              sectionId={UPI_PAYMENT_SECTION_ID}
+              sectionRef={upiPaymentRef}
+              onSubmitted={() => void refreshOrders()}
+              onExpired={() => {
+                setActiveUpiOrder(null)
+                void refreshOrders()
+              }}
+              onSuccess={(msg) => setSuccessToast(msg)}
+              onError={(msg) => setOrderMsg(msg)}
+            />
           ) : null}
 
-          {lastOrder && lastOrder.payment_method === 'counter' && lastOrder.status === 'awaiting_counter' ? (
-            <div className="dash-form-stack" style={{ marginTop: '0.5rem' }}>
-              <Button
-                type="button"
-                variant="primary"
-                block
-                disabled={busy || (otpReveal?.orderId === lastOrder.id && !otpCountdown.expired)}
-                onClick={() => void issueOtp(lastOrder.id)}
-              >
-                {otpReveal?.orderId === lastOrder.id && otpCountdown.expired
-                  ? 'Generate new verification OTP'
-                  : otpReveal?.orderId === lastOrder.id && !otpCountdown.expired
-                    ? 'OTP active — use timer below'
-                    : 'Generate verification OTP'}
-              </Button>
-              <MobileDashboardCancelButton
-                block
-                busy={busy}
-                label="Cancel order"
-                confirmMessage="Cancel this counter order? You can place a new one later if needed."
-                onCancel={async () => {
-                  setBusy(true)
-                  setOrderMsg('')
-                  try {
-                    const out = await cancelFractionalOrder(
-                      lastOrder.id,
-                      lastOrder.payment_method,
-                      lastOrder.status,
-                    )
-                    if (!out.ok) {
-                      setOrderMsg(out.detail)
-                      return
-                    }
-                    setLastOrder(null)
-                    setOtpReveal(null)
-                    setSuccessToast(out.data.detail)
-                    await refreshOrders()
-                  } finally {
-                    setBusy(false)
-                  }
-                }}
-              />
-            </div>
-          ) : null}
-
-          {otpReveal ? (
-            <Card
-              tone="accent"
-              style={{ opacity: otpCountdown.expired ? 0.65 : 1, border: '1px solid var(--gold-line-20)' }}
-              role="status"
-              aria-live="polite"
-            >
-              <p style={{ margin: '0 0 var(--sp-2)', fontSize: 'var(--ts-caption)', color: 'var(--text-muted)', fontWeight: 500 }}>
-                #{otpReveal.orderId} · Show to jeweller
-              </p>
-              <p className="tabular" style={{ margin: '0 0 var(--sp-2)', fontSize: 'var(--ts-display)', fontWeight: 700, letterSpacing: '0.25em' }}>
-                {otpReveal.otp}
-              </p>
-              <p style={{ margin: '0 0 var(--sp-3)', fontSize: 'var(--ts-caption)', color: otpCountdown.expired ? 'var(--danger)' : 'var(--text-muted)' }}>
-                {otpCountdown.expired ? 'Expired' : `${otpCountdown.labelMmSs} remaining`}
-              </p>
-              <Button
-                type="button"
-                variant="primary"
-                block
-                disabled={busy || !otpCountdown.expired}
-                onClick={() => void issueOtp(otpReveal.orderId)}
-              >
-                {otpCountdown.expired ? 'New OTP' : 'Active'}
-              </Button>
-            </Card>
+          {showCounterFlow && lastOrder ? (
+            <CustomerCounterPaymentFlow
+              paymentId={lastOrder.id}
+              referenceLabel={lastOrder.reference}
+              busy={busy}
+              otpReveal={otpReveal}
+              onIssueOtp={(id) => void issueOtp(id)}
+              onCancel={() => void cancelPendingPayment(lastOrder)}
+            />
           ) : null}
 
           {balanceHint ? (
@@ -633,7 +546,7 @@ export function FractionalPurchasePanel() {
             orders={orders}
             busy={busy}
             setBusy={setBusy}
-            otpRevealOrderId={otpReveal?.orderId ?? null}
+            otpRevealOrderId={otpReveal?.paymentId ?? null}
             otpCountdownExpired={otpCountdown.expired}
             onIssueOtp={(id) => void issueOtp(id)}
             onRefreshOrders={refreshOrders}
@@ -648,27 +561,15 @@ export function FractionalPurchasePanel() {
         </div>
       ) : null}
 
-      {narrow && resumeUpiOrder && !resumePaymentCountdown.expired ? (
-        <div className="upi-continue-payment-bar" role="region" aria-label="Pending UPI payment">
-          <div className="upi-continue-payment-bar__copy">
-            <p className="upi-continue-payment-bar__title">{resumeUpiOrder.reference}</p>
-            <p className="upi-continue-payment-bar__meta tabular">
-              ₹{formatInr(resumeUpiOrder.total_inr)} · {resumePaymentCountdown.labelMmSs} left
-            </p>
-          </div>
-          <div className="upi-continue-payment-bar__actions">
-            <Button type="button" variant="primary" disabled={busy} onClick={scrollToUpiPayment}>
-              Continue payment
-            </Button>
-            <MobileDashboardCancelButton
-              block
-              busy={busy}
-              label="Cancel payment"
-              confirmMessage="Cancel this payment? You can start a new one later if needed."
-              onCancel={() => cancelResumeUpiOrder()}
-            />
-          </div>
-        </div>
+      {narrow && resumeUpiOrder ? (
+        <CustomerResumeUpiBar
+          reference={resumeUpiOrder.reference}
+          amountInr={resumeUpiOrder.total_inr}
+          expiresAt={resumeUpiOrder.payment_expires_at}
+          busy={busy}
+          onContinue={scrollToUpiPayment}
+          onCancel={() => void cancelResumeUpiOrder()}
+        />
       ) : null}
     </div>
   )
