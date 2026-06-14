@@ -1,21 +1,44 @@
 import type { SchemeDesign } from '@/lib/schemesApi'
 import { Card, CardHeader } from '@/components/ui'
 import { flowSummaryFromDesign } from './schemeDesignMapper'
+import type { SchemePreviewData } from './schemePreviewHelpers'
 
 type Props = {
   design: SchemeDesign
-  preview: Record<string, unknown> | null
+  preview: SchemePreviewData | null
 }
 
 export function SchemeFlowPreview({ design, preview }: Props) {
-  const quote = preview?.deposit_quote as Record<string, string> | undefined
+  const nodes = preview?.flow_nodes ?? []
+  const quote = preview?.deposit_quote
+
   return (
     <Card>
-      <CardHeader title="Live preview" />
-      <p className="ds-field__hint" style={{ marginTop: 0 }}>{flowSummaryFromDesign(design)}</p>
+      <CardHeader title="Full flow preview" />
+      <p className="ds-field__hint" style={{ marginTop: 0 }}>
+        {preview?.flow_summary ?? flowSummaryFromDesign(design)}
+      </p>
+
+      {nodes.length > 0 ? (
+        <ol style={{ margin: 'var(--sp-3) 0 0', paddingLeft: '1.25rem', display: 'grid', gap: 'var(--sp-2)' }}>
+          {nodes.map((node, i) => (
+            <li key={node.id} style={{ lineHeight: 1.45 }}>
+              <strong style={{ fontSize: 'var(--ts-sm)' }}>
+                {i + 1}. {node.label}
+              </strong>
+              {node.detail ? (
+                <p className="ds-field__hint" style={{ margin: '0.2rem 0 0' }}>
+                  {node.detail}
+                </p>
+              ) : null}
+            </li>
+          ))}
+        </ol>
+      ) : null}
+
       {quote ? (
-        <dl className="dash-dl">
-          <dt>Sample deposit</dt>
+        <dl className="dash-dl" style={{ marginTop: 'var(--sp-3)' }}>
+          <dt>Sample deposit total</dt>
           <dd>₹{quote.total_inr}</dd>
           {quote.gold_grams && quote.gold_grams !== '0.000000' ? (
             <>
@@ -29,12 +52,23 @@ export function SchemeFlowPreview({ design, preview }: Props) {
               <dd>₹{quote.gst_inr}</dd>
             </>
           ) : null}
+          {preview?.example?.estimated_pool_inr != null ? (
+            <>
+              <dt>Est. pool after plan</dt>
+              <dd>₹{preview.example.estimated_pool_inr.toLocaleString('en-IN')}</dd>
+            </>
+          ) : null}
         </dl>
       ) : (
-        <p className="ds-field__hint">Adjust cards to see ₹ breakdown.</p>
+        <p className="ds-field__hint" style={{ marginTop: 'var(--sp-3)' }}>
+          Adjust cards to see the worked example.
+        </p>
       )}
+
       {preview?.valid === false ? (
-        <p className="ds-field__error" role="alert">Design has validation issues.</p>
+        <p className="ds-field__error" role="alert">
+          Design has validation issues.
+        </p>
       ) : null}
     </Card>
   )

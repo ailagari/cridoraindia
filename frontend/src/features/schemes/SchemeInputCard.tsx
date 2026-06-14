@@ -1,16 +1,21 @@
 import type { SchemeDesign } from '@/lib/schemesApi'
 import { Card, CardHeader, Input, Select, Toggle } from '@/components/ui'
+import { SchemeSectionPreview } from './SchemeSectionPreview'
+import { buildInputPreview, type SchemePreviewData } from './schemePreviewHelpers'
 
 type Props = {
   design: SchemeDesign
   onChange: (d: SchemeDesign) => void
   disabled?: boolean
+  preview?: SchemePreviewData | null
 }
 
-export function SchemeInputCard({ design, onChange, disabled }: Props) {
+export function SchemeInputCard({ design, onChange, disabled, preview }: Props) {
   const inp = design.input
   const patch = (key: string, value: unknown) =>
     onChange({ ...design, input: { ...inp, [key]: value } })
+
+  const inputPreview = buildInputPreview(design, preview ?? null)
 
   return (
     <Card>
@@ -51,6 +56,7 @@ export function SchemeInputCard({ design, onChange, disabled }: Props) {
             patch('min_deposit_inr', e.target.value ? Number(e.target.value) : null)
           }
         />
+        <SchemeSectionPreview title={inputPreview.title} lines={inputPreview.lines} />
       </div>
     </Card>
   )

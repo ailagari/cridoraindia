@@ -1,16 +1,21 @@
 import type { SchemeDesign } from '@/lib/schemesApi'
 import { Card, CardHeader, Select, Toggle } from '@/components/ui'
+import { SchemeSectionPreview } from './SchemeSectionPreview'
+import { buildOutputPreview, type SchemePreviewData } from './schemePreviewHelpers'
 
 type Props = {
   design: SchemeDesign
   onChange: (d: SchemeDesign) => void
   disabled?: boolean
+  preview?: SchemePreviewData | null
 }
 
-export function SchemeOutputCard({ design, onChange, disabled }: Props) {
+export function SchemeOutputCard({ design, onChange, disabled, preview }: Props) {
   const out = design.output
   const patch = (key: string, value: unknown) =>
     onChange({ ...design, output: { ...out, [key]: value } })
+
+  const outputPreview = buildOutputPreview(design, preview ?? null)
 
   return (
     <Card>
@@ -39,6 +44,7 @@ export function SchemeOutputCard({ design, onChange, disabled }: Props) {
           disabled={disabled}
           onChange={(checked) => patch('lock_until_plan_complete', checked)}
         />
+        <SchemeSectionPreview title={outputPreview.title} lines={outputPreview.lines} />
       </div>
     </Card>
   )

@@ -1,16 +1,21 @@
 import type { SchemeDesign } from '@/lib/schemesApi'
 import { Card, CardHeader, Input, Select, Toggle } from '@/components/ui'
+import { SchemeSectionPreview } from './SchemeSectionPreview'
+import { buildTimelinePreview, type SchemePreviewData } from './schemePreviewHelpers'
 
 type Props = {
   design: SchemeDesign
   onChange: (d: SchemeDesign) => void
   disabled?: boolean
+  preview?: SchemePreviewData | null
 }
 
-export function SchemeBonusCard({ design, onChange, disabled }: Props) {
+export function SchemeBonusCard({ design, onChange, disabled, preview }: Props) {
   const tl = design.plan_timeline
   const patch = (key: string, value: unknown) =>
     onChange({ ...design, plan_timeline: { ...tl, [key]: value } })
+
+  const timelinePreview = buildTimelinePreview(design, preview ?? null)
 
   return (
     <Card>
@@ -65,6 +70,17 @@ export function SchemeBonusCard({ design, onChange, disabled }: Props) {
                     onChange={(e) => patch('bonus_avg_months', Number(e.target.value))}
                   />
                 ) : null}
+                {tl.bonus_amount_mode === 'fixed_inr' ? (
+                  <Input
+                    label="Fixed bonus ₹"
+                    inputMode="decimal"
+                    value={tl.bonus_fixed_inr != null ? String(tl.bonus_fixed_inr) : ''}
+                    disabled={disabled}
+                    onChange={(e) =>
+                      patch('bonus_fixed_inr', e.target.value ? Number(e.target.value) : null)
+                    }
+                  />
+                ) : null}
                 <Select
                   label="Credit bonus as"
                   value={String(tl.bonus_credit_as ?? 'cash_pool')}
@@ -83,6 +99,7 @@ export function SchemeBonusCard({ design, onChange, disabled }: Props) {
             Open plan — deposits anytime, redeem per output rules.
           </p>
         )}
+        <SchemeSectionPreview title={timelinePreview.title} lines={timelinePreview.lines} />
       </div>
     </Card>
   )

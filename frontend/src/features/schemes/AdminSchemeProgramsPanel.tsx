@@ -435,9 +435,9 @@ export function AdminSchemeProgramsPanel() {
           </Card>
 
           <div className="pf-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 'var(--sp-4)' }}>
-            <SchemeInputCard design={design} onChange={setDesign} />
-            <SchemeBonusCard design={design} onChange={setDesign} />
-            <SchemeOutputCard design={design} onChange={setDesign} />
+            <SchemeInputCard design={design} onChange={setDesign} preview={preview} />
+            <SchemeBonusCard design={design} onChange={setDesign} preview={preview} />
+            <SchemeOutputCard design={design} onChange={setDesign} preview={preview} />
             <SchemeFlowPreview design={design} preview={preview} />
           </div>
         </div>

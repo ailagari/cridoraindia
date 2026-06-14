@@ -186,22 +186,32 @@ def preview_calculation(design: dict, sample_deposit_inr: float = 5000) -> dict:
     quote = engine.quote_deposit(Decimal(str(sample_deposit_inr)), jeweller_mc_per_gram=Decimal("50"))
 
     timeline = design.get("plan_timeline") or {}
+    fixed = bool(timeline.get("fixed_duration"))
     cm = timeline.get("customer_months") or 11
     monthly = float(sample_deposit_inr)
     bonus_monthly_avg = monthly
-    if timeline.get("bonus_amount_mode") == "avg_last_n_months":
+    if timeline.get("bonus_amount_mode") == "fixed_inr":
+        fixed_bonus = float(timeline.get("bonus_fixed_inr") or 0)
+        bonus_label = f"fixed jeweller bonus ₹{fixed_bonus:,.0f}"
+        bonus_monthly_avg = fixed_bonus
+    elif timeline.get("bonus_amount_mode") == "avg_last_n_months":
         n = timeline.get("bonus_avg_months") or 6
         bonus_monthly_avg = monthly
         bonus_label = f"avg last {n} months ≈ ₹{bonus_monthly_avg:,.0f}"
     else:
         bonus_label = f"avg all {cm} months ≈ ₹{bonus_monthly_avg:,.0f}"
 
-    pool_total = monthly * cm + bonus_monthly_avg
+    if fixed and timeline.get("bonus_enabled"):
+        pool_total = monthly * cm + bonus_monthly_avg
+    elif fixed:
+        pool_total = monthly * cm
+    else:
+        pool_total = None
 
     flow_nodes = [
         {"id": "input", "label": "Customer pays anytime", "detail": quote.get("summary", "")},
     ]
-    if timeline.get("fixed_duration") and timeline.get("bonus_enabled"):
+    if fixed and timeline.get("bonus_enabled"):
         flow_nodes.append(
             {
                 "id": "bonus",
@@ -210,11 +220,25 @@ def preview_calculation(design: dict, sample_deposit_inr: float = 5000) -> dict:
             }
         )
     out = design.get("output") or {}
+    redeem_labels = {
+        "jewellery_cash_pool": "Jewellery bill (INR pool)",
+        "gold_grams": "Vault gold grams",
+        "jewellery_from_gold": "Jewellery from gold balance",
+        "cash_convert_to_gold": "INR pool converted to gold at redemption",
+    }
+    if pool_total is not None and rules["contribution"]["credit_mode"] == "inr_pool":
+        output_detail = f"Pool ≈ ₹{pool_total:,.0f}"
+    elif rules["contribution"]["credit_mode"] == "inr_pool":
+        output_detail = "Open plan — pool grows with each deposit until redemption"
+    else:
+        output_detail = "Vault gold balance at redemption"
+    if out.get("lock_until_plan_complete") and fixed:
+        output_detail += " · locked until plan completes"
     flow_nodes.append(
         {
             "id": "output",
             "label": "Redemption",
-            "detail": f"Pool ≈ ₹{pool_total:,.0f}" if rules["contribution"]["credit_mode"] == "inr_pool" else "Vault gold balance",
+            "detail": f"{redeem_labels.get(out.get('redeem_as'), 'Redemption')}: {output_detail}",
         }
     )
 
@@ -223,9 +247,9 @@ def preview_calculation(design: dict, sample_deposit_inr: float = 5000) -> dict:
         "deposit_quote": quote,
         "example": {
             "sample_deposit_inr": sample_deposit_inr,
-            "customer_months": cm,
+            "customer_months": cm if fixed else None,
             "estimated_pool_inr": pool_total,
-            "bonus_label": bonus_label,
+            "bonus_label": bonus_label if fixed and timeline.get("bonus_enabled") else None,
         },
         "flow_summary": human_flow_summary(design),
     }
