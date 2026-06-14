@@ -15,6 +15,7 @@ from apps.schemes.views_admin import (
     AdminSchemeTemplatePublishView,
 )
 from apps.schemes.views_customer import (
+    CustomerSchemeContributionCancelView,
     CustomerSchemeContributionCounterOtpView,
     CustomerSchemeContributionPaymentView,
     CustomerSchemeContributionQuoteView,
@@ -124,6 +125,10 @@ urlpatterns = [
     path("schemes/enrollments/<int:pk>/", CustomerSchemeEnrollmentDetailView.as_view()),
     path("schemes/contributions/quote/", CustomerSchemeContributionQuoteView.as_view()),
     path("schemes/contributions/", CustomerSchemeContributionsView.as_view()),
+    path(
+        "schemes/contributions/<int:pk>/cancel/",
+        CustomerSchemeContributionCancelView.as_view(),
+    ),
     path(
         "schemes/contributions/<int:pk>/counter-otp/",
         CustomerSchemeContributionCounterOtpView.as_view(),

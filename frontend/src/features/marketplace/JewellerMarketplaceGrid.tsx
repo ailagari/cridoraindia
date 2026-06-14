@@ -219,6 +219,14 @@ function JewellerMarketplaceCard({ j, variant, wallet, defaultBusyId, onSetDefau
             >
               {variant === 'customer_dashboard' ? 'Buy gold' : 'Invest'}
             </Link>
+            {variant === 'customer_dashboard' && j.id > 0 ? (
+              <Link
+                to={`/userdashboard?section=invest_scheme&jeweller_id=${j.id}`}
+                className="btn btn-ghost"
+              >
+                Join scheme
+              </Link>
+            ) : null}
             {variant === 'customer_dashboard' && j.id > 0 && onSetDefault ? (
               <button
                 type="button"

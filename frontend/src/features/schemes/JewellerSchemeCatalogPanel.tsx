@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Button, Card, Input, Select } from '@/components/ui'
+import { Link } from 'react-router-dom'
+import { Button, Card, CardHeader, EmptyState, Feedback, Input, PageHeader, Select } from '@/components/ui'
 import {
   createJewellerSchemeOffering,
   fetchJewellerSchemeCatalog,
@@ -9,6 +10,8 @@ import {
   type SchemeOfferingDTO,
   type SchemeTemplateDTO,
 } from '@/lib/schemesApi'
+import { LIVE_MARKETPLACE_EDITOR_POLL_MS } from '@/lib/liveDeskIntervals'
+import { useLivePoll } from '@/lib/useLivePoll'
 
 export function JewellerSchemeCatalogPanel() {
   const [catalog, setCatalog] = useState<SchemeTemplateDTO[]>([])
@@ -19,6 +22,7 @@ export function JewellerSchemeCatalogPanel() {
   const [detail, setDetail] = useState<SchemeTemplateDTO | null>(null)
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
+  const [loading, setLoading] = useState(true)
 
   const categories = useMemo(() => {
     const set = new Set(catalog.map((t) => t.category).filter(Boolean))
@@ -38,19 +42,30 @@ export function JewellerSchemeCatalogPanel() {
       setOfferings(o)
       setErr('')
     } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Load failed')
+      const message = e instanceof Error ? e.message : 'Load failed'
+      setErr(
+        message.includes('403') || message.toLowerCase().includes('disabled')
+          ? 'Investment schemes are not enabled for your account. Ask platform admin to enable Investment schemes in feature rollout.'
+          : message,
+      )
+    } finally {
+      setLoading(false)
     }
   }, [search, category])
 
   useEffect(() => {
-    const t = window.setTimeout(() => void reload(), 300)
+    const t = window.setTimeout(() => void reload(), search || category ? 300 : 0)
     return () => window.clearTimeout(t)
-  }, [reload])
+  }, [reload, search, category])
+
+  useLivePoll(reload, LIVE_MARKETPLACE_EDITOR_POLL_MS, true)
 
   const enrolledIds = new Set(offerings.map((o) => o.template_id))
+  const activeOfferings = offerings.filter((o) => o.status === 'active')
 
   const adopt = async (templateId: number) => {
     setBusy(true)
+    setErr('')
     try {
       await createJewellerSchemeOffering({ template_id: templateId })
       await reload()
@@ -92,10 +107,28 @@ export function JewellerSchemeCatalogPanel() {
 
   return (
     <div className="dash-panel-max">
+      <PageHeader
+        eyebrow="Marketplace"
+        title="Scheme catalog"
+        subtitle="Browse published platform schemes and add them to your showroom. Customers can enroll and deposit from their dashboard once schemes are active."
+        actions={
+          <Button variant="secondary" size="sm" onClick={() => void reload()} disabled={loading || busy}>
+            Refresh
+          </Button>
+        }
+      />
+
+      {err ? <Feedback tone="error">{err}</Feedback> : null}
+
       <Card>
-        <h2 className="dash-card-title">Scheme catalog</h2>
-        <p className="dash-muted">Browse published platform schemes and add them to your showroom.</p>
-        {err ? <p className="form-error">{err}</p> : null}
+        <CardHeader
+          title="Scheme library"
+          action={
+            <span className="ds-field__hint" style={{ margin: 0 }}>
+              {loading ? 'Loading…' : `${catalog.length} published`}
+            </span>
+          }
+        />
         <div className="ds-field-row" style={{ marginTop: 'var(--sp-3)' }}>
           <Input
             label="Search"
@@ -112,45 +145,77 @@ export function JewellerSchemeCatalogPanel() {
             ))}
           </Select>
         </div>
-        <ul className="dash-list" style={{ marginTop: '1rem' }}>
-          {catalog.map((t) => (
-            <li key={t.id} className="dash-list-item" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.5rem', flexWrap: 'wrap' }}>
-                <div>
-                  <strong>{t.name}</strong>
-                  {t.category ? <span className="dash-muted"> · {t.category}</span> : null}
-                  <p className="dash-muted">{t.flow_summary}</p>
-                </div>
-                <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
-                  <Button size="sm" variant="secondary" onClick={() => void toggleDetail(t.id)}>
-                    {expandedId === t.id ? 'Hide' : 'Preview'}
-                  </Button>
-                  {enrolledIds.has(t.id) ? (
-                    <span className="dash-badge">Adopted</span>
-                  ) : (
-                    <Button size="sm" onClick={() => void adopt(t.id)} disabled={busy}>
-                      Select scheme
+
+        {loading ? (
+          <p className="dash-muted" style={{ marginTop: '1rem' }}>
+            Loading scheme library…
+          </p>
+        ) : catalog.length === 0 ? (
+          <EmptyState
+            title="No schemes in the library"
+            description="Platform admin must publish scheme templates before they appear here. Check Programs & risks in the admin dashboard, or adjust your search filters."
+          />
+        ) : (
+          <ul className="dash-list" style={{ marginTop: '1rem' }}>
+            {catalog.map((t) => (
+              <li key={t.id} className="dash-list-item" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  <div>
+                    <strong>{t.name}</strong>
+                    {t.category ? <span className="dash-muted"> · {t.category}</span> : null}
+                    <p className="dash-muted">{t.flow_summary}</p>
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                    <Button size="sm" variant="secondary" onClick={() => void toggleDetail(t.id)}>
+                      {expandedId === t.id ? 'Hide' : 'Preview'}
                     </Button>
-                  )}
+                    {enrolledIds.has(t.id) ? (
+                      <span className="dash-badge">Selected</span>
+                    ) : (
+                      <Button size="sm" variant="primary" onClick={() => void adopt(t.id)} disabled={busy}>
+                        Add to showroom
+                      </Button>
+                    )}
+                  </div>
                 </div>
-              </div>
-              {expandedId === t.id && detail?.id === t.id ? (
-                <div style={{ marginTop: '0.75rem', padding: '0.75rem', background: 'var(--surface-muted, #f5f5f5)', borderRadius: 6 }}>
-                  {detail.description ? <p className="dash-muted">{detail.description}</p> : null}
-                  <p className="dash-muted" style={{ marginTop: '0.5rem' }}>
-                    <strong>Flow:</strong> {detail.flow_summary}
-                  </p>
-                </div>
-              ) : null}
-            </li>
-          ))}
-          {catalog.length === 0 ? <p className="dash-muted">No published schemes match your filters.</p> : null}
-        </ul>
+                {expandedId === t.id && detail?.id === t.id ? (
+                  <div
+                    style={{
+                      marginTop: '0.75rem',
+                      padding: '0.75rem',
+                      background: 'var(--silk-06)',
+                      borderRadius: 'var(--r-md)',
+                      border: '1px solid var(--border-soft)',
+                    }}
+                  >
+                    {detail.description ? <p className="dash-muted">{detail.description}</p> : null}
+                    <p className="dash-muted" style={{ marginTop: '0.5rem' }}>
+                      <strong>Flow:</strong> {detail.flow_summary}
+                    </p>
+                  </div>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        )}
       </Card>
 
       <Card>
-        <h3 className="dash-card-title">Your offerings</h3>
-        <ul className="dash-list">
+        <CardHeader
+          title="Your showroom schemes"
+          action={
+            activeOfferings.length > 0 ? (
+              <Link to="/dashboard/jeweller?section=txn_schemes" className="btn btn-ghost btn--sm">
+                Open schemes desk
+              </Link>
+            ) : null
+          }
+        />
+        <p className="dash-muted" style={{ marginTop: 0 }}>
+          Active offerings appear to customers under Invest → Scheme. Use the schemes desk to verify counter OTP and UPI
+          deposits.
+        </p>
+        <ul className="dash-list" style={{ marginTop: '1rem' }}>
           {offerings.map((o) => (
             <li key={o.id} className="dash-list-item">
               <div>
@@ -177,7 +242,12 @@ export function JewellerSchemeCatalogPanel() {
               </div>
             </li>
           ))}
-          {offerings.length === 0 ? <p className="dash-muted">No schemes selected yet.</p> : null}
+          {offerings.length === 0 ? (
+            <EmptyState
+              title="No schemes selected yet"
+              description="Choose one or more schemes from the library above. They will become available for customer enrollment once status is active."
+            />
+          ) : null}
         </ul>
       </Card>
     </div>

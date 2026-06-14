@@ -149,6 +149,21 @@ class CustomerSchemeContributionQuoteView(APIView):
 class CustomerSchemeContributionsView(APIView):
     permission_classes = [IsAuthenticated]
 
+    def get(self, request):
+        err = _require_customer(request)
+        if err:
+            return err
+        qs = SchemeContribution.objects.filter(
+            enrollment__customer=request.user,
+        ).select_related("enrollment__offering__jeweller").order_by("-created_at")
+        enrollment_id = request.query_params.get("enrollment_id")
+        if enrollment_id:
+            qs = qs.filter(enrollment_id=enrollment_id)
+        status = request.query_params.get("status")
+        if status:
+            qs = qs.filter(status=status)
+        return Response([serialize_contribution(c) for c in qs[:50]])
+
     def post(self, request):
         err = _require_customer(request)
         if err:
@@ -253,6 +268,43 @@ class CustomerSchemeContributionSubmitUtrView(APIView):
         except SchemeContribution.DoesNotExist:
             return Response({"detail": "Contribution not found."}, status=404)
         contribution.refresh_from_db()
+        return Response(serialize_contribution(contribution))
+
+
+class CustomerSchemeContributionCancelView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        err = _require_customer(request)
+        if err:
+            return err
+        cancellable_upi = (
+            SchemeContribution.PENDING_PAYMENT,
+            SchemeContribution.SIGNAL_RECEIVED,
+            SchemeContribution.PROOF_REJECTED,
+        )
+        cancellable_counter = (SchemeContribution.AWAITING_COUNTER,)
+        try:
+            with transaction.atomic():
+                contribution = SchemeContribution.objects.select_for_update().get(
+                    pk=pk,
+                    enrollment__customer=request.user,
+                )
+                if contribution.payment_method == SchemeContribution.PAY_UPI:
+                    if contribution.status not in cancellable_upi:
+                        return Response(
+                            {"detail": "This UPI deposit cannot be cancelled."},
+                            status=400,
+                        )
+                elif contribution.status not in cancellable_counter:
+                    return Response(
+                        {"detail": "This counter deposit cannot be cancelled."},
+                        status=400,
+                    )
+                contribution.status = SchemeContribution.CANCELLED
+                contribution.save(update_fields=["status", "updated_at"])
+        except SchemeContribution.DoesNotExist:
+            return Response({"detail": "Contribution not found."}, status=404)
         return Response(serialize_contribution(contribution))
 
 

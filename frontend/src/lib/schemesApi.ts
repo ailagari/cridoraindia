@@ -318,6 +318,21 @@ export function confirmSchemeBonus(id: number) {
 }
 
 // Customer
+export function fetchCustomerSchemeContributions(enrollmentId?: number, status?: string) {
+  const sp = new URLSearchParams()
+  if (enrollmentId) sp.set('enrollment_id', String(enrollmentId))
+  if (status) sp.set('status', status)
+  const q = sp.toString() ? `?${sp}` : ''
+  return schemesFetch<SchemeContributionDTO[]>(`/api/v1/schemes/contributions/${q}`)
+}
+
+export function cancelSchemeContribution(id: number) {
+  return schemesFetch<SchemeContributionDTO>(`/api/v1/schemes/contributions/${id}/cancel/`, {
+    method: 'POST',
+    jsonBody: {},
+  })
+}
+
 export function fetchCustomerSchemeOfferings(jewellerId: number) {
   return schemesFetch<SchemeOfferingDTO[]>(
     `/api/v1/schemes/offerings/?jeweller_id=${jewellerId}`,

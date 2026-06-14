@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Button, Card, Input } from '@/components/ui'
+import { Button, Card, CardHeader, Feedback } from '@/components/ui'
 import {
   approveSchemeContribution,
   fetchJewellerPendingSchemeContributions,
@@ -8,6 +8,8 @@ import {
   verifySchemeContributionOtp,
   type SchemeContributionDTO,
 } from '@/lib/schemesApi'
+import { LIVE_BALANCE_POLL_MS } from '@/lib/liveDeskIntervals'
+import { useLivePoll } from '@/lib/useLivePoll'
 
 export function JewellerSchemeDeskPanel() {
   const [counter, setCounter] = useState<SchemeContributionDTO[]>([])
@@ -33,6 +35,8 @@ export function JewellerSchemeDeskPanel() {
     void reload()
   }, [reload])
 
+  useLivePoll(reload, LIVE_BALANCE_POLL_MS, true)
+
   const verify = async (id: number) => {
     setErr('')
     try {
@@ -47,30 +51,32 @@ export function JewellerSchemeDeskPanel() {
   return (
     <div className="dash-panel-max">
       <Card>
-        <h2 className="dash-card-title">Scheme desk</h2>
-        <p className="dash-muted">Counter OTP queue and UPI contributions for scheme enrollments.</p>
-        {msg ? <p className="form-success">{msg}</p> : null}
-        {err ? <p className="form-error">{err}</p> : null}
+        <CardHeader title="Schemes desk" />
+        <p className="dash-muted" style={{ marginTop: 0 }}>
+          Verify counter OTP and approve UPI scheme deposits — same workflow as the fractional purchase desk.
+        </p>
+        {msg ? <Feedback tone="success">{msg}</Feedback> : null}
+        {err ? <Feedback tone="error">{err}</Feedback> : null}
       </Card>
 
       <Card>
-        <h3 className="dash-card-title">Awaiting counter OTP</h3>
+        <CardHeader title="Awaiting counter OTP" />
         <ul className="dash-list">
           {counter.map((c) => (
-            <li key={c.id} className="dash-list-item">
+            <li key={c.id} className="dash-list-item" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
               <div>
                 <strong>{c.reference}</strong> — ₹{c.amount_inr}
               </div>
-              <Input
-                label="Counter OTP"
-                placeholder="6-digit OTP"
+              <input
+                className="ds-input"
+                placeholder="6-digit OTP from customer"
                 value={otpInputs[c.id] ?? ''}
                 onChange={(e) =>
                   setOtpInputs((prev) => ({ ...prev, [c.id]: e.target.value }))
                 }
               />
               <Button size="sm" onClick={() => void verify(c.id)}>
-                Verify
+                Verify & credit
               </Button>
             </li>
           ))}

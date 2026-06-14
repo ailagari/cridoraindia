@@ -1,6 +1,7 @@
 import { apiUrl, authFetch, authUpload, extractApiDetail } from '@/lib/api'
 import { customerCridoraPayCancel } from '@/lib/cridorapayApi'
 import { fractionalCancelCounterOrder, fractionalCancelUpiOrder } from '@/lib/fractionalPurchaseApi'
+import { cancelSchemeContribution } from '@/lib/schemesApi'
 import { postGoldLoanRepaymentCancel } from '@/lib/goldLoanApi'
 import { customerCancelSellbackUpi } from '@/lib/goldTransferApi'
 import { isValidUtr, utrValidationHint } from '@/lib/utrNormalize'
@@ -11,6 +12,7 @@ export type UpiPaymentKind =
   | 'cridorapay'
   | 'sellback'
   | 'settlement'
+  | 'scheme'
 
 export type UpiPaymentState = {
   kind: UpiPaymentKind
@@ -259,6 +261,14 @@ export async function cancelUpiPayment(
       const out = await customerCridoraPayCancel(id)
       if (!out.ok) return out
       return { ok: true, data: { detail: 'Bill cancelled.' } }
+    }
+    if (kind === 'scheme') {
+      try {
+        await cancelSchemeContribution(id)
+        return { ok: true, data: { detail: 'Deposit cancelled.' } }
+      } catch (e) {
+        return { ok: false, detail: e instanceof Error ? e.message : 'Could not cancel deposit.' }
+      }
     }
     return { ok: false, detail: 'Cannot cancel this payment type.' }
   } catch (e) {
