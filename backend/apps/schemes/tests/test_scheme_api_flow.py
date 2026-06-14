@@ -5,6 +5,7 @@ from django.test import TestCase
 from rest_framework.test import APIClient
 
 from apps.accounts.platform_features import set_feature_flags
+from apps.marketplace.models import JewellerPricingProfile, jeweller_profile_for
 from apps.schemes.models import (
     CustomerSchemeEnrollment,
     JewellerSchemeOffering,
@@ -295,6 +296,66 @@ class SchemeApiFlowTests(TestCase):
         )
         self.assertEqual(quote.status_code, 200)
         self.assertIn("total_inr", quote.json())
+
+    def test_scheme_upi_payment_payload_includes_qr_uri(self):
+        set_feature_flags({"golden_scheme": True, "fractional_upi_reconciliation": True})
+        design = _minimal_design()
+        published = SchemeTemplate.objects.create(
+            slug="upi-scheme",
+            name="UPI Scheme",
+            scheme_design=design,
+            scheme_rules=compile_scheme_design(design),
+            flow_summary=human_flow_summary(design),
+            status=SchemeTemplate.STATUS_PUBLISHED,
+        )
+        offering = JewellerSchemeOffering.objects.create(
+            jeweller=self.jeweller,
+            scheme_template=published,
+            display_name="UPI Scheme",
+            design_snapshot=design,
+            rules_snapshot=compile_scheme_design(design),
+        )
+        profile = jeweller_profile_for(self.jeweller)
+        profile.gold_rate_source = JewellerPricingProfile.GOLD_RATE_MANUAL
+        profile.manual_gold_rate_inr_per_gram = 7000
+        profile.upi_vpa = "schemejeweller@okicici"
+        profile.save()
+
+        self.client.force_authenticate(self.customer)
+        enrollment = self.client.post(
+            "/api/v1/schemes/enrollments/",
+            {"offering_id": offering.id},
+            format="json",
+        )
+        self.assertEqual(enrollment.status_code, 201)
+        enrollment_id = enrollment.json()["id"]
+
+        self.client.force_authenticate(self.jeweller)
+        admit = self.client.post(
+            f"/api/v1/jeweller/schemes/offerings/{offering.id}/enrollments/",
+            {"customer_id": self.customer.id},
+            format="json",
+        )
+        self.assertEqual(admit.status_code, 201)
+
+        self.client.force_authenticate(self.customer)
+        deposit = self.client.post(
+            "/api/v1/schemes/contributions/",
+            {
+                "enrollment_id": enrollment_id,
+                "amount_inr": 5000,
+                "payment_method": "upi",
+            },
+            format="json",
+        )
+        self.assertEqual(deposit.status_code, 201, deposit.json())
+        contribution_id = deposit.json()["id"]
+
+        pay = self.client.get(f"/api/v1/upi/scheme/{contribution_id}/payment/")
+        self.assertEqual(pay.status_code, 200, pay.json())
+        self.assertTrue(pay.json()["upi_uri"].startswith("upi://pay?"))
+        self.assertEqual(pay.json()["payee_vpa"], "schemejeweller@okicici")
+        self.assertTrue(pay.json()["can_submit_proof"])
 
     def test_feature_gate_blocks_jeweller_offerings_when_disabled(self):
         set_feature_flags({"golden_scheme": False})

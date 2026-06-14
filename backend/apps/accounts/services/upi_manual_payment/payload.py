@@ -20,6 +20,7 @@ from apps.accounts.services.upi_manual_payment.registry import (
     KIND_CRIDORAPAY,
     KIND_FRACTIONAL,
     KIND_LOAN_REPAYMENT,
+    KIND_SCHEME,
     KIND_SELLBACK,
     KIND_SETTLEMENT,
     content_type_for,
@@ -161,8 +162,20 @@ def build_payment_payload(kind: str, entity: Any) -> dict:
                 transaction_ref=state["reference"],
                 payment_note=state["payment_note"],
             )
+    elif kind == KIND_SCHEME:
+        from apps.schemes.services.scheme_upi import payment_payload_for
 
-    state["payment"] = payment if kind == KIND_FRACTIONAL else {}
+        payment = payment_payload_for(entity)
+        state["reference"] = payment.get("order_reference") or payment.get("reference")
+        state["amount_inr"] = payment.get("amount_inr")
+        state["payee_vpa"] = payment.get("payee_vpa")
+        state["payee_name"] = payment.get("payee_name")
+        state["upi_uri"] = payment.get("upi_uri")
+        state["payment_note"] = payment.get("payment_note")
+        state["expires_at"] = payment.get("payment_expires_at")
+        state["expired"] = payment.get("expired", False)
+
+    state["payment"] = payment if kind in (KIND_FRACTIONAL, KIND_SCHEME) else {}
     return state
 
 
