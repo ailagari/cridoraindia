@@ -47,6 +47,86 @@ function AdFrame({
   )
 }
 
+function mediaLink(placement: GoldRatesAdPlacementDTO): string | undefined {
+  return placement.video_link_url?.trim() || placement.image_link_url?.trim() || undefined
+}
+
+function mediaAlt(placement: GoldRatesAdPlacementDTO): string {
+  return (
+    placement.video_alt?.trim() ||
+    placement.image_alt?.trim() ||
+    placement.label ||
+    'Advertisement'
+  )
+}
+
+function renderMediaBanner(
+  placement: GoldRatesAdPlacementDTO,
+  baseCls: string,
+  opts?: { allowPlaceholderImage?: boolean },
+) {
+  const videoSrc = placement.video_url?.trim()
+  const imageSrc = placement.image_url?.trim()
+  const placeholder =
+    SLOT_PLACEHOLDER_IMAGES[placement.slot] || '/ads/gold-rates-in-content.svg'
+  const alt = mediaAlt(placement)
+  const link = mediaLink(placement)
+
+  if (videoSrc) {
+    const poster = placement.video_poster_url?.trim() || imageSrc || undefined
+    const video = (
+      <video
+        src={videoSrc}
+        poster={poster}
+        className="gr-ad__video"
+        muted
+        loop
+        autoPlay
+        playsInline
+        preload="metadata"
+        aria-label={alt}
+      />
+    )
+    const framed = <AdFrame slot={placement.slot}>{video}</AdFrame>
+    return (
+      <aside className={`${baseCls} gr-ad--video`} aria-label={alt}>
+        {link ? (
+          <a href={link} target="_blank" rel="noopener noreferrer sponsored" className="gr-ad__link">
+            {framed}
+          </a>
+        ) : (
+          framed
+        )}
+      </aside>
+    )
+  }
+
+  const imgSrc = imageSrc || (opts?.allowPlaceholderImage ? placeholder : '')
+  if (!imgSrc) {
+    return (
+      <aside className={`${baseCls} gr-ad--placeholder`} aria-hidden>
+        <AdFrame slot={placement.slot}>
+          <img src={placeholder} alt="" className="gr-ad__image gr-ad__image--placeholder" />
+        </AdFrame>
+      </aside>
+    )
+  }
+
+  const img = <img src={imgSrc} alt={alt} className="gr-ad__image" loading="lazy" decoding="async" />
+  const framed = <AdFrame slot={placement.slot}>{img}</AdFrame>
+  return (
+    <aside className={`${baseCls} gr-ad--image`} aria-label={alt}>
+      {link ? (
+        <a href={link} target="_blank" rel="noopener noreferrer sponsored" className="gr-ad__link">
+          {framed}
+        </a>
+      ) : (
+        framed
+      )}
+    </aside>
+  )
+}
+
 export function GoldRatesAdSlot({ placement, adsenseClientId, adsenseEnabled, className }: Props) {
   const pushed = useRef(false)
 
@@ -63,7 +143,7 @@ export function GoldRatesAdSlot({ placement, adsenseClientId, adsenseEnabled, cl
 
   useEffect(() => {
     pushed.current = false
-  }, [placement?.id, placement?.mode, placement?.adsense_slot_id, placement?.image_url])
+  }, [placement?.id, placement?.mode, placement?.adsense_slot_id, placement?.image_url, placement?.video_url])
 
   useEffect(() => {
     if (!placement?.is_active) return
@@ -96,28 +176,20 @@ export function GoldRatesAdSlot({ placement, adsenseClientId, adsenseEnabled, cl
     )
   }
 
+  if (placement.mode === 'media') {
+    return renderMediaBanner(placement, baseCls, { allowPlaceholderImage: true })
+  }
+
   if (placement.mode === 'image') {
-    const src =
-      placement.image_url?.trim() ||
-      SLOT_PLACEHOLDER_IMAGES[placement.slot] ||
-      '/ads/gold-rates-in-content.svg'
-    const alt = placement.image_alt?.trim() || placement.label || 'Advertisement'
-    const link = placement.image_link_url?.trim()
-    const img = (
-      <img src={src} alt={alt} className="gr-ad__image" loading="lazy" decoding="async" />
+    return renderMediaBanner(
+      { ...placement, video_url: '' },
+      baseCls,
+      { allowPlaceholderImage: true },
     )
-    const framed = <AdFrame slot={placement.slot}>{img}</AdFrame>
-    return (
-      <aside className={`${baseCls} gr-ad--image`} aria-label={alt}>
-        {link ? (
-          <a href={link} target="_blank" rel="noopener noreferrer sponsored" className="gr-ad__link">
-            {framed}
-          </a>
-        ) : (
-          framed
-        )}
-      </aside>
-    )
+  }
+
+  if (placement.mode === 'video') {
+    return renderMediaBanner(placement, baseCls)
   }
 
   if (placement.mode === 'adsense' && adsenseEnabled && adsenseClientId && placement.adsense_slot_id) {

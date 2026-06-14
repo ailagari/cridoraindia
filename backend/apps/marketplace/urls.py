@@ -3,6 +3,7 @@ from django.urls import path
 from .spot_prices import MarketplaceSpotPricesView
 from .gold_rates_views import (
     AdminGoldRatesAdImageUploadView,
+    AdminGoldRatesAdVideoUploadView,
     AdminGoldRatesPageConfigView,
     MarketplaceGoldRatesAdsView,
     MarketplaceKeralaGoldRatesDailyView,
@@ -73,6 +74,7 @@ urlpatterns = [
     path("admin/gold-ticker/send-price-notification/", AdminGoldPricePushView.as_view()),
     path("admin/gold-rates/config/", AdminGoldRatesPageConfigView.as_view()),
     path("admin/gold-rates/ad-image/", AdminGoldRatesAdImageUploadView.as_view()),
+    path("admin/gold-rates/ad-video/", AdminGoldRatesAdVideoUploadView.as_view()),
     path("admin/spot-prices/", AdminSpotPricesView.as_view()),
     path("admin/marketplace/products/", AdminMarketplaceProductListView.as_view()),
     path(

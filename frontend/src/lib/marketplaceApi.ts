@@ -260,11 +260,15 @@ export type GoldRatesAdPlacementDTO = {
   id: number
   slot: string
   label: string
-  mode: 'manual' | 'image' | 'adsense'
+  mode: 'manual' | 'image' | 'video' | 'media' | 'adsense'
   manual_html?: string
   image_url?: string
   image_link_url?: string
   image_alt?: string
+  video_url?: string
+  video_poster_url?: string
+  video_link_url?: string
+  video_alt?: string
   adsense_slot_id?: string
   adsense_format?: string
   is_active: boolean
@@ -357,6 +361,32 @@ export async function uploadAdminGoldRatesAdImage(
     return { ok: false, detail: 'Upload succeeded but no image URL was returned.' }
   }
   return { ok: true, image_url }
+}
+
+const GOLD_RATES_AD_VIDEO_MAX_BYTES = 16 * 1024 * 1024
+
+export async function uploadAdminGoldRatesAdVideo(
+  file: File,
+  slot?: string,
+): Promise<{ ok: true; video_url: string } | { ok: false; detail: string }> {
+  if (file.size > GOLD_RATES_AD_VIDEO_MAX_BYTES) {
+    return { ok: false, detail: 'Video must be 16 MB or smaller.' }
+  }
+  const fd = new FormData()
+  fd.append('file', file)
+  if (slot?.trim()) {
+    fd.append('slot', slot.trim())
+  }
+  const res = await authUpload('/api/v1/admin/gold-rates/ad-video/', fd)
+  const body = (await res.json().catch(() => ({}))) as { video_url?: string; detail?: string }
+  if (!res.ok) {
+    return { ok: false, detail: body.detail != null ? String(body.detail) : 'Upload failed.' }
+  }
+  const video_url = body.video_url?.trim()
+  if (!video_url) {
+    return { ok: false, detail: 'Upload succeeded but no video URL was returned.' }
+  }
+  return { ok: true, video_url }
 }
 
 export async function fetchMarketplaceProducts(opts?: {

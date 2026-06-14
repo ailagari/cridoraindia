@@ -375,10 +375,14 @@ class GoldRatesAdPlacement(models.Model):
 
     MODE_MANUAL = "manual"
     MODE_IMAGE = "image"
+    MODE_VIDEO = "video"
+    MODE_MEDIA = "media"
     MODE_ADSENSE = "adsense"
     MODE_CHOICES = [
         (MODE_MANUAL, "Manual HTML"),
         (MODE_IMAGE, "Image banner"),
+        (MODE_VIDEO, "Video banner"),
+        (MODE_MEDIA, "Image & video banner"),
         (MODE_ADSENSE, "Google AdSense"),
     ]
 
@@ -420,6 +424,30 @@ class GoldRatesAdPlacement(models.Model):
         blank=True,
         default="",
         help_text="Alt text for image banners.",
+    )
+    video_url = models.URLField(
+        max_length=512,
+        blank=True,
+        default="",
+        help_text="Banner video URL when mode is Video (MP4 or WebM).",
+    )
+    video_poster_url = models.URLField(
+        max_length=512,
+        blank=True,
+        default="",
+        help_text="Optional poster image shown before the video plays.",
+    )
+    video_link_url = models.URLField(
+        max_length=512,
+        blank=True,
+        default="",
+        help_text="Optional click-through URL for video banners.",
+    )
+    video_alt = models.CharField(
+        max_length=160,
+        blank=True,
+        default="",
+        help_text="Accessible label for video banners.",
     )
     adsense_slot_id = models.CharField(
         max_length=64,
@@ -927,7 +955,7 @@ def ensure_default_gold_rates_ad_placements() -> None:
                 "label": labels.get(slot, slot),
                 "sort_order": idx,
                 "is_active": True,
-                "mode": GoldRatesAdPlacement.MODE_IMAGE,
+                "mode": GoldRatesAdPlacement.MODE_MEDIA,
                 "image_url": DEFAULT_GOLD_RATES_AD_IMAGES.get(slot, ""),
                 "image_alt": labels.get(slot, slot),
             },

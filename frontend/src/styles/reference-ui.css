@@ -34,6 +34,7 @@
 
 /* ── Public shell (webpages index.html) ──────────────────────────────────── */
 .pub-ref {
+  width: 100%;
   min-height: 100vh;
   min-height: 100dvh;
   padding-top: var(--nav-h);
@@ -47,6 +48,8 @@
   top: 0;
   left: 0;
   right: 0;
+  width: 100%;
+  max-width: 100%;
   height: var(--nav-h);
   background: var(--nav-bg);
   backdrop-filter: blur(20px) saturate(1.5);
@@ -275,9 +278,16 @@
   position: sticky;
   top: var(--nav-h);
   z-index: 400;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: clip;
 }
 
 .pub-ref .pub-footer {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: clip;
+  box-sizing: border-box;
   background: var(--s0);
   border-top: 1px solid var(--b0);
   padding: 56px 5vw 32px;
@@ -453,9 +463,13 @@ html[data-theme='light'] .pub-ref .tt-k {
 /* Marketing reference blocks (shared) */
 .section {
   padding: 96px 5vw;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 .section-sm {
   padding: 60px 5vw;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 .inner {
   max-width: 1120px;
@@ -530,8 +544,18 @@ html[data-theme='light'] .pub-ref .tt-k {
 }
 
 .ref-pub-ticker .container {
-  width: min(1120px, 92vw);
+  width: 100%;
+  max-width: 1120px;
   margin-inline: auto;
+  padding-inline: max(1rem, env(safe-area-inset-left, 0px)) max(1rem, env(safe-area-inset-right, 0px));
+  box-sizing: border-box;
+}
+
+.gold-ticker--public .container > span:last-child {
+  margin-left: 0 !important;
+  flex: 1 1 200px;
+  max-width: 100%;
+  text-align: left;
 }
 
 .india-grid {
@@ -647,6 +671,8 @@ html[data-theme='light'] .pub-ref .tt-k {
 .ref-dash-shell .col {
   flex: 1;
   min-width: 0;
+  max-width: 100%;
+  overflow-x: clip;
   margin-left: var(--fw);
   display: flex;
   flex-direction: column;
@@ -660,6 +686,9 @@ html[data-theme='light'] .pub-ref .tt-k {
   z-index: 200;
   height: var(--th);
   min-height: var(--th);
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   background: var(--glass-bg);
   backdrop-filter: blur(20px) saturate(1.4);
   -webkit-backdrop-filter: blur(20px) saturate(1.4);
@@ -1102,9 +1131,12 @@ html[data-theme='light'] .ref-dash-shell .tt-knob {
   flex: 1;
   max-width: 1200px;
   width: 100%;
+  min-width: 0;
   margin: 0 auto;
   padding: 28px 28px 48px;
   box-sizing: border-box;
+  overflow-x: clip;
+  overflow-wrap: break-word;
 }
 
 /* Tabular nums utility from reference */

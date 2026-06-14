@@ -43,6 +43,10 @@ def _serialize_ad(p: GoldRatesAdPlacement) -> dict:
         "image_url": p.image_url,
         "image_link_url": p.image_link_url,
         "image_alt": p.image_alt,
+        "video_url": p.video_url,
+        "video_poster_url": p.video_poster_url,
+        "video_link_url": p.video_link_url,
+        "video_alt": p.video_alt,
         "adsense_slot_id": p.adsense_slot_id,
         "adsense_format": p.adsense_format or "auto",
         "is_active": p.is_active,
@@ -216,6 +220,8 @@ class AdminGoldRatesPageConfigView(APIView):
                 if "mode" in item and item["mode"] in (
                     GoldRatesAdPlacement.MODE_MANUAL,
                     GoldRatesAdPlacement.MODE_IMAGE,
+                    GoldRatesAdPlacement.MODE_VIDEO,
+                    GoldRatesAdPlacement.MODE_MEDIA,
                     GoldRatesAdPlacement.MODE_ADSENSE,
                 ):
                     p.mode = item["mode"]
@@ -227,6 +233,14 @@ class AdminGoldRatesPageConfigView(APIView):
                     p.image_link_url = str(item["image_link_url"] or "")[:512]
                 if "image_alt" in item:
                     p.image_alt = str(item["image_alt"] or "")[:160]
+                if "video_url" in item:
+                    p.video_url = str(item["video_url"] or "")[:512]
+                if "video_poster_url" in item:
+                    p.video_poster_url = str(item["video_poster_url"] or "")[:512]
+                if "video_link_url" in item:
+                    p.video_link_url = str(item["video_link_url"] or "")[:512]
+                if "video_alt" in item:
+                    p.video_alt = str(item["video_alt"] or "")[:160]
                 if "adsense_slot_id" in item:
                     p.adsense_slot_id = str(item["adsense_slot_id"] or "")[:64]
                 if "adsense_format" in item:
@@ -291,3 +305,53 @@ class AdminGoldRatesAdImageUploadView(APIView):
             else request.build_absolute_uri(media_url)
         )
         return Response({"image_url": absolute[:512]})
+
+
+_AD_VIDEO_CT_ALLOWED = frozenset({"video/mp4", "video/webm"})
+_AD_VIDEO_CT_EXT = {"video/mp4": ".mp4", "video/webm": ".webm"}
+_MAX_AD_VIDEO_BYTES = 16 * 1024 * 1024
+
+
+class AdminGoldRatesAdVideoUploadView(APIView):
+    """Upload a banner video for a gold rates ad slot (admin only)."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        err = _forbid_non_admin(request)
+        if err:
+            return err
+
+        upload = request.FILES.get("file")
+        if not upload:
+            return Response(
+                {"detail": "file is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        ct = (getattr(upload, "content_type", None) or "").split(";")[0].strip().lower()
+        if ct not in _AD_VIDEO_CT_ALLOWED:
+            return Response(
+                {"detail": "Video must be MP4 or WebM."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        size = int(getattr(upload, "size", 0) or 0)
+        if size > _MAX_AD_VIDEO_BYTES:
+            return Response(
+                {"detail": "Video must be 16 MB or smaller."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        slot = str(request.POST.get("slot") or "general").strip()[:32] or "general"
+        if slot not in {c[0] for c in GoldRatesAdPlacement.SLOT_CHOICES}:
+            slot = "general"
+
+        ext = _AD_VIDEO_CT_EXT[ct]
+        rel = f"gold_rates_ad_videos/{slot}/{uuid.uuid4().hex}{ext}"
+        saved_name = default_storage.save(rel, ContentFile(upload.read()))
+        media_url = default_storage.url(saved_name)
+        absolute = (
+            media_url
+            if isinstance(media_url, str) and media_url.startswith("http")
+            else request.build_absolute_uri(media_url)
+        )
+        return Response({"video_url": absolute[:512]})

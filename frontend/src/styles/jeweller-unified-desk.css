@@ -2,6 +2,8 @@
 
 .jeweller-unified-desk-scroll {
   overflow-x: auto;
+  max-width: 100%;
+  -webkit-overflow-scrolling: touch;
 }
 
 .jeweller-unified-desk-table {
@@ -111,6 +113,8 @@
 
 .admin-treasury-ledger-scroll {
   overflow-x: auto;
+  max-width: 100%;
+  -webkit-overflow-scrolling: touch;
 }
 
 .admin-treasury-ledger-table {

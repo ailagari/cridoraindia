@@ -9,6 +9,7 @@ import {
   fetchAdminGoldRatesConfig,
   patchAdminGoldRatesConfig,
   uploadAdminGoldRatesAdImage,
+  uploadAdminGoldRatesAdVideo,
   type AdminGoldRatesPageConfigPayload,
   type GoldRatesAdPlacementDTO,
 } from '@/lib/marketplaceApi'
@@ -28,6 +29,7 @@ const PLACEHOLDER_IMAGES: Record<string, string> = {
 type AdMode = GoldRatesAdPlacementDTO['mode']
 
 const AD_IMAGE_ACCEPT = 'image/jpeg,image/png,image/webp'
+const AD_VIDEO_ACCEPT = 'video/mp4,video/webm'
 
 export function AdminGoldRatesAdsPanel() {
   const [cfg, setCfg] = useState<AdminGoldRatesPageConfigPayload | null>(null)
@@ -36,6 +38,17 @@ export function AdminGoldRatesAdsPanel() {
   const [uploadBusySlot, setUploadBusySlot] = useState<string | null>(null)
   const [uploadErr, setUploadErr] = useState<Record<string, string>>({})
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({})
+  const videoInputRefs = useRef<Record<string, HTMLInputElement | null>>({})
+
+  const isBannerMode = (mode: AdMode) => mode === 'media' || mode === 'image' || mode === 'video'
+
+  const updateMediaLink = (slot: string, link: string) => {
+    updatePlacement(slot, { image_link_url: link, video_link_url: link })
+  }
+
+  const updateMediaAlt = (slot: string, alt: string) => {
+    updatePlacement(slot, { image_alt: alt, video_alt: alt })
+  }
 
   const load = useCallback(async () => {
     const data = await fetchAdminGoldRatesConfig()
@@ -73,6 +86,25 @@ export function AdminGoldRatesAdsPanel() {
     }
   }
 
+  const uploadPlacementVideo = async (slot: string, file: File) => {
+    setUploadBusySlot(slot)
+    setUploadErr((prev) => {
+      const next = { ...prev }
+      delete next[slot]
+      return next
+    })
+    try {
+      const out = await uploadAdminGoldRatesAdVideo(file, slot)
+      if (!out.ok) {
+        setUploadErr((prev) => ({ ...prev, [slot]: out.detail }))
+        return
+      }
+      updatePlacement(slot, { video_url: out.video_url })
+    } finally {
+      setUploadBusySlot(null)
+    }
+  }
+
   const save = async () => {
     if (!cfg) return
     setSaving(true)
@@ -83,7 +115,10 @@ export function AdminGoldRatesAdsPanel() {
         adsense_client_id: cfg.adsense_client_id,
         page_title: cfg.page_title,
         page_description: cfg.page_description,
-        placements: cfg.placements,
+        placements: cfg.placements.map((p) => ({
+          ...p,
+          mode: p.mode === 'image' || p.mode === 'video' ? 'media' : p.mode,
+        })),
       })
       if (saved) {
         setCfg(saved)
@@ -105,8 +140,8 @@ export function AdminGoldRatesAdsPanel() {
       <header>
         <h2 className="admin-panel-title">Gold rates page & ads</h2>
         <p className="admin-panel-lead">
-          Public page at <code>/gold-rates/kerala</code>. Configure SEO copy, banner images, manual HTML,
-          or Google AdSense per slot.
+          Public page at <code>/gold-rates/kerala</code>. Configure SEO copy, banner media (images and
+          videos via upload or URL), manual HTML, or Google AdSense per slot.
         </p>
         <p className="admin-panel-lead">
           <a href="/gold-rates/kerala" target="_blank" rel="noreferrer">
@@ -158,12 +193,17 @@ export function AdminGoldRatesAdsPanel() {
 
       {cfg.placements.map((p) => {
         const slotSpec = getGoldRatesAdSlotSpec(p.slot)
-        const previewSrc =
-          p.mode === 'image'
-            ? p.image_url?.trim() || PLACEHOLDER_IMAGES[p.slot] || ''
-            : p.mode === 'adsense' && cfg.adsense_enabled
-              ? ''
-              : PLACEHOLDER_IMAGES[p.slot] || ''
+        const bannerMode = isBannerMode(p.mode)
+        const previewVideoSrc = bannerMode ? p.video_url?.trim() || '' : ''
+        const previewImageSrc = bannerMode
+          ? p.image_url?.trim() ||
+            p.video_poster_url?.trim() ||
+            (!previewVideoSrc ? PLACEHOLDER_IMAGES[p.slot] || '' : '')
+          : p.mode === 'adsense' && cfg.adsense_enabled
+            ? ''
+            : PLACEHOLDER_IMAGES[p.slot] || ''
+        const mediaLinkUrl = p.video_link_url?.trim() || p.image_link_url?.trim() || ''
+        const mediaAltText = p.video_alt?.trim() || p.image_alt?.trim() || ''
         return (
           <section key={p.slot} className="admin-card">
             <h3>{SLOT_LABELS[p.slot] ?? p.slot}</h3>
@@ -185,17 +225,23 @@ export function AdminGoldRatesAdsPanel() {
             <label className="admin-field">
               <span>Mode</span>
               <select
-                value={p.mode}
+                value={p.mode === 'image' || p.mode === 'video' ? 'media' : p.mode}
                 onChange={(e) => updatePlacement(p.slot, { mode: e.target.value as AdMode })}
               >
-                <option value="image">Image banner</option>
+                <option value="media">Banner (image & video)</option>
                 <option value="manual">Manual HTML</option>
                 <option value="adsense">Google AdSense</option>
               </select>
             </label>
 
-            {p.mode === 'image' ? (
+            {bannerMode ? (
               <>
+                <p className="admin-panel-lead">
+                  Attach an image, a video, or both. Upload a file or paste a URL for each. When both
+                  are set, the video plays on the public page and the image is used as its poster (unless
+                  you set a separate poster URL).
+                </p>
+
                 <div className="admin-field">
                   <span>Banner image</span>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.65rem', alignItems: 'center' }}>
@@ -219,10 +265,49 @@ export function AdminGoldRatesAdsPanel() {
                       disabled={saving || uploadBusySlot === p.slot}
                       onClick={() => fileInputRefs.current[p.slot]?.click()}
                     >
-                      {uploadBusySlot === p.slot ? 'Uploading…' : 'Upload image file'}
+                      {uploadBusySlot === p.slot ? 'Uploading…' : 'Upload image'}
                     </button>
                     <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                       JPEG, PNG, or WebP · max 4 MB
+                    </span>
+                  </div>
+                </div>
+                <label className="admin-field">
+                  <span>Image URL</span>
+                  <input
+                    value={p.image_url ?? ''}
+                    onChange={(e) => updatePlacement(p.slot, { image_url: e.target.value })}
+                    placeholder={PLACEHOLDER_IMAGES[p.slot] ?? 'https://…/banner.jpg'}
+                  />
+                </label>
+
+                <div className="admin-field">
+                  <span>Banner video</span>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.65rem', alignItems: 'center' }}>
+                    <input
+                      ref={(el) => {
+                        videoInputRefs.current[p.slot] = el
+                      }}
+                      type="file"
+                      accept={AD_VIDEO_ACCEPT}
+                      disabled={saving || uploadBusySlot === p.slot}
+                      style={{ display: 'none' }}
+                      onChange={(e) => {
+                        const f = e.target.files?.[0]
+                        e.target.value = ''
+                        if (f) void uploadPlacementVideo(p.slot, f)
+                      }}
+                    />
+                    <button
+                      type="button"
+                      className="btn btn-ghost"
+                      disabled={saving || uploadBusySlot === p.slot}
+                      onClick={() => videoInputRefs.current[p.slot]?.click()}
+                    >
+                      {uploadBusySlot === p.slot ? 'Uploading…' : 'Upload video'}
+                    </button>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                      MP4 or WebM · max 16 MB
                       {slotSpec ? ` · target ${slotSpec.recommended.width}×${slotSpec.recommended.height} px` : ''}
                     </span>
                   </div>
@@ -233,26 +318,36 @@ export function AdminGoldRatesAdsPanel() {
                   ) : null}
                 </div>
                 <label className="admin-field">
-                  <span>Or image URL</span>
+                  <span>Video URL</span>
                   <input
-                    value={p.image_url ?? ''}
-                    onChange={(e) => updatePlacement(p.slot, { image_url: e.target.value })}
-                    placeholder={PLACEHOLDER_IMAGES[p.slot] ?? 'https://…/banner.jpg'}
+                    value={p.video_url ?? ''}
+                    onChange={(e) => updatePlacement(p.slot, { video_url: e.target.value })}
+                    placeholder="https://…/banner.mp4"
                   />
                 </label>
+
+                <label className="admin-field">
+                  <span>Video poster URL (optional)</span>
+                  <input
+                    value={p.video_poster_url ?? ''}
+                    onChange={(e) => updatePlacement(p.slot, { video_poster_url: e.target.value })}
+                    placeholder="Leave empty to use banner image as poster"
+                  />
+                </label>
+
                 <label className="admin-field">
                   <span>Click-through URL (optional)</span>
                   <input
-                    value={p.image_link_url ?? ''}
-                    onChange={(e) => updatePlacement(p.slot, { image_link_url: e.target.value })}
+                    value={mediaLinkUrl}
+                    onChange={(e) => updateMediaLink(p.slot, e.target.value)}
                     placeholder="https://…"
                   />
                 </label>
                 <label className="admin-field">
-                  <span>Alt text</span>
+                  <span>Accessible label</span>
                   <input
-                    value={p.image_alt ?? ''}
-                    onChange={(e) => updatePlacement(p.slot, { image_alt: e.target.value })}
+                    value={mediaAltText}
+                    onChange={(e) => updateMediaAlt(p.slot, e.target.value)}
                     placeholder={SLOT_LABELS[p.slot] ?? 'Advertisement'}
                   />
                 </label>
@@ -302,10 +397,10 @@ export function AdminGoldRatesAdsPanel() {
               </>
             ) : null}
 
-            {previewSrc ? (
+            {previewVideoSrc ? (
               <div className="admin-ad-preview">
                 <span className="admin-ad-preview__label">
-                  Preview
+                  Preview (video)
                   {slotSpec ? ` · ${slotSpec.recommended.width}×${slotSpec.recommended.height} container` : ''}
                 </span>
                 <div
@@ -319,7 +414,36 @@ export function AdminGoldRatesAdsPanel() {
                       : undefined
                   }
                 >
-                  <img src={previewSrc} alt="" className="admin-ad-preview__img" />
+                  <video
+                    src={previewVideoSrc}
+                    poster={previewImageSrc || undefined}
+                    className="admin-ad-preview__img"
+                    muted
+                    loop
+                    autoPlay
+                    playsInline
+                    preload="metadata"
+                  />
+                </div>
+              </div>
+            ) : previewImageSrc && bannerMode ? (
+              <div className="admin-ad-preview">
+                <span className="admin-ad-preview__label">
+                  Preview (image)
+                  {slotSpec ? ` · ${slotSpec.recommended.width}×${slotSpec.recommended.height} container` : ''}
+                </span>
+                <div
+                  className={`admin-ad-preview__frame admin-ad-preview__frame--${p.slot}`}
+                  style={
+                    slotSpec
+                      ? {
+                          aspectRatio: slotSpec.aspectRatio,
+                          maxWidth: slotSpec.maxWidthPx ? `${slotSpec.maxWidthPx}px` : undefined,
+                        }
+                      : undefined
+                  }
+                >
+                  <img src={previewImageSrc} alt="" className="admin-ad-preview__img" />
                 </div>
               </div>
             ) : null}

@@ -1,5 +1,12 @@
 /* Port of webpages/index.html marketing layout — scoped so it won’t collide with dashboards */
 
+.ref-landing {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: clip;
+}
+
 .ref-landing .text-gold {
   color: var(--gold-hi);
 }
@@ -900,12 +907,14 @@
 }
 .pub-ref .ref-index-footer .footer-grid {
   max-width: 1120px;
+  width: 100%;
   margin: 0 auto;
   display: grid;
   grid-template-columns: 2fr 1fr 1fr 1fr;
   gap: 48px;
   padding-bottom: 40px;
   border-bottom: 1px solid var(--b0);
+  box-sizing: border-box;
 }
 .pub-ref .ref-index-footer .footer-brand {
   display: flex;
@@ -940,6 +949,7 @@
 }
 .pub-ref .ref-index-footer .footer-bottom {
   max-width: 1120px;
+  width: 100%;
   margin: 24px auto 0;
   display: flex;
   justify-content: space-between;
@@ -948,6 +958,7 @@
   flex-wrap: wrap;
   font-size: 0.72rem;
   color: var(--ink3);
+  box-sizing: border-box;
 }
 .pub-ref .ref-index-footer .fb-links {
   display: flex;
