@@ -162,12 +162,20 @@ STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 WHITENOISE_ROOT = FRONTEND_DIST
 MEDIA_URL = "/media/"
-_media_root_env = (os.environ.get("DJANGO_MEDIA_ROOT") or "").strip()
-MEDIA_ROOT = (
-    Path(_media_root_env).resolve()
-    if _media_root_env
-    else (BASE_DIR / "media")
-)
+
+
+def _resolve_media_root() -> Path:
+    """Persistent uploads: DJANGO_MEDIA_ROOT, or Railway volume at $RAILWAY_VOLUME_MOUNT_PATH/media."""
+    explicit = (os.environ.get("DJANGO_MEDIA_ROOT") or "").strip()
+    if explicit:
+        return Path(explicit).resolve()
+    volume_mount = (os.environ.get("RAILWAY_VOLUME_MOUNT_PATH") or "").strip().rstrip("/")
+    if volume_mount:
+        return (Path(volume_mount) / "media").resolve()
+    return (BASE_DIR / "media").resolve()
+
+
+MEDIA_ROOT = _resolve_media_root()
 
 if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")

@@ -6,13 +6,25 @@ Every git push redeploys a **new container** with an empty filesystem unless you
 
 ## One-time Railway setup
 
-1. Open your **web/Django** service in the Railway dashboard.
-2. **Volumes** → **Add Volume** → mount path: `/data`
-3. **Variables** → add:
+### Option A — Railway dashboard
+
+1. Open your **web/Django** service (not Postgres).
+2. **Volumes** → **Add Volume** → mount path: **`/data`**
+3. **Variables** (recommended, explicit):
    ```
    DJANGO_MEDIA_ROOT=/data/media
    ```
-4. Redeploy (or push any commit). The container runs `ensure_media_root` on start to create `/data/media`.
+4. Redeploy (push a commit or click Redeploy).
+
+### Option B — Railway CLI
+
+```bash
+railway link
+railway volume add --mount-path /data
+railway variables set DJANGO_MEDIA_ROOT=/data/media
+```
+
+If you mount the volume at `/data` but skip `DJANGO_MEDIA_ROOT`, Django automatically uses `/data/media` via Railway’s `RAILWAY_VOLUME_MOUNT_PATH` variable.
 
 ## Verify after deploy
 
@@ -22,10 +34,12 @@ curl https://YOUR-SERVICE.up.railway.app/api/v1/health/
 
 Look for the `media` block:
 
-- `persistent_volume_configured`: should be `true`
-- `media_root`: should be `/data/media` (not `/app/backend/media`)
-- `writable`: should be `true`
-- After uploading a gold rates banner, `gold_rates_ad_images` count should be > 0 and **stay > 0** after the next git push.
+| Field | Expected |
+|-------|----------|
+| `persistent_volume_configured` | `true` |
+| `media_root` | `/data/media` (not `/app/backend/media`) |
+| `writable` | `true` |
+| `gold_rates_ad_images` | increases after upload, **unchanged** after next git push |
 
 ## Re-upload after fixing volume
 
@@ -33,4 +47,8 @@ URLs in PostgreSQL survive redeploys, but files uploaded **before** the volume w
 
 ## Local development
 
-Leave `DJANGO_MEDIA_ROOT` unset; files go to `backend/media/` (gitignored).
+Leave `DJANGO_MEDIA_ROOT` and `RAILWAY_VOLUME_MOUNT_PATH` unset; files go to `backend/media/` (gitignored).
+
+## Deploy logs
+
+If no volume is configured in production, `ensure_media_root` prints a **WARNING** on every container start. Check Railway deploy logs if media disappears after push.

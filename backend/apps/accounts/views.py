@@ -39,6 +39,13 @@ def _count_media_files(subdir: str) -> int:
     return sum(1 for path in root.rglob("*") if path.is_file())
 
 
+def _persistent_volume_configured() -> bool:
+    return bool(
+        (os.environ.get("DJANGO_MEDIA_ROOT") or "").strip()
+        or (os.environ.get("RAILWAY_VOLUME_MOUNT_PATH") or "").strip()
+    )
+
+
 class HealthView(APIView):
     permission_classes = [AllowAny]
 
@@ -49,9 +56,7 @@ class HealthView(APIView):
                 "status": "ok",
                 "media": {
                     "media_root": str(media_root),
-                    "persistent_volume_configured": bool(
-                        (os.environ.get("DJANGO_MEDIA_ROOT") or "").strip()
-                    ),
+                    "persistent_volume_configured": _persistent_volume_configured(),
                     "exists": media_root.is_dir(),
                     "writable": os.access(media_root, os.W_OK)
                     if media_root.exists()
