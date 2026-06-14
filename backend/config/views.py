@@ -5,6 +5,7 @@ from django.conf import settings
 from django.http import Http404, HttpResponse
 
 from .seo import (
+    ads_txt,
     gold_rates_feed_xml,
     gold_rates_og_svg,
     inject_route_seo,
@@ -34,6 +35,11 @@ def spa_index(request):
 def robots_txt_view(request):
     del request
     return HttpResponse(robots_txt(), content_type="text/plain; charset=utf-8")
+
+
+def ads_txt_view(request):
+    del request
+    return HttpResponse(ads_txt(), content_type="text/plain; charset=utf-8")
 
 
 def sitemap_xml_view(request):

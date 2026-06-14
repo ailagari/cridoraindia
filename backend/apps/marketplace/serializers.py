@@ -642,6 +642,32 @@ class PublicMarketplaceProductSerializer(serializers.BaseSerializer):
         return _annotate_product_public(product, expose_platform_base=False)
 
 
+def _active_scheme_offerings(jeweller) -> list[dict]:
+    try:
+        from apps.schemes.models import JewellerSchemeOffering
+
+        qs = (
+            JewellerSchemeOffering.objects.filter(
+                jeweller=jeweller,
+                status=JewellerSchemeOffering.STATUS_ACTIVE,
+            )
+            .select_related("scheme_template")
+            .order_by("scheme_template__sort_order", "display_name")
+        )
+        return [
+            {
+                "id": o.id,
+                "display_name": o.display_name or o.scheme_template.name,
+                "flow_summary": o.scheme_template.flow_summary,
+                "category": o.scheme_template.category,
+                "template_slug": o.scheme_template.slug,
+            }
+            for o in qs
+        ]
+    except Exception:
+        return []
+
+
 def _golden_scheme_storefront_summary(profile: JewellerPricingProfile) -> str:
     if not profile.golden_scheme_enabled:
         return ""
@@ -747,6 +773,7 @@ def public_jeweller_storefront(user) -> dict:
         "golden_scheme_benefits": profile.golden_scheme_benefits or "",
         "golden_scheme_rate_application_note": profile.golden_scheme_rate_application_note
         or "",
+        "active_scheme_offerings": _active_scheme_offerings(profile.jeweller),
     }
 
 

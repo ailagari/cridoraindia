@@ -15,6 +15,7 @@ export const JEWELLER_NAV_GROUPS: DashboardNavGroup[] = [
     icon: 'shop',
     items: [
       { sectionKey: 'mkt_products', label: 'Catalogue SKU' },
+      { sectionKey: 'mkt_schemes', label: 'Scheme catalog' },
       { sectionKey: 'mkt_policy', label: 'Rates & schemes' },
     ],
   },
@@ -32,6 +33,7 @@ export const JEWELLER_NAV_GROUPS: DashboardNavGroup[] = [
     icon: 'coins',
     items: [
       { sectionKey: 'txn_purchases', label: 'Purchase' },
+      { sectionKey: 'txn_schemes', label: 'Schemes desk' },
       { sectionKey: 'txn_on_hold', label: 'On hold' },
       { sectionKey: 'txn_cridorapay', label: 'CridoraPay' },
       { sectionKey: 'txn_deposits', label: 'Deposit' },
@@ -71,7 +73,7 @@ export const JEWELLER_LEGACY_SECTION: Record<string, string> = {
   cust_kyc: 'cust_hub',
   cust_value: 'cust_hub',
   cust_locked: 'cust_hub',
-  mkt_schemes: 'mkt_policy',
+  mkt_schemes: 'mkt_schemes',
   mkt_rates: 'mkt_policy',
   mkt_rules: 'mkt_policy',
   txn_sellback: 'txn_ops',
@@ -79,6 +81,7 @@ export const JEWELLER_LEGACY_SECTION: Record<string, string> = {
   txn_gold_deposit: 'txn_deposits',
   txn_cridorapay: 'txn_cridorapay',
   txn_on_hold: 'txn_on_hold',
+  txn_schemes: 'txn_schemes',
   txn_loans: 'txn_loans',
   txn_settlements: 'fin_settlements',
   txn_settlement_payments: 'fin_settlement_payments',

@@ -66,11 +66,11 @@ FEATURE_DEFINITIONS: tuple[dict[str, Any], ...] = (
     },
     {
         "key": "golden_scheme",
-        "label": "Golden scheme",
-        "description": "Customer scheme hub (placeholder until program launch).",
+        "label": "Investment schemes",
+        "description": "Admin scheme designer, jeweller catalog, customer enroll and contribute.",
         "default": False,
         "customer_sections": ("invest_scheme",),
-        "jeweller_sections": (),
+        "jeweller_sections": ("mkt_schemes", "txn_schemes"),
         "admin_sections": ("mkt_programs",),
     },
     {

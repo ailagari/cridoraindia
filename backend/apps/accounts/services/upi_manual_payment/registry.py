@@ -30,6 +30,8 @@ KIND_CRIDORAPAY = "cridorapay"
 KIND_SELLBACK = "sellback"
 KIND_SETTLEMENT = "settlement"
 
+KIND_SCHEME = "scheme"
+
 VALID_KINDS = frozenset(
     {
         KIND_FRACTIONAL,
@@ -37,6 +39,7 @@ VALID_KINDS = frozenset(
         KIND_CRIDORAPAY,
         KIND_SELLBACK,
         KIND_SETTLEMENT,
+        KIND_SCHEME,
     }
 )
 
@@ -146,12 +149,34 @@ def _settlement_spec() -> UpiKindSpec:
     )
 
 
+def _scheme_spec() -> UpiKindSpec:
+    from apps.schemes.models import SchemeContribution
+
+    m = SchemeContribution
+    return UpiKindSpec(
+        kind=KIND_SCHEME,
+        model=m,
+        payer_role=User.CUSTOMER,
+        reviewer_role=User.JEWELLER,
+        pending_review_status=m.PENDING_REVIEW,
+        proof_rejected_status=m.PROOF_REJECTED,
+        on_hold_status=m.ON_HOLD,
+        completed_status=m.COMPLETED,
+        payer_submit_statuses=(
+            m.PENDING_PAYMENT,
+            m.SIGNAL_RECEIVED,
+            m.PROOF_REJECTED,
+        ),
+    )
+
+
 _SPECS: dict[str, UpiKindSpec] = {
     KIND_FRACTIONAL: _fractional_spec(),
     KIND_LOAN_REPAYMENT: _loan_spec(),
     KIND_CRIDORAPAY: _cridorapay_spec(),
     KIND_SELLBACK: _sellback_spec(),
     KIND_SETTLEMENT: _settlement_spec(),
+    KIND_SCHEME: _scheme_spec(),
 }
 
 
@@ -174,6 +199,8 @@ def load_entity(kind: str, pk: int) -> Any:
         qs = qs.select_related("customer", "jeweller")
     elif kind == KIND_SETTLEMENT:
         qs = qs.select_related("jeweller")
+    elif kind == KIND_SCHEME:
+        qs = qs.select_related("enrollment__customer", "enrollment__offering__jeweller")
     return qs.get(pk=pk)
 
 
@@ -202,6 +229,8 @@ def user_can_payer(user: UserModel, kind: str, entity: Any) -> bool:
         return entity.customer_id == user.pk
     if kind == KIND_SELLBACK:
         return entity.jeweller_id == user.pk
+    if kind == KIND_SCHEME:
+        return entity.enrollment.customer_id == user.pk
     return False
 
 
@@ -225,6 +254,8 @@ def user_can_reviewer(user: UserModel, kind: str, entity: Any) -> bool:
         return entity.jeweller_id == user.pk
     if kind == KIND_SELLBACK:
         return entity.customer_id == user.pk
+    if kind == KIND_SCHEME:
+        return entity.enrollment.offering.jeweller_id == user.pk
     return False
 
 
@@ -252,4 +283,8 @@ def get_completion_fn(kind: str) -> CompletionFn:
         from .complete import complete_settlement
 
         return complete_settlement
+    if kind == KIND_SCHEME:
+        from .complete import complete_scheme
+
+        return complete_scheme
     raise ValueError(f"Unknown kind: {kind}")

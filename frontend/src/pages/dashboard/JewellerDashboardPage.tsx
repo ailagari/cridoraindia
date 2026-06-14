@@ -9,6 +9,8 @@ import { JewellerPrimaryCustomersPanel } from '@/features/portfolio/JewellerPrim
 import { GoldTransferPanel } from '@/features/gold/GoldTransferPanel'
 import { JewellerMarketplacePanel } from '@/features/marketplace/JewellerMarketplacePanel'
 import { JewellerRatesSchemesPanel } from '@/features/marketplace/JewellerRatesSchemesPanel'
+import { JewellerSchemeCatalogPanel } from '@/features/schemes/JewellerSchemeCatalogPanel'
+import { JewellerSchemeDeskPanel } from '@/features/schemes/JewellerSchemeDeskPanel'
 import { JewellerGoldDepositPanel } from '@/features/invest/JewellerGoldDepositPanel'
 import { JewellerUnifiedPurchaseDesk } from '@/features/invest/JewellerUnifiedPurchaseDesk'
 import { JewellerOnHoldPaymentsPanel } from '@/features/invest/JewellerOnHoldPaymentsPanel'
@@ -107,6 +109,11 @@ export function JewellerDashboardPage() {
         </>
       ) : null}
       {active === 'mkt_products' ? <JewellerMarketplacePanel /> : null}
+      {active === 'mkt_schemes' ? (
+        <div className="dash-panel-max">
+          <JewellerSchemeCatalogPanel />
+        </div>
+      ) : null}
       {active === 'mkt_policy' ? (
         <div className="dash-panel-max">
           <JewellerRatesSchemesPanel />
@@ -120,6 +127,11 @@ export function JewellerDashboardPage() {
       {active === 'txn_cridorapay' ? (
         <div className="dash-panel-max">
           <JewellerCridoraPayPanel />
+        </div>
+      ) : null}
+      {active === 'txn_schemes' ? (
+        <div className="dash-panel-max">
+          <JewellerSchemeDeskPanel />
         </div>
       ) : null}
       {active === 'txn_purchases' ? (

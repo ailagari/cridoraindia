@@ -10,6 +10,12 @@ from urllib.parse import quote
 SITE_URL = "https://www.cridoraindia.com"
 SITE_NAME = "Cridora India"
 DEFAULT_OG_IMAGE = f"{SITE_URL}/icon-512.png"
+ADSENSE_PUBLISHER_ID = "ca-pub-1180208702657280"
+ADSENSE_HEAD_SNIPPET = (
+    f'    <meta name="google-adsense-account" content="{ADSENSE_PUBLISHER_ID}">\n'
+    f'    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client={ADSENSE_PUBLISHER_ID}" '
+    'crossorigin="anonymous"></script>\n'
+)
 
 DEFAULT_KEYWORDS = (
     "gold rate today, Kerala gold rate, gold rate in India, 22K gold rate, "
@@ -203,6 +209,28 @@ def _normalize_path(path: str) -> str:
 def seo_for_path(path: str) -> dict[str, str]:
     normalized = _normalize_path(path)
     return ROUTE_SEO.get(normalized, ROUTE_SEO["/"])
+
+
+def inject_adsense_verification(html_doc: str) -> str:
+    """Place AdSense verification tags immediately after <head> (visible to crawlers)."""
+    html_doc = re.sub(
+        r'<meta\s+name=["\']google-adsense-account["\'][^>]*>\s*',
+        "",
+        html_doc,
+        flags=re.I,
+    )
+    html_doc = re.sub(
+        r'<script\b[^>]*pagead2\.googlesyndication\.com/pagead/js/adsbygoogle\.js[^>]*>\s*</script>\s*',
+        "",
+        html_doc,
+        flags=re.I | re.S,
+    )
+    return html_doc.replace("<head>", f"<head>\n{ADSENSE_HEAD_SNIPPET}", 1)
+
+
+def ads_txt() -> str:
+    pub_id = ADSENSE_PUBLISHER_ID.removeprefix("ca-pub-")
+    return f"google.com, pub-{pub_id}, DIRECT, f08c47fec0942fa0\n"
 
 def _replace_or_insert_title(html_doc: str, title: str) -> str:
     safe = html.escape(title, quote=True)
@@ -464,11 +492,17 @@ def inject_route_seo(html_doc: str, request_path: str) -> str:
     if prerender and 'id="seo-prerender"' not in out:
         out = out.replace("<div id=\"root\"></div>", prerender + '    <div id="root"></div>', 1)
 
-    return out
+    return inject_adsense_verification(out)
 
 
 def robots_txt() -> str:
-    return f"""User-agent: *
+    return f"""User-agent: Mediapartners-Google
+Allow: /
+
+User-agent: Google-Display-Ads-Bot
+Allow: /
+
+User-agent: *
 Allow: /
 
 Disallow: /dashboard/

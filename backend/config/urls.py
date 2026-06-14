@@ -5,6 +5,7 @@ from django.urls import include, path, re_path
 from django.views.static import serve
 
 from .views import (
+    ads_txt_view,
     gold_rates_feed_view,
     gold_rates_og_svg_view,
     robots_txt_view,
@@ -15,11 +16,12 @@ from .views import (
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("robots.txt", robots_txt_view),
-    path("sitemap.xml", sitemap_xml_view),
-    path("og/gold-rates.svg", gold_rates_og_svg_view),
+    path("ads.txt", ads_txt_view),
+    path("sitemap.xml", sitemap_xml_view),    path("og/gold-rates.svg", gold_rates_og_svg_view),
     path("feed/gold-rates.xml", gold_rates_feed_view),
     path("api/v1/", include("apps.accounts.urls")),
     path("api/v1/", include("apps.marketplace.urls")),
+    path("api/v1/", include("apps.schemes.urls")),
 ]
 
 if settings.DEBUG:
@@ -33,7 +35,7 @@ else:
         ),
         re_path(
             r"^(?!api/|admin/|assets/|static/|media/|sw\.js$|manifest\.webmanifest$|"
-            r"robots\.txt$|sitemap\.xml$|og/|feed/|"
+            r"robots\.txt$|ads\.txt$|sitemap\.xml$|og/|feed/|"
             r"favicon\.svg$|icon-|apple-touch-icon\.png$).*$",
             spa_index,
         ),

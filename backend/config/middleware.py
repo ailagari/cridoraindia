@@ -24,6 +24,12 @@ class SeoFilesMiddleware:
             response = HttpResponse(robots_txt(), content_type="text/plain; charset=utf-8")
             response["Cache-Control"] = "public, max-age=86400"
             return response
+        if path == "/ads.txt":
+            from .seo import ads_txt
+
+            response = HttpResponse(ads_txt(), content_type="text/plain; charset=utf-8")
+            response["Cache-Control"] = "public, max-age=86400"
+            return response
         if path == "/feed/gold-rates.xml":
             from .seo import gold_rates_feed_xml
 

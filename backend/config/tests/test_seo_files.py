@@ -1,7 +1,7 @@
 from django.test import RequestFactory, SimpleTestCase
 
 from config.middleware import SeoFilesMiddleware
-from config.seo import sitemap_xml
+from config.seo import inject_adsense_verification, inject_route_seo, sitemap_xml
 
 
 class SeoFilesMiddlewareTests(SimpleTestCase):
@@ -24,10 +24,43 @@ class SeoFilesMiddlewareTests(SimpleTestCase):
         response = self.middleware(request)
         self.assertEqual(response.status_code, 200)
         self.assertIn("text/plain", response["Content-Type"])
-        self.assertIn("Sitemap:", response.content.decode("utf-8"))
+        body = response.content.decode("utf-8")
+        self.assertIn("Sitemap:", body)
+        self.assertIn("Mediapartners-Google", body)
+
+    def test_ads_txt_returns_publisher_line(self):
+        request = self.factory.get("/ads.txt")
+        response = self.middleware(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("text/plain", response["Content-Type"])
+        self.assertIn("google.com, pub-1180208702657280, DIRECT", response.content.decode("utf-8"))
 
     def test_sitemap_includes_gold_rate_urls(self):
         xml = sitemap_xml()
         self.assertIn("https://www.cridoraindia.com/gold-rates/kerala", xml)
         self.assertIn("https://www.cridoraindia.com/ml/gold-rates/kerala", xml)
         self.assertIn("https://www.cridoraindia.com/gold-rates/kochi", xml)
+
+
+class AdSenseVerificationTests(SimpleTestCase):
+    def test_inject_route_seo_places_adsense_tags_after_head(self):
+        html = "<html><head></head><body><div id=\"root\"></div></body></html>"
+        out = inject_route_seo(html, "/")
+        head_end = out.index("</head>")
+        head = out[:head_end]
+        self.assertIn('name="google-adsense-account"', head)
+        self.assertIn("ca-pub-1180208702657280", head)
+        self.assertIn("adsbygoogle.js", head)
+        self.assertIn('crossorigin="anonymous"', head)
+        self.assertLess(head.index("google-adsense-account"), head.index("application/ld+json"))
+
+    def test_inject_adsense_verification_deduplicates_tags(self):
+        html = (
+            "<html><head>"
+            '<meta name="google-adsense-account" content="ca-pub-1180208702657280">'
+            '<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1180208702657280"></script>'
+            "</head><body></body></html>"
+        )
+        out = inject_adsense_verification(html)
+        self.assertEqual(out.count("google-adsense-account"), 1)
+        self.assertEqual(out.count("adsbygoogle.js"), 1)

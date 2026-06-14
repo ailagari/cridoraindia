@@ -49,6 +49,12 @@ def _utr_globally_used(utr: str, *, exclude_kind: str | None, exclude_id: int | 
         status=PlatformSettlementPayment.STATUS_REJECTED
     ).exclude(pk=exclude_id if exclude_kind == "settlement" else None).exists():
         return True
+    from apps.schemes.models import SchemeContribution
+
+    if SchemeContribution.objects.filter(upi_utr=utr).exclude(
+        status=SchemeContribution.CANCELLED
+    ).exclude(pk=exclude_id if exclude_kind == "scheme" else None).exists():
+        return True
     ct_ids = UpiPaymentProofSubmission.objects.filter(utr=utr).values_list(
         "content_type_id", "object_id"
     )

@@ -63,6 +63,16 @@ def complete_sellback(entity: GoldSellbackRequest, by_user: User) -> tuple[bool,
     return True, "Payout confirmed."
 
 
+def complete_scheme(entity, by_user: User) -> tuple[bool, str]:
+    from apps.schemes.models import SchemeContribution
+    from apps.schemes.services.contribution_completion import apply_contribution_completion
+
+    if entity.status == SchemeContribution.COMPLETED:
+        return True, "Already completed."
+    apply_contribution_completion(entity)
+    return True, "Payment approved."
+
+
 def complete_settlement(
     entity: PlatformSettlementPayment, by_user: User
 ) -> tuple[bool, str]:

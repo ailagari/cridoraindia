@@ -15,6 +15,7 @@ import { AdminNotificationsHubPanel } from '@/features/admin/AdminNotificationsH
 import { NotificationSettingsPanel } from '@/features/settings/NotificationSettingsPanel'
 import { AdminGoldTickerPanel, AdminMarketplaceCatalogSetupPanel } from '@/features/marketplace/AdminMarketplaceSection'
 import { AdminGoldRatesAdsPanel } from '@/features/marketplace/AdminGoldRatesAdsPanel'
+import { AdminSchemeProgramsPanel } from '@/features/schemes/AdminSchemeProgramsPanel'
 import { AdminTreasuryPanel } from '@/features/treasury/AdminTreasuryPanel'
 import { AdminUpiFraudReportsPanel } from '@/features/treasury/AdminUpiFraudReportsPanel'
 import { TablePagination } from '@/components/ui'
@@ -785,14 +786,7 @@ export function AdminDashboardPage() {
 
         {active === 'mkt_products' ? <AdminMarketplaceCatalogSetupPanel /> : null}
 
-        {active === 'mkt_programs' ? (
-          <div className="dash-coming dash-coming--payments">
-            <h2 className="dash-coming__title">Programs & risk</h2>
-            <p className="dash-coming__text">
-              Scheme approvals, marketplace moderation, and risk surveillance consolidate on this track.
-            </p>
-          </div>
-        ) : null}
+        {active === 'mkt_programs' ? <AdminSchemeProgramsPanel /> : null}
 
         {active === 'plat_festival' ? <AdminNotificationsHubPanel /> : null}
 

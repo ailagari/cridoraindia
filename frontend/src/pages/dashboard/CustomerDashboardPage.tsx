@@ -11,7 +11,7 @@ import { CustomerAccountDetailsPanel } from '@/features/customer/CustomerAccount
 import { NotificationSettingsPanel } from '@/features/settings/NotificationSettingsPanel'
 import { CustomerKycWorkflow } from '@/features/customer/CustomerKycWorkflow'
 import { ChangePasswordPanel } from '@/features/auth/ChangePasswordPanel'
-import { ComingSoonPanel } from '@/components/ui'
+import { CustomerSchemeHubPanel } from '@/features/schemes/CustomerSchemeHubPanel'
 import { CustomerPortfolioPanel } from '@/features/portfolio/CustomerPortfolioPanel'
 import { CustomerVaultsPanel } from '@/features/portfolio/CustomerVaultsPanel'
 import { CustomerCridoraPayPanel } from '@/features/cridorapay/CustomerCridoraPayPanel'
@@ -132,7 +132,7 @@ export function CustomerDashboardPage() {
       {active === 'invest_fractional' ? <FractionalPurchasePanel /> : null}
       {active === 'invest_cridorapay' ? <CustomerCridoraPayPanel /> : null}
       {active === 'invest_deposit' ? <CustomerDepositInfoPanel /> : null}
-      {active === 'invest_scheme' ? <ComingSoonPanel title="Golden scheme" /> : null}
+      {active === 'invest_scheme' ? <CustomerSchemeHubPanel /> : null}
       {active === 'redeem_cash' ? <CustomerSellbackPanel /> : null}
       {active === 'redeem_transfer' ? <GoldTransferPanel roleLabel="customer" /> : null}
       {active === 'redeem_loan' ? <CustomerGoldLoanPanel /> : null}
