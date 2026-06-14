@@ -8,7 +8,6 @@ from typing import Any
 
 from apps.accounts.fractional_service import (
     GST_PERCENT,
-    breakdown_from_total_inr,
     fractional_metal_rate_inr_per_gram,
 )
 
@@ -56,34 +55,48 @@ class UnifiedSchemeEngine:
         gst_pct = Decimal(str(c.get("gst_percent") or GST_PERCENT)) if c.get("includes_gst") else ZERO
 
         if c.get("credit_mode") == "gold_grams":
-            b = breakdown_from_total_inr(total_inr, rate)
-            mc_inr = ZERO
-            if c.get("includes_making_charge"):
-                mode = c.get("making_charge_mode")
-                if mode == "jeweller_per_gram" and jeweller_mc_per_gram > 0:
-                    mc_inr = (b["grams"] * jeweller_mc_per_gram).quantize(Decimal("0.01"))
-                elif mode == "jeweller_percent" and jeweller_mc_percent > 0:
-                    mc_inr = (
-                        b["gold_value_inr_pre_gst"] * jeweller_mc_percent / Decimal("100")
-                    ).quantize(Decimal("0.01"))
-            gold_pre = b["gold_value_inr_pre_gst"]
+            scheme_mc_pct = Decimal(str(c.get("making_charge_percent") or 0))
+            mc_pct = (
+                scheme_mc_pct
+                if c.get("making_charge_mode") == "jeweller_percent" and scheme_mc_pct > 0
+                else jeweller_mc_percent
+            )
+            mc_gst_pct = (
+                Decimal(str(c.get("gst_on_making_charge_percent") or c.get("gst_percent") or GST_PERCENT))
+                if c.get("includes_gst_on_making_charge")
+                else ZERO
+            )
+            b = self._gold_deposit_breakdown(
+                total_inr,
+                rate,
+                metal_gst_pct=gst_pct,
+                includes_making_charge=bool(c.get("includes_making_charge")),
+                making_charge_mode=c.get("making_charge_mode") or "none",
+                mc_percent=mc_pct,
+                mc_per_gram=jeweller_mc_per_gram,
+                mc_gst_pct=mc_gst_pct,
+            )
+            mc_inr = b["making_charge_inr"]
+            mc_gst_inr = b["gst_on_making_charge_inr"]
+            metal_gst = b["gst_inr"]
+            summary_parts = [f"₹{total_inr} → {b['grams']}g gold"]
             if mc_inr > 0:
-                gold_pre = max(ZERO, total_inr - b["gst_inr"] - mc_inr)
-                b = breakdown_from_total_inr(gold_pre + b["gst_inr"], rate)
+                summary_parts.append(f"MC ₹{mc_inr}")
+            if mc_gst_inr > 0:
+                summary_parts.append(f"GST on MC ₹{mc_gst_inr}")
             return {
                 "payment_type": "gold",
                 "metal_rate_inr_per_gram": str(rate),
                 "total_inr": str(total_inr),
                 "gold_value_inr_pre_gst": str(b["gold_value_inr_pre_gst"]),
                 "gst_percent": str(gst_pct),
-                "gst_inr": str(b["gst_inr"]),
+                "gst_inr": str(metal_gst),
+                "gst_on_making_charge_inr": str(mc_gst_inr),
                 "making_charge_inr": str(mc_inr),
+                "making_charge_percent": str(mc_pct) if mc_pct > 0 else "0",
                 "gold_grams": str(b["grams"]),
                 "credited_as": "gold_grams",
-                "summary": (
-                    f"₹{total_inr} → {b['grams']}g gold"
-                    + (f" + MC ₹{mc_inr}" if mc_inr else "")
-                ),
+                "summary": " · ".join(summary_parts),
             }
 
         return {
@@ -93,10 +106,92 @@ class UnifiedSchemeEngine:
             "gold_value_inr_pre_gst": str(total_inr),
             "gst_percent": "0",
             "gst_inr": "0",
+            "gst_on_making_charge_inr": "0",
             "making_charge_inr": "0",
             "gold_grams": "0",
             "credited_as": "cash_pool",
             "summary": f"₹{total_inr} → cash pool",
+        }
+
+    @staticmethod
+    def _gold_deposit_breakdown(
+        total_inr: Decimal,
+        rate: Decimal,
+        *,
+        metal_gst_pct: Decimal,
+        includes_making_charge: bool,
+        making_charge_mode: str,
+        mc_percent: Decimal,
+        mc_per_gram: Decimal,
+        mc_gst_pct: Decimal,
+    ) -> dict[str, Decimal]:
+        if rate <= 0:
+            raise ValueError("Invalid rate.")
+
+        if includes_making_charge and making_charge_mode == "jeweller_percent" and mc_percent > 0:
+            mc_factor = mc_percent / Decimal("100")
+            if mc_gst_pct > 0:
+                mc_factor *= Decimal("1") + mc_gst_pct / Decimal("100")
+            metal_factor = Decimal("1") + metal_gst_pct / Decimal("100")
+            gold_pre = (total_inr / (metal_factor + mc_factor)).quantize(Decimal("0.01"))
+            metal_gst = (gold_pre * metal_gst_pct / Decimal("100")).quantize(Decimal("0.01"))
+            mc_inr = (gold_pre * mc_percent / Decimal("100")).quantize(Decimal("0.01"))
+            mc_gst_inr = (
+                (mc_inr * mc_gst_pct / Decimal("100")).quantize(Decimal("0.01"))
+                if mc_gst_pct > 0
+                else ZERO
+            )
+            grams = (gold_pre / rate).quantize(Decimal("0.000001"))
+            return {
+                "grams": grams,
+                "gold_value_inr_pre_gst": gold_pre,
+                "gst_inr": metal_gst,
+                "making_charge_inr": mc_inr,
+                "gst_on_making_charge_inr": mc_gst_inr,
+            }
+
+        if includes_making_charge and making_charge_mode == "jeweller_per_gram" and mc_per_gram > 0:
+            metal_factor = Decimal("1") + metal_gst_pct / Decimal("100")
+            gold_pre = (total_inr / metal_factor).quantize(Decimal("0.01")) if metal_factor > 0 else total_inr
+            grams = (gold_pre / rate).quantize(Decimal("0.000001"))
+            mc_inr = (grams * mc_per_gram).quantize(Decimal("0.01"))
+            mc_gst_inr = (
+                (mc_inr * mc_gst_pct / Decimal("100")).quantize(Decimal("0.01"))
+                if mc_gst_pct > 0
+                else ZERO
+            )
+            remaining = max(ZERO, total_inr - mc_inr - mc_gst_inr)
+            if metal_gst_pct > 0:
+                gold_pre = (remaining / metal_factor).quantize(Decimal("0.01"))
+                metal_gst = (remaining - gold_pre).quantize(Decimal("0.01"))
+            else:
+                gold_pre = remaining.quantize(Decimal("0.01"))
+                metal_gst = ZERO
+            grams = (gold_pre / rate).quantize(Decimal("0.000001"))
+            mc_inr = (grams * mc_per_gram).quantize(Decimal("0.01"))
+            mc_gst_inr = (
+                (mc_inr * mc_gst_pct / Decimal("100")).quantize(Decimal("0.01"))
+                if mc_gst_pct > 0
+                else ZERO
+            )
+            return {
+                "grams": grams,
+                "gold_value_inr_pre_gst": gold_pre,
+                "gst_inr": metal_gst,
+                "making_charge_inr": mc_inr,
+                "gst_on_making_charge_inr": mc_gst_inr,
+            }
+
+        metal_factor = Decimal("1") + metal_gst_pct / Decimal("100")
+        gold_pre = (total_inr / metal_factor).quantize(Decimal("0.01")) if metal_gst_pct > 0 else total_inr.quantize(Decimal("0.01"))
+        metal_gst = (total_inr - gold_pre).quantize(Decimal("0.01")) if metal_gst_pct > 0 else ZERO
+        grams = (gold_pre / rate).quantize(Decimal("0.000001"))
+        return {
+            "grams": grams,
+            "gold_value_inr_pre_gst": gold_pre,
+            "gst_inr": metal_gst,
+            "making_charge_inr": ZERO,
+            "gst_on_making_charge_inr": ZERO,
         }
 
     def validate_deposit_amount(

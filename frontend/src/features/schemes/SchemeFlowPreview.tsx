@@ -48,8 +48,20 @@ export function SchemeFlowPreview({ design, preview }: Props) {
           ) : null}
           {quote.gst_inr && quote.gst_inr !== '0.00' ? (
             <>
-              <dt>GST</dt>
+              <dt>GST on gold</dt>
               <dd>₹{quote.gst_inr}</dd>
+            </>
+          ) : null}
+          {quote.making_charge_inr && quote.making_charge_inr !== '0.00' ? (
+            <>
+              <dt>Making charge</dt>
+              <dd>₹{quote.making_charge_inr}</dd>
+            </>
+          ) : null}
+          {quote.gst_on_making_charge_inr && quote.gst_on_making_charge_inr !== '0.00' ? (
+            <>
+              <dt>GST on making charge</dt>
+              <dd>₹{quote.gst_on_making_charge_inr}</dd>
             </>
           ) : null}
           {preview?.example?.estimated_pool_inr != null ? (

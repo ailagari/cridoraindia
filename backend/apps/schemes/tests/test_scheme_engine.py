@@ -38,6 +38,19 @@ class UnifiedSchemeEngineTests(TestCase):
         q = engine.quote_deposit(Decimal("5000"))
         self.assertEqual(q["total_inr"], "5000")
 
+    def test_quote_deposit_gold_with_mc_and_gst_on_mc(self):
+        design = preset_design("open_fractional_gold")
+        design["input"]["making_charge_mode"] = "jeweller_percent"
+        design["input"]["making_charge_percent"] = 10
+        design["input"]["includes_gst_on_making_charge"] = True
+        design["input"]["gst_on_making_charge_percent"] = 3
+        rules = compile_scheme_design(design)
+        engine = UnifiedSchemeEngine(rules)
+        q = engine.quote_deposit(Decimal("5000"))
+        self.assertEqual(q["payment_type"], "gold")
+        self.assertGreater(Decimal(q["making_charge_inr"]), 0)
+        self.assertGreater(Decimal(q["gst_on_making_charge_inr"]), 0)
+
     def test_bonus_avg_last_n(self):
         design = preset_design("eleven_plus_one_avg_six_gold")
         rules = compile_scheme_design(design)

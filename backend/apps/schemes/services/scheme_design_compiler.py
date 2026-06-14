@@ -54,6 +54,13 @@ def validate_scheme_design(design: dict) -> list[str]:
         if not n or n < 1:
             errors.append("bonus_avg_months required for avg_last_n_months.")
 
+    if _deep_get(design, "input", "includes_making_charge"):
+        mode = _deep_get(design, "input", "making_charge_mode")
+        if mode == "jeweller_percent":
+            pct = _deep_get(design, "input", "making_charge_percent")
+            if pct is None or pct <= 0:
+                errors.append("making_charge_percent required when making charge uses percent mode.")
+
     return errors
 
 
@@ -109,6 +116,11 @@ def compile_scheme_design(design: dict) -> dict:
             "gst_percent": float(inp.get("gst_percent") or 3),
             "includes_making_charge": bool(inp.get("includes_making_charge")),
             "making_charge_mode": inp.get("making_charge_mode") or "none",
+            "making_charge_percent": inp.get("making_charge_percent"),
+            "includes_gst_on_making_charge": bool(inp.get("includes_gst_on_making_charge")),
+            "gst_on_making_charge_percent": float(
+                inp.get("gst_on_making_charge_percent") or inp.get("gst_percent") or 3
+            ),
             "min_deposit_inr": inp.get("min_deposit_inr"),
             "max_deposit_inr": inp.get("max_deposit_inr"),
             "suggested_rhythm": inp.get("suggested_rhythm"),
@@ -183,7 +195,13 @@ def preview_calculation(design: dict, sample_deposit_inr: float = 5000) -> dict:
 
     rules = compile_scheme_design(design)
     engine = UnifiedSchemeEngine(rules)
-    quote = engine.quote_deposit(Decimal(str(sample_deposit_inr)), jeweller_mc_per_gram=Decimal("50"))
+    inp = design.get("input") or {}
+    mc_pct = Decimal(str(inp.get("making_charge_percent") or 12))
+    quote = engine.quote_deposit(
+        Decimal(str(sample_deposit_inr)),
+        jeweller_mc_per_gram=Decimal("50"),
+        jeweller_mc_percent=mc_pct if inp.get("making_charge_mode") == "jeweller_percent" else Decimal("0"),
+    )
 
     timeline = design.get("plan_timeline") or {}
     fixed = bool(timeline.get("fixed_duration"))

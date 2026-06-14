@@ -34,7 +34,12 @@ def quote_contribution(enrollment, total_inr: Decimal) -> dict:
     engine = UnifiedSchemeEngine(enrollment.rules_snapshot or {})
     mc_pg, mc_pct = _jeweller_mc_defaults(enrollment.offering.jeweller)
     ov = enrollment.offering.jeweller_overrides or {}
-    if ov.get("redemption_making_charge_percent") is not None:
+    c = (enrollment.rules_snapshot or {}).get("contribution") or {}
+    if c.get("making_charge_mode") == "jeweller_percent":
+        scheme_pct = c.get("making_charge_percent")
+        if scheme_pct is not None:
+            mc_pct = Decimal(str(scheme_pct))
+    elif ov.get("redemption_making_charge_percent") is not None:
         mc_pct = Decimal(str(ov["redemption_making_charge_percent"]))
     err = engine.validate_deposit_amount(total_inr, offering_overrides=ov)
     if err:

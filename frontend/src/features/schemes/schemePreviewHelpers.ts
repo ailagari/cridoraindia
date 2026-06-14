@@ -133,7 +133,13 @@ export function buildInputPreview(
       lines.push(`Gold credited: ${quote.gold_grams} g`)
     }
     if (quote.gst_inr && quote.gst_inr !== '0.00') {
-      lines.push(`GST portion: ${fmtInr(Number(quote.gst_inr))}`)
+      lines.push(`GST on gold: ${fmtInr(Number(quote.gst_inr))}`)
+    }
+    if (quote.making_charge_inr && quote.making_charge_inr !== '0.00') {
+      lines.push(`Making charge: ${fmtInr(Number(quote.making_charge_inr))}`)
+    }
+    if (quote.gst_on_making_charge_inr && quote.gst_on_making_charge_inr !== '0.00') {
+      lines.push(`GST on making charge: ${fmtInr(Number(quote.gst_on_making_charge_inr))}`)
     }
   } else {
     lines.push('Adjust inputs to see a sample deposit breakdown.')
