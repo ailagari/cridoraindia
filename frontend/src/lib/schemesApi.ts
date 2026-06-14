@@ -1,4 +1,4 @@
-import { authFetch, extractApiDetail, parseApiResponse } from '@/lib/api'
+import { authFetch } from '@/lib/api'
 
 export type SchemeDesign = {
   input: Record<string, unknown>
@@ -104,14 +104,19 @@ export type SchemePresetDTO = {
   description: string
 }
 
-async function schemesFetch<T>(path: string, init?: RequestInit & { jsonBody?: unknown }): Promise<T> {
+async function schemesFetch<T>(
+  path: string,
+  init?: RequestInit & { jsonBody?: Record<string, unknown> },
+): Promise<T> {
   const { jsonBody, ...rest } = init ?? {}
   const res = await authFetch(path, {
     ...rest,
     ...(jsonBody !== undefined ? { method: rest.method ?? 'POST', jsonBody } : {}),
   })
-  const data = await parseApiResponse(res)
-  if (!res.ok) throw new Error(extractApiDetail(data) || 'Request failed')
+  const data = (await res.json().catch(() => ({}))) as T & { detail?: string }
+  if (!res.ok) {
+    throw new Error(data.detail != null ? String(data.detail) : 'Request failed')
+  }
   return data as T
 }
 
@@ -306,5 +311,5 @@ export function submitSchemeContributionUtr(contributionId: number, utr: string)
   return schemesFetch<SchemeContributionDTO>(
     `/api/v1/schemes/contributions/${contributionId}/submit-utr/`,
     { method: 'POST', jsonBody: { utr } },
-  })
+  )
 }

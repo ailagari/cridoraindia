@@ -62,6 +62,7 @@ export function JewellerSchemeDeskPanel() {
                 <strong>{c.reference}</strong> — ₹{c.amount_inr}
               </div>
               <Input
+                label="Counter OTP"
                 placeholder="6-digit OTP"
                 value={otpInputs[c.id] ?? ''}
                 onChange={(e) =>

@@ -134,7 +134,7 @@ export function CustomerSchemeHubPanel() {
             <option value="">Select jeweller</option>
             {jewellers.map((j) => (
               <option key={j.id} value={j.id}>
-                {j.business_name || j.email}
+                {j.business_name || `Jeweller #${j.id}`}
               </option>
             ))}
           </select>

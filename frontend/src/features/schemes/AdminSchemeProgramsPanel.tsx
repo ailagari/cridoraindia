@@ -12,7 +12,8 @@ import {
   type SchemePresetDTO,
   type SchemeTemplateDTO,
 } from '@/lib/schemesApi'
-import { EMPTY_SCHEME_DESIGN, type SchemeDesign } from '@/features/schemes/schemeDesignMapper'
+import { EMPTY_SCHEME_DESIGN } from '@/features/schemes/schemeDesignMapper'
+import type { SchemeDesign } from '@/lib/schemesApi'
 import { SchemeInputCard } from './SchemeInputCard'
 import { SchemeBonusCard } from './SchemeBonusCard'
 import { SchemeOutputCard } from './SchemeOutputCard'
