@@ -2382,6 +2382,37 @@ select.input {
   margin-bottom: 0.65rem !important;
 }
 
+.scheme-join-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+}
+
+.scheme-join-toggle__title {
+  font-weight: 600;
+  font-size: var(--ts-h3);
+}
+
+.scheme-join-toggle__hint {
+  font-size: var(--ts-caption);
+  color: var(--text-muted);
+}
+
+.scheme-join-body {
+  margin-top: var(--sp-4);
+  padding-top: var(--sp-4);
+  border-top: 1px solid var(--border-soft);
+}
+
 .fractional-jeweller-picker {
   display: grid;
   gap: var(--sp-4);
