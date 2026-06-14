@@ -164,20 +164,24 @@ export function CustomerSchemeHubPanel() {
   }, [])
 
   const reloadContributions = useCallback(async () => {
-    const rows = await fetchCustomerSchemeContributions()
-    setContributions(rows)
-    const upiInflight = rows.find((c) => isCustomerInflightUpi(c))
-    const counterInflight = rows.find((c) => isCustomerCounterAwaiting(c))
-    setActiveUpiContribution(upiInflight ?? null)
-    if (counterInflight) {
-      setLastContribution(counterInflight)
-      if (counterInflight.otp && counterInflight.otp_expires_at) {
-        setOtpReveal({
-          paymentId: counterInflight.id,
-          otp: counterInflight.otp,
-          expiresAt: counterInflight.otp_expires_at,
-        })
+    try {
+      const rows = await fetchCustomerSchemeContributions()
+      setContributions(rows)
+      const upiInflight = rows.find((c) => isCustomerInflightUpi(c))
+      const counterInflight = rows.find((c) => isCustomerCounterAwaiting(c))
+      setActiveUpiContribution(upiInflight ?? null)
+      if (counterInflight) {
+        setLastContribution(counterInflight)
+        if (counterInflight.otp && counterInflight.otp_expires_at) {
+          setOtpReveal({
+            paymentId: counterInflight.id,
+            otp: counterInflight.otp,
+            expiresAt: counterInflight.otp_expires_at,
+          })
+        }
       }
+    } catch {
+      /* keep last contributions on poll failure */
     }
   }, [])
 
@@ -379,6 +383,11 @@ export function CustomerSchemeHubPanel() {
     })
   }, [activeUpiContribution, resumeUpiContribution])
 
+  const ledgerContributions = useMemo(() => {
+    if (ledgerEnrollmentId === '') return contributions
+    return contributions.filter((c) => c.enrollment_id === ledgerEnrollmentId)
+  }, [contributions, ledgerEnrollmentId])
+
   if (!featureReady) {
     return (
       <div className="dash-panel-max fractional-buy-panel">
@@ -397,11 +406,6 @@ export function CustomerSchemeHubPanel() {
       </div>
     )
   }
-
-  const ledgerContributions = useMemo(() => {
-    if (ledgerEnrollmentId === '') return contributions
-    return contributions.filter((c) => c.enrollment_id === ledgerEnrollmentId)
-  }, [contributions, ledgerEnrollmentId])
 
   const showUpiStep = Boolean(activeUpiContribution && isCustomerInflightUpi(activeUpiContribution))
   const showCounterFlow = Boolean(lastContribution && isCustomerCounterAwaiting(lastContribution))

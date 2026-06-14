@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Card, CardHeader, Feedback } from '@/components/ui'
+import { Card, CardHeader, EmptyState, Feedback } from '@/components/ui'
 import { DashSegmentPair } from '@/components/DashSegmentPair'
 import { JewellerSchemeCustomersLedger } from '@/features/schemes/JewellerSchemeCustomersLedger'
 import { JewellerSchemeEnrollPanel } from '@/features/schemes/JewellerSchemeEnrollPanel'
@@ -10,6 +10,7 @@ import {
 } from '@/lib/schemesApi'
 import { LIVE_BALANCE_POLL_MS } from '@/lib/liveDeskIntervals'
 import { useLivePoll } from '@/lib/useLivePoll'
+import { fetchPlatformFeatures, isFeatureEnabled } from '@/lib/platformFeatures'
 
 const DESK_TABS = [
   { id: 'queue', label: 'Action queue' },
@@ -26,6 +27,15 @@ export function JewellerSchemeDeskPanel() {
   const [customerFilter, setCustomerFilter] = useState<number | null>(null)
   const [msg, setMsg] = useState('')
   const [err, setErr] = useState('')
+  const [featureReady, setFeatureReady] = useState(false)
+  const [schemesEnabled, setSchemesEnabled] = useState(false)
+
+  useEffect(() => {
+    void fetchPlatformFeatures().then((f) => {
+      setSchemesEnabled(isFeatureEnabled(f?.flags ?? null, 'golden_scheme'))
+      setFeatureReady(true)
+    })
+  }, [])
 
   const reloadSummary = useCallback(async () => {
     try {
@@ -40,11 +50,30 @@ export function JewellerSchemeDeskPanel() {
     void reloadSummary()
   }, [reloadSummary])
 
-  useLivePoll(reloadSummary, LIVE_BALANCE_POLL_MS, tab !== 'enroll')
+  useLivePoll(reloadSummary, LIVE_BALANCE_POLL_MS, schemesEnabled && tab !== 'enroll')
 
   const viewCustomerPayments = (customerId: number) => {
     setCustomerFilter(customerId)
     setTab('payments')
+  }
+
+  if (!featureReady) {
+    return (
+      <div className="dash-panel-max scheme-desk-panel">
+        <p className="dash-muted">Loading schemes desk…</p>
+      </div>
+    )
+  }
+
+  if (!schemesEnabled) {
+    return (
+      <div className="dash-panel-max scheme-desk-panel">
+        <EmptyState
+          title="Schemes desk unavailable"
+          description="Golden scheme is not enabled on the platform yet."
+        />
+      </div>
+    )
   }
 
   return (
