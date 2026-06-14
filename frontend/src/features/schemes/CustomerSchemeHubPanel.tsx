@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Button, Card, Input } from '@/components/ui'
+import { Button, Card, CardHeader, Input, Select, TabBar } from '@/components/ui'
 import { fetchVerifiedJewellers, type JewellerStorefrontDTO } from '@/lib/marketplaceApi'
 import {
   createSchemeContribution,
@@ -189,11 +189,10 @@ export function CustomerSchemeHubPanel() {
 
       <Card>
         <h3 className="dash-card-title">Join a scheme</h3>
-        <label className="form-label">
-          Jeweller
-          <select
-            className="form-input"
-            value={jewellerId}
+        <div className="ds-form ds-form--compact">
+          <Select
+            label="Jeweller"
+            value={jewellerId === '' ? '' : String(jewellerId)}
             onChange={(e) => setJewellerId(e.target.value ? Number(e.target.value) : '')}
           >
             <option value="">Select jeweller</option>
@@ -202,8 +201,8 @@ export function CustomerSchemeHubPanel() {
                 {j.business_name || `Jeweller #${j.id}`}
               </option>
             ))}
-          </select>
-        </label>
+          </Select>
+        </div>
         <ul className="dash-list">
           {availableOfferings.map((o) => (
             <li key={o.id} className="dash-list-item">
@@ -224,60 +223,63 @@ export function CustomerSchemeHubPanel() {
 
       {selectedEnrollment?.status === 'active' ? (
         <Card>
-          <h3 className="dash-card-title">Add deposit — {selectedEnrollment.offering.display_name}</h3>
-          <Input label="Amount ₹" value={amount} onChange={(e) => setAmount(e.target.value)} />
-          {quote ? (
-            <p className="dash-muted" style={{ margin: '0.5rem 0' }}>
-              Total ₹{quote.total_inr}
-              {quote.gold_grams && quote.gold_grams !== '0.000000' ? ` · ${quote.gold_grams} g` : ''}
-            </p>
-          ) : null}
-          <div className="dash-segment-row" style={{ margin: '0.75rem 0' }}>
-            <button
-              type="button"
-              className={paymentMethod === 'counter' ? 'dash-segment is-active' : 'dash-segment'}
-              onClick={() => setPaymentMethod('counter')}
-            >
-              Counter
-            </button>
-            <button
-              type="button"
-              className={paymentMethod === 'upi' ? 'dash-segment is-active' : 'dash-segment'}
-              onClick={() => setPaymentMethod('upi')}
-            >
-              UPI
-            </button>
-          </div>
-          <Button onClick={() => void contribute()} disabled={busy}>
-            Create deposit
-          </Button>
-          {otp ? (
-            <p style={{ marginTop: '0.75rem' }}>
-              Counter OTP: <strong className="tabular">{otp}</strong>
-            </p>
-          ) : null}
-          {lastContributionId && paymentMethod === 'upi' ? (
-            <div style={{ marginTop: '1rem' }}>
-              {upiUri ? (
-                <p className="dash-muted">
-                  <a href={upiUri}>Open UPI app</a>
-                </p>
-              ) : null}
-              <Input label="UTR after payment" value={utr} onChange={(e) => setUtr(e.target.value)} />
-              <Button
-                size="sm"
-                style={{ marginTop: '0.5rem' }}
-                onClick={() =>
-                  lastContributionId &&
-                  submitSchemeContributionUtr(lastContributionId, utr).then(() =>
-                    setMsg('UTR submitted.'),
-                  )
-                }
-              >
-                Submit UTR
-              </Button>
+          <CardHeader title={`Add deposit — ${selectedEnrollment.offering.display_name}`} />
+          <div className="ds-form ds-form--compact">
+            <Input
+              label="Amount ₹"
+              inputMode="decimal"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+            />
+            {quote ? (
+              <p className="ds-field__hint" style={{ margin: 0 }}>
+                Total ₹{quote.total_inr}
+                {quote.gold_grams && quote.gold_grams !== '0.000000' ? ` · ${quote.gold_grams} g` : ''}
+              </p>
+            ) : null}
+            <div>
+              <span className="ds-field__label">Payment method</span>
+              <TabBar
+                variant="segmented"
+                active={paymentMethod}
+                onChange={(k) => setPaymentMethod(k as 'upi' | 'counter')}
+                tabs={[
+                  { key: 'counter', label: 'Counter' },
+                  { key: 'upi', label: 'UPI' },
+                ]}
+              />
             </div>
-          ) : null}
+            <Button onClick={() => void contribute()} disabled={busy} variant="primary">
+              Create deposit
+            </Button>
+            {otp ? (
+              <p className="ds-field__hint">
+                Counter OTP: <strong className="tabular">{otp}</strong>
+              </p>
+            ) : null}
+            {lastContributionId && paymentMethod === 'upi' ? (
+              <>
+                {upiUri ? (
+                  <p className="ds-field__hint">
+                    <a href={upiUri}>Open UPI app</a>
+                  </p>
+                ) : null}
+                <Input label="UTR after payment" value={utr} onChange={(e) => setUtr(e.target.value)} />
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() =>
+                    lastContributionId &&
+                    submitSchemeContributionUtr(lastContributionId, utr).then(() =>
+                      setMsg('UTR submitted.'),
+                    )
+                  }
+                >
+                  Submit UTR
+                </Button>
+              </>
+            ) : null}
+          </div>
         </Card>
       ) : selectedEnrollment?.status === 'plan_month_complete' ? (
         <Card>

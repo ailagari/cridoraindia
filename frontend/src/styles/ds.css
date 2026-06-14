@@ -712,11 +712,47 @@ html[data-theme='light'] .ds-card {
   box-sizing: border-box;
 }
 .ds-field__input::placeholder { color: var(--text-faint); }
+.ds-field__input:hover:not(:disabled):not(:focus) {
+  border-color: var(--gold-shine-12);
+  background: var(--gold-shine-10);
+}
 .ds-field__input:focus {
   outline: none;
   border-color: var(--gold);
   background: var(--silk-10);
   box-shadow: 0 0 0 3px var(--gold-bg);
+}
+.ds-field__input:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  background: var(--silk-06);
+}
+.ds-field__select-wrap {
+  position: relative;
+  display: flex;
+  width: 100%;
+}
+.ds-field__select-wrap::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: 14px;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid var(--text-muted);
+  border-bottom: 2px solid var(--text-muted);
+  transform: translateY(-65%) rotate(45deg);
+  pointer-events: none;
+}
+.ds-field__select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 40px;
+  cursor: pointer;
+}
+.ds-field__select option {
+  background: var(--surface);
+  color: var(--text);
 }
 .ds-field__input--error {
   border-color: var(--danger);

@@ -426,18 +426,21 @@ export function AdminSchemeProgramsPanel() {
                 </Button>
               }
             />
-            <Input
-              label="Scheme name"
-              value={name}
-              onChange={(e) => !isReadOnlyDesigner && setName(e.target.value)}
-              disabled={isReadOnlyDesigner}
-            />
+            <div className="ds-form ds-form--compact">
+              <Input
+                label="Scheme name"
+                value={name}
+                placeholder="e.g. 11+1 Jewellery Pool"
+                onChange={(e) => !isReadOnlyDesigner && setName(e.target.value)}
+                disabled={isReadOnlyDesigner}
+              />
+            </div>
           </Card>
 
           <div className="pf-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 'var(--sp-4)' }}>
-            <SchemeInputCard design={design} onChange={isReadOnlyDesigner ? () => {} : setDesign} />
-            <SchemeBonusCard design={design} onChange={isReadOnlyDesigner ? () => {} : setDesign} />
-            <SchemeOutputCard design={design} onChange={isReadOnlyDesigner ? () => {} : setDesign} />
+            <SchemeInputCard design={design} onChange={isReadOnlyDesigner ? () => {} : setDesign} disabled={isReadOnlyDesigner} />
+            <SchemeBonusCard design={design} onChange={isReadOnlyDesigner ? () => {} : setDesign} disabled={isReadOnlyDesigner} />
+            <SchemeOutputCard design={design} onChange={isReadOnlyDesigner ? () => {} : setDesign} disabled={isReadOnlyDesigner} />
             <SchemeFlowPreview design={design} preview={preview} />
           </div>
         </div>

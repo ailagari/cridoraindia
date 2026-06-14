@@ -87,17 +87,19 @@ export function Select({ label, error, hint, children, className, ...rest }: Sel
   return (
     <Field label={label} error={error} hint={hint} required={rest.required}>
       {(id) => (
-        <select
-          id={id}
-          className={[
-            'ds-field__input',
-            error ? 'ds-field__input--error' : '',
-            className ?? '',
-          ].filter(Boolean).join(' ')}
-          {...rest}
-        >
-          {children}
-        </select>
+        <div className="ds-field__select-wrap">
+          <select
+            id={id}
+            className={[
+              'ds-field__input ds-field__select',
+              error ? 'ds-field__input--error' : '',
+              className ?? '',
+            ].filter(Boolean).join(' ')}
+            {...rest}
+          >
+            {children}
+          </select>
+        </div>
       )}
     </Field>
   )

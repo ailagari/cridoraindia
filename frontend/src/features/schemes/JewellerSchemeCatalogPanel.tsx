@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Button, Card, Input } from '@/components/ui'
+import { Button, Card, Input, Select } from '@/components/ui'
 import {
   createJewellerSchemeOffering,
   fetchJewellerSchemeCatalog,
@@ -96,24 +96,21 @@ export function JewellerSchemeCatalogPanel() {
         <h2 className="dash-card-title">Scheme catalog</h2>
         <p className="dash-muted">Browse published platform schemes and add them to your showroom.</p>
         {err ? <p className="form-error">{err}</p> : null}
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', marginTop: '0.75rem' }}>
+        <div className="ds-field-row" style={{ marginTop: 'var(--sp-3)' }}>
           <Input
             label="Search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Scheme name…"
           />
-          <label className="form-label">
-            Category
-            <select className="form-input" value={category} onChange={(e) => setCategory(e.target.value)}>
-              <option value="">All categories</option>
-              {categories.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-          </label>
+          <Select label="Category" value={category} onChange={(e) => setCategory(e.target.value)}>
+            <option value="">All categories</option>
+            {categories.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </Select>
         </div>
         <ul className="dash-list" style={{ marginTop: '1rem' }}>
           {catalog.map((t) => (

@@ -1,5 +1,5 @@
 import type { SchemeDesign } from '@/lib/schemesApi'
-import { Card } from '@/components/ui'
+import { Card, CardHeader } from '@/components/ui'
 import { flowSummaryFromDesign } from './schemeDesignMapper'
 
 type Props = {
@@ -11,8 +11,8 @@ export function SchemeFlowPreview({ design, preview }: Props) {
   const quote = preview?.deposit_quote as Record<string, string> | undefined
   return (
     <Card>
-      <h3 className="dash-card-title">Live preview</h3>
-      <p className="dash-muted">{flowSummaryFromDesign(design)}</p>
+      <CardHeader title="Live preview" />
+      <p className="ds-field__hint" style={{ marginTop: 0 }}>{flowSummaryFromDesign(design)}</p>
       {quote ? (
         <dl className="dash-dl">
           <dt>Sample deposit</dt>
@@ -31,10 +31,10 @@ export function SchemeFlowPreview({ design, preview }: Props) {
           ) : null}
         </dl>
       ) : (
-        <p className="dash-muted">Adjust cards to see ₹ breakdown.</p>
+        <p className="ds-field__hint">Adjust cards to see ₹ breakdown.</p>
       )}
       {preview?.valid === false ? (
-        <p className="form-error">Design has validation issues.</p>
+        <p className="ds-field__error" role="alert">Design has validation issues.</p>
       ) : null}
     </Card>
   )
