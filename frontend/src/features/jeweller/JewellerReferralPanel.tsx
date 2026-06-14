@@ -13,7 +13,12 @@ function signupLinkFor(code: string): string {
   return `${origin}/signup?ref=${encodeURIComponent(code)}`
 }
 
-export function JewellerReferralPanel() {
+type Props = {
+  /** Compact strip for portfolio overview; full card for profile and customer base. */
+  variant?: 'full' | 'compact'
+}
+
+export function JewellerReferralPanel({ variant = 'full' }: Props) {
   const { user } = useAuth()
   const [code, setCode] = useState('')
   const [loaded, setLoaded] = useState(false)
@@ -43,15 +48,64 @@ export function JewellerReferralPanel() {
     }
   }
 
+  const verified = user?.kyc_status === 'verified'
+
   if (!loaded) {
-    return (
+    return variant === 'compact' ? null : (
       <div className="card" style={{ padding: '1.25rem', marginBottom: '1rem' }}>
         <p style={{ margin: 0, color: 'var(--text-muted)' }}>Loading referral code…</p>
       </div>
     )
   }
 
-  const verified = user?.kyc_status === 'verified'
+  if (variant === 'compact') {
+    return (
+      <div
+        className="card"
+        style={{
+          padding: '1rem 1.25rem',
+          marginBottom: '1.25rem',
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '0.75rem',
+        }}
+      >
+        <div>
+          <p style={{ margin: 0, fontSize: '0.68rem', fontWeight: 800, letterSpacing: '0.08em', color: 'var(--text-faint)' }}>
+            CUSTOMER REFERRAL CODE
+          </p>
+          {!verified ? (
+            <p style={{ margin: '0.35rem 0 0', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+              Issued after KYB verification is approved.
+            </p>
+          ) : code ? (
+            <p className="tabular" style={{ margin: '0.25rem 0 0', fontSize: '1.5rem', fontWeight: 800, letterSpacing: '0.18em' }}>
+              {code}
+            </p>
+          ) : (
+            <p style={{ margin: '0.35rem 0 0', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+              Referral code is being assigned — refresh shortly.
+            </p>
+          )}
+        </div>
+        {verified && code ? (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+            <button type="button" className="btn btn-primary btn-sm" onClick={() => void copyText(code, 'Code')}>
+              Copy code
+            </button>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={() => void copyText(signupLink, 'Signup link')}>
+              Copy signup link
+            </button>
+          </div>
+        ) : null}
+        {copyMsg ? (
+          <p style={{ margin: 0, width: '100%', fontSize: '0.82rem', color: 'var(--success)' }}>{copyMsg}</p>
+        ) : null}
+      </div>
+    )
+  }
 
   return (
     <div className="card" style={{ padding: '1.25rem', marginBottom: '1rem' }}>

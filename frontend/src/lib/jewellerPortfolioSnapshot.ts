@@ -3,6 +3,7 @@ import { jewellerGoldDepositPending } from '@/lib/goldDepositApi'
 import {
   fetchGoldWallet,
   fetchJewellerCustodyVaults,
+  fetchJewellerPrimaryCustomers,
   fetchJewellerSellbacks,
   type LiabilityCreditRowDTO,
 } from '@/lib/goldTransferApi'
@@ -23,6 +24,9 @@ export type JewellerPortfolioSnapshot = {
   fractionalGrams: number
   schemeGrams: number
   customerCount: number
+  primaryCustomerCount: number
+  primaryVaultGramsTotal: number
+  primaryEstimatedValueInr: number
   investmentSalesInr: number
   ornamentRevenueInr: number
   depositValueInr: number
@@ -40,10 +44,11 @@ export type JewellerPortfolioSnapshot = {
 }
 
 export async function fetchJewellerPortfolioSnapshot(): Promise<JewellerPortfolioSnapshot | null> {
-  const [wallet, custody, purchaseDesk, pendingDeposits, ornaments, sellbacks, crossInbox] =
+  const [wallet, custody, primaryCustomers, purchaseDesk, pendingDeposits, ornaments, sellbacks, crossInbox] =
     await Promise.all([
       fetchGoldWallet(),
       fetchJewellerCustodyVaults(),
+      fetchJewellerPrimaryCustomers(),
       jewellerFractionalOrdersDesk(),
       jewellerGoldDepositPending(),
       fetchJewellerOrnamentRedemptions(),
@@ -100,6 +105,9 @@ export async function fetchJewellerPortfolioSnapshot(): Promise<JewellerPortfoli
     fractionalGrams,
     schemeGrams,
     customerCount: custody?.results?.length ?? 0,
+    primaryCustomerCount: primaryCustomers?.primary_customer_count ?? 0,
+    primaryVaultGramsTotal: parseN(primaryCustomers?.primary_vault_grams_total),
+    primaryEstimatedValueInr: parseN(primaryCustomers?.primary_estimated_value_inr_total),
     investmentSalesInr,
     ornamentRevenueInr,
     depositValueInr: depositPendingInr > 0 ? depositPendingInr : depositValueInr,

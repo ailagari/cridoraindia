@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { DashboardLayout } from '@/components/DashboardLayout'
 import { JewellerBusinessProfilePanel } from '@/features/jeweller/JewellerBusinessProfilePanel'
+import { JewellerReferralPanel } from '@/features/jeweller/JewellerReferralPanel'
 import { JewellerKybWorkflow } from '@/features/jeweller/JewellerKybWorkflow'
 import { JewellerPortfolioOverviewPanel } from '@/features/portfolio/JewellerPortfolioOverviewPanel'
 import { JewellerCustomerVaultsPanel } from '@/features/portfolio/JewellerCustomerVaultsPanel'
@@ -102,11 +103,17 @@ export function JewellerDashboardPage() {
       title={head}
     >
       {active === 'portfolio' ? <JewellerPortfolioOverviewPanel onNavigate={setSection} /> : null}
+      {active === 'cust_referral' ? (
+        <div className="dash-panel-max">
+          <JewellerReferralPanel />
+        </div>
+      ) : null}
       {active === 'cust_hub' ? (
-        <>
-          <JewellerCustomerVaultsPanel />
+        <div className="dash-panel-max">
+          <JewellerReferralPanel />
           <JewellerPrimaryCustomersPanel />
-        </>
+          <JewellerCustomerVaultsPanel />
+        </div>
       ) : null}
       {active === 'mkt_products' ? <JewellerMarketplacePanel /> : null}
       {active === 'mkt_schemes' ? (

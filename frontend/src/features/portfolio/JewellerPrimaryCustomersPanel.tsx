@@ -5,6 +5,8 @@ import {
   type JewellerPrimaryCustomerRowDTO,
   type JewellerPrimaryCustomersPayloadDTO,
 } from '@/lib/goldTransferApi'
+import { LIVE_BALANCE_POLL_MS } from '@/lib/liveDeskIntervals'
+import { useLivePoll } from '@/lib/useLivePoll'
 
 function parseG(s: string): number {
   const n = Number.parseFloat(s)
@@ -36,20 +38,37 @@ export function JewellerPrimaryCustomersPanel() {
     void load()
   }, [load])
 
+  useLivePoll(load, LIVE_BALANCE_POLL_MS, true)
+
   const rows: JewellerPrimaryCustomerRowDTO[] = data?.results ?? []
+  const withVault = rows.filter((row) => parseG(row.vault_total_grams) > 1e-9).length
 
   return (
-    <section className="card" style={{ marginTop: 'var(--sp-5)' }}>
-      <h2 className="dash-table-title">Primary customers</h2>
+    <section className="card" style={{ marginBottom: 'var(--sp-5)' }}>
+      <h2 className="dash-table-title">Primary customer base</h2>
       <p className="dash-footnote">
-        Customers who chose your shop as their primary jeweller. Gold column is vault balance held at your shop.
+        Customers who chose your shop as their <strong>primary jeweller</strong> at signup or in their dashboard. This is
+        your default routing audience for transfers, marketplace benefits, and loyalty.
       </p>
       {err ? <p className="form-error">{err}</p> : null}
       {data ? (
-        <p className="dash-footnote">
-          {data.primary_customer_count} primary · {parseG(data.primary_vault_grams_total).toFixed(4)} g · ₹
-          {formatInr(data.primary_estimated_value_inr_total)}
-        </p>
+        <div className="pf-grid pf-grid--kpis pf-stagger" style={{ margin: '1rem 0 1.25rem' }}>
+          <div className="pf-kpi pf-kpi--gold pf-kpi--shimmer">
+            <span className="pf-kpi__eyebrow">Primary customers</span>
+            <p className="pf-kpi__value">{data.primary_customer_count}</p>
+            <span className="pf-kpi__hint">Listed you as default jeweller</span>
+          </div>
+          <div className="pf-kpi pf-kpi--ocean pf-kpi--pulse">
+            <span className="pf-kpi__eyebrow">With vault balance</span>
+            <p className="pf-kpi__value">{withVault}</p>
+            <span className="pf-kpi__hint">Primary customers holding gold here</span>
+          </div>
+          <div className="pf-kpi pf-kpi--iris pf-kpi--pulse">
+            <span className="pf-kpi__eyebrow">Gold at your shop</span>
+            <p className="pf-kpi__value tabular">{parseG(data.primary_vault_grams_total).toFixed(4)} g</p>
+            <span className="pf-kpi__hint">₹{formatInr(data.primary_estimated_value_inr_total)} estimated</span>
+          </div>
+        </div>
       ) : null}
       <div className="dash-table-scroll">
         <table className="admin-user-table">
@@ -65,7 +84,8 @@ export function JewellerPrimaryCustomersPanel() {
             {rows.length === 0 ? (
               <tr>
                 <td colSpan={4} style={{ color: 'var(--text-muted)' }}>
-                  No primary customers yet.
+                  No primary customers yet. Share your referral code or storefront invite link so customers can choose you
+                  at signup.
                 </td>
               </tr>
             ) : (

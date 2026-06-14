@@ -6,7 +6,10 @@ export const JEWELLER_NAV_GROUPS: DashboardNavGroup[] = [
     label: 'Customer',
     shortLabel: 'Customer',
     icon: 'users',
-    items: [{ sectionKey: 'cust_hub', label: 'Customer vaults' }],
+    items: [
+      { sectionKey: 'cust_hub', label: 'Customer base' },
+      { sectionKey: 'cust_referral', label: 'Referral code' },
+    ],
   },
   {
     id: 'marketplace',
@@ -73,6 +76,7 @@ export const JEWELLER_LEGACY_SECTION: Record<string, string> = {
   cust_kyc: 'cust_hub',
   cust_value: 'cust_hub',
   cust_locked: 'cust_hub',
+  cust_referral: 'cust_referral',
   mkt_schemes: 'mkt_schemes',
   mkt_rates: 'mkt_policy',
   mkt_rules: 'mkt_policy',

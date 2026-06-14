@@ -107,3 +107,22 @@ class JewellerReferralTests(TestCase):
         self.assertTrue(res.data.get("onboarding_jeweller_applied"))
         user = User.objects.get(email="api-ref@test.com")
         self.assertEqual(user.default_jeweller_id, self.j_onboard.id)
+
+    def test_me_assigns_referral_code_for_verified_jeweller(self):
+        jeweller = User.objects.create_user(
+            "me-code@test.com",
+            "pw",
+            user_type=User.JEWELLER,
+            kyc_status=User.KYC_VERIFIED,
+            jeweller_code="me-code-shop",
+        )
+        self.assertFalse((jeweller.jeweller_referral_code or "").strip())
+        client = APIClient()
+        client.force_authenticate(jeweller)
+        res = client.get("/api/v1/auth/me/")
+        self.assertEqual(res.status_code, 200)
+        code = (res.data.get("jeweller_referral_code") or "").strip()
+        self.assertEqual(len(code), 6)
+        self.assertTrue(code.isdigit())
+        jeweller.refresh_from_db()
+        self.assertEqual(jeweller.jeweller_referral_code, code)

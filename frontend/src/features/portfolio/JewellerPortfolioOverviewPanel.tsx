@@ -6,6 +6,7 @@ import { LIVE_BALANCE_POLL_MS, LIVE_PROFILE_POLL_MS } from '@/lib/liveDeskInterv
 import { useLivePoll } from '@/lib/useLivePoll'
 import { PortfolioBarChart, PortfolioDonut, PortfolioSparkRow } from './PortfolioCharts'
 import { JewellerPortfolioPanel } from './JewellerPortfolioPanel'
+import { JewellerReferralPanel } from '@/features/jeweller/JewellerReferralPanel'
 import { TablePagination } from '@/components/ui'
 import { useTablePagination } from '@/hooks/useTablePagination'
 
@@ -123,6 +124,8 @@ export function JewellerPortfolioOverviewPanel({ onNavigate }: Props) {
         </p>
       </div>
 
+      <JewellerReferralPanel variant="compact" />
+
       <div className="row row-b wrap mb20" style={{ alignItems: 'center', gap: 12 }}>
         <span className={kybBadgeClass} style={{ textTransform: 'capitalize', padding: '4px 10px' }}>
           KYB {user?.kyc_status ?? 'pending'}
@@ -133,6 +136,9 @@ export function JewellerPortfolioOverviewPanel({ onNavigate }: Props) {
           </button>
           <button type="button" className="btn btn-ghost btn-sm" onClick={() => onNavigate('txn_deposits')}>
             Deposits ({snap?.pendingDeposits ?? 0})
+          </button>
+          <button type="button" className="btn btn-ghost btn-sm" onClick={() => onNavigate('cust_hub')}>
+            Customer base ({snap?.primaryCustomerCount ?? 0})
           </button>
           <button type="button" className="btn btn-ghost btn-sm" onClick={() => onNavigate('mkt_products')}>
             Catalogue
@@ -218,8 +224,38 @@ export function JewellerPortfolioOverviewPanel({ onNavigate }: Props) {
                 <div className="hs-val tn c-ok">{fmtG(snap.vaultGrams)}</div>
               </div>
               <div className="hero-stat">
-                <div className="hs-lbl">Active customers</div>
+                <div className="hs-lbl">Primary customers</div>
+                <div className="hs-val tn">{snap.primaryCustomerCount}</div>
+              </div>
+              <div className="hero-stat">
+                <div className="hs-lbl">Vault customers</div>
                 <div className="hs-val tn">{snap.customerCount}</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="stat-row mb20">
+            <div className="stat a">
+              <div className="stat-lbl">Primary customer base</div>
+              <div className="stat-val tn">{snap.primaryCustomerCount}</div>
+              <div className="stat-sub">Chose your shop as default jeweller</div>
+            </div>
+            <div className="stat b">
+              <div className="stat-lbl">Primary vault gold</div>
+              <div className="stat-val c-gold tn">{fmtG(snap.primaryVaultGramsTotal)}</div>
+              <div className="stat-sub">Held at your counter by primary customers</div>
+            </div>
+            <div className="stat c">
+              <div className="stat-lbl">Primary est. value</div>
+              <div className="stat-val tn">₹{fmtInr(snap.primaryEstimatedValueInr)}</div>
+              <div className="stat-sub">Marked at your reference ₹/g</div>
+            </div>
+            <div className="stat d">
+              <button type="button" className="btn btn-ghost btn-sm" style={{ marginTop: 4 }} onClick={() => onNavigate('cust_hub')}>
+                View customer base →
+              </button>
+              <div className="stat-sub" style={{ marginTop: 8 }}>
+                {snap.customerCount} with active vault balance
               </div>
             </div>
           </div>

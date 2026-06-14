@@ -130,7 +130,14 @@ class MeView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        data = UserMeSerializer(request.user, context={"request": request}).data
+        user = request.user
+        if user.user_type == User.JEWELLER and user.kyc_status == User.KYC_VERIFIED:
+            from apps.accounts.services.jeweller_referral import ensure_jeweller_referral_code
+
+            if not (user.jeweller_referral_code or "").strip():
+                ensure_jeweller_referral_code(user)
+                user.refresh_from_db()
+        data = UserMeSerializer(user, context={"request": request}).data
         return Response(data)
 
 
