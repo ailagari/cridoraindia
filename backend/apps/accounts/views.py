@@ -16,6 +16,7 @@ from django.contrib.auth import get_user_model
 
 from .models import BankAccount, KYDocument
 from .services.admin_access import sync_staff_superuser_to_platform_admin
+from .services.media_storage import delete_media_by_url, delete_media_file, delete_replaced_media_url
 from .serializers import (
     BankAccountSerializer,
     CustomerPersonalProfileSerializer,
@@ -314,12 +315,15 @@ class KYDocumentUploadView(APIView):
                 "original_filename": getattr(upload, "name", "") or "",
             },
         )
+        previous_file_name = obj.file.name if obj.file else ""
         obj.file = upload
         obj.original_filename = getattr(upload, "name", "") or ""
         obj.status = KYDocument.DOC_PENDING
         obj.rejection_reason = ""
         obj.reviewed_at = None
         obj.save()
+        if previous_file_name and previous_file_name != (obj.file.name or ""):
+            delete_media_file(previous_file_name)
         if request.user.kyc_status == User.KYC_VERIFIED:
             request.user.kyc_status = User.KYC_PENDING
             request.user.kyc_verified_at = None
@@ -368,12 +372,14 @@ class ProfilePhotoView(APIView):
             else request.build_absolute_uri(media_url)
         )
         user = request.user
+        delete_replaced_media_url(old_url=user.profile_photo_url, new_url=absolute)
         user.profile_photo_url = absolute[:512]
         user.save(update_fields=["profile_photo_url"])
         return Response({"profile_photo_url": user.profile_photo_url})
 
     def delete(self, request):
         user = request.user
+        delete_media_by_url(user.profile_photo_url)
         user.profile_photo_url = ""
         user.save(update_fields=["profile_photo_url"])
         return Response({"profile_photo_url": ""})

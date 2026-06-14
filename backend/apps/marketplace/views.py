@@ -11,6 +11,8 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.accounts.services.media_storage import delete_media_by_url, delete_replaced_media_url
+
 from .models import (
     MarketplaceProduct,
     MetalPurity,
@@ -278,6 +280,7 @@ class JewellerMarketplaceLogoUploadView(APIView):
             else request.build_absolute_uri(media_url)
         )
         profile = jeweller_profile_for(request.user)
+        delete_replaced_media_url(old_url=profile.logo_url, new_url=absolute)
         profile.logo_url = absolute[:512]
         profile.save(update_fields=["logo_url", "updated_at"])
         return Response({"logo_url": profile.logo_url})
@@ -332,6 +335,7 @@ class JewellerProductImageUploadView(APIView):
         )
         url_stored = absolute[:512]
         if product:
+            delete_replaced_media_url(old_url=product.image_url, new_url=url_stored)
             product.image_url = url_stored
             product.save(update_fields=["image_url", "updated_at"])
         return Response({"image_url": url_stored})
@@ -403,6 +407,7 @@ class JewellerProductDetailView(APIView):
             product = MarketplaceProduct.objects.get(pk=pk, jeweller=request.user)
         except MarketplaceProduct.DoesNotExist:
             return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        delete_media_by_url(product.image_url)
         product.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 

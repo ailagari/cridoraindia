@@ -12,6 +12,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.accounts.services.admin_access import user_is_platform_admin
+from apps.accounts.services.media_storage import delete_replaced_media_url
 
 from .kerala_board_history import (
     fetch_board_daily_table,
@@ -228,15 +229,21 @@ class AdminGoldRatesPageConfigView(APIView):
                 if "manual_html" in item:
                     p.manual_html = str(item["manual_html"] or "")
                 if "image_url" in item:
-                    p.image_url = str(item["image_url"] or "")[:512]
+                    new_image_url = str(item["image_url"] or "")[:512]
+                    delete_replaced_media_url(old_url=p.image_url, new_url=new_image_url)
+                    p.image_url = new_image_url
                 if "image_link_url" in item:
                     p.image_link_url = str(item["image_link_url"] or "")[:512]
                 if "image_alt" in item:
                     p.image_alt = str(item["image_alt"] or "")[:160]
                 if "video_url" in item:
-                    p.video_url = str(item["video_url"] or "")[:512]
+                    new_video_url = str(item["video_url"] or "")[:512]
+                    delete_replaced_media_url(old_url=p.video_url, new_url=new_video_url)
+                    p.video_url = new_video_url
                 if "video_poster_url" in item:
-                    p.video_poster_url = str(item["video_poster_url"] or "")[:512]
+                    new_poster_url = str(item["video_poster_url"] or "")[:512]
+                    delete_replaced_media_url(old_url=p.video_poster_url, new_url=new_poster_url)
+                    p.video_poster_url = new_poster_url
                 if "video_link_url" in item:
                     p.video_link_url = str(item["video_link_url"] or "")[:512]
                 if "video_alt" in item:

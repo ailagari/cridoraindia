@@ -2,6 +2,8 @@ from django.contrib.auth import get_user_model
 from decimal import Decimal
 from rest_framework import serializers
 
+from apps.accounts.services.media_storage import delete_replaced_media_url
+
 from .models import (
     GoldTickerConfig,
     JewellerPricingProfile,
@@ -323,6 +325,14 @@ class GoldTickerAdminSerializer(serializers.ModelSerializer):
                 {"gold_loan_ltv_max_percent": "Must be greater than or equal to minimum LTV."}
             )
         return attrs
+
+    def update(self, instance, validated_data):
+        if "gold_push_image_url" in validated_data:
+            delete_replaced_media_url(
+                old_url=instance.gold_push_image_url,
+                new_url=validated_data["gold_push_image_url"],
+            )
+        return super().update(instance, validated_data)
 
     def validate_gold_loan_processing_fee_percent(self, value):
         if value < Decimal("0"):
@@ -936,6 +946,14 @@ class JewellerProductWriteSerializer(serializers.ModelSerializer):
                 )
 
         return attrs
+
+    def update(self, instance, validated_data):
+        if "image_url" in validated_data:
+            delete_replaced_media_url(
+                old_url=instance.image_url,
+                new_url=validated_data["image_url"],
+            )
+        return super().update(instance, validated_data)
 
 
 class JewellerProductReadSerializer(serializers.BaseSerializer):

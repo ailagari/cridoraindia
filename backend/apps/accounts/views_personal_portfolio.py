@@ -35,6 +35,7 @@ from apps.accounts.services.personal_holdings import (
 )
 from apps.accounts.services.customer_active_gold_ledger import customer_active_gold_ledger_payload
 from apps.accounts.services.personal_holdings_audit import log_personal_portfolio_action
+from apps.accounts.services.media_storage import delete_filefield
 from apps.accounts.services.portfolio_user_notify import create_portfolio_notification
 
 User = get_user_model()
@@ -576,6 +577,7 @@ class PersonalHoldingDocumentDeleteView(APIView):
         if not d or not _can_mutate_holding_customer(request.user, d.holding):
             return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
         with transaction.atomic():
+            delete_filefield(d.file)
             d.is_removed = True
             d.save(update_fields=["is_removed"])
             log_personal_portfolio_action(
@@ -813,6 +815,7 @@ class AdminPersonalDocumentRemoveView(APIView):
         if not d:
             return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
         with transaction.atomic():
+            delete_filefield(d.file)
             d.is_removed = True
             d.save(update_fields=["is_removed"])
             log_personal_portfolio_action(
