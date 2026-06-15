@@ -1,7 +1,14 @@
-/** Cridora standard ornament tax — aligned with marketplace checkout. */
+/** Cridora ornament tax — rates from admin platform settings when loaded. */
 
-export const GST_ON_GOLD_PERCENT = 3
-export const GST_ON_MAKING_PERCENT = 18
+import {
+  DEFAULT_GST_ON_GOLD_PERCENT,
+  DEFAULT_GST_ON_MAKING_PERCENT,
+  resolveGstOnGoldPercent,
+  resolveGstOnMakingPercent,
+} from '@/lib/platformBillingTax'
+
+export const GST_ON_GOLD_PERCENT = DEFAULT_GST_ON_GOLD_PERCENT
+export const GST_ON_MAKING_PERCENT = DEFAULT_GST_ON_MAKING_PERCENT
 export const MARKETPLACE_MAKING_DISCOUNT_PERCENT = 5
 
 export type OrnamentBillBreakdown = {
@@ -20,19 +27,19 @@ function parseN(s: string | number): number {
 /** Multiplier on pre-GST metal ₹ to reach bill total (metal + MC + both GST lines). */
 export function ornamentBillMultiplier(makingChargePercent: number): number {
   const mc = makingChargePercent / 100
-  const gstGold = GST_ON_GOLD_PERCENT / 100
-  const gstMc = GST_ON_MAKING_PERCENT / 100
+  const gstGold = resolveGstOnGoldPercent() / 100
+  const gstMc = resolveGstOnMakingPercent() / 100
   return 1 + gstGold + mc * (1 + gstMc)
 }
 
 export function gstOnGoldInr(metalInr: number): number {
   if (metalInr <= 0) return 0
-  return (metalInr * GST_ON_GOLD_PERCENT) / 100
+  return (metalInr * resolveGstOnGoldPercent()) / 100
 }
 
 export function gstOnMakingInr(makingInr: number): number {
   if (makingInr <= 0) return 0
-  return (makingInr * GST_ON_MAKING_PERCENT) / 100
+  return (makingInr * resolveGstOnMakingPercent()) / 100
 }
 
 export function ornamentBillFromMetal(

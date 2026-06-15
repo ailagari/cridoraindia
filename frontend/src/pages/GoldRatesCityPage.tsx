@@ -198,9 +198,14 @@ function GoldRatesCityPageInner({ citySlug }: { citySlug: string }) {
               {t('goldRatesCity.detailSection', { city: city.nameEn })}
             </h2>
             <p className="gr-section__lead">{t('goldRatesCity.detailLead', { city: city.nameEn })}</p>
-            <Link to="/gold-rates/kerala" className="btn btn-gold">
-              {t('goldRatesCity.keralaChartsCta')}
-            </Link>
+            <div className="gr-section__actions">
+              <Link to="/gold-rates/kerala" className="btn btn-gold">
+                {t('goldRatesCity.keralaChartsCta')}
+              </Link>
+              <Link to="/gold-calculator" className="btn btn-ghost">
+                {t('nav.goldCalculator')}
+              </Link>
+            </div>
           </section>
 
           <GoldRatesCityLinks titleKey="goldRatesCity.linksTitleCompact" />

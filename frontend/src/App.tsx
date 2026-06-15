@@ -22,6 +22,7 @@ import { DiscoverPage } from '@/pages/DiscoverPage'
 import { ShopHubPage } from '@/pages/ShopHubPage'
 import { JoinHubPage } from '@/pages/JoinHubPage'
 import { GoldRatesPage } from '@/pages/GoldRatesPage'
+import { GoldCalculatorPage } from '@/pages/GoldCalculatorPage'
 import { GoldRatesIndiaPage } from '@/pages/GoldRatesIndiaPage'
 import { GoldRatesCityPage } from '@/pages/GoldRatesCityPage'
 import { goldRatesMalayalamRoutes } from '@/components/GoldRatesMalayalamRoutes'
@@ -84,6 +85,7 @@ export default function App() {
               <Route path="gold-rates/india" element={<GoldRatesIndiaPage />} />
               <Route path="gold-rates/:citySlug" element={<GoldRatesCityPage />} />
               <Route path="gold-rates" element={<Navigate to="/gold-rates/kerala" replace />} />
+              <Route path="gold-calculator" element={<GoldCalculatorPage />} />
               {goldRatesMalayalamRoutes}
               <Route path="login" element={<LoginPage />} />
               <Route path="signup" element={<SignupPage />} />

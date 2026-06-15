@@ -35,8 +35,13 @@ from .services.kyc_review import customer_in_review_queue, jeweller_in_review_qu
 from .services.platform_operational import (
     fractional_counter_otp_ttl_seconds_int,
     fractional_markup_percent,
+    gst_on_gold_percent,
+    gst_on_making_percent,
+    platform_billing_tax_payload,
     set_fractional_counter_otp_ttl_seconds,
     set_fractional_markup_percent,
+    set_gst_on_gold_percent,
+    set_gst_on_making_percent,
 )
 from .vault_service import jeweller_primary_customer_base_payload
 
@@ -640,6 +645,7 @@ class AdminFractionalCounterOtpPolicyView(APIView):
         return {
             "fractional_counter_otp_ttl_seconds": secs,
             "fractional_markup_percent": str(markup),
+            **platform_billing_tax_payload(),
         }
 
     def get(self, request):
@@ -682,5 +688,31 @@ class AdminFractionalCounterOtpPolicyView(APIView):
             except ValueError as e:
                 return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
             out["fractional_markup_percent"] = str(fractional_markup_percent())
+
+        if "gst_on_gold_percent" in data:
+            raw = data.get("gst_on_gold_percent")
+            try:
+                set_gst_on_gold_percent(raw)
+            except (TypeError, ValueError, ArithmeticError):
+                return Response(
+                    {"detail": "gst_on_gold_percent must be a number."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            except ValueError as e:
+                return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            out["gst_on_gold_percent"] = str(gst_on_gold_percent())
+
+        if "gst_on_making_percent" in data:
+            raw = data.get("gst_on_making_percent")
+            try:
+                set_gst_on_making_percent(raw)
+            except (TypeError, ValueError, ArithmeticError):
+                return Response(
+                    {"detail": "gst_on_making_percent must be a number."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            except ValueError as e:
+                return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            out["gst_on_making_percent"] = str(gst_on_making_percent())
 
         return Response(out)

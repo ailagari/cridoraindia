@@ -42,6 +42,7 @@ from .views_gold import (
     JewellerPrimaryCustomersView,
 )
 from .platform_features_views import AdminFeatureRolloutView, PlatformFeaturesView
+from .platform_billing_tax_views import PlatformBillingTaxView
 from .views_admin_treasury import (
     AdminTreasuryLedgerView,
     AdminTreasuryPaymentConfirmView,
@@ -514,6 +515,7 @@ urlpatterns = [
     ),
     path("admin/feature-rollout/", AdminFeatureRolloutView.as_view()),
     path("platform/features/", PlatformFeaturesView.as_view()),
+    path("platform/billing-tax/", PlatformBillingTaxView.as_view()),
     path("admin/notifications/", AdminNotificationsListView.as_view()),
     path("admin/notifications/mark-read/", AdminNotificationsMarkReadView.as_view()),
     path(

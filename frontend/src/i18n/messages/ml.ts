@@ -688,6 +688,34 @@ export const mlMessages: Record<MessageKey, string> = {
   'idx.cta.stat4label': 'വെരിഫൈഡ് പാർട്ണർ സ്റ്റോറുകൾ',
 
   'nav.goldRates': 'സ്വർണ്ണ നിരക്ക്',
+  'nav.goldCalculator': 'സ്വർണ്ണ കാൽക്കുലേറ്റർ',
+
+  'goldCalculator.breadcrumb': 'Gold calculator',
+  'goldCalculator.heading': 'Gold Jewellery Calculator — Live Kerala Rates',
+  'goldCalculator.subheading':
+    'Live 22K/24K Kerala rate, making charges, GST — India gold ornament price estimate on Cridora.',
+  'goldCalculator.pageTitle':
+    'Gold Calculator India — 22K, 24K Jewellery Price with GST & Making Charges | Cridora',
+  'goldCalculator.pageTitleMl':
+    'സ്വർണ്ണ കാൽക്കുലേറ്റർ — Live 22K, 24K GST & Making | Cridora India',
+  'goldCalculator.pageDescriptionMl':
+    'സ്വർണ്ണ കാൽക്കുലേറ്റർ — live Kerala 22K, 24K, making charges, GST. Cridora India.',
+  'goldCalculator.liveRatesTitle': 'Calculator-ൽ ഉപയോഗിക്കുന്ന live rate',
+  'goldCalculator.liveRatesLead': 'Cridora live Kerala gold rate per gram — refreshed every few minutes.',
+  'goldCalculator.keralaRatesCta': 'Kerala gold rate charts & history',
+  'goldCalculator.howToTitle': 'സ്വർണ്ണ വില എങ്ങനെ കണക്കാക്കാം',
+  'goldCalculator.howTo1': 'ഭാരം — gram, sovereign (8 g), kg.',
+  'goldCalculator.howTo2': '24K, 22K (916), 18K purity തിരഞ്ഞെടുക്കുക.',
+  'goldCalculator.howTo3': 'Making charge — ₹/g അല്ലെങ്കിൽ metal %.',
+  'goldCalculator.howTo4': 'Metal + making + GST (3% gold, 18% making) = estimate.',
+  'goldCalculator.faq1q': 'Cridora gold calculator എങ്ങനെ?',
+  'goldCalculator.faq1a': 'Live rate × weight + making + GST on gold & making.',
+  'goldCalculator.faq2q': 'ഏത് rate ഉപയോഗിക്കുന്നു?',
+  'goldCalculator.faq2a': 'Live Kerala 22K, 24K, 18K — jewellers may set own rates.',
+  'goldCalculator.faq3q': 'GST എങ്ങനെ?',
+  'goldCalculator.faq3a': 'Gold 3%, making 18% — showroom bills may vary.',
+  'goldCalculator.faq4q': 'Sovereign (8 g) calculate ചെയ്യാമോ?',
+  'goldCalculator.faq4a': 'Yes — sovereign unit, live rate per gram.',
 
   'goldRates.pageTitle': 'കേരള സ്വർണ്ണ വില ഇന്ന് — 22K, 24K & വെള്ളി | ക്രിഡോറ ഇന്ത്യ',
   'goldRates.pageTitleMl': 'കേരള സ്വർണ്ണ വില ഇന്ന് — Live 22K, 24K & Silver | Cridora India',
@@ -728,6 +756,7 @@ export const mlMessages: Record<MessageKey, string> = {
   'goldRates.calcGstMaking': 'മേക്കിംഗ് GST ({pct}%)',
   'goldRates.calcTotal': 'GST ഉൾപ്പെടെ ആകെ estimate',
   'goldRates.calcWaiting': 'ഭാരം നൽകുക.',
+  'goldRates.calculatorDedicatedCta': 'സ്വർണ്ണ കാൽക്കുലേറ്റർ പേജ് →',
   'goldRates.historyTable': 'ദൈനംദിന നിരക്ക് പട്ടിക',
   'goldRates.historyTableLead': '2 വർഷം വരെ archived daily closes.',
   'goldRates.colDate': 'തീയതി',

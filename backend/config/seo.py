@@ -100,6 +100,18 @@ ROUTE_SEO: dict[str, dict[str, str]] = {
             "24K gold rate today, Kerala gold rate, gold rate per gram India"
         ),
     },
+    "/gold-calculator": {
+        "title": "Gold Calculator India — 22K, 24K Jewellery Price with GST & Making Charges | Cridora",
+        "description": (
+            "Free gold jewellery calculator with live Kerala 22K and 24K rates. Estimate ornament price by weight, "
+            "purity, making charges, and GST on gold and making. Updated every few minutes."
+        ),
+        "keywords": (
+            "gold calculator, gold jewellery calculator, gold price calculator India, 22K gold calculator, "
+            "gold making charges calculator, Kerala gold calculator, gold rate calculator, GST on gold calculator, "
+            "സ്വർണ്ണ കാൽക്കുലേറ്റർ"
+        ),
+    },
     "/gold-rates": {
         "title": "Gold Rates — Kerala & India | Cridora India",
         "description": "Live gold and silver rates for Kerala and India on Cridora.",
@@ -143,6 +155,12 @@ ML_GOLD_META: dict[str, dict[str, str]] = {
         "title": "ഇന്ത്യ സ്വർണ്ണ വില ഇന്ന് — Live 22K, 24K | Cridora India",
         "description": "ഇന്ത്യ സ്വർണ്ണ വില — Kerala board 22K, 24K, 18K, silver per gram on Cridora.",
     },
+    "/gold-calculator": {
+        "title": "സ്വർണ്ണ കാൽക്കുലേറ്റർ — Live 22K, 24K GST & Making | Cridora India",
+        "description": (
+            "സ്വർണ്ണ കാൽക്കുലേറ്റർ — live Kerala 22K, 24K rate, making charges, GST. Cridora India."
+        ),
+    },
 }
 
 for _city in GOLD_RATE_CITIES:
@@ -157,6 +175,8 @@ GOLD_RATE_BASE_PATHS = frozenset(
     | {f"/gold-rates/{c['slug']}" for c in GOLD_RATE_CITIES}
 )
 
+GOLD_CALCULATOR_BASE_PATHS = frozenset({"/gold-calculator"})
+
 for _base in sorted(GOLD_RATE_BASE_PATHS):
     if _base == "/gold-rates":
         continue
@@ -164,10 +184,21 @@ for _base in sorted(GOLD_RATE_BASE_PATHS):
     _ml = ML_GOLD_META.get(_base, _en)
     ROUTE_SEO[f"/ml{_base}"] = {**_en, "title": _ml["title"], "description": _ml["description"]}
 
+for _calc_base in sorted(GOLD_CALCULATOR_BASE_PATHS):
+    _en_calc = ROUTE_SEO[_calc_base]
+    _ml_calc = ML_GOLD_META.get(_calc_base, _en_calc)
+    ROUTE_SEO[f"/ml{_calc_base}"] = {
+        **_en_calc,
+        "title": _ml_calc["title"],
+        "description": _ml_calc["description"],
+    }
+
 SITEMAP_PATHS: list[tuple[str, str, str]] = [
     ("/", "daily", "1.0"),
     ("/gold-rates/kerala", "hourly", "1.0"),
     ("/ml/gold-rates/kerala", "hourly", "0.98"),
+    ("/gold-calculator", "hourly", "0.97"),
+    ("/ml/gold-calculator", "hourly", "0.95"),
     ("/gold-rates/india", "daily", "0.95"),
     ("/ml/gold-rates/india", "daily", "0.93"),
     *[(f"/gold-rates/{c['slug']}", "hourly", "0.92") for c in GOLD_RATE_CITIES],
@@ -185,6 +216,10 @@ GOLD_RATE_PATHS = frozenset(
     GOLD_RATE_BASE_PATHS | {f"/ml{p}" for p in GOLD_RATE_BASE_PATHS if p != "/gold-rates"}
 )
 
+GOLD_CALCULATOR_PATHS = frozenset(
+    GOLD_CALCULATOR_BASE_PATHS | {f"/ml{p}" for p in GOLD_CALCULATOR_BASE_PATHS}
+)
+
 GOLD_RATES_OG_URL = f"{SITE_URL}/og/gold-rates.svg"
 GOLD_RATES_FEED_URL = f"{SITE_URL}/feed/gold-rates.xml"
 
@@ -199,6 +234,14 @@ def _strip_ml_prefix(path: str) -> str:
 
 def _is_gold_rate_path(path: str) -> bool:
     return _strip_ml_prefix(_normalize_path(path)) in GOLD_RATE_BASE_PATHS
+
+
+def _is_gold_calculator_path(path: str) -> bool:
+    return _strip_ml_prefix(_normalize_path(path)) in GOLD_CALCULATOR_BASE_PATHS
+
+
+def _needs_live_rates(path: str) -> bool:
+    return _is_gold_rate_path(path) or _is_gold_calculator_path(path)
 
 
 def _normalize_path(path: str) -> str:
@@ -299,6 +342,8 @@ def _rates_summary_html(rates: dict[str, Any] | None) -> str:
 
 def _prerender_heading(path: str, meta: dict[str, str]) -> str:
     base = _strip_ml_prefix(path)
+    if base == "/gold-calculator":
+        return "സ്വർണ്ണ കാൽക്കുലേറ്റർ" if path.startswith("/ml/") else "Gold Jewellery Calculator"
     if base.startswith("/gold-rates/") and base not in ("/gold-rates/kerala", "/gold-rates/india"):
         slug = base.rsplit("/", 1)[-1]
         city = CITY_BY_SLUG.get(slug)
@@ -313,7 +358,49 @@ def _prerender_heading(path: str, meta: dict[str, str]) -> str:
     return meta["title"].split("—")[0].strip()
 
 
+def _calculator_example_html(rates: dict[str, Any] | None) -> str:
+    if not rates:
+        return (
+            "<p>Example: 8 g of 22K gold at today&apos;s live Kerala rate, plus making charges and GST.</p>"
+        )
+    gold = rates.get("gold") if isinstance(rates.get("gold"), dict) else {}
+    r22 = gold.get("22K")
+    if r22 is None:
+        return "<p>Enter weight, purity, and making charges to estimate gold jewellery price with GST.</p>"
+    metal = float(r22) * 8
+    gst_gold = metal * 0.03
+    total = metal + gst_gold
+    return (
+        f"<p><strong>Example (8 g 22K, no making charge):</strong> "
+        f"metal {_format_inr(metal)} + GST on gold {_format_inr(gst_gold)} "
+        f"≈ {_format_inr(total)} total at {_format_inr(r22)}/g.</p>"
+    )
+
+
 def _prerender_body(path: str, meta: dict[str, str], rates: dict[str, Any] | None) -> str:
+    if _is_gold_calculator_path(path):
+        base = _strip_ml_prefix(path)
+        heading = _prerender_heading(path, meta)
+        rates_html = _rates_summary_html(rates)
+        example_html = _calculator_example_html(rates)
+        lang = "ml-IN" if path.startswith("/ml/") else "en-IN"
+        ml_link = (
+            f'<p><a href="{SITE_URL}/ml{base}">Malayalam version</a></p>'
+            if not path.startswith("/ml/")
+            else ""
+        )
+        return f"""<noscript>
+  <article id="seo-prerender" lang="{lang}">
+    <h1>{html.escape(heading)}</h1>
+    <p>{html.escape(meta["description"])}</p>
+    {rates_html}
+    {example_html}
+    <p>Steps: enter weight → select 24K/22K/18K purity → add making charges → view GST and total.</p>
+    <p><a href="{SITE_URL}/gold-rates/kerala">Live Kerala gold rates</a></p>
+    {ml_link}
+  </article>
+</noscript>
+"""
     if not _is_gold_rate_path(path):
         return ""
     base = _strip_ml_prefix(path)
@@ -431,6 +518,90 @@ def _json_ld_for_path(path: str, meta: dict[str, str], rates: dict[str, Any] | N
                     ],
                 }
             )
+    if _is_gold_calculator_path(path):
+        date_modified = None
+        if rates:
+            date_modified = rates.get("rate_date") or rates.get("source_updated_at")
+        blocks.extend(
+            [
+                {
+                    "@context": "https://schema.org",
+                    "@type": "WebPage",
+                    "name": meta["title"],
+                    "description": meta["description"],
+                    "url": url,
+                    "about": {"@type": "Thing", "name": "Gold jewellery price calculator India"},
+                    **({"dateModified": str(date_modified)} if date_modified else {}),
+                    "inLanguage": "ml-IN" if path.startswith("/ml/") else "en-IN",
+                },
+                {
+                    "@context": "https://schema.org",
+                    "@type": "WebApplication",
+                    "name": "Cridora Gold Jewellery Calculator",
+                    "url": url,
+                    "applicationCategory": "FinanceApplication",
+                    "operatingSystem": "Any",
+                    "offers": {"@type": "Offer", "price": "0", "priceCurrency": "INR"},
+                    "description": meta["description"],
+                    "provider": {"@type": "Organization", "name": SITE_NAME, "url": SITE_URL},
+                },
+                {
+                    "@context": "https://schema.org",
+                    "@type": "HowTo",
+                    "name": "How to calculate gold jewellery price in India",
+                    "step": [
+                        {
+                            "@type": "HowToStep",
+                            "name": "Enter gold weight",
+                            "text": "Enter weight in grams, sovereign (8 g), or kilograms.",
+                        },
+                        {
+                            "@type": "HowToStep",
+                            "name": "Select purity",
+                            "text": "Choose 24K, 22K (916 BIS), or 18K gold purity.",
+                        },
+                        {
+                            "@type": "HowToStep",
+                            "name": "Add making charges",
+                            "text": "Optional making charge as rupees per gram or percentage of metal value.",
+                        },
+                        {
+                            "@type": "HowToStep",
+                            "name": "View total with GST",
+                            "text": "See metal value, making charges, GST on gold (3%), GST on making (18%), and total.",
+                        },
+                    ],
+                },
+                {
+                    "@context": "https://schema.org",
+                    "@type": "FAQPage",
+                    "mainEntity": [
+                        {
+                            "@type": "Question",
+                            "name": "How does the Cridora gold calculator work?",
+                            "acceptedAnswer": {
+                                "@type": "Answer",
+                                "text": (
+                                    "Multiply live gold rate per gram by weight for metal value, add making charges, "
+                                    "then apply GST on gold and making to get an estimated ornament price."
+                                ),
+                            },
+                        },
+                        {
+                            "@type": "Question",
+                            "name": "How is GST calculated on gold jewellery?",
+                            "acceptedAnswer": {
+                                "@type": "Answer",
+                                "text": (
+                                    "GST on gold metal is typically 3% of gold value; GST on making charges is 18% "
+                                    "of the making charge amount in India."
+                                ),
+                            },
+                        },
+                    ],
+                },
+            ]
+        )
     return blocks
 
 
@@ -444,9 +615,9 @@ def inject_route_seo(html_doc: str, request_path: str) -> str:
     title = meta["title"]
     description = meta["description"]
     keywords = meta.get("keywords", DEFAULT_KEYWORDS)
-    rates = _fetch_live_rates() if _is_gold_rate_path(path) else None
+    rates = _fetch_live_rates() if _needs_live_rates(path) else None
     og_image = DEFAULT_OG_IMAGE
-    if _is_gold_rate_path(path):
+    if _needs_live_rates(path):
         label = meta["title"].split("|")[0].strip()
         og_image = f"{GOLD_RATES_OG_URL}?label={quote(label)}"
 
@@ -469,19 +640,20 @@ def inject_route_seo(html_doc: str, request_path: str) -> str:
     out = _replace_meta_content(out, "name", "twitter:image", og_image)
 
     out = _inject_link(out, "canonical", canonical)
-    if _is_gold_rate_path(path):
+    if _is_gold_rate_path(path) or _is_gold_calculator_path(path):
         en_url = f"{SITE_URL}{base}"
         ml_url = f"{SITE_URL}/ml{base}"
         out = _inject_link(out, "alternate", en_url, hreflang="en-IN")
         out = _inject_link(out, "alternate", ml_url, hreflang="ml-IN")
         out = _inject_link(out, "alternate", en_url, hreflang="x-default")
-        out = _inject_link(out, "alternate", GOLD_RATES_FEED_URL, type="application/rss+xml")
+        if _is_gold_rate_path(path):
+            out = _inject_link(out, "alternate", GOLD_RATES_FEED_URL, type="application/rss+xml")
     else:
         out = _inject_link(out, "alternate", canonical, hreflang="en-IN")
         out = _inject_link(out, "alternate", canonical, hreflang="ml-IN")
         out = _inject_link(out, "alternate", canonical, hreflang="x-default")
 
-    rates_for_ld = rates if _is_gold_rate_path(path) else None
+    rates_for_ld = rates if _needs_live_rates(path) else None
     for block in _json_ld_for_path(path, meta, rates_for_ld):
         script = (
             f'    <script type="application/ld+json">{json.dumps(block, ensure_ascii=False)}</script>\n'

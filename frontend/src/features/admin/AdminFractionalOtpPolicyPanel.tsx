@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { authFetch } from '@/lib/api'
 import { AdminFractionalMarkupPanel } from '@/features/admin/AdminFractionalMarkupPanel'
+import { AdminGoldBillingTaxPanel } from '@/features/admin/AdminGoldBillingTaxPanel'
 
 export function AdminFractionalOtpPolicyPanel() {
   const [otpSeconds, setOtpSeconds] = useState<number | null>(null)
@@ -71,6 +72,10 @@ export function AdminFractionalOtpPolicyPanel() {
   return (
     <div className="dash-panel-max">
       <h2 className="dash-table-title">Fractional investment policy</h2>
+
+      <div style={{ marginBottom: '1.25rem' }}>
+        <AdminGoldBillingTaxPanel />
+      </div>
 
       <div style={{ marginBottom: '1.25rem' }}>
         <AdminFractionalMarkupPanel />

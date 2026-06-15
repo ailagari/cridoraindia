@@ -40,6 +40,8 @@ class SeoFilesMiddlewareTests(SimpleTestCase):
         self.assertIn("https://www.cridoraindia.com/gold-rates/kerala", xml)
         self.assertIn("https://www.cridoraindia.com/ml/gold-rates/kerala", xml)
         self.assertIn("https://www.cridoraindia.com/gold-rates/kochi", xml)
+        self.assertIn("https://www.cridoraindia.com/gold-calculator", xml)
+        self.assertIn("https://www.cridoraindia.com/ml/gold-calculator", xml)
 
 
 class AdSenseVerificationTests(SimpleTestCase):

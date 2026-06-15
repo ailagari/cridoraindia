@@ -21,13 +21,20 @@ from .pricing import (
     markup_for_product,
     stone_component_inr,
 )
+from .gold_billing import effective_gst_on_gold_percent, effective_gst_on_making_percent
 from .spot_prices import resolve_cridora_base_22k_inr
 
 User = get_user_model()
 
 _DISCOUNT_ON_MAKING = Decimal("0.05")
-_GST_GOLD = Decimal("0.03")
-_GST_MAKING = Decimal("0.18")
+
+
+def _gst_gold_rate() -> Decimal:
+    return effective_gst_on_gold_percent() / Decimal("100")
+
+
+def _gst_making_rate() -> Decimal:
+    return effective_gst_on_making_percent() / Decimal("100")
 
 
 def customer_has_vault_holdings_at_jeweller(
@@ -114,8 +121,8 @@ def _jeweller_line_parts(
     raw_making = _raw_making_inr(product, gold_metal, same_store)
     discount = (raw_making * _DISCOUNT_ON_MAKING).quantize(Decimal("0.01"))
     making = (raw_making - discount).quantize(Decimal("0.01"))
-    gst_gold_full = (gold_metal * _GST_GOLD).quantize(Decimal("0.01"))
-    gst_making = (making * _GST_MAKING).quantize(Decimal("0.01"))
+    gst_gold_full = (gold_metal * _gst_gold_rate()).quantize(Decimal("0.01"))
+    gst_making = (making * _gst_making_rate()).quantize(Decimal("0.01"))
     return gold_metal, stone, making, gst_gold_full, gst_making, discount, same_store
 
 
@@ -151,7 +158,7 @@ def checkout_totals_with_vault(
     grams = max(Decimal("0"), vault_grams)
     raw_vault_inr = (grams * metal_rate).quantize(Decimal("0.01"))
     vault_metal_credit = min(raw_vault_inr, gold_metal)
-    gst_on_gold_charged = ((gold_metal - vault_metal_credit) * _GST_GOLD).quantize(Decimal("0.01"))
+    gst_on_gold_charged = ((gold_metal - vault_metal_credit) * _gst_gold_rate()).quantize(Decimal("0.01"))
     gst_on_gold_saved = max(Decimal("0"), gst_gold_full - gst_on_gold_charged)
     vault_value_offset = min(raw_vault_inr, final_invoice)
     cash_payable = max(

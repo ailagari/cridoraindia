@@ -214,6 +214,9 @@ export function HomePage() {
               <Link className="btn btn-primary btn-xl" to="/gold-rates/kerala">
                 {t('idx.hero.ctaGoldRates')}
               </Link>
+              <Link className="btn btn-ghost btn-lg" to="/gold-calculator">
+                {t('nav.goldCalculator')}
+              </Link>
               <Link className="btn btn-ghost btn-lg" to={exploreHref}>
                 {t('idx.hero.cta1')}
               </Link>

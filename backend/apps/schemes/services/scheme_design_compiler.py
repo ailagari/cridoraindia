@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from apps.accounts.services.platform_operational import gst_on_gold_percent, gst_on_making_percent
+
 
 def _deep_get(d: dict, *keys: str, default=None):
     cur: Any = d
@@ -116,13 +118,13 @@ def compile_scheme_design(design: dict) -> dict:
         "contribution": {
             "credit_mode": credit_mode,
             "includes_gst": payment_type == "gold" or bool(inp.get("includes_gst")),
-            "gst_percent": float(inp.get("gst_percent") or 3),
+            "gst_percent": float(inp.get("gst_percent") or gst_on_gold_percent()),
             "includes_making_charge": includes_making_charge,
             "making_charge_mode": inp.get("making_charge_mode") or "none",
             "making_charge_percent": inp.get("making_charge_percent"),
             "includes_gst_on_making_charge": includes_making_charge,
             "gst_on_making_charge_percent": float(
-                inp.get("gst_on_making_charge_percent") or 18
+                inp.get("gst_on_making_charge_percent") or gst_on_making_percent()
             ),
             "min_deposit_inr": inp.get("min_deposit_inr"),
             "max_deposit_inr": inp.get("max_deposit_inr"),

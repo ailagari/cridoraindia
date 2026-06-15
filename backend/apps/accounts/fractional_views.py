@@ -12,7 +12,6 @@ from .fractional_completion import apply_fractional_purchase_credit_and_liabilit
 from .fractional_counter_otp import issue_counter_otp, verify_counter_otp
 from .platform_commercial_service import record_spread_fee_on_fractional_confirm
 from .fractional_service import (
-    GST_PERCENT,
     breakdown_from_grams,
     breakdown_from_total_inr,
     fractional_metal_rate_inr_per_gram,
@@ -233,7 +232,7 @@ class FractionalOrdersView(APIView):
                 metal_rate_inr_per_gram=rate,
                 grams=b["grams"],
                 gold_value_inr_pre_gst=b["gold_value_inr_pre_gst"],
-                gst_percent=GST_PERCENT,
+                gst_percent=b["gst_percent"],
                 gst_inr=b["gst_inr"],
                 total_inr=b["total_inr"],
                 payment_method=FractionalGoldPurchase.PAY_UPI,
@@ -257,7 +256,7 @@ class FractionalOrdersView(APIView):
             metal_rate_inr_per_gram=rate,
             grams=b["grams"],
             gold_value_inr_pre_gst=b["gold_value_inr_pre_gst"],
-            gst_percent=GST_PERCENT,
+            gst_percent=b["gst_percent"],
             gst_inr=b["gst_inr"],
             total_inr=b["total_inr"],
             payment_method=FractionalGoldPurchase.PAY_COUNTER,

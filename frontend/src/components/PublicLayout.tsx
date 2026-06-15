@@ -23,6 +23,7 @@ function PublicLayoutInner() {
   const primaryNav = [
     { to: '/', label: t('nav.home') },
     { to: '/gold-rates/kerala', label: t('nav.goldRates') },
+    { to: '/gold-calculator', label: t('nav.goldCalculator') },
     { to: '/how-it-works', label: t('nav.howItWorks') },
     { to: '/jewellers', label: t('nav.jewellers') },
     { to: '/marketplace', label: t('nav.products') },
@@ -174,6 +175,9 @@ function PublicLayoutInner() {
             </Link>
             <Link className="footer-link" to="/gold-rates/kerala">
               {t('nav.goldRates')}
+            </Link>
+            <Link className="footer-link" to="/gold-calculator">
+              {t('nav.goldCalculator')}
             </Link>
             <Link className="footer-link" to="/gold-rates/india">
               {t('goldRatesCity.allIndia')}

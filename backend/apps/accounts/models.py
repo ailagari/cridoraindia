@@ -1434,6 +1434,20 @@ class PlatformOperationalSettings(models.Model):
         validators=[MinValueValidator(Decimal("0")), MaxValueValidator(Decimal("100"))],
         help_text="Platform markup on fractional purchase metal rate (0–100%).",
     )
+    gst_on_gold_percent = models.DecimalField(
+        max_digits=6,
+        decimal_places=3,
+        default=Decimal("3"),
+        validators=[MinValueValidator(Decimal("0")), MaxValueValidator(Decimal("100"))],
+        help_text="GST % on gold metal value (ornament billing, fractional buy, schemes).",
+    )
+    gst_on_making_percent = models.DecimalField(
+        max_digits=6,
+        decimal_places=3,
+        default=Decimal("18"),
+        validators=[MinValueValidator(Decimal("0")), MaxValueValidator(Decimal("100"))],
+        help_text="GST % on jewellery making charges.",
+    )
     feature_flags = models.JSONField(
         default=dict,
         blank=True,

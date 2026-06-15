@@ -10,11 +10,10 @@ from apps.marketplace.models import jeweller_profile_for
 from apps.marketplace.pricing import reference_metal_rate_inr_per_gram_for_jeweller
 from apps.marketplace.spot_prices import resolve_cridora_base_22k_inr
 
-from .services.platform_operational import fractional_markup_percent
+from .services.platform_operational import fractional_markup_percent, gst_on_gold_percent
 
 User = get_user_model()
 
-GST_PERCENT = Decimal("3")  # GST on gold value; aligned with marketplace metal GST handling
 MIN_GRAMS = Decimal("0.001")  # gold deposit intake floor (not fractional purchase minimum)
 
 
@@ -45,12 +44,13 @@ def fractional_metal_rate_inr_per_gram(_jeweller: User | None = None) -> Decimal
 
 def breakdown_from_grams(grams: Decimal, rate: Decimal) -> dict[str, Decimal]:
     gold_pre = (grams * rate).quantize(Decimal("0.01"))
-    gst = (gold_pre * GST_PERCENT / Decimal("100")).quantize(Decimal("0.01"))
+    gst_pct = gst_on_gold_percent()
+    gst = (gold_pre * gst_pct / Decimal("100")).quantize(Decimal("0.01"))
     total = (gold_pre + gst).quantize(Decimal("0.01"))
     return {
         "grams": grams.quantize(Decimal("0.000001")),
         "gold_value_inr_pre_gst": gold_pre,
-        "gst_percent": GST_PERCENT,
+        "gst_percent": gst_pct,
         "gst_inr": gst,
         "total_inr": total,
     }
@@ -59,8 +59,8 @@ def breakdown_from_grams(grams: Decimal, rate: Decimal) -> dict[str, Decimal]:
 def breakdown_from_total_inr(total_inr: Decimal, rate: Decimal) -> dict[str, Decimal]:
     if rate <= 0:
         raise ValueError("Invalid rate.")
-    # total = gold_pre * (1 + gst/100)
-    factor = Decimal("1") + GST_PERCENT / Decimal("100")
+    gst_pct = gst_on_gold_percent()
+    factor = Decimal("1") + gst_pct / Decimal("100")
     gold_pre = (total_inr / factor).quantize(Decimal("0.01"))
     grams = (gold_pre / rate).quantize(Decimal("0.000001"))
     gst = (total_inr - gold_pre).quantize(Decimal("0.01"))

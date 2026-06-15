@@ -16,6 +16,16 @@
     <priority>0.98</priority>
   </url>
   <url>
+    <loc>https://www.cridoraindia.com/gold-calculator</loc>
+    <changefreq>hourly</changefreq>
+    <priority>0.97</priority>
+  </url>
+  <url>
+    <loc>https://www.cridoraindia.com/ml/gold-calculator</loc>
+    <changefreq>hourly</changefreq>
+    <priority>0.95</priority>
+  </url>
+  <url>
     <loc>https://www.cridoraindia.com/gold-rates/india</loc>
     <changefreq>daily</changefreq>
     <priority>0.95</priority>

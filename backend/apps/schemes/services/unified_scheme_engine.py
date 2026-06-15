@@ -8,8 +8,8 @@ from typing import Any
 
 from apps.accounts.fractional_service import fractional_metal_rate_inr_per_gram
 from apps.marketplace.gold_billing import (
-    GST_ON_GOLD_PERCENT,
-    GST_ON_MAKING_PERCENT,
+    effective_gst_on_gold_percent,
+    effective_gst_on_making_percent,
     ornament_redemption_bill_inr,
 )
 
@@ -57,7 +57,7 @@ class UnifiedSchemeEngine:
 
         if c.get("credit_mode") == "gold_grams":
             # Gold deposits always include GST on metal; making GST when MC is in the deposit.
-            gst_pct = Decimal(str(c.get("gst_percent") or GST_ON_GOLD_PERCENT))
+            gst_pct = Decimal(str(c.get("gst_percent") or effective_gst_on_gold_percent()))
             scheme_mc_pct = Decimal(str(c.get("making_charge_percent") or 0))
             mc_pct = (
                 scheme_mc_pct
@@ -66,7 +66,7 @@ class UnifiedSchemeEngine:
             )
             includes_mc = bool(c.get("includes_making_charge"))
             mc_gst_pct = (
-                Decimal(str(c.get("gst_on_making_charge_percent") or GST_ON_MAKING_PERCENT))
+                Decimal(str(c.get("gst_on_making_charge_percent") or effective_gst_on_making_percent()))
                 if includes_mc
                 else ZERO
             )

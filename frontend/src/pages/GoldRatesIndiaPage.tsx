@@ -165,9 +165,14 @@ export function GoldRatesIndiaPage() {
               {t('goldRatesIndia.keralaSection')}
             </h2>
             <p className="gr-section__lead">{t('goldRatesIndia.keralaLead')}</p>
-            <Link to="/gold-rates/kerala" className="btn btn-gold">
-              {t('goldRatesIndia.keralaCta')}
-            </Link>
+            <div className="gr-section__actions">
+              <Link to="/gold-rates/kerala" className="btn btn-gold">
+                {t('goldRatesIndia.keralaCta')}
+              </Link>
+              <Link to="/gold-calculator" className="btn btn-ghost">
+                {t('nav.goldCalculator')}
+              </Link>
+            </div>
           </section>
 
           <GoldRatesCityLinks />

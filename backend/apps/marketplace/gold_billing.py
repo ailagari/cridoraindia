@@ -1,32 +1,50 @@
-"""Shared gold ornament billing tax — aligned with frontend goldBillingTax.ts."""
+"""Shared gold ornament billing tax — rates from admin platform settings."""
 
 from __future__ import annotations
 
 from decimal import Decimal
 
-GST_ON_GOLD_PERCENT = Decimal("3")
-GST_ON_MAKING_PERCENT = Decimal("18")
+from apps.accounts.services.platform_operational import (
+    DEFAULT_GST_ON_GOLD_PERCENT,
+    DEFAULT_GST_ON_MAKING_PERCENT,
+    gst_on_gold_percent,
+    gst_on_making_percent,
+)
+
+# Back-compat aliases (defaults only — use getters for live rates).
+GST_ON_GOLD_PERCENT = DEFAULT_GST_ON_GOLD_PERCENT
+GST_ON_MAKING_PERCENT = DEFAULT_GST_ON_MAKING_PERCENT
 MARKETPLACE_MAKING_DISCOUNT_PERCENT = Decimal("5")
 
 ZERO = Decimal("0")
 
 
+def effective_gst_on_gold_percent() -> Decimal:
+    return gst_on_gold_percent()
+
+
+def effective_gst_on_making_percent() -> Decimal:
+    return gst_on_making_percent()
+
+
 def gst_on_gold_inr(metal_inr: Decimal) -> Decimal:
     if metal_inr <= 0:
         return ZERO
-    return (metal_inr * GST_ON_GOLD_PERCENT / Decimal("100")).quantize(Decimal("0.01"))
+    pct = effective_gst_on_gold_percent()
+    return (metal_inr * pct / Decimal("100")).quantize(Decimal("0.01"))
 
 
 def gst_on_making_inr(making_inr: Decimal) -> Decimal:
     if making_inr <= 0:
         return ZERO
-    return (making_inr * GST_ON_MAKING_PERCENT / Decimal("100")).quantize(Decimal("0.01"))
+    pct = effective_gst_on_making_percent()
+    return (making_inr * pct / Decimal("100")).quantize(Decimal("0.01"))
 
 
 def ornament_bill_multiplier(making_charge_percent: Decimal) -> Decimal:
     mc = making_charge_percent / Decimal("100")
-    gst_gold = GST_ON_GOLD_PERCENT / Decimal("100")
-    gst_mc = GST_ON_MAKING_PERCENT / Decimal("100")
+    gst_gold = effective_gst_on_gold_percent() / Decimal("100")
+    gst_mc = effective_gst_on_making_percent() / Decimal("100")
     return Decimal("1") + gst_gold + mc * (Decimal("1") + gst_mc)
 
 

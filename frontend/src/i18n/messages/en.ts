@@ -661,6 +661,40 @@ export const enMessages = {
   'idx.cta.stat4label': 'Verified partner stores',
 
   'nav.goldRates': 'Gold rates',
+  'nav.goldCalculator': 'Gold calculator',
+
+  'goldCalculator.breadcrumb': 'Gold calculator',
+  'goldCalculator.heading': 'Gold Jewellery Calculator — Live Kerala Rates',
+  'goldCalculator.subheading':
+    'Calculate gold ornament price in India using live 22K and 24K Kerala rates, making charges, and GST on gold and making.',
+  'goldCalculator.pageTitle':
+    'Gold Calculator India — 22K, 24K Jewellery Price with GST & Making Charges | Cridora',
+  'goldCalculator.pageTitleMl':
+    'സ്വർണ്ണ കാൽക്കുലേറ്റർ — Live 22K, 24K GST & Making | Cridora India',
+  'goldCalculator.pageDescriptionMl':
+    'സ്വർണ്ണ കാൽക്കുലേറ്റർ — live Kerala 22K, 24K rate, making charges, GST. Cridora India.',
+  'goldCalculator.liveRatesTitle': 'Live rates used in this calculator',
+  'goldCalculator.liveRatesLead':
+    'The calculator auto-fills today\'s Cridora live Kerala gold rate per gram. Rates refresh every few minutes.',
+  'goldCalculator.keralaRatesCta': 'Full Kerala gold rate charts & history',
+  'goldCalculator.howToTitle': 'How to calculate gold jewellery price',
+  'goldCalculator.howTo1': 'Enter the weight in grams, sovereign (8 g), or kilograms.',
+  'goldCalculator.howTo2': 'Select gold purity — 24K, 22K (916 BIS), or 18K.',
+  'goldCalculator.howTo3': 'Add optional making charges as ₹ per gram or % of metal value.',
+  'goldCalculator.howTo4':
+    'View metal value, making charges, GST on gold (3%), GST on making (18%), and estimated total.',
+  'goldCalculator.faq1q': 'How does the Cridora gold calculator work?',
+  'goldCalculator.faq1a':
+    'Multiply live gold rate per gram by weight for metal value, add making charges, then apply GST on gold (3%) and GST on making (18%) to get an estimated ornament price.',
+  'goldCalculator.faq2q': 'What gold rate does the calculator use?',
+  'goldCalculator.faq2a':
+    'Cridora uses live indicative Kerala 22K, 24K, and 18K rates refreshed every few minutes. Jewellers may follow this rate or set their own board rates.',
+  'goldCalculator.faq3q': 'How is GST calculated on gold jewellery?',
+  'goldCalculator.faq3a':
+    'In India, GST on gold metal is typically 3% of the gold value, and GST on making charges is 18% of the making charge amount. Showroom bills may vary.',
+  'goldCalculator.faq4q': 'Can I calculate sovereign or 8 gram gold price?',
+  'goldCalculator.faq4a':
+    'Yes. Select sovereign (8 g) as the unit, enter quantity, and choose 22K or 24K purity. The calculator uses today\'s live rate per gram.',
 
   'goldRates.pageTitle': 'Kerala Gold Rate Today — Live 22K, 24K & Silver | Cridora India',
   'goldRates.pageTitleMl': 'കേരള സ്വർണ്ണ വില ഇന്ന് — Live 22K, 24K & Silver | Cridora India',
@@ -701,6 +735,7 @@ export const enMessages = {
   'goldRates.calcGstMaking': 'GST on making ({pct}%)',
   'goldRates.calcTotal': 'Estimated total (incl. GST)',
   'goldRates.calcWaiting': 'Enter weight to calculate.',
+  'goldRates.calculatorDedicatedCta': 'Open dedicated gold calculator page →',
   'goldRates.historyTable': 'Daily rate history',
   'goldRates.historyTableLead': 'Archived daily Kerala gold closes — up to two years on record.',
   'goldRates.colDate': 'Date',
@@ -742,7 +777,7 @@ export const enMessages = {
     '22 karat (916 BIS) gold is 91.6% pure. The 22K rate is derived from the 24K base rate adjusted for purity — the standard for most Indian jewellery.',
   'goldRatesIndia.faq3q': 'Where can I see Kerala gold rate history?',
   'goldRatesIndia.faq3a':
-    'Visit our Kerala gold rates page for interactive charts, daily history tables up to two years, and a jewellery value calculator.',
+    'Visit our Kerala gold rates page for charts and history, or use the dedicated gold calculator for ornament price estimates.',
 
   'goldRatesCity.pageTitle': '{city} Gold Rate Today — Live 22K, 24K & Silver | Cridora India',
   'goldRatesCity.pageTitleMl': '{city} സ്വർണ്ണ വില ഇന്ന് — Live 22K, 24K | Cridora India',
@@ -772,7 +807,7 @@ export const enMessages = {
     'Cridora publishes live indicative 22K, 24K, and 18K Kerala gold rates per gram for {city}, refreshed every few minutes.',
   'goldRatesCity.faq3q': 'Do {city} jewellers charge the same rate?',
   'goldRatesCity.faq3a':
-    'Showroom rates in {city} may include making charges, wastage, and GST. Use our calculator on the Kerala page for estimates.',
+    'Showroom rates in {city} may include making charges, wastage, and GST. Use our free gold calculator for estimates.',
 } as const
 
 export type MessageKey = keyof typeof enMessages

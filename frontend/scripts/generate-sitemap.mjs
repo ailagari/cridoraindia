@@ -30,6 +30,8 @@ const paths = [
   ['/', 'daily', '1.0'],
   ['/gold-rates/kerala', 'hourly', '1.0'],
   ['/ml/gold-rates/kerala', 'hourly', '0.98'],
+  ['/gold-calculator', 'hourly', '0.97'],
+  ['/ml/gold-calculator', 'hourly', '0.95'],
   ['/gold-rates/india', 'daily', '0.95'],
   ['/ml/gold-rates/india', 'daily', '0.93'],
   ...cities.flatMap((slug) => [
