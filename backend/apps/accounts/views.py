@@ -51,6 +51,12 @@ class HealthView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
+        from .services.festival_broadcast_scheduler import maybe_process_scheduled_broadcasts
+
+        try:
+            maybe_process_scheduled_broadcasts()
+        except Exception:
+            pass
         media_root = Path(settings.MEDIA_ROOT)
         return Response(
             {

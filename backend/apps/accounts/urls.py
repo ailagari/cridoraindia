@@ -1,6 +1,7 @@
 from django.urls import path
 from rest_framework_simplejwt.views import TokenRefreshView
 
+from .views_internal_cron import InternalCronProcessBroadcastsView
 from .views import (
     BankAccountUpsertView,
     CustomerPersonalProfileView,
@@ -299,6 +300,10 @@ urlpatterns = [
     path("notifications/mark-read/", PlatformNotificationsMarkReadView.as_view()),
     path("admin/push/test/", WebPushAdminSelfTestView.as_view()),
     path("health/", HealthView.as_view()),
+    path(
+        "internal/cron/process-festival-broadcasts/",
+        InternalCronProcessBroadcastsView.as_view(),
+    ),
     path("auth/login/", LoginView.as_view()),
     path("auth/register/", CustomerRegisterView.as_view()),
     path(

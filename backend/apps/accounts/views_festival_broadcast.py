@@ -9,10 +9,8 @@ from .serializers import (
     FestivalBroadcastNotificationCreateSerializer,
     FestivalBroadcastNotificationSerializer,
 )
-from .services.festival_broadcast import (
-    process_due_festival_broadcasts,
-    prune_festival_broadcast_history,
-)
+from .services.festival_broadcast import prune_festival_broadcast_history
+from .services.festival_broadcast_scheduler import maybe_process_scheduled_broadcasts
 from .views_admin import _require_admin
 
 
@@ -23,7 +21,7 @@ class AdminFestivalBroadcastListCreateView(APIView):
         err = _require_admin(request)
         if err:
             return err
-        process_due_festival_broadcasts()
+        maybe_process_scheduled_broadcasts(force=True)
         qs = (
             FestivalBroadcastNotification.objects.select_related("created_by")
             .order_by("-created_at")[:100]
@@ -41,7 +39,7 @@ class AdminFestivalBroadcastListCreateView(APIView):
         )
         ser.is_valid(raise_exception=True)
         obj = ser.save()
-        process_due_festival_broadcasts()
+        maybe_process_scheduled_broadcasts(force=True)
         obj.refresh_from_db()
         out = FestivalBroadcastNotificationSerializer(obj)
         return Response(out.data, status=status.HTTP_201_CREATED)

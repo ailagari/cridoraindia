@@ -12,7 +12,7 @@ from apps.accounts.serializers import (
     FestivalBroadcastNotificationCreateSerializer,
     FestivalBroadcastNotificationSerializer,
 )
-from apps.accounts.services.festival_broadcast import process_due_festival_broadcasts
+from apps.accounts.services.festival_broadcast_scheduler import maybe_process_scheduled_broadcasts
 from apps.accounts.services.notification_rate_limits import promotional_allowed_for_jeweller
 
 User = get_user_model()
@@ -63,7 +63,7 @@ class JewellerCampaignListCreateView(APIView):
         obj = ser.save()
         obj.created_by_jeweller = request.user
         obj.save(update_fields=["created_by_jeweller"])
-        process_due_festival_broadcasts()
+        maybe_process_scheduled_broadcasts(force=True)
         obj.refresh_from_db()
         return Response(
             FestivalBroadcastNotificationSerializer(obj).data,

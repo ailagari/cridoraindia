@@ -19,9 +19,9 @@ Triggers: live spot fetch (`/marketplace/spot-prices/`), public gold ticker GET 
 
 ## Suggested Railway cron services (housekeeping)
 
-| Command | Suggested schedule |
-|---------|-------------------|
-| `process_festival_broadcasts` | Every 2–5 minutes |
+| Command / hook | Suggested schedule |
+|----------------|-------------------|
+| `process_festival_broadcasts` | Every 2–5 minutes — **prefer HTTP hook below** |
 | `expire_fractional_upi_orders` | Every 5–15 minutes |
 | `cross_redemption_timeout_sweep` | Every 5 minutes |
 | `cross_redemption_process_outbox` | Every 1–2 minutes |
@@ -29,7 +29,24 @@ Triggers: live spot fetch (`/marketplace/spot-prices/`), public gold ticker GET 
 | `sync_kerala_gold_rates_history` | Once after deploy, then weekly until archive is full (~730 days) |
 | `refresh_kerala_board_rates` | Every 5 minutes (polls AKGSMA → Jos → Goodreturns; updates cache only when rates change) |
 
-Use separate **cron** services with `python manage.py <command>` start commands (not the main Gunicorn service).
+### Scheduled admin broadcasts (recommended)
+
+The separate Django cron container can miss ticks on Railway. Prefer pinging the **always-on web service**:
+
+1. Set `CRON_SECRET` on the **`cridoraindia`** web service (long random string).
+2. On **`cron-festival-broadcasts`**, set the same `CRON_SECRET` and change **Custom Start Command** to:
+
+```bash
+curl -fsS -X POST "https://www.cridoraindia.com/api/v1/internal/cron/process-festival-broadcasts/" -H "X-Cron-Secret: ${CRON_SECRET}"
+```
+
+3. Keep cron schedule `*/3 * * * *` or `*/5 * * * *`.
+
+`GET /api/v1/health/` also runs a throttled processor (~every 4 minutes) as a backup when something pings health.
+
+Legacy (works but less reliable on Railway): separate service start command `python manage.py process_festival_broadcasts` with full Django + VAPID env vars duplicated.
+
+Use separate **cron** services with `python manage.py <command>` or the HTTP `curl` hook above (not the main Gunicorn service start command).
 
 ### Kerala gold rate history backfill
 
