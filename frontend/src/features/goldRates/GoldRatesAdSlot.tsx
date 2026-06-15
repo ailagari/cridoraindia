@@ -21,6 +21,16 @@ type Props = {
   adsenseClientId: string
   adsenseEnabled: boolean
   className?: string
+  slotSpecs?: Record<string, import('@/features/goldRates/goldRatesAdSpecs').GoldRatesAdSlotSpec>
+  placeholderImages?: Record<string, string>
+}
+
+function resolveSlotSpec(
+  slot: string | undefined,
+  slotSpecs?: Props['slotSpecs'],
+): import('@/features/goldRates/goldRatesAdSpecs').GoldRatesAdSlotSpec | undefined {
+  if (!slot) return undefined
+  return slotSpecs?.[slot] ?? getGoldRatesAdSlotSpec(slot)
 }
 
 function slotClass(slot: string | undefined): string {
@@ -34,12 +44,14 @@ function AdFrame({
   slot,
   className,
   children,
+  slotSpecs,
 }: {
   slot: string | undefined
   className?: string
   children: ReactNode
+  slotSpecs?: Props['slotSpecs']
 }) {
-  const spec = getGoldRatesAdSlotSpec(slot)
+  const spec = resolveSlotSpec(slot, slotSpecs)
   return (
     <div className={`gr-ad__frame${className ? ` ${className}` : ''}`} style={adSlotFrameStyle(spec)}>
       {children}
@@ -63,12 +75,13 @@ function mediaAlt(placement: GoldRatesAdPlacementDTO): string {
 function renderMediaBanner(
   placement: GoldRatesAdPlacementDTO,
   baseCls: string,
-  opts?: { allowPlaceholderImage?: boolean },
+  opts?: { allowPlaceholderImage?: boolean; slotSpecs?: Props['slotSpecs']; placeholderImages?: Record<string, string> },
 ) {
   const videoSrc = placement.video_url?.trim()
   const imageSrc = placement.image_url?.trim()
+  const placeholders = opts?.placeholderImages ?? SLOT_PLACEHOLDER_IMAGES
   const placeholder =
-    SLOT_PLACEHOLDER_IMAGES[placement.slot] || '/ads/gold-rates-in-content.svg'
+    placeholders[placement.slot] || '/ads/gold-rates-in-content.svg'
   const alt = mediaAlt(placement)
   const link = mediaLink(placement)
 
@@ -87,7 +100,7 @@ function renderMediaBanner(
         aria-label={alt}
       />
     )
-    const framed = <AdFrame slot={placement.slot}>{video}</AdFrame>
+    const framed = <AdFrame slot={placement.slot} slotSpecs={opts?.slotSpecs}>{video}</AdFrame>
     return (
       <aside className={`${baseCls} gr-ad--video`} aria-label={alt}>
         {link ? (
@@ -105,7 +118,7 @@ function renderMediaBanner(
   if (!imgSrc) {
     return (
       <aside className={`${baseCls} gr-ad--placeholder`} aria-hidden>
-        <AdFrame slot={placement.slot}>
+        <AdFrame slot={placement.slot} slotSpecs={opts?.slotSpecs}>
           <img src={placeholder} alt="" className="gr-ad__image gr-ad__image--placeholder" />
         </AdFrame>
       </aside>
@@ -113,7 +126,7 @@ function renderMediaBanner(
   }
 
   const img = <img src={imgSrc} alt={alt} className="gr-ad__image" loading="lazy" decoding="async" />
-  const framed = <AdFrame slot={placement.slot}>{img}</AdFrame>
+  const framed = <AdFrame slot={placement.slot} slotSpecs={opts?.slotSpecs}>{img}</AdFrame>
   return (
     <aside className={`${baseCls} gr-ad--image`} aria-label={alt}>
       {link ? (
@@ -127,7 +140,14 @@ function renderMediaBanner(
   )
 }
 
-export function GoldRatesAdSlot({ placement, adsenseClientId, adsenseEnabled, className }: Props) {
+export function GoldRatesAdSlot({
+  placement,
+  adsenseClientId,
+  adsenseEnabled,
+  className,
+  slotSpecs,
+  placeholderImages,
+}: Props) {
   const pushed = useRef(false)
 
   useEffect(() => {
@@ -163,7 +183,8 @@ export function GoldRatesAdSlot({ placement, adsenseClientId, adsenseEnabled, cl
 
   const slotCls = slotClass(placement.slot)
   const baseCls = `gr-ad${slotCls}${className ? ` ${className}` : ''}`
-  const frameStyle = adSlotFrameStyle(getGoldRatesAdSlotSpec(placement.slot)) as CSSProperties | undefined
+  const frameStyle = adSlotFrameStyle(resolveSlotSpec(placement.slot, slotSpecs)) as CSSProperties | undefined
+  const mediaOpts = { slotSpecs, placeholderImages }
 
   if (placement.mode === 'manual' && placement.manual_html?.trim()) {
     return (
@@ -177,27 +198,27 @@ export function GoldRatesAdSlot({ placement, adsenseClientId, adsenseEnabled, cl
   }
 
   if (placement.mode === 'media') {
-    return renderMediaBanner(placement, baseCls, { allowPlaceholderImage: true })
+    return renderMediaBanner(placement, baseCls, { allowPlaceholderImage: true, ...mediaOpts })
   }
 
   if (placement.mode === 'image') {
     return renderMediaBanner(
       { ...placement, video_url: '' },
       baseCls,
-      { allowPlaceholderImage: true },
+      { allowPlaceholderImage: true, ...mediaOpts },
     )
   }
 
   if (placement.mode === 'video') {
-    return renderMediaBanner(placement, baseCls)
+    return renderMediaBanner(placement, baseCls, mediaOpts)
   }
 
   if (placement.mode === 'adsense' && adsenseEnabled && adsenseClientId && placement.adsense_slot_id) {
-    const spec = getGoldRatesAdSlotSpec(placement.slot)
+    const spec = resolveSlotSpec(placement.slot, slotSpecs)
     const format = placement.adsense_format?.trim() || spec?.adsenseFormat || 'auto'
     return (
       <aside className={`${baseCls} gr-ad--adsense`} aria-label={placement.label || 'Advertisement'}>
-        <AdFrame slot={placement.slot} className="gr-ad__frame--adsense">
+        <AdFrame slot={placement.slot} className="gr-ad__frame--adsense" slotSpecs={slotSpecs}>
           <ins
             className="adsbygoogle"
             style={{ display: 'block', width: '100%', height: '100%' }}
@@ -213,9 +234,9 @@ export function GoldRatesAdSlot({ placement, adsenseClientId, adsenseEnabled, cl
 
   return (
     <aside className={`${baseCls} gr-ad--placeholder`} aria-hidden>
-      <AdFrame slot={placement.slot}>
+      <AdFrame slot={placement.slot} slotSpecs={slotSpecs}>
         <img
-          src={SLOT_PLACEHOLDER_IMAGES[placement.slot] || '/ads/gold-rates-in-content.svg'}
+          src={(placeholderImages ?? SLOT_PLACEHOLDER_IMAGES)[placement.slot] || '/ads/gold-rates-in-content.svg'}
           alt=""
           className="gr-ad__image gr-ad__image--placeholder"
         />

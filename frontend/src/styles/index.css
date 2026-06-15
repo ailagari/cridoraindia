@@ -10396,6 +10396,132 @@ select.input {
   margin-top: 0.35rem;
 }
 
+.admin-gold-page-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding-top: 0.75rem;
+}
+
+.admin-ads-overview h3 {
+  margin: 0 0 0.75rem;
+}
+
+.admin-ads-slots-table-wrap {
+  overflow-x: auto;
+}
+
+.admin-ads-slots-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.admin-ads-slots-table th,
+.admin-ads-slots-table td {
+  padding: 0.55rem 0.65rem;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.admin-ads-slots-table th {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.admin-ads-slots-table__slot-id {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.admin-ads-slots-table__size {
+  white-space: nowrap;
+}
+
+.admin-ads-slots-table__row--inactive {
+  opacity: 0.72;
+}
+
+.admin-ads-page-accordion {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.admin-ads-page-accordion > summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  padding: 0.85rem 1rem;
+  cursor: pointer;
+  list-style: none;
+  font-weight: 600;
+}
+
+.admin-ads-page-accordion > summary::-webkit-details-marker {
+  display: none;
+}
+
+.admin-ads-page-accordion > summary::before {
+  content: '▸';
+  margin-right: 0.45rem;
+  color: var(--text-muted);
+}
+
+.admin-ads-page-accordion[open] > summary::before {
+  content: '▾';
+}
+
+.admin-ads-page-accordion__title {
+  font-size: 0.95rem;
+}
+
+.admin-ads-page-accordion__meta {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.admin-ads-page-accordion > .admin-gold-page-section {
+  padding: 0 1rem 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.admin-ads-slot-accordion {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+}
+
+.admin-ads-slot-accordion > summary {
+  padding: 0.4rem 0.55rem;
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 600;
+  list-style: none;
+}
+
+.admin-ads-slot-accordion > summary::-webkit-details-marker {
+  display: none;
+}
+
+.admin-ads-slot-accordion__body {
+  padding: 0.65rem 0.75rem 0.85rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
 /* Jeweller customer alert preview + admin message preview */
 .ad-preview-page {
   display: flex;

@@ -1,11 +1,18 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { SeoHead } from '@/components/SeoHead'
+import { findAdPlacement, GoldRatesAdSlot } from '@/features/goldRates/GoldRatesAdSlot'
+import { GOLD_CALCULATOR_AD_SLOT_SPECS } from '@/features/goldRates/goldCalculatorAdSpecs'
 import { GoldJewelleryCalculator } from '@/features/goldRates/GoldJewelleryCalculator'
 import { usePublicLocale } from '@/i18n/PublicLocaleProvider'
 import { useGoldRatesSeoContext } from '@/hooks/useGoldRatesSeoContext'
 import { LIVE_PRICE_POLL_MS } from '@/lib/liveDeskIntervals'
-import { fetchKeralaGoldRates, type KeralaGoldRatesPayload } from '@/lib/marketplaceApi'
+import {
+  fetchGoldCalculatorAds,
+  fetchKeralaGoldRates,
+  type GoldRatesAdsPayload,
+  type KeralaGoldRatesPayload,
+} from '@/lib/marketplaceApi'
 import { publicRateSourceLabel } from '@/lib/publicRateLabels'
 import {
   breadcrumbJsonLd,
@@ -38,16 +45,24 @@ export function GoldCalculatorPage() {
   const { t } = usePublicLocale()
   const { seoPath, locale: routeLocale } = useGoldRatesSeoContext()
   const [rates, setRates] = useState<KeralaGoldRatesPayload | null>(null)
+  const [ads, setAds] = useState<GoldRatesAdsPayload | null>(null)
   const seo = PAGE_SEO['/gold-calculator']
 
-  const pageTitle = routeLocale === 'ml' ? t('goldCalculator.pageTitleMl') : seo.title
-  const pageDescription = routeLocale === 'ml' ? t('goldCalculator.pageDescriptionMl') : seo.description
+  const pageTitle =
+    routeLocale === 'ml'
+      ? t('goldCalculator.pageTitleMl')
+      : ads?.page_title || seo.title
+  const pageDescription =
+    routeLocale === 'ml'
+      ? t('goldCalculator.pageDescriptionMl')
+      : ads?.page_description || seo.description
 
   const loadRates = useCallback(() => {
     void fetchKeralaGoldRates().then(setRates)
   }, [])
 
   useEffect(() => {
+    void fetchGoldCalculatorAds().then(setAds)
     loadRates()
   }, [loadRates])
 
@@ -78,6 +93,9 @@ export function GoldCalculatorPage() {
     ],
     [pageTitle, pageDescription, seoPath, rates, t],
   )
+
+  const placements = ads?.placements ?? []
+  const ad = (slot: string) => findAdPlacement(placements, slot)
 
   const r22 = parseNum(rates?.gold['22K'])
   const r24 = parseNum(rates?.gold['24K'])
@@ -115,9 +133,24 @@ export function GoldCalculatorPage() {
         </p>
       </div>
 
+      <GoldRatesAdSlot
+        placement={ad('top_banner')}
+        adsenseClientId={ads?.adsense_client_id ?? ''}
+        adsenseEnabled={ads?.adsense_enabled ?? false}
+        className="container"
+        slotSpecs={GOLD_CALCULATOR_AD_SLOT_SPECS}
+      />
+
       <div className="container gr-page__layout">
         <div className="gr-page__main">
           <GoldJewelleryCalculator rates={rates} sectionId="gr-calculator-main" showHeading={false} />
+
+          <GoldRatesAdSlot
+            placement={ad('in_content_1')}
+            adsenseClientId={ads?.adsense_client_id ?? ''}
+            adsenseEnabled={ads?.adsense_enabled ?? false}
+            slotSpecs={GOLD_CALCULATOR_AD_SLOT_SPECS}
+          />
 
           <section className="gr-section" aria-labelledby="gr-calc-live-rates">
             <h2 id="gr-calc-live-rates" className="gr-section__title">
@@ -148,6 +181,13 @@ export function GoldCalculatorPage() {
               {t('goldCalculator.keralaRatesCta')}
             </Link>
           </section>
+
+          <GoldRatesAdSlot
+            placement={ad('in_content_2')}
+            adsenseClientId={ads?.adsense_client_id ?? ''}
+            adsenseEnabled={ads?.adsense_enabled ?? false}
+            slotSpecs={GOLD_CALCULATOR_AD_SLOT_SPECS}
+          />
 
           <section className="gr-section" aria-labelledby="gr-calc-howto">
             <h2 id="gr-calc-howto" className="gr-section__title">
@@ -187,6 +227,12 @@ export function GoldCalculatorPage() {
         </div>
 
         <aside className="gr-page__sidebar" aria-label={t('goldRates.sidebar')}>
+          <GoldRatesAdSlot
+            placement={ad('sidebar')}
+            adsenseClientId={ads?.adsense_client_id ?? ''}
+            adsenseEnabled={ads?.adsense_enabled ?? false}
+            slotSpecs={GOLD_CALCULATOR_AD_SLOT_SPECS}
+          />
           <div className="gr-sidebar-card">
             <h3>{t('goldRates.sidebarCridora')}</h3>
             <p>{t('goldRates.sidebarCridoraBody')}</p>
@@ -199,6 +245,14 @@ export function GoldCalculatorPage() {
           </div>
         </aside>
       </div>
+
+      <GoldRatesAdSlot
+        placement={ad('footer')}
+        adsenseClientId={ads?.adsense_client_id ?? ''}
+        adsenseEnabled={ads?.adsense_enabled ?? false}
+        className="container"
+        slotSpecs={GOLD_CALCULATOR_AD_SLOT_SPECS}
+      />
     </div>
   )
 }

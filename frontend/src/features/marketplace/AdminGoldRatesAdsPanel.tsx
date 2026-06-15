@@ -1,322 +1,225 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { GoldRatesAdSlot } from '@/features/goldRates/GoldRatesAdSlot'
-import { getGoldRatesAdSlotSpec, GOLD_RATES_AD_SLOT_SPECS } from '@/features/goldRates/goldRatesAdSpecs'
+import { useCallback, useEffect, useState } from 'react'
+import { GOLD_CALCULATOR_AD_SLOT_SPECS } from '@/features/goldRates/goldCalculatorAdSpecs'
+import { GOLD_RATES_AD_SLOT_SPECS } from '@/features/goldRates/goldRatesAdSpecs'
 import {
+  AdminGoldPageAdsSection,
+  countActivePlacements,
+  pageUsesAdsense,
+} from '@/features/marketplace/AdminGoldPageAdsSection'
+import {
+  fetchAdminGoldCalculatorConfig,
   fetchAdminGoldRatesConfig,
+  patchAdminGoldCalculatorConfig,
   patchAdminGoldRatesConfig,
+  uploadAdminGoldCalculatorAdImage,
+  uploadAdminGoldCalculatorAdVideo,
   uploadAdminGoldRatesAdImage,
   uploadAdminGoldRatesAdVideo,
+  type AdminGoldCalculatorPageConfigPayload,
   type AdminGoldRatesPageConfigPayload,
   type GoldRatesAdPlacementDTO,
 } from '@/lib/marketplaceApi'
-import '@/styles/gold-rates-page.css'
 
-const SLOT_LABELS: Record<string, string> = Object.fromEntries(
+const RATES_SLOT_LABELS: Record<string, string> = Object.fromEntries(
   Object.entries(GOLD_RATES_AD_SLOT_SPECS).map(([slot, spec]) => [slot, spec.label]),
 )
 
-type SlotAdSource = 'manual' | 'adsense'
+const CALC_SLOT_LABELS: Record<string, string> = Object.fromEntries(
+  Object.entries(GOLD_CALCULATOR_AD_SLOT_SPECS).map(([slot, spec]) => [slot, spec.label]),
+)
 
-const AD_MEDIA_ACCEPT = 'image/jpeg,image/png,image/webp,video/mp4,video/webm'
-
-function slotAdSource(mode: GoldRatesAdPlacementDTO['mode']): SlotAdSource {
-  return mode === 'adsense' ? 'adsense' : 'manual'
-}
-
-function previewPlacement(p: GoldRatesAdPlacementDTO): GoldRatesAdPlacementDTO {
-  const source = slotAdSource(p.mode)
-  if (source === 'adsense') {
-    return { ...p, is_active: true, mode: 'adsense' }
-  }
-  if (p.mode === 'manual' && p.manual_html?.trim()) {
-    return { ...p, is_active: true }
-  }
-  return { ...p, is_active: true, mode: 'media' }
-}
-
-function isVideoFile(file: File): boolean {
-  if (file.type.startsWith('video/')) return true
-  return /\.(mp4|webm)$/i.test(file.name)
+function normalizePlacements(placements: GoldRatesAdPlacementDTO[]) {
+  return placements.map((p) => ({
+    ...p,
+    mode:
+      p.mode === 'adsense'
+        ? ('adsense' as const)
+        : p.mode === 'manual'
+          ? ('manual' as const)
+          : ('media' as const),
+    image_link_url: p.image_link_url ?? p.video_link_url ?? '',
+    video_link_url: p.video_link_url ?? p.image_link_url ?? '',
+  }))
 }
 
 export function AdminGoldRatesAdsPanel() {
-  const [cfg, setCfg] = useState<AdminGoldRatesPageConfigPayload | null>(null)
-  const [saving, setSaving] = useState(false)
-  const [msg, setMsg] = useState<string | null>(null)
-  const [uploadBusySlot, setUploadBusySlot] = useState<string | null>(null)
-  const [uploadErr, setUploadErr] = useState<Record<string, string>>({})
-  const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({})
+  const [ratesCfg, setRatesCfg] = useState<AdminGoldRatesPageConfigPayload | null>(null)
+  const [calcCfg, setCalcCfg] = useState<AdminGoldCalculatorPageConfigPayload | null>(null)
+  const [ratesSaving, setRatesSaving] = useState(false)
+  const [calcSaving, setCalcSaving] = useState(false)
+  const [ratesMsg, setRatesMsg] = useState<string | null>(null)
+  const [calcMsg, setCalcMsg] = useState<string | null>(null)
 
   const load = useCallback(async () => {
-    const data = await fetchAdminGoldRatesConfig()
-    setCfg(data)
+    const [rates, calc] = await Promise.all([fetchAdminGoldRatesConfig(), fetchAdminGoldCalculatorConfig()])
+    setRatesCfg(rates)
+    setCalcCfg(calc)
   }, [])
 
   useEffect(() => {
     void load()
   }, [load])
 
-  const updatePlacement = (slot: string, patch: Partial<GoldRatesAdPlacementDTO>) => {
-    setCfg((prev) => {
-      if (!prev) return prev
-      const placements = prev.placements.map((p) => (p.slot === slot ? { ...p, ...patch } : p))
-      return { ...prev, placements }
-    })
-  }
-
-  const setSlotSource = (slot: string, source: SlotAdSource) => {
-    if (source === 'adsense') {
-      updatePlacement(slot, { mode: 'adsense' })
-      setCfg((prev) => (prev ? { ...prev, adsense_enabled: true } : prev))
-      return
-    }
-    updatePlacement(slot, { mode: 'media' })
-  }
-
-  const attachPlacementMedia = async (slot: string, file: File) => {
-    setUploadBusySlot(slot)
-    setUploadErr((prev) => {
-      const next = { ...prev }
-      delete next[slot]
-      return next
-    })
-    try {
-      const out = isVideoFile(file)
-        ? await uploadAdminGoldRatesAdVideo(file, slot)
-        : await uploadAdminGoldRatesAdImage(file, slot)
-      if (!out.ok) {
-        setUploadErr((prev) => ({ ...prev, [slot]: out.detail }))
-        return
-      }
-      if ('video_url' in out) {
-        updatePlacement(slot, { video_url: out.video_url, mode: 'media' })
-      } else {
-        updatePlacement(slot, { image_url: out.image_url, mode: 'media' })
-      }
-    } finally {
-      setUploadBusySlot(null)
-    }
-  }
-
-  const save = async () => {
-    if (!cfg) return
-    setSaving(true)
-    setMsg(null)
-    const placements = cfg.placements.map((p) => ({
-      ...p,
-      mode:
-        p.mode === 'adsense'
-          ? ('adsense' as const)
-          : p.mode === 'manual'
-            ? ('manual' as const)
-            : ('media' as const),
-      image_link_url: p.image_link_url ?? p.video_link_url ?? '',
-      video_link_url: p.video_link_url ?? p.image_link_url ?? '',
-    }))
-    const adsense_enabled = placements.some((p) => p.mode === 'adsense') || cfg.adsense_enabled
+  const saveRates = async () => {
+    if (!ratesCfg) return
+    setRatesSaving(true)
+    setRatesMsg(null)
+    const placements = normalizePlacements(ratesCfg.placements)
+    const adsense_enabled = placements.some((p) => p.mode === 'adsense') || ratesCfg.adsense_enabled
     try {
       const saved = await patchAdminGoldRatesConfig({
         adsense_enabled,
-        adsense_client_id: cfg.adsense_client_id,
-        page_title: cfg.page_title,
-        page_description: cfg.page_description,
+        adsense_client_id: ratesCfg.adsense_client_id,
+        page_title: ratesCfg.page_title,
+        page_description: ratesCfg.page_description,
         placements,
       })
       if (saved) {
-        setCfg(saved)
-        setMsg('Saved.')
+        setRatesCfg(saved)
+        setRatesMsg('Saved.')
       } else {
-        setMsg('Save failed.')
+        setRatesMsg('Save failed.')
       }
     } finally {
-      setSaving(false)
+      setRatesSaving(false)
     }
   }
 
-  if (!cfg) {
-    return <p className="text-muted">Loading gold rates page settings…</p>
+  const saveCalc = async () => {
+    if (!calcCfg) return
+    setCalcSaving(true)
+    setCalcMsg(null)
+    const placements = normalizePlacements(calcCfg.placements)
+    const adsense_enabled = placements.some((p) => p.mode === 'adsense') || calcCfg.adsense_enabled
+    try {
+      const saved = await patchAdminGoldCalculatorConfig({
+        adsense_enabled,
+        adsense_client_id: calcCfg.adsense_client_id,
+        page_title: calcCfg.page_title,
+        page_description: calcCfg.page_description,
+        placements,
+      })
+      if (saved) {
+        setCalcCfg(saved)
+        setCalcMsg('Saved.')
+      } else {
+        setCalcMsg('Save failed.')
+      }
+    } finally {
+      setCalcSaving(false)
+    }
   }
 
-  const anyAdsense = cfg.placements.some((p) => slotAdSource(p.mode) === 'adsense')
+  const loading = !ratesCfg || !calcCfg
 
   return (
     <div className="admin-panel-stack">
       <header>
-        <h2 className="admin-panel-title">Gold rates page & ads</h2>
+        <h2 className="admin-panel-title">Public gold pages & ads</h2>
         <p className="admin-panel-lead">
-          <a href="/gold-rates/kerala" target="_blank" rel="noreferrer">
-            Open public page ↗
-          </a>
+          Manage SEO and advertisement slots for the Kerala gold rates page and the gold jewellery calculator.
         </p>
       </header>
 
-      <section className="admin-card">
-        <h3>Page SEO</h3>
-        <label className="admin-field">
-          <span>Title</span>
-          <input
-            value={cfg.page_title ?? ''}
-            onChange={(e) => setCfg({ ...cfg, page_title: e.target.value })}
-          />
-        </label>
-        <label className="admin-field">
-          <span>Meta description</span>
-          <textarea
-            rows={2}
-            value={cfg.page_description ?? ''}
-            onChange={(e) => setCfg({ ...cfg, page_description: e.target.value })}
-          />
-        </label>
-        {anyAdsense ? (
-          <label className="admin-field">
-            <span>AdSense publisher ID</span>
-            <input
-              value={cfg.adsense_client_id ?? ''}
-              onChange={(e) => setCfg({ ...cfg, adsense_client_id: e.target.value })}
-              placeholder="ca-pub-xxxxxxxxxxxxxxxx"
-            />
-          </label>
-        ) : null}
+      <section className="admin-card admin-ads-overview">
+        <h3>Pages overview</h3>
+        <div className="admin-ads-slots-table-wrap">
+          <table className="admin-ads-slots-table admin-ads-overview-table">
+            <thead>
+              <tr>
+                <th scope="col">Page</th>
+                <th scope="col">Active slots</th>
+                <th scope="col">AdSense</th>
+                <th scope="col">Public link</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <strong>Gold rates (Kerala)</strong>
+                  <span className="admin-ads-slots-table__slot-id">/gold-rates/kerala</span>
+                </td>
+                <td>{countActivePlacements(ratesCfg)}</td>
+                <td>{pageUsesAdsense(ratesCfg) ? 'Yes' : 'No'}</td>
+                <td>
+                  <a href="/gold-rates/kerala" target="_blank" rel="noreferrer">
+                    Open ↗
+                  </a>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <strong>Gold calculator</strong>
+                  <span className="admin-ads-slots-table__slot-id">/gold-calculator</span>
+                </td>
+                <td>{countActivePlacements(calcCfg)}</td>
+                <td>{pageUsesAdsense(calcCfg) ? 'Yes' : 'No'}</td>
+                <td>
+                  <a href="/gold-calculator" target="_blank" rel="noreferrer">
+                    Open ↗
+                  </a>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </section>
 
-      {cfg.placements.map((p) => {
-        const source = slotAdSource(p.mode)
-        const slotSpec = getGoldRatesAdSlotSpec(p.slot)
-        const linkUrl = p.video_link_url?.trim() || p.image_link_url?.trim() || ''
-        return (
-          <section key={p.slot} className="admin-card admin-gold-ad-slot">
-            <div className="admin-gold-ad-slot__head">
-              <h3>{SLOT_LABELS[p.slot] ?? p.slot}</h3>
-              <label className="admin-check admin-gold-ad-slot__active">
-                <input
-                  type="checkbox"
-                  checked={p.is_active}
-                  onChange={(e) => updatePlacement(p.slot, { is_active: e.target.checked })}
-                />
-                Active
-              </label>
-            </div>
-
-            <div className="admin-ad-mode-toggle" role="group" aria-label="Ad source">
-              <button
-                type="button"
-                className={`admin-ad-mode-toggle__btn${source === 'manual' ? ' admin-ad-mode-toggle__btn--active' : ''}`}
-                onClick={() => setSlotSource(p.slot, 'manual')}
-              >
-                Manual
-              </button>
-              <button
-                type="button"
-                className={`admin-ad-mode-toggle__btn${source === 'adsense' ? ' admin-ad-mode-toggle__btn--active' : ''}`}
-                onClick={() => setSlotSource(p.slot, 'adsense')}
-              >
-                AdSense
-              </button>
-            </div>
-
-            <div className={`admin-ad-live-preview${p.is_active ? '' : ' admin-ad-live-preview--inactive'}`}>
-              <span className="admin-ad-preview__label">
-                Live preview
-                {slotSpec ? ` · ${slotSpec.recommended.width}×${slotSpec.recommended.height}` : ''}
-                {!p.is_active ? ' · slot inactive on public page' : ''}
+      {loading ? (
+        <p className="text-muted">Loading gold page settings…</p>
+      ) : (
+        <>
+          <details className="admin-ads-page-accordion" open>
+            <summary>
+              <span className="admin-ads-page-accordion__title">Gold rates page</span>
+              <span className="admin-ads-page-accordion__meta">
+                {countActivePlacements(ratesCfg)} active ·{' '}
+                <a href="/gold-rates/kerala" target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>
+                  View page ↗
+                </a>
               </span>
-              <div className="admin-ad-live-preview__stage">
-                <GoldRatesAdSlot
-                  placement={previewPlacement(p)}
-                  adsenseClientId={cfg.adsense_client_id ?? ''}
-                  adsenseEnabled={cfg.adsense_enabled || anyAdsense}
-                />
-              </div>
-            </div>
+            </summary>
+            <AdminGoldPageAdsSection
+              cfg={ratesCfg}
+              slotSpecs={GOLD_RATES_AD_SLOT_SPECS}
+              slotLabels={RATES_SLOT_LABELS}
+              onCfgChange={setRatesCfg}
+              onSave={saveRates}
+              saving={ratesSaving}
+              saveMsg={ratesMsg}
+              uploadFns={{
+                uploadImage: uploadAdminGoldRatesAdImage,
+                uploadVideo: uploadAdminGoldRatesAdVideo,
+              }}
+            />
+          </details>
 
-            {source === 'manual' ? (
-              <div className="admin-gold-ad-slot__fields">
-                <div className="admin-field">
-                  <span>Attach image or video</span>
-                  <div className="admin-gold-ad-slot__attach-row">
-                    <input
-                      ref={(el) => {
-                        fileInputRefs.current[p.slot] = el
-                      }}
-                      type="file"
-                      accept={AD_MEDIA_ACCEPT}
-                      disabled={saving || uploadBusySlot === p.slot}
-                      hidden
-                      onChange={(e) => {
-                        const f = e.target.files?.[0]
-                        e.target.value = ''
-                        if (f) void attachPlacementMedia(p.slot, f)
-                      }}
-                    />
-                    <button
-                      type="button"
-                      className="btn btn-ghost"
-                      disabled={saving || uploadBusySlot === p.slot}
-                      onClick={() => fileInputRefs.current[p.slot]?.click()}
-                    >
-                      {uploadBusySlot === p.slot ? 'Uploading…' : 'Attach file'}
-                    </button>
-                    <span className="admin-gold-ad-slot__hint">
-                      Image (4 MB) or video (16 MB)
-                    </span>
-                  </div>
-                  {uploadErr[p.slot] ? (
-                    <p className="admin-save-msg admin-gold-ad-slot__err">{uploadErr[p.slot]}</p>
-                  ) : null}
-                </div>
-                <label className="admin-field">
-                  <span>Image URL</span>
-                  <input
-                    value={p.image_url ?? ''}
-                    onChange={(e) => updatePlacement(p.slot, { image_url: e.target.value, mode: 'media' })}
-                    placeholder="https://…/banner.jpg"
-                  />
-                </label>
-                <label className="admin-field">
-                  <span>Video URL</span>
-                  <input
-                    value={p.video_url ?? ''}
-                    onChange={(e) => updatePlacement(p.slot, { video_url: e.target.value, mode: 'media' })}
-                    placeholder="https://…/banner.mp4"
-                  />
-                </label>
-                <label className="admin-field">
-                  <span>Click-through URL</span>
-                  <input
-                    value={linkUrl}
-                    onChange={(e) =>
-                      updatePlacement(p.slot, {
-                        image_link_url: e.target.value,
-                        video_link_url: e.target.value,
-                        mode: 'media',
-                      })
-                    }
-                    placeholder="https://… (optional)"
-                  />
-                </label>
-              </div>
-            ) : (
-              <div className="admin-gold-ad-slot__fields">
-                <label className="admin-field">
-                  <span>AdSense slot ID</span>
-                  <input
-                    value={p.adsense_slot_id ?? ''}
-                    onChange={(e) => updatePlacement(p.slot, { adsense_slot_id: e.target.value })}
-                    placeholder="1234567890"
-                  />
-                </label>
-              </div>
-            )}
-          </section>
-        )
-      })}
-
-      <div className="admin-actions">
-        <button type="button" className="btn btn-gold" disabled={saving} onClick={() => void save()}>
-          {saving ? 'Saving…' : 'Save'}
-        </button>
-        {msg ? <span className="admin-save-msg">{msg}</span> : null}
-      </div>
+          <details className="admin-ads-page-accordion">
+            <summary>
+              <span className="admin-ads-page-accordion__title">Gold calculator page</span>
+              <span className="admin-ads-page-accordion__meta">
+                {countActivePlacements(calcCfg)} active ·{' '}
+                <a href="/gold-calculator" target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>
+                  View page ↗
+                </a>
+              </span>
+            </summary>
+            <AdminGoldPageAdsSection
+              cfg={calcCfg}
+              slotSpecs={GOLD_CALCULATOR_AD_SLOT_SPECS}
+              slotLabels={CALC_SLOT_LABELS}
+              onCfgChange={setCalcCfg}
+              onSave={saveCalc}
+              saving={calcSaving}
+              saveMsg={calcMsg}
+              uploadFns={{
+                uploadImage: uploadAdminGoldCalculatorAdImage,
+                uploadVideo: uploadAdminGoldCalculatorAdVideo,
+              }}
+            />
+          </details>
+        </>
+      )}
     </div>
   )
 }

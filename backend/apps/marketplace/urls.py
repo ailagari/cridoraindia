@@ -10,6 +10,12 @@ from .gold_rates_views import (
     MarketplaceKeralaGoldRatesHistoryView,
     MarketplaceKeralaGoldRatesView,
 )
+from .gold_calculator_views import (
+    AdminGoldCalculatorAdImageUploadView,
+    AdminGoldCalculatorAdVideoUploadView,
+    AdminGoldCalculatorPageConfigView,
+    MarketplaceGoldCalculatorAdsView,
+)
 from .views import (
     AdminGoldTickerView,
     AdminGoldPricePushView,
@@ -42,6 +48,7 @@ urlpatterns = [
     path("marketplace/kerala-gold-rates/history/", MarketplaceKeralaGoldRatesHistoryView.as_view()),
     path("marketplace/kerala-gold-rates/daily/", MarketplaceKeralaGoldRatesDailyView.as_view()),
     path("marketplace/gold-rates/ads/", MarketplaceGoldRatesAdsView.as_view()),
+    path("marketplace/gold-calculator/ads/", MarketplaceGoldCalculatorAdsView.as_view()),
     path("marketplace/catalog-meta/", MarketplaceCatalogMetaView.as_view()),
     path("marketplace/gold-ticker/history/", MarketplaceGoldTickerHistoryView.as_view()),
     path("marketplace/gold-ticker/", MarketplaceGoldTickerPublicView.as_view()),
@@ -75,6 +82,9 @@ urlpatterns = [
     path("admin/gold-rates/config/", AdminGoldRatesPageConfigView.as_view()),
     path("admin/gold-rates/ad-image/", AdminGoldRatesAdImageUploadView.as_view()),
     path("admin/gold-rates/ad-video/", AdminGoldRatesAdVideoUploadView.as_view()),
+    path("admin/gold-calculator/config/", AdminGoldCalculatorPageConfigView.as_view()),
+    path("admin/gold-calculator/ad-image/", AdminGoldCalculatorAdImageUploadView.as_view()),
+    path("admin/gold-calculator/ad-video/", AdminGoldCalculatorAdVideoUploadView.as_view()),
     path("admin/spot-prices/", AdminSpotPricesView.as_view()),
     path("admin/marketplace/products/", AdminMarketplaceProductListView.as_view()),
     path(

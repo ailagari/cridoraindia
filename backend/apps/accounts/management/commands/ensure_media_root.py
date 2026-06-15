@@ -8,6 +8,8 @@ from django.core.management.base import BaseCommand
 _GOLD_RATES_SUBDIRS = (
     "gold_rates_ad_images",
     "gold_rates_ad_videos",
+    "gold_calculator_ad_images",
+    "gold_calculator_ad_videos",
 )
 
 

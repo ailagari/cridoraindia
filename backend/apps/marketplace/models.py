@@ -487,6 +487,90 @@ class GoldRatesAdPlacement(models.Model):
         return f"{self.slot} ({self.mode})"
 
 
+class GoldCalculatorPageConfig(models.Model):
+    """Singleton settings for the public gold jewellery calculator page (SEO + AdSense)."""
+
+    adsense_enabled = models.BooleanField(
+        default=False,
+        help_text="When on, active AdSense placements render using the client ID below.",
+    )
+    adsense_client_id = models.CharField(
+        max_length=64,
+        blank=True,
+        default="",
+        help_text="Google AdSense publisher ID, e.g. ca-pub-xxxxxxxx.",
+    )
+    page_title = models.CharField(
+        max_length=160,
+        blank=True,
+        default="Gold Jewellery Price Calculator India — Live 22K & 24K",
+    )
+    page_description = models.CharField(
+        max_length=320,
+        blank=True,
+        default="Estimate ornament price with live gold rates, making charges, and GST. Free calculator for Kerala and India.",
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Gold calculator page config"
+
+    def __str__(self) -> str:
+        return "Gold calculator page config"
+
+
+class GoldCalculatorAdPlacement(models.Model):
+    """Manual HTML, media, or AdSense slot on the public gold calculator page."""
+
+    MODE_MANUAL = "manual"
+    MODE_IMAGE = "image"
+    MODE_VIDEO = "video"
+    MODE_MEDIA = "media"
+    MODE_ADSENSE = "adsense"
+    MODE_CHOICES = GoldRatesAdPlacement.MODE_CHOICES
+
+    SLOT_TOP_BANNER = "top_banner"
+    SLOT_SIDEBAR = "sidebar"
+    SLOT_IN_CONTENT_1 = "in_content_1"
+    SLOT_IN_CONTENT_2 = "in_content_2"
+    SLOT_FOOTER = "footer"
+    SLOT_CHOICES = [
+        (SLOT_TOP_BANNER, "Top banner"),
+        (SLOT_SIDEBAR, "Sidebar"),
+        (SLOT_IN_CONTENT_1, "In content (after calculator)"),
+        (SLOT_IN_CONTENT_2, "In content (after live rates)"),
+        (SLOT_FOOTER, "Footer strip"),
+    ]
+
+    slot = models.CharField(max_length=32, choices=SLOT_CHOICES, unique=True)
+    label = models.CharField(max_length=120, blank=True, default="")
+    mode = models.CharField(max_length=16, choices=MODE_CHOICES, default=MODE_MANUAL)
+    manual_html = models.TextField(
+        blank=True,
+        default="",
+        help_text="Raw HTML for sponsored blocks (admin-reviewed only).",
+    )
+    image_url = models.URLField(max_length=512, blank=True, default="")
+    image_link_url = models.URLField(max_length=512, blank=True, default="")
+    image_alt = models.CharField(max_length=160, blank=True, default="")
+    video_url = models.URLField(max_length=512, blank=True, default="")
+    video_poster_url = models.URLField(max_length=512, blank=True, default="")
+    video_link_url = models.URLField(max_length=512, blank=True, default="")
+    video_alt = models.CharField(max_length=160, blank=True, default="")
+    adsense_slot_id = models.CharField(max_length=64, blank=True, default="")
+    adsense_format = models.CharField(max_length=24, blank=True, default="auto")
+    is_active = models.BooleanField(default=True)
+    sort_order = models.PositiveSmallIntegerField(default=0)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["sort_order", "slot"]
+        verbose_name = "Gold calculator ad placement"
+
+    def __str__(self) -> str:
+        return f"{self.slot} ({self.mode})"
+
+
 class MetalPurity(models.Model):
     """Admin-managed hallmark / fineness options (Django admin). Jewellers enable subsets on their pricing profile."""
 
@@ -971,6 +1055,51 @@ def ensure_default_gold_rates_ad_placements() -> None:
                 "is_active": True,
                 "mode": GoldRatesAdPlacement.MODE_MEDIA,
                 "image_url": DEFAULT_GOLD_RATES_AD_IMAGES.get(slot, ""),
+                "image_alt": labels.get(slot, slot),
+            },
+        )
+
+
+def get_or_create_gold_calculator_page_config() -> GoldCalculatorPageConfig:
+    obj, _ = GoldCalculatorPageConfig.objects.get_or_create(pk=1)
+    return obj
+
+
+DEFAULT_GOLD_CALCULATOR_AD_SLOTS = (
+    GoldCalculatorAdPlacement.SLOT_TOP_BANNER,
+    GoldCalculatorAdPlacement.SLOT_SIDEBAR,
+    GoldCalculatorAdPlacement.SLOT_IN_CONTENT_1,
+    GoldCalculatorAdPlacement.SLOT_IN_CONTENT_2,
+    GoldCalculatorAdPlacement.SLOT_FOOTER,
+)
+
+
+DEFAULT_GOLD_CALCULATOR_AD_IMAGES = {
+    GoldCalculatorAdPlacement.SLOT_TOP_BANNER: "/ads/gold-rates-top-banner.svg",
+    GoldCalculatorAdPlacement.SLOT_SIDEBAR: "/ads/gold-rates-sidebar.svg",
+    GoldCalculatorAdPlacement.SLOT_IN_CONTENT_1: "/ads/gold-rates-in-content.svg",
+    GoldCalculatorAdPlacement.SLOT_IN_CONTENT_2: "/ads/gold-rates-in-content.svg",
+    GoldCalculatorAdPlacement.SLOT_FOOTER: "/ads/gold-rates-footer.svg",
+}
+
+
+def ensure_default_gold_calculator_ad_placements() -> None:
+    labels = {
+        GoldCalculatorAdPlacement.SLOT_TOP_BANNER: "Top banner",
+        GoldCalculatorAdPlacement.SLOT_SIDEBAR: "Sidebar",
+        GoldCalculatorAdPlacement.SLOT_IN_CONTENT_1: "After calculator",
+        GoldCalculatorAdPlacement.SLOT_IN_CONTENT_2: "After live rates",
+        GoldCalculatorAdPlacement.SLOT_FOOTER: "Footer strip",
+    }
+    for idx, slot in enumerate(DEFAULT_GOLD_CALCULATOR_AD_SLOTS):
+        GoldCalculatorAdPlacement.objects.get_or_create(
+            slot=slot,
+            defaults={
+                "label": labels.get(slot, slot),
+                "sort_order": idx,
+                "is_active": True,
+                "mode": GoldCalculatorAdPlacement.MODE_MEDIA,
+                "image_url": DEFAULT_GOLD_CALCULATOR_AD_IMAGES.get(slot, ""),
                 "image_alt": labels.get(slot, slot),
             },
         )

@@ -18,6 +18,8 @@ _MANAGED_PREFIXES = (
     "jeweller_product_images/",
     "gold_rates_ad_images/",
     "gold_rates_ad_videos/",
+    "gold_calculator_ad_images/",
+    "gold_calculator_ad_videos/",
     "personal_holding_docs/",
     "upi_proofs/",
     "settlement_receipts/",

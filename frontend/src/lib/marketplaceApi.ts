@@ -318,7 +318,17 @@ export async function fetchGoldRatesAds(): Promise<GoldRatesAdsPayload | null> {
   return (await res.json()) as GoldRatesAdsPayload
 }
 
+export async function fetchGoldCalculatorAds(): Promise<GoldRatesAdsPayload | null> {
+  const res = await apiFetch('/api/v1/marketplace/gold-calculator/ads/', { cache: 'no-store' })
+  if (!res.ok) return null
+  return (await res.json()) as GoldRatesAdsPayload
+}
+
 export type AdminGoldRatesPageConfigPayload = GoldRatesAdsPayload & {
+  updated_at?: string | null
+}
+
+export type AdminGoldCalculatorPageConfigPayload = GoldRatesAdsPayload & {
   updated_at?: string | null
 }
 
@@ -381,6 +391,72 @@ export async function uploadAdminGoldRatesAdVideo(
     fd.append('slot', slot.trim())
   }
   const res = await authUpload('/api/v1/admin/gold-rates/ad-video/', fd)
+  const body = (await res.json().catch(() => ({}))) as { video_url?: string; detail?: string }
+  if (!res.ok) {
+    return { ok: false, detail: body.detail != null ? String(body.detail) : 'Upload failed.' }
+  }
+  const video_url = body.video_url?.trim()
+  if (!video_url) {
+    return { ok: false, detail: 'Upload succeeded but no video URL was returned.' }
+  }
+  return { ok: true, video_url }
+}
+
+export async function fetchAdminGoldCalculatorConfig(): Promise<AdminGoldCalculatorPageConfigPayload | null> {
+  const res = await authFetch('/api/v1/admin/gold-calculator/config/', { cache: 'no-store' })
+  if (!res.ok) return null
+  return (await res.json()) as AdminGoldCalculatorPageConfigPayload
+}
+
+export async function patchAdminGoldCalculatorConfig(
+  body: Partial<AdminGoldCalculatorPageConfigPayload>,
+): Promise<AdminGoldCalculatorPageConfigPayload | null> {
+  const res = await authFetch('/api/v1/admin/gold-calculator/config/', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) return null
+  return (await res.json()) as AdminGoldCalculatorPageConfigPayload
+}
+
+export async function uploadAdminGoldCalculatorAdImage(
+  file: File,
+  slot?: string,
+): Promise<{ ok: true; image_url: string } | { ok: false; detail: string }> {
+  if (file.size > GOLD_RATES_AD_IMAGE_MAX_BYTES) {
+    return { ok: false, detail: 'Image must be 4 MB or smaller.' }
+  }
+  const fd = new FormData()
+  fd.append('file', file)
+  if (slot?.trim()) {
+    fd.append('slot', slot.trim())
+  }
+  const res = await authUpload('/api/v1/admin/gold-calculator/ad-image/', fd)
+  const body = (await res.json().catch(() => ({}))) as { image_url?: string; detail?: string }
+  if (!res.ok) {
+    return { ok: false, detail: body.detail != null ? String(body.detail) : 'Upload failed.' }
+  }
+  const image_url = body.image_url?.trim()
+  if (!image_url) {
+    return { ok: false, detail: 'Upload succeeded but no image URL was returned.' }
+  }
+  return { ok: true, image_url }
+}
+
+export async function uploadAdminGoldCalculatorAdVideo(
+  file: File,
+  slot?: string,
+): Promise<{ ok: true; video_url: string } | { ok: false; detail: string }> {
+  if (file.size > GOLD_RATES_AD_VIDEO_MAX_BYTES) {
+    return { ok: false, detail: 'Video must be 16 MB or smaller.' }
+  }
+  const fd = new FormData()
+  fd.append('file', file)
+  if (slot?.trim()) {
+    fd.append('slot', slot.trim())
+  }
+  const res = await authUpload('/api/v1/admin/gold-calculator/ad-video/', fd)
   const body = (await res.json().catch(() => ({}))) as { video_url?: string; detail?: string }
   if (!res.ok) {
     return { ok: false, detail: body.detail != null ? String(body.detail) : 'Upload failed.' }
