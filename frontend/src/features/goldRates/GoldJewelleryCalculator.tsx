@@ -1,10 +1,11 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { usePublicLocale } from '@/i18n/PublicLocaleProvider'
+import { ornamentBillFromCalculator } from '@/lib/goldBillingTax'
 import {
-  GST_ON_GOLD_PERCENT,
-  GST_ON_MAKING_PERCENT,
-  ornamentBillFromCalculator,
-} from '@/lib/goldBillingTax'
+  fetchPlatformBillingTax,
+  resolveGstOnGoldPercent,
+  resolveGstOnMakingPercent,
+} from '@/lib/platformBillingTax'
 import type { KeralaGoldRatesPayload } from '@/lib/marketplaceApi'
 
 export type WeightUnit = 'gram' | 'sovereign' | 'kg'
@@ -50,6 +51,11 @@ export function GoldJewelleryCalculator({ rates, sectionId = 'gr-calculator', sh
   const [calcPurity, setCalcPurity] = useState<PurityKey>('22K')
   const [calcMcMode, setCalcMcMode] = useState<'per_gram' | 'percent'>('per_gram')
   const [calcMc, setCalcMc] = useState('0')
+  const [taxReady, setTaxReady] = useState(false)
+
+  useEffect(() => {
+    void fetchPlatformBillingTax().then(() => setTaxReady(true))
+  }, [])
 
   const calcResult = useMemo(() => {
     const w = Number.parseFloat(calcWeight)
@@ -59,7 +65,7 @@ export function GoldJewelleryCalculator({ rates, sectionId = 'gr-calculator', sh
     if (rate == null) return null
     const mcVal = Number.parseFloat(calcMc) || 0
     return ornamentBillFromCalculator(grams, rate, mcVal, calcMcMode)
-  }, [calcWeight, calcUnit, calcPurity, calcMc, calcMcMode, rates])
+  }, [calcWeight, calcUnit, calcPurity, calcMc, calcMcMode, rates, taxReady])
 
   return (
     <section className="gr-section" aria-labelledby={sectionId}>
@@ -132,12 +138,12 @@ export function GoldJewelleryCalculator({ rates, sectionId = 'gr-calculator', sh
                 <strong>₹{fmtInr(calcResult.makingInr, 2)}</strong>
               </div>
               <div className="gr-calc__row">
-                <span>{t('goldRates.calcGstGold', { pct: GST_ON_GOLD_PERCENT })}</span>
+                <span>{t('goldRates.calcGstGold', { pct: resolveGstOnGoldPercent() })}</span>
                 <strong>₹{fmtInr(calcResult.gstOnGoldInr, 2)}</strong>
               </div>
               {calcResult.makingInr > 0 ? (
                 <div className="gr-calc__row">
-                  <span>{t('goldRates.calcGstMaking', { pct: GST_ON_MAKING_PERCENT })}</span>
+                  <span>{t('goldRates.calcGstMaking', { pct: resolveGstOnMakingPercent() })}</span>
                   <strong>₹{fmtInr(calcResult.gstOnMakingInr, 2)}</strong>
                 </div>
               ) : null}

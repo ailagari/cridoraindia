@@ -63,10 +63,14 @@ def gst_on_making_percent() -> Decimal:
     return Decimal(row.gst_on_making_percent)
 
 
+def _percent_str(value: Decimal) -> str:
+    return format(value.normalize(), "f")
+
+
 def platform_billing_tax_payload() -> dict[str, str]:
     return {
-        "gst_on_gold_percent": str(gst_on_gold_percent()),
-        "gst_on_making_percent": str(gst_on_making_percent()),
+        "gst_on_gold_percent": _percent_str(gst_on_gold_percent()),
+        "gst_on_making_percent": _percent_str(gst_on_making_percent()),
     }
 
 

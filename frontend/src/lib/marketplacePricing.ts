@@ -1,5 +1,5 @@
 import type { MarketplaceProductDTO } from '@/lib/marketplaceApi'
-import { GST_ON_GOLD_PERCENT, GST_ON_MAKING_PERCENT } from '@/lib/goldBillingTax'
+import { resolveGstOnGoldPercent, resolveGstOnMakingPercent } from '@/lib/platformBillingTax'
 
 export type PriceBreakdown = {
   /** Gold metal only (rate × fine gold weight). */
@@ -139,8 +139,8 @@ function jewellerLineParts(p: MarketplaceProductDTO, ctx?: CheckoutPricingContex
   const rawMakingCharges = rawMakingChargesInr(p, ctx)
   const discountAmount = rawMakingCharges * DISCOUNT_RATE
   const makingCharges = rawMakingCharges - discountAmount
-  const gstOnGold = (goldMetalValue * GST_ON_GOLD_PERCENT) / 100
-  const gstOnMaking = (makingCharges * GST_ON_MAKING_PERCENT) / 100
+  const gstOnGold = (goldMetalValue * resolveGstOnGoldPercent()) / 100
+  const gstOnMaking = (makingCharges * resolveGstOnMakingPercent()) / 100
   const jewellerSubtotal = goldValue + makingCharges + gstOnGold + gstOnMaking
 
   return {
@@ -256,8 +256,8 @@ export function calculateCheckoutPrice(
   const cappedGrams = Math.max(0, Math.min(vaultGramsToApply, vaultBalanceGrams))
   const rawVaultInr = cappedGrams * metalRate
   const vaultMetalCredit = Math.min(rawVaultInr, goldMetalQ)
-  const gstOnGoldFull = (goldMetalQ * GST_ON_GOLD_PERCENT) / 100
-  const gstOnGold = Math.max(0, ((goldMetalQ - vaultMetalCredit) * GST_ON_GOLD_PERCENT) / 100)
+  const gstOnGoldFull = (goldMetalQ * resolveGstOnGoldPercent()) / 100
+  const gstOnGold = Math.max(0, ((goldMetalQ - vaultMetalCredit) * resolveGstOnGoldPercent()) / 100)
   const gstOnGoldSaved = Math.max(0, gstOnGoldFull - gstOnGold)
   const vaultValueOffset = Math.min(rawVaultInr, finalAmount)
   const payableAmount = Math.max(0, finalAmount - vaultValueOffset - gstOnGoldSaved)

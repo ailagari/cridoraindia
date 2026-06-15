@@ -35,6 +35,7 @@ import { NativeNotificationBridge } from '@/components/NativeNotificationBridge'
 import { PushActivationPrompt } from '@/components/PushActivationPrompt'
 import { NativeAppSplash } from '@/components/NativeAppSplash'
 import { NativeAppEntryRoute } from '@/components/NativeAppEntryRoute'
+import { PlatformBillingTaxBootstrap } from '@/components/PlatformBillingTaxBootstrap'
 import { isNativePlatform } from '@/lib/capacitorPlatform'
 import '@/styles/index.css'
 import '@/styles/reference-tokens.css'
@@ -64,6 +65,7 @@ export default function App() {
           <PushActivationPrompt />
           <NativeAppSplash />
           <NativeAppEntryRoute />
+          <PlatformBillingTaxBootstrap />
           <Routes>
             <Route element={<PublicLayout />}>
               <Route index element={<HomePage />} />

@@ -1,11 +1,13 @@
 import { authFetch, authUpload, apiUrl, getStoredAccess } from '@/lib/api'
 import type { PortfolioTotalsDTO } from '@/lib/goldTransferApi'
 
+import { ornamentBillFromMetal } from '@/lib/goldBillingTax'
 import {
-  GST_ON_GOLD_PERCENT,
-  GST_ON_MAKING_PERCENT,
-  ornamentBillFromMetal,
-} from '@/lib/goldBillingTax'
+  DEFAULT_GST_ON_GOLD_PERCENT,
+  DEFAULT_GST_ON_MAKING_PERCENT,
+  resolveGstOnGoldPercent,
+  resolveGstOnMakingPercent,
+} from '@/lib/platformBillingTax'
 
 export type { PortfolioTotalsDTO }
 
@@ -14,9 +16,9 @@ export function parsePersonalHoldingNumber(s: string): number {
   return Number.isFinite(n) ? n : 0
 }
 
-/** Aligned with marketplace ornament billing: 3% on gold metal, 18% on making charges. */
-export const PERSONAL_VAULT_GST_ON_GOLD_PERCENT = GST_ON_GOLD_PERCENT
-export const PERSONAL_VAULT_GST_ON_MAKING_PERCENT = GST_ON_MAKING_PERCENT
+/** Defaults until platform billing-tax API loads; use resolve* at runtime in UI copy. */
+export const PERSONAL_VAULT_GST_ON_GOLD_PERCENT = DEFAULT_GST_ON_GOLD_PERCENT
+export const PERSONAL_VAULT_GST_ON_MAKING_PERCENT = DEFAULT_GST_ON_MAKING_PERCENT
 
 export type PersonalVaultBillBreakdown = {
   metalInr: string
@@ -30,7 +32,7 @@ export type PersonalVaultBillBreakdown = {
 /** Multiplier on pre-GST metal ₹ to reach invoice total (metal + MC + GST on both). */
 function billTotalMultiplier(makingChargePercentStr: string): number {
   const mc = parsePersonalHoldingNumber(makingChargePercentStr)
-  return 1 + GST_ON_GOLD_PERCENT / 100 + (mc / 100) * (1 + GST_ON_MAKING_PERCENT / 100)
+  return 1 + resolveGstOnGoldPercent() / 100 + (mc / 100) * (1 + resolveGstOnMakingPercent() / 100)
 }
 
 function metalInrFromBillInputs(
@@ -139,9 +141,9 @@ export function describeDerivedGoldRate(
   const gstMc = parsePersonalHoldingNumber(bd.gstOnMakingInr).toLocaleString('en-IN')
   const mc = parsePersonalHoldingNumber(makingChargePercentStr)
   if (mc > 0) {
-    return `Gold rate ₹${rateInr}/g — from bill after ${mc}% making, ${PERSONAL_VAULT_GST_ON_GOLD_PERCENT}% GST on gold (₹${gstGold}), ${PERSONAL_VAULT_GST_ON_MAKING_PERCENT}% GST on making (₹${gstMc}).`
+    return `Gold rate ₹${rateInr}/g — from bill after ${mc}% making, ${resolveGstOnGoldPercent()}% GST on gold (₹${gstGold}), ${resolveGstOnMakingPercent()}% GST on making (₹${gstMc}).`
   }
-  return `Gold rate ₹${rateInr}/g — from bill after ${PERSONAL_VAULT_GST_ON_GOLD_PERCENT}% GST on gold (₹${gstGold}).`
+  return `Gold rate ₹${rateInr}/g — from bill after ${resolveGstOnGoldPercent()}% GST on gold (₹${gstGold}).`
 }
 
 function inrLabel(n: string): string {
@@ -169,12 +171,12 @@ export function describePersonalVaultCostSummary(
   const mc = parsePersonalHoldingNumber(makingChargePercentStr)
   const bits = [
     `Metal ₹${inrLabel(bd.metalInr)}`,
-    `GST on gold (${PERSONAL_VAULT_GST_ON_GOLD_PERCENT}%): ₹${inrLabel(bd.gstOnGoldInr)}`,
+    `GST on gold (${resolveGstOnGoldPercent()}%): ₹${inrLabel(bd.gstOnGoldInr)}`,
   ]
   if (mc > 0) {
     bits.push(
       `Making (${mc}%): ₹${inrLabel(bd.makingInr)}`,
-      `GST on making (${PERSONAL_VAULT_GST_ON_MAKING_PERCENT}%): ₹${inrLabel(bd.gstOnMakingInr)}`,
+      `GST on making (${resolveGstOnMakingPercent()}%): ₹${inrLabel(bd.gstOnMakingInr)}`,
     )
   }
   bits.push(`Estimated bill total: ₹${inrLabel(bd.totalInr)}`)

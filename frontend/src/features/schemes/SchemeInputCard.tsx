@@ -1,5 +1,5 @@
 import type { SchemeDesign } from '@/lib/schemesApi'
-import { GST_ON_GOLD_PERCENT, GST_ON_MAKING_PERCENT } from '@/lib/goldBillingTax'
+import { resolveGstOnGoldPercent, resolveGstOnMakingPercent } from '@/lib/platformBillingTax'
 import { Card, CardHeader, Input, Select, Toggle } from '@/components/ui'
 import { SchemeSectionPreview } from './SchemeSectionPreview'
 import { buildInputPreview, type SchemePreviewData } from './schemePreviewHelpers'
@@ -25,7 +25,7 @@ export function SchemeInputCard({ design, onChange, disabled, preview }: Props) 
           ...inp,
           payment_type: 'gold',
           includes_gst: true,
-          gst_percent: GST_ON_GOLD_PERCENT,
+          gst_percent: resolveGstOnGoldPercent(),
         },
       })
       return
@@ -43,7 +43,7 @@ export function SchemeInputCard({ design, onChange, disabled, preview }: Props) 
         making_charge_percent: checked ? Number(inp.making_charge_percent ?? 12) : inp.making_charge_percent,
         includes_gst_on_making_charge: checked,
         gst_on_making_charge_percent: checked
-          ? Number(inp.gst_on_making_charge_percent ?? GST_ON_MAKING_PERCENT)
+          ? Number(inp.gst_on_making_charge_percent ?? resolveGstOnMakingPercent())
           : inp.gst_on_making_charge_percent,
       },
     })
@@ -68,16 +68,16 @@ export function SchemeInputCard({ design, onChange, disabled, preview }: Props) 
         {isGold ? (
           <>
             <p className="ds-field__hint" style={{ margin: 0 }}>
-              GST on gold ({GST_ON_GOLD_PERCENT}%) is applied automatically on each deposit.
+              GST on gold ({resolveGstOnGoldPercent()}%) is applied automatically on each deposit.
             </p>
             <Input
               label="GST on gold %"
               hint="Override only if your scheme uses a different rate"
               inputMode="decimal"
-              value={String(inp.gst_percent ?? GST_ON_GOLD_PERCENT)}
+              value={String(inp.gst_percent ?? resolveGstOnGoldPercent())}
               disabled={disabled}
               onChange={(e) =>
-                patch('gst_percent', Number(e.target.value) || GST_ON_GOLD_PERCENT)
+                patch('gst_percent', Number(e.target.value) || resolveGstOnGoldPercent())
               }
             />
 
@@ -98,19 +98,19 @@ export function SchemeInputCard({ design, onChange, disabled, preview }: Props) 
                   onChange={(e) => patch('making_charge_percent', Number(e.target.value))}
                 />
                 <p className="ds-field__hint" style={{ margin: 0 }}>
-                  GST on making charge ({GST_ON_MAKING_PERCENT}%) is applied automatically when
+                  GST on making charge ({resolveGstOnMakingPercent()}%) is applied automatically when
                   making charge is included.
                 </p>
                 <Input
                   label="GST on making charge %"
                   hint="Override only if your scheme uses a different rate"
                   inputMode="decimal"
-                  value={String(inp.gst_on_making_charge_percent ?? GST_ON_MAKING_PERCENT)}
+                  value={String(inp.gst_on_making_charge_percent ?? resolveGstOnMakingPercent())}
                   disabled={disabled}
                   onChange={(e) =>
                     patch(
                       'gst_on_making_charge_percent',
-                      Number(e.target.value) || GST_ON_MAKING_PERCENT,
+                      Number(e.target.value) || resolveGstOnMakingPercent(),
                     )
                   }
                 />

@@ -8,8 +8,6 @@ import {
   describePersonalVaultCostSummary,
   formatPurchaseValueFromRate,
   isGoldRateDerivedFromBill,
-  PERSONAL_VAULT_GST_ON_GOLD_PERCENT,
-  PERSONAL_VAULT_GST_ON_MAKING_PERCENT,
   recalcRateFromBillOrValue,
   uploadPersonalDocument,
   type InvoiceExtractDTO,

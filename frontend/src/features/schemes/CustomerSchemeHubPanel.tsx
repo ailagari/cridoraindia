@@ -34,6 +34,7 @@ import {
   type SchemeSearchResultDTO,
 } from '@/lib/schemesApi'
 import { fetchPlatformFeatures, isFeatureEnabled } from '@/lib/platformFeatures'
+import { resolveGstOnMakingPercent } from '@/lib/platformBillingTax'
 import { LIVE_BALANCE_POLL_MS } from '@/lib/liveDeskIntervals'
 import { useLivePoll } from '@/lib/useLivePoll'
 import { SchemeEnrollmentPicker } from './SchemeEnrollmentPicker'
@@ -496,7 +497,7 @@ export function CustomerSchemeHubPanel() {
                     ) : null}
                     {quote.gst_on_making_charge_inr && quote.gst_on_making_charge_inr !== '0.00' ? (
                       <p className="fractional-buy-quote-row" style={{ color: 'var(--text-muted)' }}>
-                        GST on making (18%){' '}
+                        GST on making ({resolveGstOnMakingPercent()}%){' '}
                         <strong className="tabular">
                           ₹{formatCustomerPaymentInr(quote.gst_on_making_charge_inr)}
                         </strong>
