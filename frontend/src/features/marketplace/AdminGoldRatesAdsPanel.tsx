@@ -42,6 +42,8 @@ function normalizePlacements(placements: GoldRatesAdPlacementDTO[]) {
   }))
 }
 
+type OpenPage = 'rates' | 'calc' | null
+
 export function AdminGoldRatesAdsPanel() {
   const [ratesCfg, setRatesCfg] = useState<AdminGoldRatesPageConfigPayload | null>(null)
   const [calcCfg, setCalcCfg] = useState<AdminGoldCalculatorPageConfigPayload | null>(null)
@@ -49,6 +51,11 @@ export function AdminGoldRatesAdsPanel() {
   const [calcSaving, setCalcSaving] = useState(false)
   const [ratesMsg, setRatesMsg] = useState<string | null>(null)
   const [calcMsg, setCalcMsg] = useState<string | null>(null)
+  const [openPage, setOpenPage] = useState<OpenPage>('rates')
+
+  const togglePage = (page: Exclude<OpenPage, null>) => {
+    setOpenPage((current) => (current === page ? null : page))
+  }
 
   const load = useCallback(async () => {
     const [rates, calc] = await Promise.all([fetchAdminGoldRatesConfig(), fetchAdminGoldCalculatorConfig()])
@@ -169,8 +176,8 @@ export function AdminGoldRatesAdsPanel() {
         <p className="text-muted">Loading gold page settings…</p>
       ) : (
         <>
-          <details className="admin-ads-page-accordion" open>
-            <summary>
+          <details className="admin-ads-page-accordion" open={openPage === 'rates'}>
+            <summary onClick={(e) => { e.preventDefault(); togglePage('rates') }}>
               <span className="admin-ads-page-accordion__title">Gold rates page</span>
               <span className="admin-ads-page-accordion__meta">
                 {countActivePlacements(ratesCfg)} active ·{' '}
@@ -194,8 +201,8 @@ export function AdminGoldRatesAdsPanel() {
             />
           </details>
 
-          <details className="admin-ads-page-accordion">
-            <summary>
+          <details className="admin-ads-page-accordion" open={openPage === 'calc'}>
+            <summary onClick={(e) => { e.preventDefault(); togglePage('calc') }}>
               <span className="admin-ads-page-accordion__title">Gold calculator page</span>
               <span className="admin-ads-page-accordion__meta">
                 {countActivePlacements(calcCfg)} active ·{' '}

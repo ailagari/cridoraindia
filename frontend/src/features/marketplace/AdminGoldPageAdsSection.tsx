@@ -60,7 +60,12 @@ export function AdminGoldPageAdsSection({
 }: Props) {
   const [uploadBusySlot, setUploadBusySlot] = useState<string | null>(null)
   const [uploadErr, setUploadErr] = useState<Record<string, string>>({})
+  const [openSlot, setOpenSlot] = useState<string | null>(null)
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({})
+
+  const toggleSlot = (slot: string) => {
+    setOpenSlot((current) => (current === slot ? null : slot))
+  }
 
   const updatePlacement = (slot: string, patch: Partial<GoldRatesAdPlacementDTO>) => {
     if (!cfg) return
@@ -180,8 +185,8 @@ export function AdminGoldPageAdsSection({
                     </label>
                   </td>
                   <td>
-                    <details className="admin-ads-slot-accordion">
-                      <summary>Edit slot</summary>
+                    <details className="admin-ads-slot-accordion" open={openSlot === p.slot}>
+                      <summary onClick={(e) => { e.preventDefault(); toggleSlot(p.slot) }}>Edit slot</summary>
                       <div className="admin-ads-slot-accordion__body">
                         <div className="admin-ad-mode-toggle" role="group" aria-label="Ad source">
                           <button
