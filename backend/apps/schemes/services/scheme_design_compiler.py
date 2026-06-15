@@ -107,19 +107,22 @@ def compile_scheme_design(design: dict) -> dict:
         "fixed_inr": "fixed_inr",
     }.get(bonus_mode, "avg_monthly_buckets_all")
 
+    payment_type = inp.get("payment_type") or "cash"
+    includes_making_charge = bool(inp.get("includes_making_charge"))
+
     return {
         "deposit_mode": "anytime",
         "timing": "calendar_month",
         "contribution": {
             "credit_mode": credit_mode,
-            "includes_gst": bool(inp.get("includes_gst")),
+            "includes_gst": payment_type == "gold" or bool(inp.get("includes_gst")),
             "gst_percent": float(inp.get("gst_percent") or 3),
-            "includes_making_charge": bool(inp.get("includes_making_charge")),
+            "includes_making_charge": includes_making_charge,
             "making_charge_mode": inp.get("making_charge_mode") or "none",
             "making_charge_percent": inp.get("making_charge_percent"),
-            "includes_gst_on_making_charge": bool(inp.get("includes_gst_on_making_charge")),
+            "includes_gst_on_making_charge": includes_making_charge,
             "gst_on_making_charge_percent": float(
-                inp.get("gst_on_making_charge_percent") or inp.get("gst_percent") or 3
+                inp.get("gst_on_making_charge_percent") or 18
             ),
             "min_deposit_inr": inp.get("min_deposit_inr"),
             "max_deposit_inr": inp.get("max_deposit_inr"),

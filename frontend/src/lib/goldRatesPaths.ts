@@ -19,7 +19,7 @@ export function isMalayalamPath(path: string): boolean {
 
 export function isGoldRatesPath(path: string): boolean {
   const base = stripMlPrefix(path.split('?')[0] ?? path)
-  return base === '/gold-rates' || base.startsWith('/gold-rates/')
+  return base === '/gold-rates' || base.startsWith('/gold-rates/') || base === '/gold-calculator'
 }
 
 export function goldRatesHreflangPair(pathname: string): { en: string; ml: string } {

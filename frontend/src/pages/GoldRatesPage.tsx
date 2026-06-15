@@ -31,12 +31,11 @@ import {
   webSiteJsonLd,
 } from '@/lib/seo'
 import { useLivePoll } from '@/lib/useLivePoll'
+import { GoldJewelleryCalculator } from '@/features/goldRates/GoldJewelleryCalculator'
 import '@/styles/gold-rates-page.css'
 
 type HistoryRange = '1d' | '1w' | '1m' | '3m' | '6m' | '1y' | '2y'
 type ChartMetal = '22K' | '24K' | '18K' | 'silver999'
-type WeightUnit = 'gram' | 'sovereign' | 'kg'
-type PurityKey = '24K' | '22K' | '18K'
 
 const CHART_PRESETS: { key: HistoryRange; label: string }[] = [
   { key: '1w', label: 'Weekly' },
@@ -62,7 +61,6 @@ const METAL_TABS: { key: ChartMetal; label: string }[] = [
 ]
 
 const SOVEREIGN_GRAMS = 8
-const KG_GRAMS = 1000
 
 function fmtInr(n: number, digits = 0): string {
   return n.toLocaleString('en-IN', {
@@ -75,17 +73,6 @@ function parseNum(s: string | number | undefined | null): number | null {
   if (s == null) return null
   const n = typeof s === 'number' ? s : Number.parseFloat(String(s))
   return Number.isFinite(n) ? n : null
-}
-
-function gramsFromInput(weight: number, unit: WeightUnit): number {
-  if (unit === 'sovereign') return weight * SOVEREIGN_GRAMS
-  if (unit === 'kg') return weight * KG_GRAMS
-  return weight
-}
-
-function rateForPurity(rates: KeralaGoldRatesPayload | null, purity: PurityKey): number | null {
-  if (!rates) return null
-  return parseNum(rates.gold[purity])
 }
 
 function ChangeBadge({ changePct }: { changePct: string | null | undefined }) {
@@ -148,12 +135,6 @@ export function GoldRatesPage() {
   const [dailyRows, setDailyRows] = useState<KeralaGoldRatesDailyRow[]>([])
   const [dailyTotal, setDailyTotal] = useState(0)
   const [dailyLoading, setDailyLoading] = useState(false)
-
-  const [calcWeight, setCalcWeight] = useState('8')
-  const [calcUnit, setCalcUnit] = useState<WeightUnit>('gram')
-  const [calcPurity, setCalcPurity] = useState<PurityKey>('22K')
-  const [calcMcMode, setCalcMcMode] = useState<'per_gram' | 'percent'>('per_gram')
-  const [calcMc, setCalcMc] = useState('0')
 
   const loadRates = useCallback(() => {
     void fetchKeralaGoldRates().then((payload) => {
@@ -273,11 +254,10 @@ export function GoldRatesPage() {
     const grams = gramsFromInput(w, calcUnit)
     const rate = rateForPurity(rates, calcPurity)
     if (rate == null) return null
-    const metal = grams * rate
     const mcVal = Number.parseFloat(calcMc) || 0
-    const making =
-      calcMcMode === 'percent' ? (metal * mcVal) / 100 : mcVal * grams
-    return { grams, rate, metal, making, total: metal + making }
+    const bd = ornamentBillFromCalculator(grams, rate, mcVal, calcMcMode)
+    if (!bd) return null
+    return { ...bd, grams, rate }
   }, [calcWeight, calcUnit, calcPurity, calcMc, calcMcMode, rates])
 
   const placements = ads?.placements ?? []
@@ -490,15 +470,25 @@ export function GoldRatesPage() {
                   <>
                     <div className="gr-calc__row">
                       <span>{t('goldRates.calcMetal')}</span>
-                      <strong>₹{fmtInr(calcResult.metal, 2)}</strong>
+                      <strong>₹{fmtInr(calcResult.metalInr, 2)}</strong>
                     </div>
                     <div className="gr-calc__row">
                       <span>{t('goldRates.calcMaking')}</span>
-                      <strong>₹{fmtInr(calcResult.making, 2)}</strong>
+                      <strong>₹{fmtInr(calcResult.makingInr, 2)}</strong>
                     </div>
+                    <div className="gr-calc__row">
+                      <span>{t('goldRates.calcGstGold', { pct: GST_ON_GOLD_PERCENT })}</span>
+                      <strong>₹{fmtInr(calcResult.gstOnGoldInr, 2)}</strong>
+                    </div>
+                    {calcResult.makingInr > 0 ? (
+                      <div className="gr-calc__row">
+                        <span>{t('goldRates.calcGstMaking', { pct: GST_ON_MAKING_PERCENT })}</span>
+                        <strong>₹{fmtInr(calcResult.gstOnMakingInr, 2)}</strong>
+                      </div>
+                    ) : null}
                     <div className="gr-calc__row gr-calc__row--total">
                       <span>{t('goldRates.calcTotal')}</span>
-                      <strong>₹{fmtInr(calcResult.total, 2)}</strong>
+                      <strong>₹{fmtInr(calcResult.totalInr, 2)}</strong>
                     </div>
                     <p className="gr-calc__fine">
                       {fmtInr(calcResult.grams, calcResult.grams >= 1 ? 2 : 3)} g × ₹

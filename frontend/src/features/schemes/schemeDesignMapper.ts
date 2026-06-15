@@ -9,7 +9,7 @@ export const EMPTY_SCHEME_DESIGN: SchemeDesign = {
     making_charge_mode: 'none',
     making_charge_percent: 12,
     includes_gst_on_making_charge: false,
-    gst_on_making_charge_percent: 3,
+    gst_on_making_charge_percent: 18,
     min_deposit_inr: null,
     max_deposit_inr: null,
     suggested_rhythm: 'anytime',

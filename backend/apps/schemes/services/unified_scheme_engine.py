@@ -6,9 +6,11 @@ from dataclasses import dataclass
 from decimal import Decimal
 from typing import Any
 
-from apps.accounts.fractional_service import (
-    GST_PERCENT,
-    fractional_metal_rate_inr_per_gram,
+from apps.accounts.fractional_service import fractional_metal_rate_inr_per_gram
+from apps.marketplace.gold_billing import (
+    GST_ON_GOLD_PERCENT,
+    GST_ON_MAKING_PERCENT,
+    ornament_redemption_bill_inr,
 )
 
 ZERO = Decimal("0")
@@ -52,18 +54,20 @@ class UnifiedSchemeEngine:
     ) -> dict[str, Any]:
         c = self.rules.contribution
         rate = fractional_metal_rate_inr_per_gram()
-        gst_pct = Decimal(str(c.get("gst_percent") or GST_PERCENT)) if c.get("includes_gst") else ZERO
 
         if c.get("credit_mode") == "gold_grams":
+            # Gold deposits always include GST on metal; making GST when MC is in the deposit.
+            gst_pct = Decimal(str(c.get("gst_percent") or GST_ON_GOLD_PERCENT))
             scheme_mc_pct = Decimal(str(c.get("making_charge_percent") or 0))
             mc_pct = (
                 scheme_mc_pct
                 if c.get("making_charge_mode") == "jeweller_percent" and scheme_mc_pct > 0
                 else jeweller_mc_percent
             )
+            includes_mc = bool(c.get("includes_making_charge"))
             mc_gst_pct = (
-                Decimal(str(c.get("gst_on_making_charge_percent") or c.get("gst_percent") or GST_PERCENT))
-                if c.get("includes_gst_on_making_charge")
+                Decimal(str(c.get("gst_on_making_charge_percent") or GST_ON_MAKING_PERCENT))
+                if includes_mc
                 else ZERO
             )
             b = self._gold_deposit_breakdown(
@@ -279,7 +283,8 @@ class UnifiedSchemeEngine:
             ).quantize(Decimal("0.01"))
 
         if mode == "jewellery_inr_pool":
-            bill = ornament_metal_inr + making_charge
+            bill_parts = ornament_redemption_bill_inr(ornament_metal_inr, making_charge)
+            bill = bill_parts["total_inr"]
             from_pool = min(inr_balance, bill)
             topup = ZERO
             if r.get("allow_topup") and bill > from_pool:
@@ -288,6 +293,8 @@ class UnifiedSchemeEngine:
                 "mode": mode,
                 "inr_balance": str(inr_balance),
                 "bill_inr": str(bill),
+                "gst_on_gold_inr": str(bill_parts["gst_on_gold_inr"]),
+                "gst_on_making_inr": str(bill_parts["gst_on_making_inr"]),
                 "from_pool_inr": str(from_pool),
                 "topup_inr": str(topup),
                 "making_charge_inr": str(making_charge),

@@ -485,12 +485,21 @@ export function CustomerSchemeHubPanel() {
                     ) : null}
                     {quote.gst_inr && quote.gst_inr !== '0.00' ? (
                       <p className="fractional-buy-quote-row" style={{ color: 'var(--text-muted)' }}>
-                        GST ({quote.gst_percent ?? '0'}%) <strong className="tabular">₹{formatCustomerPaymentInr(quote.gst_inr)}</strong>
+                        GST on gold ({quote.gst_percent ?? '3'}%){' '}
+                        <strong className="tabular">₹{formatCustomerPaymentInr(quote.gst_inr)}</strong>
                       </p>
                     ) : null}
                     {quote.making_charge_inr && quote.making_charge_inr !== '0.00' ? (
                       <p className="fractional-buy-quote-row" style={{ color: 'var(--text-muted)' }}>
                         Making charge <strong className="tabular">₹{formatCustomerPaymentInr(quote.making_charge_inr)}</strong>
+                      </p>
+                    ) : null}
+                    {quote.gst_on_making_charge_inr && quote.gst_on_making_charge_inr !== '0.00' ? (
+                      <p className="fractional-buy-quote-row" style={{ color: 'var(--text-muted)' }}>
+                        GST on making (18%){' '}
+                        <strong className="tabular">
+                          ₹{formatCustomerPaymentInr(quote.gst_on_making_charge_inr)}
+                        </strong>
                       </p>
                     ) : null}
                     <p className="fractional-buy-quote-row fractional-buy-quote-total" style={{ fontWeight: 800 }}>

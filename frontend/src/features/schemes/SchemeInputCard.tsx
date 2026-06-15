@@ -1,4 +1,5 @@
 import type { SchemeDesign } from '@/lib/schemesApi'
+import { GST_ON_GOLD_PERCENT, GST_ON_MAKING_PERCENT } from '@/lib/goldBillingTax'
 import { Card, CardHeader, Input, Select, Toggle } from '@/components/ui'
 import { SchemeSectionPreview } from './SchemeSectionPreview'
 import { buildInputPreview, type SchemePreviewData } from './schemePreviewHelpers'
@@ -16,6 +17,22 @@ export function SchemeInputCard({ design, onChange, disabled, preview }: Props) 
   const patch = (key: string, value: unknown) =>
     onChange({ ...design, input: { ...inp, [key]: value } })
 
+  const setPaymentType = (paymentType: string) => {
+    if (paymentType === 'gold') {
+      onChange({
+        ...design,
+        input: {
+          ...inp,
+          payment_type: 'gold',
+          includes_gst: true,
+          gst_percent: GST_ON_GOLD_PERCENT,
+        },
+      })
+      return
+    }
+    onChange({ ...design, input: { ...inp, payment_type: paymentType } })
+  }
+
   const setMakingChargeEnabled = (checked: boolean) => {
     onChange({
       ...design,
@@ -24,6 +41,10 @@ export function SchemeInputCard({ design, onChange, disabled, preview }: Props) 
         includes_making_charge: checked,
         making_charge_mode: checked ? 'jeweller_percent' : 'none',
         making_charge_percent: checked ? Number(inp.making_charge_percent ?? 12) : inp.making_charge_percent,
+        includes_gst_on_making_charge: checked,
+        gst_on_making_charge_percent: checked
+          ? Number(inp.gst_on_making_charge_percent ?? GST_ON_MAKING_PERCENT)
+          : inp.gst_on_making_charge_percent,
       },
     })
   }
@@ -38,7 +59,7 @@ export function SchemeInputCard({ design, onChange, disabled, preview }: Props) 
           label="Payment type"
           value={String(inp.payment_type ?? 'cash')}
           disabled={disabled}
-          onChange={(e) => patch('payment_type', e.target.value)}
+          onChange={(e) => setPaymentType(e.target.value)}
         >
           <option value="cash">Cash (INR pool)</option>
           <option value="gold">Gold (grams + GST/MC)</option>
@@ -46,21 +67,19 @@ export function SchemeInputCard({ design, onChange, disabled, preview }: Props) 
 
         {isGold ? (
           <>
-            <Toggle
-              label="Includes GST on gold"
-              checked={Boolean(inp.includes_gst)}
+            <p className="ds-field__hint" style={{ margin: 0 }}>
+              GST on gold ({GST_ON_GOLD_PERCENT}%) is applied automatically on each deposit.
+            </p>
+            <Input
+              label="GST on gold %"
+              hint="Override only if your scheme uses a different rate"
+              inputMode="decimal"
+              value={String(inp.gst_percent ?? GST_ON_GOLD_PERCENT)}
               disabled={disabled}
-              onChange={(checked) => patch('includes_gst', checked)}
+              onChange={(e) =>
+                patch('gst_percent', Number(e.target.value) || GST_ON_GOLD_PERCENT)
+              }
             />
-            {inp.includes_gst ? (
-              <Input
-                label="GST on gold %"
-                inputMode="decimal"
-                value={String(inp.gst_percent ?? 3)}
-                disabled={disabled}
-                onChange={(e) => patch('gst_percent', Number(e.target.value))}
-              />
-            ) : null}
 
             <Toggle
               label="Includes making charge in deposit"
@@ -78,21 +97,23 @@ export function SchemeInputCard({ design, onChange, disabled, preview }: Props) 
                   disabled={disabled}
                   onChange={(e) => patch('making_charge_percent', Number(e.target.value))}
                 />
-                <Toggle
-                  label="GST on making charge"
-                  checked={Boolean(inp.includes_gst_on_making_charge)}
+                <p className="ds-field__hint" style={{ margin: 0 }}>
+                  GST on making charge ({GST_ON_MAKING_PERCENT}%) is applied automatically when
+                  making charge is included.
+                </p>
+                <Input
+                  label="GST on making charge %"
+                  hint="Override only if your scheme uses a different rate"
+                  inputMode="decimal"
+                  value={String(inp.gst_on_making_charge_percent ?? GST_ON_MAKING_PERCENT)}
                   disabled={disabled}
-                  onChange={(checked) => patch('includes_gst_on_making_charge', checked)}
+                  onChange={(e) =>
+                    patch(
+                      'gst_on_making_charge_percent',
+                      Number(e.target.value) || GST_ON_MAKING_PERCENT,
+                    )
+                  }
                 />
-                {inp.includes_gst_on_making_charge ? (
-                  <Input
-                    label="GST on making charge %"
-                    inputMode="decimal"
-                    value={String(inp.gst_on_making_charge_percent ?? inp.gst_percent ?? 3)}
-                    disabled={disabled}
-                    onChange={(e) => patch('gst_on_making_charge_percent', Number(e.target.value))}
-                  />
-                ) : null}
               </>
             ) : null}
           </>

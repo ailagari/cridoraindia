@@ -1,6 +1,12 @@
 import { authFetch, authUpload, apiUrl, getStoredAccess } from '@/lib/api'
 import type { PortfolioTotalsDTO } from '@/lib/goldTransferApi'
 
+import {
+  GST_ON_GOLD_PERCENT,
+  GST_ON_MAKING_PERCENT,
+  ornamentBillFromMetal,
+} from '@/lib/goldBillingTax'
+
 export type { PortfolioTotalsDTO }
 
 export function parsePersonalHoldingNumber(s: string): number {
@@ -9,8 +15,8 @@ export function parsePersonalHoldingNumber(s: string): number {
 }
 
 /** Aligned with marketplace ornament billing: 3% on gold metal, 18% on making charges. */
-export const PERSONAL_VAULT_GST_ON_GOLD_PERCENT = 3
-export const PERSONAL_VAULT_GST_ON_MAKING_PERCENT = 18
+export const PERSONAL_VAULT_GST_ON_GOLD_PERCENT = GST_ON_GOLD_PERCENT
+export const PERSONAL_VAULT_GST_ON_MAKING_PERCENT = GST_ON_MAKING_PERCENT
 
 export type PersonalVaultBillBreakdown = {
   metalInr: string
@@ -23,10 +29,8 @@ export type PersonalVaultBillBreakdown = {
 
 /** Multiplier on pre-GST metal ₹ to reach invoice total (metal + MC + GST on both). */
 function billTotalMultiplier(makingChargePercentStr: string): number {
-  const mc = parsePersonalHoldingNumber(makingChargePercentStr) / 100
-  const gstGold = PERSONAL_VAULT_GST_ON_GOLD_PERCENT / 100
-  const gstMc = PERSONAL_VAULT_GST_ON_MAKING_PERCENT / 100
-  return 1 + gstGold + mc * (1 + gstMc)
+  const mc = parsePersonalHoldingNumber(makingChargePercentStr)
+  return 1 + GST_ON_GOLD_PERCENT / 100 + (mc / 100) * (1 + GST_ON_MAKING_PERCENT / 100)
 }
 
 function metalInrFromBillInputs(
@@ -57,16 +61,14 @@ export function breakdownPersonalVaultBill(
   const metal = metalInrFromBillInputs(weightStr, opts)
   if (metal == null || w <= 0 || metal <= 0) return null
   const mcPct = parsePersonalHoldingNumber(opts.makingChargePercentStr ?? '')
-  const making = (metal * mcPct) / 100
-  const gstOnGold = (metal * PERSONAL_VAULT_GST_ON_GOLD_PERCENT) / 100
-  const gstOnMaking = (making * PERSONAL_VAULT_GST_ON_MAKING_PERCENT) / 100
-  const total = metal + making + gstOnGold + gstOnMaking
+  const raw = ornamentBillFromMetal(metal, mcPct)
+  if (!raw) return null
   return {
-    metalInr: metal.toFixed(2),
-    makingInr: making.toFixed(2),
-    gstOnGoldInr: gstOnGold.toFixed(2),
-    gstOnMakingInr: gstOnMaking.toFixed(2),
-    totalInr: total.toFixed(2),
+    metalInr: raw.metalInr.toFixed(2),
+    makingInr: raw.makingInr.toFixed(2),
+    gstOnGoldInr: raw.gstOnGoldInr.toFixed(2),
+    gstOnMakingInr: raw.gstOnMakingInr.toFixed(2),
+    totalInr: raw.totalInr.toFixed(2),
     ratePerGram: (metal / w).toFixed(4),
   }
 }

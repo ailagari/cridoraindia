@@ -57,6 +57,14 @@ export const PAGE_SEO: Record<string, PageSeo> = {
     keywords:
       'gold rate India, gold rate today India, gold price India, 22K gold rate India, 24K gold rate today, Kerala gold rate, gold rate per gram India, silver rate India',
   },
+  '/gold-calculator': {
+    title: 'Gold Calculator India — 22K, 24K Jewellery Price with GST & Making Charges | Cridora',
+    description:
+      'Free gold jewellery calculator with live Kerala 22K and 24K rates. Estimate ornament price by weight, purity, making charges, and GST on gold and making. Updated every few minutes.',
+    path: '/gold-calculator',
+    keywords:
+      'gold calculator, gold jewellery calculator, gold price calculator India, 22K gold calculator, gold making charges calculator, Kerala gold calculator, gold rate calculator, GST on gold calculator, സ്വർണ്ണ കാൽക്കുലേറ്റർ',
+  },
   '/jewellers': {
     title: 'Verified Jewellers in Kerala & India | Cridora India',
     description:
@@ -182,6 +190,55 @@ export function faqJsonLd(faqs: { question: string; answer: string }[]): Record<
         text: faq.answer,
       },
     })),
+  }
+}
+
+export function goldCalculatorWebAppJsonLd(path: string): Record<string, unknown> {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'WebApplication',
+    name: 'Cridora Gold Jewellery Calculator',
+    url: absoluteUrl(path),
+    applicationCategory: 'FinanceApplication',
+    operatingSystem: 'Any',
+    browserRequirements: 'Requires JavaScript',
+    offers: { '@type': 'Offer', price: '0', priceCurrency: 'INR' },
+    description:
+      'Calculate gold jewellery price in India using live Kerala 22K and 24K rates, making charges, and GST.',
+    provider: { '@type': 'Organization', name: SITE_NAME, url: SITE_URL },
+    inLanguage: ['en-IN', 'ml-IN'],
+  }
+}
+
+export function goldCalculatorHowToJsonLd(): Record<string, unknown> {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'HowTo',
+    name: 'How to calculate gold jewellery price in India',
+    description:
+      'Use weight, purity, live gold rate per gram, making charges, and GST to estimate ornament price on Cridora.',
+    step: [
+      {
+        '@type': 'HowToStep',
+        name: 'Enter gold weight',
+        text: 'Enter weight in grams, sovereign (8 g), or kilograms.',
+      },
+      {
+        '@type': 'HowToStep',
+        name: 'Select purity',
+        text: 'Choose 24K, 22K (916 BIS), or 18K gold purity.',
+      },
+      {
+        '@type': 'HowToStep',
+        name: 'Add making charges',
+        text: 'Optional making charge as ₹ per gram or percentage of metal value.',
+      },
+      {
+        '@type': 'HowToStep',
+        name: 'View total with GST',
+        text: 'See metal value, making charges, GST on gold (3%), GST on making (18%), and estimated total.',
+      },
+    ],
   }
 }
 
