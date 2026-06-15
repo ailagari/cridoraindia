@@ -24,6 +24,10 @@ from .public_rate_copy import (
     attach_public_rate_labels,
 )
 from .models import GoldTickerConfig, get_or_create_ticker
+from .ticker_metal_sources import (
+    merge_live_and_manual_ticker_payload,
+    metal_uses_manual,
+)
 
 TROY_OZ_TO_GRAMS = 31.1035
 
@@ -274,13 +278,13 @@ def _resolve_raw_22k_unadjusted() -> tuple[Decimal | None, str]:
 
 def resolve_cridora_base_22k_inr() -> tuple[Decimal, str]:
     """
-    Cridora reference 22K ₹/g for jewellers: manual value, or live raw 22K with gold 22K deduction settings,
-    else platform fallback (snapshot / legacy reference).
+    Cridora reference 22K ₹/g for jewellers: manual value when 22K source is manual,
+    or live raw 22K with gold 22K deduction settings, else platform fallback.
     """
     ticker = get_or_create_ticker()
-    if ticker.manual_ticker_enabled and ticker.ticker_manual_22k_inr_per_gram is not None:
+    if metal_uses_manual(ticker, family="gold", key="22K"):
         raw = ticker.ticker_manual_22k_inr_per_gram
-        if raw > 0:
+        if raw is not None and raw > 0:
             return (
                 Decimal(str(raw)).quantize(Decimal("0.01")),
                 "manual_ticker",
@@ -421,17 +425,14 @@ def public_spot_prices_payload(*, include_live_raw: bool = False) -> dict:
     """Spot ladder + platform 22K base. International raw ladder only when include_live_raw=True (admin)."""
     live_feed = refresh_live_kerala_feed()
     ticker = get_or_create_ticker()
-    if (
-        ticker.manual_ticker_enabled
-        and ticker.ticker_manual_22k_inr_per_gram is not None
-        and ticker.ticker_manual_22k_inr_per_gram > 0
-    ):
-        manual_payload = _manual_ticker_spot_payload(ticker)
-        return _finalize_spot_payload(
-            _attach_kerala_board_from_live(manual_payload, live_feed),
-            include_live_raw=include_live_raw,
-        )
+    live_payload = _build_live_adjusted_spot_payload(ticker)
+    payload = merge_live_and_manual_ticker_payload(live_payload, ticker)
+    payload = _attach_kerala_board_from_live(payload, live_feed)
+    return _finalize_spot_payload(payload, include_live_raw=include_live_raw)
 
+
+def _build_live_adjusted_spot_payload(ticker) -> dict:
+    """Live Kerala feed with per-metal markup/deduction (before manual overlays)."""
     cached = cache.get(_CACHE_KEY_INR)
     if cached is not None:
         gold_block = cached.get("gold")
@@ -445,7 +446,7 @@ def public_spot_prices_payload(*, include_live_raw: bool = False) -> dict:
                 "source_updated_at": cached.get("source_updated_at"),
                 "rate_date": cached.get("rate_date"),
             }
-        return _finalize_spot_payload(payload, include_live_raw=include_live_raw)
+        return payload
 
     data = _build_board_inr_from_feed()
     if data is None:
@@ -466,10 +467,8 @@ def public_spot_prices_payload(*, include_live_raw: bool = False) -> dict:
                     "source_updated_at": merged.get("source_updated_at"),
                     "rate_date": merged.get("rate_date"),
                 }
-            return _finalize_spot_payload(payload, include_live_raw=include_live_raw)
-        return _finalize_spot_payload(
-            _platform_ticker_fallback_inr(), include_live_raw=include_live_raw
-        )
+            return payload
+        return _platform_ticker_fallback_inr()
 
     persist_last_good_live_raw_snapshot(data)
     cache.set(_CACHE_KEY_INR, data, timeout=_CACHE_TTL)
@@ -484,7 +483,7 @@ def public_spot_prices_payload(*, include_live_raw: bool = False) -> dict:
             "source_updated_at": data.get("source_updated_at"),
             "rate_date": data.get("rate_date"),
         }
-    return _finalize_spot_payload(payload_out, include_live_raw=include_live_raw)
+    return payload_out
 
 
 class MarketplaceSpotPricesView(APIView):

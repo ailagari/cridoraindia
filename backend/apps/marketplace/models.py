@@ -203,7 +203,12 @@ class GoldTickerConfig(models.Model):
     )
     manual_ticker_enabled = models.BooleanField(
         default=False,
-        help_text="When on, public ticker and platform 22K base use manual rates below (overrides live spot).",
+        help_text="Legacy global manual flag; superseded by ticker_metal_source_json per-metal toggles.",
+    )
+    ticker_metal_source_json = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text='Per-metal published source, e.g. {"gold":{"22K":"live","24K":"manual"},"silver":{"999":"live"}}.',
     )
     ticker_manual_22k_inr_per_gram = models.DecimalField(
         max_digits=12,

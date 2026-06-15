@@ -1093,6 +1093,23 @@ select.input {
   letter-spacing: 0.04em;
 }
 
+.admin-ticker-source-toggle {
+  display: inline-flex;
+  gap: 0.25rem;
+  flex-wrap: nowrap;
+}
+
+.admin-ticker-source-toggle .btn {
+  min-width: 3.25rem;
+  padding: 0.25rem 0.45rem;
+  font-size: 0.72rem;
+  justify-content: center;
+}
+
+.admin-ticker-rates-table td {
+  vertical-align: middle;
+}
+
 .admin-moderation-success-slot {
   margin-bottom: 0.85rem;
 }

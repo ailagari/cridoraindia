@@ -4,6 +4,7 @@ from __future__ import annotations
 
 CRIDORA_LIVE_RATE_LABEL = "Cridora live rate"
 CRIDORA_MANUAL_RATE_LABEL = "Cridora manual rate"
+CRIDORA_MIXED_RATE_LABEL = "Cridora live + manual rates"
 KERALA_GOLD_RATE_LABEL = "Kerala gold rate"
 
 CRIDORA_LIVE_RATE_NOTE = (
@@ -45,6 +46,8 @@ def public_rate_source_label(source: str | None) -> str:
     src = str(source or "").strip().lower()
     if src == "manual_ticker":
         return CRIDORA_MANUAL_RATE_LABEL
+    if src == "mixed_ticker":
+        return CRIDORA_MIXED_RATE_LABEL
     if src in _LIVE_SOURCES or not src:
         return CRIDORA_LIVE_RATE_LABEL
     return CRIDORA_LIVE_RATE_LABEL
@@ -62,6 +65,11 @@ def sanitize_public_rate_note(note: str | None, *, source: str | None = None) ->
     src = str(source or "").strip().lower()
     if src == "manual_ticker":
         return CRIDORA_MANUAL_RATE_NOTE
+    if src == "mixed_ticker":
+        return (
+            "Cridora published rates — some metals follow the live Kerala feed, "
+            "others use admin manual board rates."
+        )
     blocked = (
         "jos",
         "alukkas",

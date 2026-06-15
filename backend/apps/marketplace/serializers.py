@@ -46,6 +46,10 @@ from .spot_prices import (
     public_spot_prices_payload,
     resolve_cridora_base_22k_inr,
 )
+from .ticker_metal_sources import (
+    normalize_ticker_metal_source_json,
+    validate_manual_rates_for_sources,
+)
 
 User = get_user_model()
 
@@ -87,6 +91,7 @@ class GoldTickerReadSerializer(serializers.ModelSerializer):
             "hourly_gold_push_baseline_inr_per_gram_22k",
             "hourly_gold_push_baseline_recorded_at",
             "manual_ticker_enabled",
+            "ticker_metal_source_json",
             "ticker_manual_22k_inr_per_gram",
             "ticker_manual_24k_inr_per_gram",
             "ticker_manual_18k_inr_per_gram",
@@ -235,6 +240,7 @@ class GoldTickerAdminSerializer(serializers.ModelSerializer):
             "enable_educational_engagement",
             "enable_monthly_storytelling_push",
             "manual_ticker_enabled",
+            "ticker_metal_source_json",
             "ticker_manual_22k_inr_per_gram",
             "ticker_manual_24k_inr_per_gram",
             "ticker_manual_18k_inr_per_gram",
@@ -270,6 +276,11 @@ class GoldTickerAdminSerializer(serializers.ModelSerializer):
             return {}
         return normalize_live_metal_adjustments_json(value)
 
+    def validate_ticker_metal_source_json(self, value):
+        if value is None:
+            return {}
+        return normalize_ticker_metal_source_json(value)
+
     def validate_rate_move_alert_threshold_inr(self, value):
         if value < 0:
             raise serializers.ValidationError("Must be zero or greater (0 disables alerts).")
@@ -278,14 +289,37 @@ class GoldTickerAdminSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         from decimal import Decimal
 
-        enabled = attrs.get("manual_ticker_enabled")
-        if enabled is None and self.instance is not None:
-            enabled = self.instance.manual_ticker_enabled
+        sources = attrs.get("ticker_metal_source_json")
+        if sources is None and self.instance is not None:
+            sources = normalize_ticker_metal_source_json(
+                self.instance.ticker_metal_source_json,
+                ticker=self.instance,
+            )
+        elif sources is not None:
+            sources = normalize_ticker_metal_source_json(sources)
+        else:
+            sources = normalize_ticker_metal_source_json(None)
 
-        key_22 = "ticker_manual_22k_inr_per_gram"
-        k22 = attrs.get(key_22) if key_22 in attrs else None
-        if k22 is None and self.instance is not None:
-            k22 = self.instance.ticker_manual_22k_inr_per_gram
+        class _RateProbe:
+            pass
+
+        probe = _RateProbe()
+        probe.ticker_manual_22k_inr_per_gram = attrs.get("ticker_manual_22k_inr_per_gram")
+        if probe.ticker_manual_22k_inr_per_gram is None and self.instance is not None:
+            probe.ticker_manual_22k_inr_per_gram = self.instance.ticker_manual_22k_inr_per_gram
+        probe.ticker_manual_24k_inr_per_gram = attrs.get("ticker_manual_24k_inr_per_gram")
+        if "ticker_manual_24k_inr_per_gram" not in attrs and self.instance is not None:
+            probe.ticker_manual_24k_inr_per_gram = self.instance.ticker_manual_24k_inr_per_gram
+        probe.ticker_manual_18k_inr_per_gram = attrs.get("ticker_manual_18k_inr_per_gram")
+        if "ticker_manual_18k_inr_per_gram" not in attrs and self.instance is not None:
+            probe.ticker_manual_18k_inr_per_gram = self.instance.ticker_manual_18k_inr_per_gram
+        probe.ticker_manual_silver_999_inr_per_gram = attrs.get("ticker_manual_silver_999_inr_per_gram")
+        if "ticker_manual_silver_999_inr_per_gram" not in attrs and self.instance is not None:
+            probe.ticker_manual_silver_999_inr_per_gram = self.instance.ticker_manual_silver_999_inr_per_gram
+
+        source_errors = validate_manual_rates_for_sources(probe, sources)
+        if source_errors:
+            raise serializers.ValidationError(source_errors)
 
         key_24 = "ticker_manual_24k_inr_per_gram"
         k24 = attrs.get(key_24) if key_24 in attrs else None
@@ -302,13 +336,6 @@ class GoldTickerAdminSerializer(serializers.ModelSerializer):
         if key_silver not in attrs and self.instance is not None:
             s999 = self.instance.ticker_manual_silver_999_inr_per_gram
 
-        if enabled:
-            if k22 is None or k22 <= Decimal("0"):
-                raise serializers.ValidationError(
-                    {
-                        key_22: "Enter a positive 22K ₹/g when manual ticker is enabled.",
-                    }
-                )
         if k24 is not None and k24 <= Decimal("0"):
             raise serializers.ValidationError(
                 {key_24: "Leave blank or enter a positive 24K ₹/g."}
@@ -335,6 +362,13 @@ class GoldTickerAdminSerializer(serializers.ModelSerializer):
         return attrs
 
     def update(self, instance, validated_data):
+        if "ticker_metal_source_json" in validated_data:
+            sources = validated_data["ticker_metal_source_json"]
+            validated_data["manual_ticker_enabled"] = any(
+                mode == "manual"
+                for block in sources.values()
+                for mode in block.values()
+            )
         if "gold_push_image_url" in validated_data:
             delete_replaced_media_url(
                 old_url=instance.gold_push_image_url,

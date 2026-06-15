@@ -28,6 +28,13 @@ type LivePreviewRow = {
   final_inr_per_gram: string | null
 }
 
+type MetalSource = 'live' | 'manual'
+
+type MetalSourceState = {
+  gold: Record<string, MetalSource>
+  silver: Record<string, MetalSource>
+}
+
 type AdminTickerPayload = {
   live_metal_adjustments_json: Record<string, unknown>
   live_spot_raw_preview: {
@@ -42,6 +49,7 @@ type AdminTickerPayload = {
   hourly_gold_push_baseline_inr_per_gram_22k?: string | null
   hourly_gold_push_baseline_recorded_at?: string | null
   manual_ticker_enabled?: boolean
+  ticker_metal_source_json?: Record<string, Record<string, string>>
   ticker_manual_22k_inr_per_gram?: string | null
   ticker_manual_24k_inr_per_gram?: string | null
   ticker_manual_18k_inr_per_gram?: string | null
@@ -56,6 +64,78 @@ type AdminTickerPayload = {
   platform_base_inr_per_gram_22k: string
   cridora_base_source?: string
   updated_at: string
+}
+
+const DEFAULT_METAL_SOURCES: MetalSourceState = {
+  gold: { '24K': 'live', '22K': 'live', '21K': 'live', '18K': 'live' },
+  silver: { '999': 'live', '925': 'live' },
+}
+
+function emptyMetalSources(): MetalSourceState {
+  return {
+    gold: { ...DEFAULT_METAL_SOURCES.gold },
+    silver: { ...DEFAULT_METAL_SOURCES.silver },
+  }
+}
+
+function parseMetalSources(raw: unknown, legacyManualOn?: boolean): MetalSourceState {
+  const base = emptyMetalSources()
+  if (raw && typeof raw === 'object') {
+    const o = raw as { gold?: Record<string, string>; silver?: Record<string, string> }
+    for (const key of Object.keys(base.gold)) {
+      const mode = o.gold?.[key]
+      base.gold[key] = mode === 'manual' ? 'manual' : 'live'
+    }
+    for (const key of Object.keys(base.silver)) {
+      const mode = o.silver?.[key]
+      base.silver[key] = mode === 'manual' ? 'manual' : 'live'
+    }
+    return base
+  }
+  if (legacyManualOn) {
+    for (const family of ['gold', 'silver'] as const) {
+      for (const key of Object.keys(base[family])) {
+        base[family][key] = 'manual'
+      }
+    }
+  }
+  return base
+}
+
+function anyGoldManual(sources: MetalSourceState): boolean {
+  return Object.values(sources.gold).some((m) => m === 'manual')
+}
+
+function anySilverManual(sources: MetalSourceState): boolean {
+  return Object.values(sources.silver).some((m) => m === 'manual')
+}
+
+function metalSourceFor(sources: MetalSourceState, family: 'gold' | 'silver', key: string): MetalSource {
+  return sources[family][key] ?? 'live'
+}
+
+function patchMetalSource(
+  sources: MetalSourceState,
+  family: 'gold' | 'silver',
+  key: string,
+  mode: MetalSource,
+): MetalSourceState {
+  return {
+    ...sources,
+    [family]: { ...sources[family], [key]: mode },
+  }
+}
+
+const MANUAL_INPUT_KEYS: Partial<
+  Record<'gold' | 'silver', Partial<Record<string, '22K' | '24K' | '18K' | '999'>>>
+> = {
+  gold: { '22K': '22K', '24K': '24K', '18K': '18K' },
+  silver: { '999': '999' },
+}
+
+const MANUAL_DERIVED_HINT: Partial<Record<string, string>> = {
+  '21K': 'From 24K × 0.875',
+  '925': 'From 999 × 0.925',
 }
 
 const OPTIONAL_LIVE_METAL_KEYS = new Set(['21K'])
@@ -270,138 +350,35 @@ function manualTickerRates(
   return { gold, silver }
 }
 
-function AdminPublishedRatesSummary(props: {
-  manualOn: boolean
-  previewRows: LivePreviewRow[] | undefined
-  manual22Draft: string
-  manual24Draft: string
-  manual18Draft: string
-  manualSilver999Draft: string
-  rawPreviewSource?: string
-  rawPreviewUpdatedAt?: string
-  rawPreviewRateDate?: string
+function AdminMetalSourceToggle({
+  mode,
+  onChange,
+  liveAvailable,
+}: {
+  mode: MetalSource
+  onChange: (mode: MetalSource) => void
+  liveAvailable: boolean
 }) {
-  const {
-    manualOn,
-    previewRows,
-    manual22Draft,
-    manual24Draft,
-    manual18Draft,
-    manualSilver999Draft,
-    rawPreviewSource,
-    rawPreviewUpdatedAt,
-    rawPreviewRateDate,
-  } = props
-
-  const liveByKey = new Map(
-    (previewRows ?? []).map((r) => [`${r.family}:${r.key}`, r] as const),
-  )
-  const manualRates = manualOn
-    ? manualTickerRates(manual22Draft, manual24Draft, manual18Draft, manualSilver999Draft)
-    : null
-
-  const publishedForRow = (family: 'gold' | 'silver', key: string): number | null => {
-    if (manualOn && manualRates) {
-      const bucket = family === 'gold' ? manualRates.gold : manualRates.silver
-      const v = bucket[key as keyof typeof bucket]
-      return typeof v === 'number' && Number.isFinite(v) ? v : null
-    }
-    const live = liveByKey.get(`${family}:${key}`)
-    if (!live?.final_inr_per_gram) return null
-    const n = Number.parseFloat(live.final_inr_per_gram)
-    return Number.isFinite(n) ? n : null
-  }
-
   return (
-    <div
-      className="card"
-      style={{
-        padding: '0.85rem 1rem',
-        borderRadius: 12,
-        border: '1px solid var(--border-soft)',
-        marginBottom: '1rem',
-        background: 'var(--veil-35)',
-      }}
-    >
-      <p style={{ margin: '0 0 0.35rem', fontWeight: 700, fontSize: '0.82rem', color: 'var(--text)' }}>
-        {manualOn ? 'Manual published · live feed reference' : 'Live feed · published rates'}
-      </p>
-      <p style={{ margin: '0 0 0.75rem', fontSize: '0.76rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
-        {manualOn ? (
-          <>
-            <strong style={{ color: 'var(--text)' }}>Published</strong> column is what customers see (manual board).{' '}
-            <strong style={{ color: 'var(--text)' }}>Live feed</strong> refreshes in the background for comparison.
-          </>
-        ) : (
-          <>
-            <strong style={{ color: 'var(--text)' }}>Live feed</strong> is the current Kerala raw ₹/g.{' '}
-            <strong style={{ color: 'var(--text)' }}>Published</strong> applies your saved markup rules.
-          </>
-        )}
-      </p>
-      <div className="dash-table-scroll">
-        <table className="admin-user-table" style={{ fontSize: '0.78rem', margin: 0 }}>
-          <thead>
-            <tr>
-              <th>Metal</th>
-              <th className="tabular">Live feed ₹/g</th>
-              {!manualOn ? <th className="tabular">+Markup</th> : null}
-              <th className="tabular">Published ₹/g</th>
-            </tr>
-          </thead>
-          <tbody>
-            {visibleMetalRows(previewRows).map(({ family, key, label }) => {
-              const live = liveByKey.get(`${family}:${key}`)
-              const published = publishedForRow(family, key)
-              const decimals = family === 'silver' ? 3 : 2
-              return (
-                <tr key={`${family}-${key}`}>
-                  <td style={{ fontWeight: 600 }}>{label}</td>
-                  <td className="tabular" style={{ color: 'var(--text-muted)' }}>
-                    {live?.raw_inr_per_gram != null
-                      ? `₹${formatMaybeStrInr(live.raw_inr_per_gram, decimals)}`
-                      : '—'}
-                  </td>
-                  {!manualOn ? (
-                    <td className="tabular" style={{ color: 'var(--text-muted)', fontWeight: 600 }}>
-                      {live?.after_markup_inr_per_gram != null
-                        ? `₹${formatMaybeStrInr(live.after_markup_inr_per_gram, decimals)}`
-                        : '—'}
-                    </td>
-                  ) : null}
-                  <td
-                    className="tabular"
-                    style={{
-                      color: 'var(--gold-light)',
-                      fontWeight: 700,
-                      background: manualOn ? 'var(--gold-bg)' : undefined,
-                    }}
-                  >
-                    {published != null ? `₹${formatFinal(family, published)}` : '—'}
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
-      {rawPreviewSource ? (
-        <p style={{ margin: '0.5rem 0 0', fontSize: '0.68rem', color: 'var(--text-faint)' }}>
-          Live feed: {publicRateSourceLabel(rawPreviewSource)}
-          {rawPreviewUpdatedAt ? ` · Updated ${rawPreviewUpdatedAt}` : null}
-          {rawPreviewRateDate ? ` · Board date ${rawPreviewRateDate}` : null}
-          {manualOn ? ' · Refreshed even while manual board is published' : null}
-        </p>
-      ) : (
-        <p style={{ margin: '0.5rem 0 0', fontSize: '0.68rem', color: 'var(--text-faint)' }}>
-          Fetching live Kerala feed…
-        </p>
-      )}
-      {manualOn && !manualRates ? (
-        <p style={{ margin: '0.5rem 0 0', fontSize: '0.76rem', color: 'var(--text-muted)' }}>
-          Enter 22K manual rate above to preview published column.
-        </p>
-      ) : null}
+    <div className="admin-ticker-source-toggle" role="group" aria-label="Price source">
+      <button
+        type="button"
+        className={mode === 'live' ? 'btn btn-primary kyb-btn-sm' : 'btn btn-ghost kyb-btn-sm'}
+        aria-pressed={mode === 'live'}
+        disabled={!liveAvailable && mode !== 'live'}
+        title={liveAvailable ? 'Use live Kerala feed' : 'Live feed unavailable — use manual'}
+        onClick={() => onChange('live')}
+      >
+        Live
+      </button>
+      <button
+        type="button"
+        className={mode === 'manual' ? 'btn btn-primary kyb-btn-sm' : 'btn btn-ghost kyb-btn-sm'}
+        aria-pressed={mode === 'manual'}
+        onClick={() => onChange('manual')}
+      >
+        Manual
+      </button>
     </div>
   )
 }
@@ -409,7 +386,7 @@ function AdminPublishedRatesSummary(props: {
 export function AdminGoldTickerPanel() {
   const [data, setData] = useState<AdminTickerPayload | null>(null)
   const [adjDraft, setAdjDraft] = useState<AdjustmentsState>(() => emptyAdjustments())
-  const [manualOn, setManualOn] = useState(false)
+  const [sourceDraft, setSourceDraft] = useState<MetalSourceState>(() => emptyMetalSources())
   const [manual22Draft, setManual22Draft] = useState('')
   const [manual24Draft, setManual24Draft] = useState('')
   const [manual18Draft, setManual18Draft] = useState('')
@@ -436,7 +413,7 @@ export function AdminGoldTickerPanel() {
     const j = (await res.json()) as AdminTickerPayload
     setData(j)
     setAdjDraft(parseAdjustments(j.live_metal_adjustments_json))
-    setManualOn(Boolean(j.manual_ticker_enabled))
+    setSourceDraft(parseMetalSources(j.ticker_metal_source_json, j.manual_ticker_enabled))
     setManual22Draft(j.ticker_manual_22k_inr_per_gram ?? '')
     setManual24Draft(j.ticker_manual_24k_inr_per_gram ?? '')
     setManual18Draft(j.ticker_manual_18k_inr_per_gram ?? '')
@@ -485,6 +462,54 @@ export function AdminGoldTickerPanel() {
   const previewRow = (family: string, key: string): LivePreviewRow | undefined =>
     data?.live_spot_raw_preview?.rows?.find((r) => r.family === family && r.key === key)
 
+  const manualRates = manualTickerRates(
+    manual22Draft,
+    manual24Draft,
+    manual18Draft,
+    manualSilver999Draft,
+  )
+
+  const liveAvailableFor = (family: 'gold' | 'silver', key: string): boolean =>
+    previewRow(family, key)?.raw_inr_per_gram != null
+
+  const publishedForRow = (family: 'gold' | 'silver', key: string): number | null => {
+    if (metalSourceFor(sourceDraft, family, key) === 'manual') {
+      if (!manualRates) return null
+      const bucket = family === 'gold' ? manualRates.gold : manualRates.silver
+      const v = bucket[key as keyof typeof bucket]
+      return typeof v === 'number' && Number.isFinite(v) ? v : null
+    }
+    const live = previewRow(family, key)
+    if (!live?.final_inr_per_gram) return null
+    const n = Number.parseFloat(live.final_inr_per_gram)
+    return Number.isFinite(n) ? n : null
+  }
+
+  const manualDraftForKey = (family: 'gold' | 'silver', key: string): string => {
+    const mapped = MANUAL_INPUT_KEYS[family]?.[key]
+    if (mapped === '22K') return manual22Draft
+    if (mapped === '24K') return manual24Draft
+    if (mapped === '18K') return manual18Draft
+    if (mapped === '999') return manualSilver999Draft
+    return ''
+  }
+
+  const setManualDraftForKey = (family: 'gold' | 'silver', key: string, value: string) => {
+    const mapped = MANUAL_INPUT_KEYS[family]?.[key]
+    if (mapped === '22K') setManual22Draft(value)
+    else if (mapped === '24K') setManual24Draft(value)
+    else if (mapped === '18K') setManual18Draft(value)
+    else if (mapped === '999') setManualSilver999Draft(value)
+  }
+
+  const saveBlocked =
+    (anyGoldManual(sourceDraft) && !manual22Draft.trim()) ||
+    (anySilverManual(sourceDraft) && !manualSilver999Draft.trim())
+
+  const liveMarkupRows = visibleMetalRows(data?.live_spot_raw_preview?.rows).filter(
+    ({ family, key }) => metalSourceFor(sourceDraft, family, key) === 'live',
+  )
+
   const save = async () => {
     setBusy(true)
     setError('')
@@ -493,7 +518,9 @@ export function AdminGoldTickerPanel() {
       method: 'PATCH',
       jsonBody: {
         live_metal_adjustments_json: buildAdjustmentsPayload(adjDraft),
-        manual_ticker_enabled: manualOn,
+        ticker_metal_source_json: sourceDraft,
+        manual_ticker_enabled: Object.values(sourceDraft.gold).some((m) => m === 'manual')
+          || Object.values(sourceDraft.silver).some((m) => m === 'manual'),
         ticker_manual_22k_inr_per_gram: manual22Draft.trim() || null,
         ticker_manual_24k_inr_per_gram: manual24Draft.trim() ? manual24Draft.trim() : null,
         ticker_manual_18k_inr_per_gram: manual18Draft.trim() ? manual18Draft.trim() : null,
@@ -530,193 +557,155 @@ export function AdminGoldTickerPanel() {
         <h2 className="dash-coming__title" style={{ marginTop: 0 }}>
           Ticker &amp; fees
         </h2>
-        <p className="dash-coming__text" style={{ marginBottom: 0, fontSize: '0.82rem', maxWidth: '52rem' }}>
-          Configure Cridora live Kerala gold rates, alerts, and <strong>all platform fees and storefront disclosures</strong> here.{' '}
-          <strong>Fractional investment markup</strong> (above) applies on top of jeweller board rates for vault purchases.{' '}
-          <strong>Live:</strong> Cridora refreshes Kerala gold rates in the background; optional admin markup/deduction applies before publishing.{' '}
-          Jewellers can follow the Cridora live rate or set their own board rates on their storefront.{' '}
-          <strong>Manual:</strong> fixed gold (22K/18K/24K) and optional silver board rates (no row rules). Live Kerala feed still refreshes below for comparison. Push alerts are configured under{' '}
-          <strong>Pushes &amp; alerts</strong>.
+        <p className="dash-coming__text" style={{ marginBottom: 0, fontSize: '0.82rem', maxWidth: '44rem' }}>
+          Set published ₹/g per metal — use <strong>Live</strong> when the Kerala feed looks right, or{' '}
+          <strong>Manual</strong> when it is missing or wrong. Platform fees and loan disclosures are below.
         </p>
         {data ? (
           <ul className="admin-ticker-panel__meta" aria-label="Current ticker snapshot">
             <li>
-              <span className="admin-ticker-panel__meta-k">{manualOn ? 'Published 22K' : 'Live 22K'}</span>
-              <strong className="tabular">
-                ₹{formatMaybeStrInr(data.platform_base_inr_per_gram_22k)}
-              </strong>
+              <span className="admin-ticker-panel__meta-k">Published 22K</span>
+              <strong className="tabular">₹{formatMaybeStrInr(data.platform_base_inr_per_gram_22k)}</strong>
               <span style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>/g</span>
             </li>
-            {manualOn ? (
-              <li>
-                <span className="admin-ticker-panel__meta-k">Kerala live 22K</span>
-                <strong className="tabular">
-                  {previewRow('gold', '22K')?.raw_inr_per_gram
-                    ? `₹${formatMaybeStrInr(previewRow('gold', '22K')!.raw_inr_per_gram!)}`
-                    : '—'}
-                </strong>
-                <span style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>/g</span>
-              </li>
-            ) : null}
             <li>
-              <span className="admin-ticker-panel__meta-k">Feed</span>
-              <span>{data.cridora_base_source ? data.cridora_base_source.replace(/_/g, ' ') : '—'}</span>
+              <span className="admin-ticker-panel__meta-k">Kerala live 22K</span>
+              <strong className="tabular">
+                {previewRow('gold', '22K')?.raw_inr_per_gram
+                  ? `₹${formatMaybeStrInr(previewRow('gold', '22K')!.raw_inr_per_gram!)}`
+                  : '—'}
+              </strong>
             </li>
-            {manualOn && data.live_spot_raw_preview?.source ? (
+            {data.live_spot_raw_preview?.source ? (
               <li>
-                <span className="admin-ticker-panel__meta-k">Live feed</span>
+                <span className="admin-ticker-panel__meta-k">Feed</span>
                 <span>{publicRateSourceLabel(data.live_spot_raw_preview.source)}</span>
               </li>
             ) : null}
             <li>
-              <span className="admin-ticker-panel__meta-k">Alert baseline</span>
-              <strong className="tabular">{data.rate_alert_baseline_inr_per_gram_22k ?? '—'}</strong>
-            </li>
-            <li>
               <span className="admin-ticker-panel__meta-k">Last saved</span>
-              <span className="tabular" style={{ fontWeight: 600 }}>
-                {data.updated_at}
-              </span>
+              <span className="tabular" style={{ fontWeight: 600 }}>{data.updated_at}</span>
             </li>
           </ul>
         ) : null}
       </header>
       <div className="admin-ticker-panel__body">
       {error ? <p className="form-error">{error}</p> : null}
-      <p className="admin-ticker-panel__section-title">Price source</p>
-      <div className="admin-ticker-panel__card">
-        <div
-          role="group"
-          aria-label="Ticker metal price source"
-          style={{
-            display: 'flex',
-            gap: '0.5rem',
-            flexWrap: 'wrap',
-            marginBottom: manualOn ? '0.85rem' : 0,
-          }}
-        >
-          <button
-            type="button"
-            className={manualOn ? 'btn btn-ghost' : 'btn btn-primary'}
-            aria-pressed={!manualOn}
-            style={{ flex: '1 1 160px', justifyContent: 'center' }}
-            onClick={() => setManualOn(false)}
-          >
-            Live spot (API)
-          </button>
-          <button
-            type="button"
-            className={manualOn ? 'btn btn-primary' : 'btn btn-ghost'}
-            aria-pressed={manualOn}
-            style={{ flex: '1 1 160px', justifyContent: 'center' }}
-            onClick={() => setManualOn(true)}
-          >
-            Manual board rates
-          </button>
+
+      <p className="admin-ticker-panel__section-title">Published rates</p>
+      <div className="admin-ticker-adj-table-wrap">
+        <div className="dash-table-scroll">
+          <table className="admin-user-table admin-ticker-rates-table" style={{ fontSize: '0.8rem' }}>
+            <thead>
+              <tr>
+                <th>Metal</th>
+                <th className="tabular">Live feed</th>
+                <th>Source</th>
+                <th>Manual ₹/g</th>
+                <th className="tabular">Published</th>
+              </tr>
+            </thead>
+            <tbody>
+              {visibleMetalRows(data?.live_spot_raw_preview?.rows).map(({ family, key, label }) => {
+                const mode = metalSourceFor(sourceDraft, family, key)
+                const live = previewRow(family, key)
+                const published = publishedForRow(family, key)
+                const decimals = family === 'silver' ? 3 : 2
+                const inputKey = MANUAL_INPUT_KEYS[family]?.[key]
+                const derivedHint = MANUAL_DERIVED_HINT[key]
+                const inpStyle: CSSProperties = {
+                  width: '100%',
+                  minWidth: 88,
+                  maxWidth: 120,
+                  padding: '0.35rem 0.5rem',
+                  borderRadius: 8,
+                  border: '1px solid var(--border-soft)',
+                  background: 'var(--input-bg, transparent)',
+                  color: 'var(--text)',
+                }
+                return (
+                  <tr key={`${family}-${key}`}>
+                    <td style={{ fontWeight: 600 }}>{label}</td>
+                    <td className="tabular" style={{ color: 'var(--text-muted)' }}>
+                      {live?.raw_inr_per_gram != null
+                        ? `₹${formatMaybeStrInr(live.raw_inr_per_gram, decimals)}`
+                        : '—'}
+                    </td>
+                    <td>
+                      <AdminMetalSourceToggle
+                        mode={mode}
+                        liveAvailable={liveAvailableFor(family, key)}
+                        onChange={(next) => {
+                          if (next === 'live' && !liveAvailableFor(family, key)) return
+                          setSourceDraft((prev) => patchMetalSource(prev, family, key, next))
+                        }}
+                      />
+                    </td>
+                    <td>
+                      {mode === 'manual' && inputKey ? (
+                        <input
+                          value={manualDraftForKey(family, key)}
+                          onChange={(e) => setManualDraftForKey(family, key, e.target.value)}
+                          placeholder={
+                            key === '22K'
+                              ? 'Required'
+                              : key === '999'
+                                ? 'Required'
+                                : 'Optional'
+                          }
+                          inputMode="decimal"
+                          style={inpStyle}
+                          aria-label={`Manual ${label} rate`}
+                        />
+                      ) : mode === 'manual' && derivedHint ? (
+                        <span className="dash-footnote" style={{ fontSize: '0.72rem' }}>
+                          {derivedHint}
+                        </span>
+                      ) : (
+                        <span style={{ color: 'var(--text-faint)' }}>—</span>
+                      )}
+                    </td>
+                    <td
+                      className="tabular"
+                      style={{ color: 'var(--gold-light)', fontWeight: 700 }}
+                    >
+                      {published != null ? `₹${formatFinal(family, published)}` : '—'}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
         </div>
-        {manualOn ? (
-          <div
-            style={{
-              display: 'grid',
-              gap: '0.85rem',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-            }}
-          >
-            <label className="field">
-              <span>22K ₹/g (required)</span>
-              <input
-                value={manual22Draft}
-                onChange={(e) => setManual22Draft(e.target.value)}
-                placeholder="e.g. 14850"
-                inputMode="decimal"
-              />
-            </label>
-            <label className="field">
-              <span>24K ₹/g (optional)</span>
-              <input
-                value={manual24Draft}
-                onChange={(e) => setManual24Draft(e.target.value)}
-                placeholder="Leave blank to derive from 22K ÷ 0.916"
-                inputMode="decimal"
-              />
-            </label>
-            <label className="field">
-              <span>18K ₹/g (optional)</span>
-              <input
-                value={manual18Draft}
-                onChange={(e) => setManual18Draft(e.target.value)}
-                placeholder="Leave blank to derive from 24K × 0.75"
-                inputMode="decimal"
-              />
-            </label>
-            <label className="field">
-              <span>Silver 999 ₹/g (optional)</span>
-              <input
-                value={manualSilver999Draft}
-                onChange={(e) => setManualSilver999Draft(e.target.value)}
-                placeholder="925 derived as 999 × 0.925"
-                inputMode="decimal"
-              />
-            </label>
-          </div>
+        {data?.live_spot_raw_preview?.source ? (
+          <p className="dash-footnote" style={{ margin: '0.5rem 0 0', fontSize: '0.68rem' }}>
+            Live feed: {publicRateSourceLabel(data.live_spot_raw_preview.source)}
+            {data.live_spot_raw_preview.source_updated_at
+              ? ` · ${data.live_spot_raw_preview.source_updated_at}`
+              : null}
+          </p>
         ) : null}
       </div>
 
-      {data ? (
+      {liveMarkupRows.length > 0 ? (
         <>
-          <p className="admin-ticker-panel__section-title">Published preview</p>
-          <AdminPublishedRatesSummary
-            manualOn={manualOn}
-            previewRows={data.live_spot_raw_preview?.rows}
-            manual22Draft={manual22Draft}
-            manual24Draft={manual24Draft}
-            manual18Draft={manual18Draft}
-            manualSilver999Draft={manualSilver999Draft}
-            rawPreviewSource={data.live_spot_raw_preview?.source}
-            rawPreviewUpdatedAt={data.live_spot_raw_preview?.source_updated_at}
-            rawPreviewRateDate={data.live_spot_raw_preview?.rate_date}
-          />
-        </>
-      ) : null}
-
-      {!manualOn ? (
-        <>
-          <p className="admin-ticker-panel__section-title">Live markup rules (draft)</p>
+          <p className="admin-ticker-panel__section-title">Live markup (live metals only)</p>
         <div className="admin-ticker-adj-table-wrap">
-          <p className="admin-ticker-panel__draft-banner">
-            <strong>Live ladder (draft)</strong> — Cridora live Kerala gold rate. Edits apply after{' '}
-            <strong>Save</strong>.
-          </p>
           <div className="dash-table-scroll">
           <table className="admin-user-table" style={{ fontSize: '0.8rem' }}>
             <thead>
               <tr>
                 <th scope="col">Metal</th>
-                <th className="tabular" scope="col" title="Kerala gold rate before admin markup">
-                  Raw ₹/g
-                </th>
-                <th scope="col" title="Markup: percent or fixed ₹ on raw">
-                  Markup
-                </th>
-                <th className="tabular" scope="col" title="Markup amount">
-                  Value
-                </th>
-                <th className="tabular" scope="col" title="Price after markup">
-                  Post-mk
-                </th>
-                <th scope="col" title="Deduction from post-markup reference">
-                  Deduction
-                </th>
-                <th className="tabular" scope="col" title="Deduction amount">
-                  Value
-                </th>
-                <th className="tabular" scope="col" title="Published live market">
-                  Published
-                </th>
+                <th className="tabular" scope="col">Raw</th>
+                <th scope="col">Markup</th>
+                <th className="tabular" scope="col">Value</th>
+                <th scope="col">Deduction</th>
+                <th className="tabular" scope="col">Value</th>
+                <th className="tabular" scope="col">After rules</th>
               </tr>
             </thead>
             <tbody>
-              {visibleMetalRows(data?.live_spot_raw_preview?.rows).map(({ family, key, label }) => {
+              {liveMarkupRows.map(({ family, key, label }) => {
                 const pr = previewRow(family, key)
                 const rawStr = pr?.raw_inr_per_gram
                 const rawNum = rawStr != null ? Number.parseFloat(rawStr) : NaN
@@ -785,9 +774,6 @@ export function AdminGoldTickerPanel() {
                         }
                       />
                     </td>
-                    <td className="tabular" style={{ color: 'var(--text-muted)', fontWeight: 600 }}>
-                      {Number.isFinite(midNum) ? formatFinal(family, midNum) : '—'}
-                    </td>
                     <td>
                       <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
                         <button
@@ -800,7 +786,7 @@ export function AdminGoldTickerPanel() {
                           style={{ padding: '0.25rem 0.5rem', fontSize: '0.72rem' }}
                           onClick={() => patchAdjSide(family, key, 'deduction', { mode: 'percent' })}
                         >
-                          % off ref
+                          %
                         </button>
                         <button
                           type="button"
@@ -812,7 +798,7 @@ export function AdminGoldTickerPanel() {
                           style={{ padding: '0.25rem 0.5rem', fontSize: '0.72rem' }}
                           onClick={() => patchAdjSide(family, key, 'deduction', { mode: 'fixed_inr' })}
                         >
-                          ₹/g off ref
+                          ₹/g
                         </button>
                       </div>
                     </td>
@@ -822,11 +808,7 @@ export function AdminGoldTickerPanel() {
                         onChange={(e) => patchAdjSide(family, key, 'deduction', { amount: e.target.value })}
                         inputMode="decimal"
                         style={inpStyle}
-                        aria-label={
-                          rowAdj.deduction.mode === 'percent'
-                            ? 'Deduction percent after markup'
-                            : 'Deduction rupees per gram after markup'
-                        }
+                        aria-label="Deduction amount"
                       />
                     </td>
                     <td className="tabular" style={{ color: 'var(--gold-light)', fontWeight: 700 }}>
@@ -840,12 +822,7 @@ export function AdminGoldTickerPanel() {
           </div>
         </div>
         </>
-      ) : (
-        <p className="dash-footnote" style={{ marginBottom: '0.85rem' }}>
-          Manual mode uses only the board rates above. Switch to <strong>Live spot (API)</strong> to edit per-metal markup
-          rules.
-        </p>
-      )}
+      ) : null}
 
       <p className="admin-ticker-panel__section-title">Platform fees &amp; storefront disclosures</p>
       <div className="admin-ticker-panel__card" style={{ marginBottom: 0 }}>
@@ -913,16 +890,16 @@ export function AdminGoldTickerPanel() {
           type="button"
           className="btn btn-primary"
           style={{ minWidth: '11rem' }}
-          disabled={busy || (manualOn && !manual22Draft.trim())}
+          disabled={busy || saveBlocked}
           onClick={() => void save()}
         >
           {busy ? 'Saving…' : 'Save ticker &amp; fees'}
         </button>
         <AdminFormSuccessBanner message={saveSuccessMsg} />
       </div>
-      {manualOn && !manual22Draft.trim() ? (
+      {saveBlocked ? (
         <p className="dash-footnote" style={{ marginTop: '0.5rem', marginBottom: 0 }}>
-          Enter a 22K ₹/g value before saving in manual mode.
+          Enter 22K ₹/g when any gold row is manual, and silver 999 ₹/g when any silver row is manual.
         </p>
       ) : null}
       </div>

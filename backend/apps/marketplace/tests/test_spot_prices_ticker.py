@@ -12,6 +12,7 @@ from apps.marketplace.spot_prices import (
     invalidate_spot_price_cache,
     public_spot_prices_payload,
 )
+from apps.marketplace.ticker_metal_sources import DEFAULT_TICKER_METAL_SOURCES
 
 KERALA_LIVE = {
     "currency": "INR",
@@ -25,15 +26,31 @@ KERALA_LIVE = {
 }
 
 
+def _all_manual_sources() -> dict:
+    return {
+        "gold": {k: "manual" for k in DEFAULT_TICKER_METAL_SOURCES["gold"]},
+        "silver": {k: "manual" for k in DEFAULT_TICKER_METAL_SOURCES["silver"]},
+    }
+
+
+def _all_live_sources() -> dict:
+    return {
+        "gold": {k: "live" for k in DEFAULT_TICKER_METAL_SOURCES["gold"]},
+        "silver": {k: "live" for k in DEFAULT_TICKER_METAL_SOURCES["silver"]},
+    }
+
+
 class SpotPricesTickerSourceTests(TestCase):
     def setUp(self):
         invalidate_spot_price_cache(force_kerala_refresh=True)
         self.ticker = get_or_create_ticker()
         self.ticker.manual_ticker_enabled = False
+        self.ticker.ticker_metal_source_json = _all_live_sources()
         self.ticker.ticker_manual_22k_inr_per_gram = None
         self.ticker.save(
             update_fields=[
                 "manual_ticker_enabled",
+                "ticker_metal_source_json",
                 "ticker_manual_22k_inr_per_gram",
             ]
         )
@@ -53,6 +70,7 @@ class SpotPricesTickerSourceTests(TestCase):
     def test_manual_mode_overrides_kerala_feed(self, mock_feed):
         mock_feed.return_value = dict(KERALA_LIVE)
         self.ticker.manual_ticker_enabled = True
+        self.ticker.ticker_metal_source_json = _all_manual_sources()
         self.ticker.ticker_manual_22k_inr_per_gram = Decimal("9999.00")
         self.ticker.save()
         invalidate_spot_price_cache(force_kerala_refresh=True)
@@ -64,9 +82,25 @@ class SpotPricesTickerSourceTests(TestCase):
         self.assertEqual(payload["kerala_board"]["gold"]["22K"], 13645.0)
 
     @patch("apps.marketplace.josalukkas_rates.get_josalukkas_spot_payload_cached")
+    def test_per_metal_manual_only_22k(self, mock_feed):
+        mock_feed.return_value = dict(KERALA_LIVE)
+        sources = _all_live_sources()
+        sources["gold"]["22K"] = "manual"
+        self.ticker.ticker_metal_source_json = sources
+        self.ticker.ticker_manual_22k_inr_per_gram = Decimal("12000.00")
+        self.ticker.save()
+        invalidate_spot_price_cache(force_kerala_refresh=True)
+
+        payload = public_spot_prices_payload()
+        self.assertEqual(payload.get("source"), "mixed_ticker")
+        self.assertEqual(payload["gold"]["22K"], 12000.0)
+        self.assertEqual(payload["gold"]["24K"], 14890.0)
+
+    @patch("apps.marketplace.josalukkas_rates.get_josalukkas_spot_payload_cached")
     def test_manual_mode_admin_payload_includes_live_raw(self, mock_feed):
         mock_feed.return_value = dict(KERALA_LIVE)
         self.ticker.manual_ticker_enabled = True
+        self.ticker.ticker_metal_source_json = _all_manual_sources()
         self.ticker.ticker_manual_22k_inr_per_gram = Decimal("9999.00")
         self.ticker.save()
         invalidate_spot_price_cache(force_kerala_refresh=True)
@@ -81,13 +115,15 @@ class SpotPricesTickerSourceTests(TestCase):
         mock_feed.return_value = dict(KERALA_LIVE)
 
         self.ticker.manual_ticker_enabled = True
+        self.ticker.ticker_metal_source_json = _all_manual_sources()
         self.ticker.ticker_manual_22k_inr_per_gram = Decimal("8888.00")
         self.ticker.save()
         manual_payload = public_spot_prices_payload()
         self.assertEqual(manual_payload["gold"]["22K"], 8888.0)
 
         self.ticker.manual_ticker_enabled = False
-        self.ticker.save(update_fields=["manual_ticker_enabled"])
+        self.ticker.ticker_metal_source_json = _all_live_sources()
+        self.ticker.save(update_fields=["manual_ticker_enabled", "ticker_metal_source_json"])
         invalidate_spot_price_cache(force_kerala_refresh=True)
 
         live_payload = public_spot_prices_payload()
