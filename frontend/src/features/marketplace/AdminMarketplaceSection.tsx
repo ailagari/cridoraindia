@@ -253,83 +253,6 @@ function manualTickerRates(
   return { gold, silver }
 }
 
-function LiveKeralaPreviewTable({
-  rows,
-  rawPreviewSource,
-  title = 'Live Kerala ₹/g',
-  subtitle = '(saved rules · current raw feed)',
-}: {
-  rows: LivePreviewRow[]
-  rawPreviewSource?: string
-  title?: string
-  subtitle?: string
-}) {
-  return (
-    <div
-      className="card"
-      style={{
-        padding: '0.65rem 0.75rem',
-        borderRadius: 12,
-        border: '1px solid var(--border-soft)',
-        marginBottom: '1rem',
-        background: 'var(--veil-35)',
-      }}
-    >
-      <p style={{ margin: '0 0 0.35rem', fontWeight: 700, fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-        {title}{' '}
-        <span style={{ fontWeight: 500, color: 'var(--text-faint)' }}>{subtitle}</span>
-      </p>
-      <div className="dash-table-scroll">
-        <table className="admin-user-table" style={{ fontSize: '0.78rem', margin: 0 }}>
-          <thead>
-            <tr>
-              <th>Metal</th>
-              <th className="tabular">Kerala raw ₹/g</th>
-              <th className="tabular">+Markup</th>
-              <th className="tabular">Published</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.length === 0 ? (
-              <tr>
-                <td colSpan={4} style={{ color: 'var(--text-muted)' }}>
-                  Fetching live Kerala feed…
-                </td>
-              </tr>
-            ) : (
-              rows.map((r) => (
-                <tr key={`${r.family}-${r.key}`}>
-                  <td style={{ fontWeight: 600 }}>{r.label}</td>
-                  <td className="tabular" style={{ color: 'var(--text-muted)' }}>
-                    {r.raw_inr_per_gram != null
-                      ? `₹${formatMaybeStrInr(r.raw_inr_per_gram, r.family === 'silver' ? 3 : 2)}`
-                      : '—'}
-                  </td>
-                  <td className="tabular" style={{ color: 'var(--text-muted)', fontWeight: 600 }}>
-                    {r.after_markup_inr_per_gram != null
-                      ? `₹${formatMaybeStrInr(r.after_markup_inr_per_gram, r.family === 'silver' ? 3 : 2)}`
-                      : '—'}
-                  </td>
-                  <td className="tabular" style={{ color: 'var(--gold-light)', fontWeight: 700 }}>
-                    {r.final_inr_per_gram != null
-                      ? `₹${formatMaybeStrInr(r.final_inr_per_gram, r.family === 'silver' ? 3 : 2)}`
-                      : '—'}
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-      {rawPreviewSource ? (
-        <p style={{ margin: '0.4rem 0 0', fontSize: '0.68rem', color: 'var(--text-faint)' }}>
-          Feed: {publicRateSourceLabel(rawPreviewSource)}
-        </p>
-      ) : null}
-    </div>
-  )
-}
-
 function AdminPublishedRatesSummary(props: {
   manualOn: boolean
   previewRows: LivePreviewRow[] | undefined
@@ -349,82 +272,114 @@ function AdminPublishedRatesSummary(props: {
     rawPreviewSource,
   } = props
 
-  if (manualOn) {
-    const rates = manualTickerRates(manual22Draft, manual24Draft, manual18Draft, manualSilver999Draft)
-    const liveRows = previewRows ?? []
-    return (
-      <>
-        <div
-          className="card"
-          style={{
-            padding: '0.65rem 0.75rem',
-            borderRadius: 12,
-            border: '1px solid var(--gold-border)',
-            marginBottom: '1rem',
-            background: 'var(--gold-bg)',
-          }}
-        >
-          <p style={{ margin: '0 0 0.45rem', fontWeight: 700, fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-            Published manual board ₹/g <span style={{ fontWeight: 500 }}>(customers see this)</span>
-          </p>
-          {!rates ? (
-            <p style={{ margin: 0, fontSize: '0.76rem', color: 'var(--text-muted)' }}>Enter 22K to preview.</p>
-          ) : (
-            <div className="dash-table-scroll">
-              <table className="admin-user-table" style={{ fontSize: '0.78rem', margin: 0 }}>
-                <thead>
-                  <tr>
-                    <th>Metal</th>
-                    <th className="tabular">Board ₹/g</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(['24K', '22K', '21K', '18K'] as const).map((k) => (
-                    <tr key={k}>
-                      <td style={{ fontWeight: 600 }}>Gold {k}</td>
-                      <td className="tabular" style={{ color: 'var(--gold-light)', fontWeight: 700 }}>
-                        ₹{formatFinal('gold', rates.gold[k])}
-                      </td>
-                    </tr>
-                  ))}
-                  {(['999', '925'] as const).map((k) => (
-                    <tr key={k}>
-                      <td style={{ fontWeight: 600 }}>Silver {k}</td>
-                      <td className="tabular" style={{ color: 'var(--gold-light)', fontWeight: 700 }}>
-                        {rates.silver[k] != null ? `₹${formatFinal('silver', rates.silver[k])}` : '—'}
-                      </td>
-                    </tr>
-                  ))}
-                  {Object.keys(rates.silver).length === 0 ? (
-                    <tr>
-                      <td colSpan={2} style={{ fontSize: '0.72rem', color: 'var(--text-muted)', paddingTop: 6 }}>
-                        Silver omitted until you enter 999 ₹/g (925 is derived as 999 × 0.925).
-                      </td>
-                    </tr>
-                  ) : null}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-        <LiveKeralaPreviewTable
-          rows={liveRows}
-          rawPreviewSource={rawPreviewSource}
-          title="Live Kerala reference"
-          subtitle="(always refreshed for comparison — not published while manual is on)"
-        />
-      </>
-    )
+  const liveByKey = new Map(
+    (previewRows ?? []).map((r) => [`${r.family}:${r.key}`, r] as const),
+  )
+  const manualRates = manualOn
+    ? manualTickerRates(manual22Draft, manual24Draft, manual18Draft, manualSilver999Draft)
+    : null
+
+  const publishedForRow = (family: 'gold' | 'silver', key: string): number | null => {
+    if (manualOn && manualRates) {
+      const bucket = family === 'gold' ? manualRates.gold : manualRates.silver
+      const v = bucket[key as keyof typeof bucket]
+      return typeof v === 'number' && Number.isFinite(v) ? v : null
+    }
+    const live = liveByKey.get(`${family}:${key}`)
+    if (!live?.final_inr_per_gram) return null
+    const n = Number.parseFloat(live.final_inr_per_gram)
+    return Number.isFinite(n) ? n : null
   }
 
-  const rows = previewRows ?? []
   return (
-    <LiveKeralaPreviewTable
-      rows={rows}
-      rawPreviewSource={rawPreviewSource}
-      title="Published ₹/g"
-      subtitle="(saved rules · current raw)"
-    />
+    <div
+      className="card"
+      style={{
+        padding: '0.85rem 1rem',
+        borderRadius: 12,
+        border: '1px solid var(--border-soft)',
+        marginBottom: '1rem',
+        background: 'var(--veil-35)',
+      }}
+    >
+      <p style={{ margin: '0 0 0.35rem', fontWeight: 700, fontSize: '0.82rem', color: 'var(--text)' }}>
+        {manualOn ? 'Manual published · live feed reference' : 'Live feed · published rates'}
+      </p>
+      <p style={{ margin: '0 0 0.75rem', fontSize: '0.76rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
+        {manualOn ? (
+          <>
+            <strong style={{ color: 'var(--text)' }}>Published</strong> column is what customers see (manual board).{' '}
+            <strong style={{ color: 'var(--text)' }}>Live feed</strong> refreshes in the background for comparison.
+          </>
+        ) : (
+          <>
+            <strong style={{ color: 'var(--text)' }}>Live feed</strong> is the current Kerala raw ₹/g.{' '}
+            <strong style={{ color: 'var(--text)' }}>Published</strong> applies your saved markup rules.
+          </>
+        )}
+      </p>
+      <div className="dash-table-scroll">
+        <table className="admin-user-table" style={{ fontSize: '0.78rem', margin: 0 }}>
+          <thead>
+            <tr>
+              <th>Metal</th>
+              <th className="tabular">Live feed ₹/g</th>
+              {!manualOn ? <th className="tabular">+Markup</th> : null}
+              <th className="tabular">Published ₹/g</th>
+            </tr>
+          </thead>
+          <tbody>
+            {METAL_ROWS.map(({ family, key, label }) => {
+              const live = liveByKey.get(`${family}:${key}`)
+              const published = publishedForRow(family, key)
+              const decimals = family === 'silver' ? 3 : 2
+              return (
+                <tr key={`${family}-${key}`}>
+                  <td style={{ fontWeight: 600 }}>{label}</td>
+                  <td className="tabular" style={{ color: 'var(--text-muted)' }}>
+                    {live?.raw_inr_per_gram != null
+                      ? `₹${formatMaybeStrInr(live.raw_inr_per_gram, decimals)}`
+                      : '—'}
+                  </td>
+                  {!manualOn ? (
+                    <td className="tabular" style={{ color: 'var(--text-muted)', fontWeight: 600 }}>
+                      {live?.after_markup_inr_per_gram != null
+                        ? `₹${formatMaybeStrInr(live.after_markup_inr_per_gram, decimals)}`
+                        : '—'}
+                    </td>
+                  ) : null}
+                  <td
+                    className="tabular"
+                    style={{
+                      color: 'var(--gold-light)',
+                      fontWeight: 700,
+                      background: manualOn ? 'var(--gold-bg)' : undefined,
+                    }}
+                  >
+                    {published != null ? `₹${formatFinal(family, published)}` : '—'}
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+      {rawPreviewSource ? (
+        <p style={{ margin: '0.5rem 0 0', fontSize: '0.68rem', color: 'var(--text-faint)' }}>
+          Live feed: {publicRateSourceLabel(rawPreviewSource)}
+          {manualOn ? ' · Refreshed even while manual board is published' : null}
+        </p>
+      ) : (
+        <p style={{ margin: '0.5rem 0 0', fontSize: '0.68rem', color: 'var(--text-faint)' }}>
+          Fetching live Kerala feed…
+        </p>
+      )}
+      {manualOn && !manualRates ? (
+        <p style={{ margin: '0.5rem 0 0', fontSize: '0.76rem', color: 'var(--text-muted)' }}>
+          Enter 22K manual rate above to preview published column.
+        </p>
+      ) : null}
+    </div>
   )
 }
 
