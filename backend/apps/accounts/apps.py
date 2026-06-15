@@ -9,3 +9,6 @@ class AccountsConfig(AppConfig):
 
     def ready(self):
         from . import signals  # noqa: F401
+        from .services.inline_broadcast_scheduler import start_inline_broadcast_scheduler
+
+        start_inline_broadcast_scheduler()

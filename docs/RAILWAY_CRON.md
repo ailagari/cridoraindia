@@ -31,20 +31,27 @@ Triggers: live spot fetch (`/marketplace/spot-prices/`), public gold ticker GET 
 
 ### Scheduled admin broadcasts (recommended)
 
-The separate Django cron container can miss ticks on Railway. Prefer pinging the **always-on web service**:
+Railway's separate cron container often **does not tick on schedule**. The reliable path is the **inline scheduler on the main web service**:
 
-1. Set `CRON_SECRET` on the **`cridoraindia`** web service (long random string).
-2. On **`cron-festival-broadcasts`**, set the same `CRON_SECRET` and change **Custom Start Command** to:
+1. On **`cridoraindia`** (Gunicorn), set `INLINE_BROADCAST_SCHEDULER=true`.
+2. Deploy — each Gunicorn process starts a background loop (60s interval, Postgres advisory lock) that runs `process_due_festival_broadcasts()`.
+
+Optional backup (external or Railway cron pinging the live app):
+
+1. Set `CRON_SECRET` on **`cridoraindia`**.
+2. Cron start command (Python — works even before `curl` is in the image):
+
+```bash
+python manage.py trigger_scheduled_broadcasts_http
+```
+
+Or with curl after deploy:
 
 ```bash
 curl -fsS -X POST "https://www.cridoraindia.com/api/v1/internal/cron/process-festival-broadcasts/" -H "X-Cron-Secret: ${CRON_SECRET}"
 ```
 
-3. Keep cron schedule `*/3 * * * *` or `*/5 * * * *`.
-
-`GET /api/v1/health/` also runs a throttled processor (~every 4 minutes) as a backup when something pings health.
-
-Legacy (works but less reliable on Railway): separate service start command `python manage.py process_festival_broadcasts` with full Django + VAPID env vars duplicated.
+`GET /api/v1/health/` also runs a throttled processor (~every 4 minutes).
 
 Use separate **cron** services with `python manage.py <command>` or the HTTP `curl` hook above (not the main Gunicorn service start command).
 
