@@ -48,7 +48,7 @@ export function breakdownPersonalVaultBill(
       makingInr: raw.makingInr.toFixed(2),
       gstOnGoldInr: raw.gstOnGoldInr.toFixed(2),
       gstOnMakingInr: raw.gstOnMakingInr.toFixed(2),
-      totalInr: raw.totalInr.toFixed(2),
+      totalInr: total.toFixed(2),
       ratePerGram: raw.ratePerGram.toFixed(4),
     }
   }
@@ -89,10 +89,35 @@ export function formatRateFromPurchaseValue(
   return bd?.ratePerGram ?? ''
 }
 
-export type PersonalVaultPricingMode = 'bill' | 'rate'
+export type PersonalVaultPriceAnchor = 'total' | 'rate'
+
+/** @deprecated Use PersonalVaultPriceAnchor */
+export type PersonalVaultPricingMode = PersonalVaultPriceAnchor
+
+export function syncPersonalVaultPricing(
+  anchor: PersonalVaultPriceAnchor,
+  weightStr: string,
+  totalStr: string,
+  rateStr: string,
+  makingChargePercentStr: string,
+): { total: string; rate: string } {
+  if (anchor === 'total' && totalStr.trim()) {
+    return {
+      total: totalStr,
+      rate: formatRateFromPurchaseValue(weightStr, totalStr, makingChargePercentStr),
+    }
+  }
+  if (anchor === 'rate' && rateStr.trim()) {
+    return {
+      rate: rateStr,
+      total: formatPurchaseValueFromRate(weightStr, rateStr, makingChargePercentStr),
+    }
+  }
+  return { total: totalStr, rate: rateStr }
+}
 
 export function buildPersonalVaultPurchasePayload(
-  mode: PersonalVaultPricingMode,
+  anchor: PersonalVaultPriceAnchor,
   weightStr: string,
   rateStr: string,
   valueStr: string,
@@ -102,21 +127,23 @@ export function buildPersonalVaultPurchasePayload(
   purchase_total_inr?: string | null
   making_charge_percent?: string | null
 } {
-  if (mode === 'rate') {
-    const rate = rateStr.trim()
+  const mc = makingChargePercentStr.trim() || null
+  const synced = syncPersonalVaultPricing(anchor, weightStr, valueStr, rateStr, makingChargePercentStr)
+
+  if (anchor === 'total') {
+    const value = valueStr.trim()
     return {
-      purchase_price_inr_per_gram: rate || undefined,
-      purchase_total_inr: null,
-      making_charge_percent: null,
+      purchase_price_inr_per_gram: synced.rate || undefined,
+      purchase_total_inr: value || null,
+      making_charge_percent: mc,
     }
   }
-  const value = valueStr.trim()
-  const mc = makingChargePercentStr.trim()
+
+  const rate = rateStr.trim()
   return {
-    purchase_price_inr_per_gram:
-      derivePurchasePricePerGram(weightStr, '', value, mc) || undefined,
-    purchase_total_inr: value || null,
-    making_charge_percent: mc || null,
+    purchase_price_inr_per_gram: rate || undefined,
+    purchase_total_inr: synced.total || null,
+    making_charge_percent: mc,
   }
 }
 
@@ -191,10 +218,6 @@ export function describePersonalVaultCostSummary(
       : null
   if (!bd) return ''
 
-  if (valueStr.trim()) {
-    return describeDerivedGoldRate(weightStr, valueStr, makingChargePercentStr)
-  }
-
   const mc = parsePersonalHoldingNumber(makingChargePercentStr)
   const bits = [
     `Metal ₹${inrLabel(bd.metalInr)}`,
@@ -206,7 +229,10 @@ export function describePersonalVaultCostSummary(
       `GST on making (${resolveGstOnMakingPercent()}%): ₹${inrLabel(bd.gstOnMakingInr)}`,
     )
   }
-  bits.push(`Estimated bill total: ₹${inrLabel(bd.totalInr)}`)
+  bits.push(`Bill total: ₹${inrLabel(bd.totalInr)}`)
+  if (valueStr.trim()) {
+    bits.push(`Gold rate ₹${inrLabel(bd.ratePerGram)}/g`)
+  }
   return bits.join(' · ')
 }
 
@@ -214,7 +240,7 @@ export function isGoldRateDerivedFromBill(weightStr: string, valueStr: string): 
   return parsePersonalHoldingNumber(weightStr) > 0 && valueStr.trim() !== ''
 }
 
-/** When bill total is known, always derive ₹/g from it (making charge strips out MC first). */
+/** When bill total is known, derive ₹/g (making charge + GST included). */
 export function recalcRateFromBillOrValue(
   weightStr: string,
   rateStr: string,
@@ -222,16 +248,12 @@ export function recalcRateFromBillOrValue(
   makingChargePercentStr: string,
 ): { rate: string; value: string } {
   if (valueStr.trim()) {
-    return {
-      rate: formatRateFromPurchaseValue(weightStr, valueStr, makingChargePercentStr),
-      value: valueStr,
-    }
+    const synced = syncPersonalVaultPricing('total', weightStr, valueStr, rateStr, makingChargePercentStr)
+    return { rate: synced.rate, value: synced.total }
   }
   if (rateStr.trim()) {
-    return {
-      rate: rateStr,
-      value: formatPurchaseValueFromRate(weightStr, rateStr, makingChargePercentStr),
-    }
+    const synced = syncPersonalVaultPricing('rate', weightStr, valueStr, rateStr, makingChargePercentStr)
+    return { rate: synced.rate, value: synced.total }
   }
   return { rate: '', value: '' }
 }
@@ -242,8 +264,7 @@ export function recalcRateOnlyFromBillTotal(
   valueStr: string,
   makingChargePercentStr: string,
 ): string {
-  if (!valueStr.trim()) return ''
-  return formatRateFromPurchaseValue(weightStr, valueStr, makingChargePercentStr)
+  return syncPersonalVaultPricing('total', weightStr, valueStr, '', makingChargePercentStr).rate
 }
 
 export function purchaseValueFromHolding(h: {
@@ -533,9 +554,34 @@ export async function createPersonalHolding(body: {
   return { ok: true, data: null }
 }
 
+export function describeHoldingPurchaseSummary(h: PersonalHoldingDTO): string {
+  const stored = (h.purchase_total_inr ?? '').trim()
+  const rate = h.purchase_price_inr_per_gram
+  const mc = (h.making_charge_percent ?? '').trim()
+  const mcNum = parsePersonalHoldingNumber(mc)
+
+  if (stored) {
+    const parts = [`Paid ₹${parsePersonalHoldingNumber(stored).toLocaleString('en-IN')}`]
+    if (rate) parts.push(`₹${parsePersonalHoldingNumber(rate).toLocaleString('en-IN')}/g`)
+    if (mcNum > 0) parts.push(`MC ${mcNum.toLocaleString('en-IN')}%`)
+    return parts.join(' · ')
+  }
+
+  if (!rate) return ''
+  const parts = [`₹${parsePersonalHoldingNumber(rate).toLocaleString('en-IN')}/g`]
+  if (mcNum > 0) {
+    const total = purchaseValueFromHolding(h)
+    if (total) parts.push(`~₹${parsePersonalHoldingNumber(total).toLocaleString('en-IN')} total`)
+    parts.push(`MC ${mcNum.toLocaleString('en-IN')}%`)
+  }
+  return parts.join(' · ')
+}
+
 export function describeHoldingBillBreakdown(h: PersonalHoldingDTO): string {
   const bd = h.purchase_bill_breakdown
+  const storedTotal = (h.purchase_total_inr ?? '').trim()
   if (bd) {
+    const billTotal = storedTotal || bd.purchase_total_inr
     const bits = [
       `Metal ₹${parsePersonalHoldingNumber(bd.metal_inr).toLocaleString('en-IN')}`,
       `GST on gold (${bd.gst_on_gold_percent}%): ₹${parsePersonalHoldingNumber(bd.gst_on_gold_inr).toLocaleString('en-IN')}`,
@@ -546,7 +592,7 @@ export function describeHoldingBillBreakdown(h: PersonalHoldingDTO): string {
         `GST on making (${bd.gst_on_making_percent}%): ₹${parsePersonalHoldingNumber(bd.gst_on_making_inr).toLocaleString('en-IN')}`,
       )
     }
-    bits.push(`Bill total: ₹${parsePersonalHoldingNumber(bd.purchase_total_inr).toLocaleString('en-IN')}`)
+    bits.push(`Bill total: ₹${parsePersonalHoldingNumber(billTotal).toLocaleString('en-IN')}`)
     return bits.join(' · ')
   }
   if (!h.purchase_price_inr_per_gram) return ''

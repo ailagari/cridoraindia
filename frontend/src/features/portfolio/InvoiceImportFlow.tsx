@@ -3,19 +3,19 @@ import { FormSubmitFoot } from '@/components/ui/FormSubmitFoot'
 import type { JewellerStorefrontDTO } from '@/lib/marketplaceApi'
 import {
   analyzeInvoice,
+  buildPersonalVaultPurchasePayload,
   createPersonalHolding,
-  derivePurchasePricePerGram,
   describePersonalVaultCostSummary,
-  isGoldRateDerivedFromBill,
-  recalcRateFromBillOrValue,
-  recalcRateOnlyFromBillTotal,
   uploadPersonalDocument,
   type InvoiceExtractDTO,
   type PersonalHoldingDTO,
 } from '@/lib/personalHoldingsApi'
-import { fetchPlatformBillingTax } from '@/lib/platformBillingTax'
+import { fetchPlatformBillingTax, resolveGstOnGoldPercent, resolveGstOnMakingPercent } from '@/lib/platformBillingTax'
 import { DEFAULT_PERSONAL_VAULT_PURITY, normalizePersonalVaultPurity } from '@/lib/personalVaultPurity'
-import { PersonalVaultPuritySelect } from '@/features/portfolio/PersonalVaultPuritySelect'
+import {
+  PersonalVaultPricingFields,
+  type PersonalVaultPriceAnchor,
+} from '@/features/portfolio/PersonalVaultPricingFields'
 
 const CATS = [
   { v: 'ornament', l: 'Ornament' },
@@ -81,6 +81,7 @@ export function InvoiceImportFlow({
   const [purchasePricePerGram, setPurchasePricePerGram] = useState('')
   const [purchaseValue, setPurchaseValue] = useState('')
   const [makingChargePercent, setMakingChargePercent] = useState('')
+  const [priceAnchor, setPriceAnchor] = useState<PersonalVaultPriceAnchor>('rate')
   const [purchaseSource, setPurchaseSource] = useState('')
   const [purchaseDate, setPurchaseDate] = useState('')
   const [invoiceNumber, setInvoiceNumber] = useState('')
@@ -97,7 +98,6 @@ export function InvoiceImportFlow({
       ),
     [weight, purchasePricePerGram, purchaseValue, makingChargePercent, billingTaxReady],
   )
-  const rateFromBill = isGoldRateDerivedFromBill(weight, purchaseValue)
 
   const resetFlow = useCallback(() => {
     setPhase('picking')
@@ -111,6 +111,7 @@ export function InvoiceImportFlow({
     setPurchasePricePerGram('')
     setPurchaseValue('')
     setMakingChargePercent('')
+    setPriceAnchor('rate')
     setPurchaseSource('')
     setPurchaseDate('')
     setInvoiceNumber('')
@@ -127,15 +128,6 @@ export function InvoiceImportFlow({
     void fetchPlatformBillingTax().then(() => setBillingTaxReady(true))
   }, [])
 
-  useEffect(() => {
-    if (!billingTaxReady) return
-    if (purchaseValue.trim()) {
-      setPurchasePricePerGram(
-        recalcRateOnlyFromBillTotal(weight, purchaseValue, makingChargePercent),
-      )
-    }
-  }, [billingTaxReady])
-
   const applyExtract = (data: InvoiceExtractDTO) => {
     setTitle(data.title)
     setCategory(CATS.some((c) => c.v === data.category) ? data.category : 'other')
@@ -146,6 +138,7 @@ export function InvoiceImportFlow({
     setPurchasePricePerGram(data.purchase_price_inr_per_gram ?? '')
     setPurchaseValue('')
     setMakingChargePercent('')
+    setPriceAnchor(data.purchase_price_inr_per_gram ? 'rate' : 'total')
     setInvoiceNumber(data.invoice_number ?? '')
     setConfidence(data.confidence)
   }
@@ -202,6 +195,13 @@ export function InvoiceImportFlow({
     setError('')
     setPhase('creating')
     try {
+      const purchase = buildPersonalVaultPurchasePayload(
+        priceAnchor,
+        weight,
+        purchasePricePerGram,
+        purchaseValue,
+        makingChargePercent,
+      )
       const created = await createPersonalHolding({
         title: t,
         category,
@@ -209,10 +209,9 @@ export function InvoiceImportFlow({
         purity: normalizePersonalVaultPurity(purity),
         purchase_source: purchaseSource.trim() || undefined,
         purchase_date: purchaseDate.trim() || undefined,
-        purchase_price_inr_per_gram:
-          derivePurchasePricePerGram(weight, purchasePricePerGram, purchaseValue, makingChargePercent) || undefined,
-        purchase_total_inr: purchaseValue.trim() || undefined,
-        making_charge_percent: makingChargePercent.trim() || undefined,
+        purchase_price_inr_per_gram: purchase.purchase_price_inr_per_gram,
+        purchase_total_inr: purchase.purchase_total_inr ?? undefined,
+        making_charge_percent: purchase.making_charge_percent ?? undefined,
       })
       if (!created.ok) {
         setError(created.detail)
@@ -378,97 +377,25 @@ export function InvoiceImportFlow({
                 ))}
               </div>
             </div>
-            <div className="pf-vault-form__metal-grid">
-              <label className="pf-vault-field">
-                <span>Weight (g)</span>
-                <input
-                  className="input pf-vault-form__input tabular"
-                  value={weight}
-                  onChange={(e) => {
-                    const next = e.target.value
-                    setWeight(next)
-                    const synced = recalcRateFromBillOrValue(
-                      next,
-                      purchasePricePerGram,
-                      purchaseValue,
-                      makingChargePercent,
-                    )
-                    setPurchasePricePerGram(synced.rate)
-                    setPurchaseValue(synced.value)
-                  }}
-                  inputMode="decimal"
-                  disabled={busy}
-                />
-              </label>
-              <label className="pf-vault-field">
-                <span>Purity</span>
-                <PersonalVaultPuritySelect value={purity} onChange={setPurity} disabled={busy} />
-              </label>
-              <label className="pf-vault-field">
-                <span>Total purchase value (₹, optional)</span>
-                <input
-                  className="input pf-vault-form__input tabular"
-                  value={purchaseValue}
-                  onChange={(e) => {
-                    const synced = recalcRateFromBillOrValue(
-                      weight,
-                      purchasePricePerGram,
-                      e.target.value,
-                      makingChargePercent,
-                    )
-                    setPurchaseValue(synced.value)
-                    setPurchasePricePerGram(synced.rate)
-                  }}
-                  inputMode="decimal"
-                  placeholder="Total bill amount"
-                  disabled={busy}
-                />
-              </label>
-              <label className="pf-vault-field">
-                <span>Making charge % (optional)</span>
-                <input
-                  className="input pf-vault-form__input tabular"
-                  value={makingChargePercent}
-                  onChange={(e) => {
-                    const next = e.target.value
-                    setMakingChargePercent(next)
-                    const synced = recalcRateFromBillOrValue(
-                      weight,
-                      purchasePricePerGram,
-                      purchaseValue,
-                      next,
-                    )
-                    setPurchasePricePerGram(synced.rate)
-                    setPurchaseValue(synced.value)
-                  }}
-                  inputMode="decimal"
-                  placeholder="e.g. 12 — GST added automatically"
-                  disabled={busy}
-                />
-              </label>
-              <label className="pf-vault-field pf-vault-field--wide">
-                <span>{rateFromBill ? 'Gold rate (₹/g, calculated)' : 'Gold rate (₹/g, optional)'}</span>
-                <input
-                  className="input pf-vault-form__input tabular"
-                  value={purchasePricePerGram}
-                  onChange={(e) => {
-                    const synced = recalcRateFromBillOrValue(weight, e.target.value, '', makingChargePercent)
-                    setPurchasePricePerGram(synced.rate)
-                    setPurchaseValue(synced.value)
-                  }}
-                  readOnly={rateFromBill}
-                  inputMode="decimal"
-                  placeholder={rateFromBill ? 'Calculated from bill' : 'If you know the gold rate'}
-                  disabled={busy}
-                  aria-readonly={rateFromBill}
-                />
-              </label>
-            </div>
-            {costSummaryHint ? (
-              <p className="pf-vault-form__section-hint pf-vault-form__derived-rate" role="status">
-                {costSummaryHint}
-              </p>
-            ) : null}
+            <PersonalVaultPricingFields
+              anchor={priceAnchor}
+              onAnchorChange={setPriceAnchor}
+              weight={weight}
+              onWeightChange={setWeight}
+              purity={purity}
+              onPurityChange={setPurity}
+              purchaseValue={purchaseValue}
+              onPurchaseValueChange={setPurchaseValue}
+              makingChargePercent={makingChargePercent}
+              onMakingChargePercentChange={setMakingChargePercent}
+              purchasePricePerGram={purchasePricePerGram}
+              onPurchasePricePerGramChange={setPurchasePricePerGram}
+              gstGoldPct={resolveGstOnGoldPercent()}
+              gstMakingPct={resolveGstOnMakingPercent()}
+              costSummaryHint={costSummaryHint}
+              billingTaxReady={billingTaxReady}
+              disabled={busy}
+            />
             <label className="pf-vault-field">
               <span>Purchase source</span>
               <input

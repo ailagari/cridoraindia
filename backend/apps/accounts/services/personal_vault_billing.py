@@ -59,12 +59,17 @@ def personal_vault_bill_breakdown(
         return None
 
     parts = ornament_bill_breakdown(metal, making_charge_percent=making_charge_percent)
+    total_display = (
+        str(purchase_total_inr.quantize(Decimal("0.01")))
+        if purchase_total_inr is not None and purchase_total_inr > 0
+        else str(parts["total_inr"])
+    )
     return {
         "metal_inr": str(parts["metal_inr"]),
         "making_inr": str(parts["making_inr"]),
         "gst_on_gold_inr": str(parts["gst_on_gold_inr"]),
         "gst_on_making_inr": str(parts["gst_on_making_inr"]),
-        "purchase_total_inr": str(parts["total_inr"]),
+        "purchase_total_inr": total_display,
         "metal_rate_inr_per_gram": str(rate),
     }
 

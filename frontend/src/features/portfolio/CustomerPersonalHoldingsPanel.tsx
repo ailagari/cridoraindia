@@ -4,10 +4,9 @@ import { FileUploadTrigger, type FileUploadTriggerPhase } from '@/components/ui'
 import { fetchVerifiedJewellers, type JewellerStorefrontDTO } from '@/lib/marketplaceApi'
 import { InvoiceImportFlow } from '@/features/portfolio/InvoiceImportFlow'
 import {
-  detectPersonalVaultPricingMode,
+  detectPersonalVaultPriceAnchor,
   PersonalVaultPricingFields,
-  personalVaultCostSummaryForMode,
-  type PersonalVaultPricingMode,
+  type PersonalVaultPriceAnchor,
 } from '@/features/portfolio/PersonalVaultPricingFields'
 import {
   buildPersonalVaultPurchasePayload,
@@ -15,12 +14,13 @@ import {
   deletePersonalDocument,
   deletePersonalHolding,
   describeHoldingBillBreakdown,
+  describeHoldingPurchaseSummary,
   describePersonalVaultCostSummary,
   fetchPersonalHoldings,
   fetchPersonalVaultDocuments,
   openPersonalDocumentDownload,
   purchaseValueFromHolding,
-  recalcRateOnlyFromBillTotal,
+  syncPersonalVaultPricing,
   updatePersonalHolding,
   uploadPersonalDocument,
   type PersonalDocumentDTO,
@@ -156,7 +156,7 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
   const [purchasePricePerGram, setPurchasePricePerGram] = useState('')
   const [purchaseValue, setPurchaseValue] = useState('')
   const [makingChargePercent, setMakingChargePercent] = useState('')
-  const [pricingMode, setPricingMode] = useState<PersonalVaultPricingMode>('bill')
+  const [priceAnchor, setPriceAnchor] = useState<PersonalVaultPriceAnchor>('total')
   const [purchaseSource, setPurchaseSource] = useState('')
   const [purchaseDate, setPurchaseDate] = useState('')
   const [notes, setNotes] = useState('')
@@ -176,31 +176,27 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
   const [ePurchaseSource, setEPurchaseSource] = useState('')
   const [ePurchaseDate, setEPurchaseDate] = useState('')
   const [eNotes, setENotes] = useState('')
-  const [ePricingMode, setEPricingMode] = useState<PersonalVaultPricingMode>('bill')
+  const [ePriceAnchor, setEPriceAnchor] = useState<PersonalVaultPriceAnchor>('total')
 
   const addCostSummaryHint = useMemo(
     () =>
-      personalVaultCostSummaryForMode(
-        pricingMode,
+      describePersonalVaultCostSummary(
         weight,
         purchasePricePerGram,
         purchaseValue,
         makingChargePercent,
-        describePersonalVaultCostSummary,
       ),
-    [pricingMode, weight, purchasePricePerGram, purchaseValue, makingChargePercent, billingTaxReady],
+    [weight, purchasePricePerGram, purchaseValue, makingChargePercent, billingTaxReady],
   )
   const editCostSummaryHint = useMemo(
     () =>
-      personalVaultCostSummaryForMode(
-        ePricingMode,
+      describePersonalVaultCostSummary(
         eWeight,
         ePurchasePrice,
         ePurchaseValue,
         eMakingChargePercent,
-        describePersonalVaultCostSummary,
       ),
-    [ePricingMode, eWeight, ePurchasePrice, ePurchaseValue, eMakingChargePercent, billingTaxReady],
+    [eWeight, ePurchasePrice, ePurchaseValue, eMakingChargePercent, billingTaxReady],
   )
   const gstGoldPct = resolveGstOnGoldPercent()
   const gstMakingPct = resolveGstOnMakingPercent()
@@ -225,22 +221,6 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
   useEffect(() => {
     void fetchPlatformBillingTax().then(() => setBillingTaxReady(true))
   }, [])
-
-  useEffect(() => {
-    if (!billingTaxReady || pricingMode !== 'bill') return
-    if (purchaseValue.trim()) {
-      setPurchasePricePerGram(
-        recalcRateOnlyFromBillTotal(weight, purchaseValue, makingChargePercent),
-      )
-    }
-  }, [billingTaxReady, pricingMode])
-
-  useEffect(() => {
-    if (!billingTaxReady || editingId == null || ePricingMode !== 'bill' || !ePurchaseValue.trim()) return
-    setEPurchasePrice(
-      recalcRateOnlyFromBillTotal(eWeight, ePurchaseValue, eMakingChargePercent),
-    )
-  }, [billingTaxReady, editingId, ePricingMode])
 
   const totalVaultPages = Math.max(1, Math.ceil(rows.length / VAULT_PAGE_SIZE))
   const pageRows = useMemo(() => {
@@ -301,26 +281,25 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
     }
     setVaultOpenIds((prev) => new Set(prev).add(h.id))
     setEditingId(h.id)
-    const mode = detectPersonalVaultPricingMode(h)
-    setEPricingMode(mode)
+    const anchor = detectPersonalVaultPriceAnchor(h)
+    setEPriceAnchor(anchor)
     setETitle(h.title)
     setECategory(h.category)
     setEWeight(h.weight_grams)
     setEPurity(normalizePersonalVaultPurity(h.purity))
-    if (mode === 'bill') {
-      const storedPurchaseValue = purchaseValueFromHolding(h)
-      setEPurchaseValue(storedPurchaseValue)
-      setEMakingChargePercent(h.making_charge_percent ?? '')
-      setEPurchasePrice(
-        storedPurchaseValue
-          ? recalcRateOnlyFromBillTotal(h.weight_grams, storedPurchaseValue, h.making_charge_percent ?? '')
-          : (h.purchase_price_inr_per_gram ?? ''),
-      )
-    } else {
-      setEPurchaseValue('')
-      setEMakingChargePercent('')
-      setEPurchasePrice(h.purchase_price_inr_per_gram ?? '')
-    }
+    const storedPurchaseValue = purchaseValueFromHolding(h)
+    setEPurchaseValue(storedPurchaseValue)
+    setEMakingChargePercent(h.making_charge_percent ?? '')
+    setEPurchasePrice(h.purchase_price_inr_per_gram ?? '')
+    const synced = syncPersonalVaultPricing(
+      anchor,
+      h.weight_grams,
+      storedPurchaseValue,
+      h.purchase_price_inr_per_gram ?? '',
+      h.making_charge_percent ?? '',
+    )
+    setEPurchaseValue(synced.total)
+    setEPurchasePrice(synced.rate)
     setEPurchaseSource(h.purchase_source)
     setEPurchaseDate(h.purchase_date?.slice(0, 10) ?? '')
     setENotes(h.notes)
@@ -346,7 +325,7 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
     setMakingChargePercent('')
     setCategory('ornament')
     setPurity(DEFAULT_PERSONAL_VAULT_PURITY)
-    setPricingMode('bill')
+    setPriceAnchor('total')
   }
 
   const finishAddSuccess = async (label: string, newId?: number) => {
@@ -373,7 +352,7 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
     setLoadErr('')
     try {
       const purchase = buildPersonalVaultPurchasePayload(
-        ePricingMode,
+        ePriceAnchor,
         eWeight,
         ePurchasePrice,
         ePurchaseValue,
@@ -424,7 +403,7 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
     setAddFormSuccess('')
     setBusy(true)
     const purchase = buildPersonalVaultPurchasePayload(
-      pricingMode,
+      priceAnchor,
       weight,
       purchasePricePerGram,
       purchaseValue,
@@ -656,8 +635,8 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
                 Metal details
               </h5>
               <PersonalVaultPricingFields
-                mode={pricingMode}
-                onModeChange={setPricingMode}
+                anchor={priceAnchor}
+                onAnchorChange={setPriceAnchor}
                 weight={weight}
                 onWeightChange={setWeight}
                 purity={purity}
@@ -671,6 +650,7 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
                 gstGoldPct={gstGoldPct}
                 gstMakingPct={gstMakingPct}
                 costSummaryHint={addCostSummaryHint}
+                billingTaxReady={billingTaxReady}
                 disabled={busy}
               />
             </section>
@@ -806,16 +786,9 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
                           {parseN(h.reference_gain_inr).toLocaleString('en-IN')} ({h.reference_gain_percent}%)
                         </span>
                       ) : null}
-                      {h.purchase_price_inr_per_gram ? (
+                      {h.purchase_price_inr_per_gram || h.purchase_total_inr ? (
                         <span className="pf-vault-acc__basis">
-                          ₹{parseN(h.purchase_price_inr_per_gram).toLocaleString('en-IN')}/g · metal ~₹
-                          {parseN(h.purchase_cost_basis_inr).toLocaleString('en-IN')}
-                          {h.making_charge_percent ? (
-                            <>
-                              {' '}
-                              · MC {parseN(h.making_charge_percent).toLocaleString('en-IN')}%
-                            </>
-                          ) : null}
+                          {describeHoldingPurchaseSummary(h)}
                           {describeHoldingBillBreakdown(h) ? (
                             <>
                               <br />
@@ -883,8 +856,8 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
                             </label>
                           </div>
                           <PersonalVaultPricingFields
-                            mode={ePricingMode}
-                            onModeChange={setEPricingMode}
+                            anchor={ePriceAnchor}
+                            onAnchorChange={setEPriceAnchor}
                             weight={eWeight}
                             onWeightChange={setEWeight}
                             purity={ePurity}
@@ -898,6 +871,7 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
                             gstGoldPct={gstGoldPct}
                             gstMakingPct={gstMakingPct}
                             costSummaryHint={editCostSummaryHint}
+                            billingTaxReady={billingTaxReady}
                             disabled={editBusy}
                             gridClassName="pf-vault-form__grid"
                           />

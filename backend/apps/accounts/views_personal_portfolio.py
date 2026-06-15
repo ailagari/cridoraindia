@@ -216,11 +216,12 @@ def _holding_detail_dict(
         out["documents"] = docs
 
     mc = h.making_charge_percent if h.making_charge_percent is not None else Decimal("0")
-    bill = personal_vault_bill_breakdown(
-        h.weight_grams,
-        metal_rate_inr_per_gram=h.purchase_price_inr_per_gram,
-        making_charge_percent=mc,
-    )
+    bill_kwargs: dict = {"making_charge_percent": mc}
+    if h.purchase_total_inr is not None and h.purchase_total_inr > 0:
+        bill_kwargs["purchase_total_inr"] = h.purchase_total_inr
+    elif h.purchase_price_inr_per_gram is not None and h.purchase_price_inr_per_gram > 0:
+        bill_kwargs["metal_rate_inr_per_gram"] = h.purchase_price_inr_per_gram
+    bill = personal_vault_bill_breakdown(h.weight_grams, **bill_kwargs)
     if bill:
         out["purchase_bill_breakdown"] = {
             "metal_inr": bill["metal_inr"],

@@ -47,6 +47,16 @@ class PersonalVaultBillingTests(TestCase):
         )
         self.assertEqual(rate, Decimal("10000.0000"))
 
+    def test_bill_breakdown_preserves_user_total_with_making(self):
+        bd = personal_vault_bill_breakdown(
+            Decimal("1.1890"),
+            purchase_total_inr=Decimal("18000"),
+            making_charge_percent=Decimal("5.7"),
+        )
+        self.assertIsNotNone(bd)
+        self.assertEqual(bd["purchase_total_inr"], "18000.00")
+        self.assertEqual(bd["metal_rate_inr_per_gram"], "13890.6897")
+
     def test_create_holding_preserves_purchase_total_inr(self):
         customer = User.objects.create_user(
             username="vaultcust@example.com",
