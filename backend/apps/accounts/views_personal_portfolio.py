@@ -37,6 +37,11 @@ from apps.accounts.services.customer_active_gold_ledger import customer_active_g
 from apps.accounts.services.personal_holdings_audit import log_personal_portfolio_action
 from apps.accounts.services.media_storage import delete_filefield
 from apps.accounts.services.portfolio_user_notify import create_portfolio_notification
+from apps.accounts.services.personal_vault_billing import (
+    personal_vault_bill_breakdown,
+    resolve_purchase_price_inr_per_gram,
+)
+from apps.marketplace.gold_billing import effective_gst_on_gold_percent, effective_gst_on_making_percent
 
 User = get_user_model()
 
@@ -71,6 +76,48 @@ def _parse_making_charge_percent_field(raw) -> tuple[Decimal | None, str | None]
     if mc > 100:
         return None, "making_charge_percent cannot exceed 100."
     return mc.quantize(Decimal("0.01")), None
+
+
+def _parse_purchase_total_inr_field(raw) -> tuple[Decimal | None, str | None]:
+    if raw in (None, "", "null"):
+        return None, None
+    try:
+        total = Decimal(str(raw))
+    except Exception:
+        return None, "Invalid purchase_total_inr."
+    if total <= 0:
+        return None, "purchase_total_inr must be greater than 0."
+    return total.quantize(Decimal("0.01")), None
+
+
+def _resolve_holding_purchase_fields(
+    *,
+    weight_grams: Decimal,
+    purchase_price_inr_per_gram_raw,
+    purchase_total_inr_raw,
+    making_charge_percent: Decimal | None,
+) -> tuple[Decimal | None, str | None]:
+    purchase_total_inr = None
+    if purchase_total_inr_raw not in (None, "", "null"):
+        purchase_total_inr, terr = _parse_purchase_total_inr_field(purchase_total_inr_raw)
+        if terr:
+            return None, terr
+
+    purchase_price_inr_per_gram = None
+    if purchase_price_inr_per_gram_raw not in (None, "", "null"):
+        purchase_price_inr_per_gram, perr = _parse_purchase_price_inr_per_gram_field(
+            purchase_price_inr_per_gram_raw
+        )
+        if perr:
+            return None, perr
+
+    resolved = resolve_purchase_price_inr_per_gram(
+        weight_grams=weight_grams,
+        purchase_price_inr_per_gram=purchase_price_inr_per_gram,
+        purchase_total_inr=purchase_total_inr,
+        making_charge_percent=making_charge_percent,
+    )
+    return resolved, None
 
 
 def _recalc_holding_inr(h: PersonalGoldHolding) -> None:
@@ -162,6 +209,27 @@ def _holding_detail_dict(
         for d in h.documents.filter(is_removed=False).order_by("-created_at")[:40]:
             docs.append(_document_dict(d))
         out["documents"] = docs
+
+    mc = h.making_charge_percent if h.making_charge_percent is not None else Decimal("0")
+    bill = personal_vault_bill_breakdown(
+        h.weight_grams,
+        metal_rate_inr_per_gram=h.purchase_price_inr_per_gram,
+        making_charge_percent=mc,
+    )
+    if bill:
+        out["purchase_bill_breakdown"] = {
+            "metal_inr": bill["metal_inr"],
+            "making_inr": bill["making_inr"],
+            "gst_on_gold_inr": bill["gst_on_gold_inr"],
+            "gst_on_making_inr": bill["gst_on_making_inr"],
+            "purchase_total_inr": bill["purchase_total_inr"],
+            "metal_rate_inr_per_gram": bill["metal_rate_inr_per_gram"],
+            "gst_on_gold_percent": str(effective_gst_on_gold_percent()),
+            "gst_on_making_percent": str(effective_gst_on_making_percent()),
+        }
+    else:
+        out["purchase_bill_breakdown"] = None
+
     return out
 
 
@@ -356,13 +424,6 @@ class PersonalHoldingsListCreateView(APIView):
             purity = "BIS 916"
         purchase_source = (request.data.get("purchase_source") or "").strip()[:512]
         notes = (request.data.get("notes") or "").strip()
-        purchase_price_inr_per_gram = None
-        if request.data.get("purchase_price_inr_per_gram") not in (None, "", "null"):
-            purchase_price_inr_per_gram, perr = _parse_purchase_price_inr_per_gram_field(
-                request.data.get("purchase_price_inr_per_gram")
-            )
-            if perr:
-                return Response({"detail": perr}, status=status.HTTP_400_BAD_REQUEST)
         making_charge_percent = None
         if request.data.get("making_charge_percent") not in (None, "", "null"):
             making_charge_percent, merr = _parse_making_charge_percent_field(
@@ -370,6 +431,14 @@ class PersonalHoldingsListCreateView(APIView):
             )
             if merr:
                 return Response({"detail": merr}, status=status.HTTP_400_BAD_REQUEST)
+        purchase_price_inr_per_gram, perr = _resolve_holding_purchase_fields(
+            weight_grams=weight_grams,
+            purchase_price_inr_per_gram_raw=request.data.get("purchase_price_inr_per_gram"),
+            purchase_total_inr_raw=request.data.get("purchase_total_inr"),
+            making_charge_percent=making_charge_percent,
+        )
+        if perr:
+            return Response({"detail": perr}, status=status.HTTP_400_BAD_REQUEST)
         purchase_date = None
         if request.data.get("purchase_date"):
             from datetime import date as date_cls
@@ -458,12 +527,22 @@ class PersonalHoldingDetailView(APIView):
                     h.purity = str(val or "").strip()[:64] or "BIS 916"
                 else:
                     setattr(h, field, str(val or "").strip()[:512] if field != "title" else str(val or "").strip()[:255])
-        if "purchase_price_inr_per_gram" in request.data:
+        if "purchase_price_inr_per_gram" in request.data or "purchase_total_inr" in request.data:
             raw_pp = request.data.get("purchase_price_inr_per_gram")
-            if raw_pp in (None, "", "null"):
+            raw_total = request.data.get("purchase_total_inr")
+            if (
+                raw_pp in (None, "", "null")
+                and raw_total in (None, "", "null")
+                and "purchase_price_inr_per_gram" in request.data
+            ):
                 h.purchase_price_inr_per_gram = None
             else:
-                ppv, perr = _parse_purchase_price_inr_per_gram_field(raw_pp)
+                ppv, perr = _resolve_holding_purchase_fields(
+                    weight_grams=h.weight_grams,
+                    purchase_price_inr_per_gram_raw=raw_pp,
+                    purchase_total_inr_raw=raw_total,
+                    making_charge_percent=h.making_charge_percent,
+                )
                 if perr:
                     return Response({"detail": perr}, status=status.HTTP_400_BAD_REQUEST)
                 h.purchase_price_inr_per_gram = ppv
@@ -484,6 +563,20 @@ class PersonalHoldingDetailView(APIView):
             if wg <= 0:
                 return Response({"detail": "Grams must be greater than 0."}, status=status.HTTP_400_BAD_REQUEST)
             h.weight_grams = wg
+        if "purchase_total_inr" in request.data and "purchase_price_inr_per_gram" not in request.data:
+            raw_total = request.data.get("purchase_total_inr")
+            if raw_total not in (None, "", "null"):
+                ppv, perr = _resolve_holding_purchase_fields(
+                    weight_grams=h.weight_grams,
+                    purchase_price_inr_per_gram_raw=None,
+                    purchase_total_inr_raw=raw_total,
+                    making_charge_percent=h.making_charge_percent,
+                )
+                if perr:
+                    return Response({"detail": perr}, status=status.HTTP_400_BAD_REQUEST)
+                h.purchase_price_inr_per_gram = ppv
+            elif raw_total in (None, "", "null"):
+                h.purchase_price_inr_per_gram = None
         if "purchase_date" in request.data:
             raw = request.data.get("purchase_date")
             if raw in (None, ""):

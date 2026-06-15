@@ -6,7 +6,6 @@ import {
   createPersonalHolding,
   derivePurchasePricePerGram,
   describePersonalVaultCostSummary,
-  formatPurchaseValueFromRate,
   isGoldRateDerivedFromBill,
   recalcRateFromBillOrValue,
   uploadPersonalDocument,
@@ -127,7 +126,8 @@ export function InvoiceImportFlow({
     setPurchaseSource(data.purchase_source)
     setPurchaseDate(data.purchase_date ?? '')
     setPurchasePricePerGram(data.purchase_price_inr_per_gram ?? '')
-    setPurchaseValue(formatPurchaseValueFromRate(data.weight_grams, data.purchase_price_inr_per_gram ?? ''))
+    setPurchaseValue('')
+    setMakingChargePercent('')
     setInvoiceNumber(data.invoice_number ?? '')
     setConfidence(data.confidence)
   }
@@ -193,6 +193,7 @@ export function InvoiceImportFlow({
         purchase_date: purchaseDate.trim() || undefined,
         purchase_price_inr_per_gram:
           derivePurchasePricePerGram(weight, purchasePricePerGram, purchaseValue, makingChargePercent) || undefined,
+        purchase_total_inr: purchaseValue.trim() || undefined,
         making_charge_percent: makingChargePercent.trim() || undefined,
       })
       if (!created.ok) {

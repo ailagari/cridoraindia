@@ -8,7 +8,7 @@ from decimal import Decimal
 from ..models import PlatformOperationalSettings
 
 DEFAULT_GST_ON_GOLD_PERCENT = Decimal("3")
-DEFAULT_GST_ON_MAKING_PERCENT = Decimal("18")
+DEFAULT_GST_ON_MAKING_PERCENT = Decimal("5")
 
 
 def fractional_counter_otp_ttl_timedelta() -> timedelta:

@@ -1444,7 +1444,7 @@ class PlatformOperationalSettings(models.Model):
     gst_on_making_percent = models.DecimalField(
         max_digits=6,
         decimal_places=3,
-        default=Decimal("18"),
+        default=Decimal("5"),
         validators=[MinValueValidator(Decimal("0")), MaxValueValidator(Decimal("100"))],
         help_text="GST % on jewellery making charges.",
     )

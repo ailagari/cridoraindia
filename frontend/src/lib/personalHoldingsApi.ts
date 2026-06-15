@@ -262,6 +262,17 @@ function parsePersonalHoldingId(parsed: Record<string, unknown> | null): number 
   return null
 }
 
+export type PersonalPurchaseBillBreakdownDTO = {
+  metal_inr: string
+  making_inr: string
+  gst_on_gold_inr: string
+  gst_on_making_inr: string
+  purchase_total_inr: string
+  metal_rate_inr_per_gram: string
+  gst_on_gold_percent: string
+  gst_on_making_percent: string
+}
+
 export type PersonalHoldingDTO = {
   id: number
   holding_type: string
@@ -290,6 +301,7 @@ export type PersonalHoldingDTO = {
   created_at: string
   updated_at: string
   mvp_note: string
+  purchase_bill_breakdown?: PersonalPurchaseBillBreakdownDTO | null
   is_cridorapay?: boolean
   cridorapay_reference?: string
   documents?: PersonalDocumentDTO[]
@@ -458,6 +470,7 @@ export async function createPersonalHolding(body: {
   purchase_source?: string
   purchase_date?: string
   purchase_price_inr_per_gram?: string
+  purchase_total_inr?: string
   making_charge_percent?: string
   notes?: string
 }): Promise<
@@ -478,6 +491,31 @@ export async function createPersonalHolding(body: {
   return { ok: true, data: null }
 }
 
+export function describeHoldingBillBreakdown(h: PersonalHoldingDTO): string {
+  const bd = h.purchase_bill_breakdown
+  if (bd) {
+    const bits = [
+      `Metal ₹${parsePersonalHoldingNumber(bd.metal_inr).toLocaleString('en-IN')}`,
+      `GST on gold (${bd.gst_on_gold_percent}%): ₹${parsePersonalHoldingNumber(bd.gst_on_gold_inr).toLocaleString('en-IN')}`,
+    ]
+    if (parsePersonalHoldingNumber(bd.making_inr) > 0) {
+      bits.push(
+        `Making: ₹${parsePersonalHoldingNumber(bd.making_inr).toLocaleString('en-IN')}`,
+        `GST on making (${bd.gst_on_making_percent}%): ₹${parsePersonalHoldingNumber(bd.gst_on_making_inr).toLocaleString('en-IN')}`,
+      )
+    }
+    bits.push(`Bill total: ₹${parsePersonalHoldingNumber(bd.purchase_total_inr).toLocaleString('en-IN')}`)
+    return bits.join(' · ')
+  }
+  if (!h.purchase_price_inr_per_gram) return ''
+  return describePersonalVaultCostSummary(
+    h.weight_grams,
+    h.purchase_price_inr_per_gram,
+    purchaseValueFromHolding(h),
+    h.making_charge_percent ?? '',
+  )
+}
+
 export async function updatePersonalHolding(
   id: number,
   body: Partial<{
@@ -488,6 +526,7 @@ export async function updatePersonalHolding(
     purchase_source: string
     purchase_date: string | null
     purchase_price_inr_per_gram: string | null
+    purchase_total_inr?: string | null
     making_charge_percent: string | null
     notes: string
   }>,

@@ -8,10 +8,9 @@ import {
   deletePersonalDocument,
   deletePersonalHolding,
   derivePurchasePricePerGram,
+  describeHoldingBillBreakdown,
   describePersonalVaultCostSummary,
   fetchPersonalHoldings,
-  PERSONAL_VAULT_GST_ON_GOLD_PERCENT,
-  PERSONAL_VAULT_GST_ON_MAKING_PERCENT,
   fetchPersonalVaultDocuments,
   isGoldRateDerivedFromBill,
   openPersonalDocumentDownload,
@@ -22,6 +21,7 @@ import {
   type PersonalDocumentDTO,
   type PersonalHoldingDTO,
 } from '@/lib/personalHoldingsApi'
+import { resolveGstOnGoldPercent, resolveGstOnMakingPercent } from '@/lib/platformBillingTax'
 
 function parseN(s: string): number {
   const n = Number.parseFloat(s)
@@ -175,6 +175,18 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
       ),
     [weight, purchasePricePerGram, purchaseValue, makingChargePercent],
   )
+  const editCostSummaryHint = useMemo(
+    () =>
+      describePersonalVaultCostSummary(
+        eWeight,
+        ePurchasePrice,
+        ePurchaseValue,
+        eMakingChargePercent,
+      ),
+    [eWeight, ePurchasePrice, ePurchaseValue, eMakingChargePercent],
+  )
+  const gstGoldPct = resolveGstOnGoldPercent()
+  const gstMakingPct = resolveGstOnMakingPercent()
   const addRateFromBill = isGoldRateDerivedFromBill(weight, purchaseValue)
   const editRateFromBill = isGoldRateDerivedFromBill(eWeight, ePurchaseValue)
 
@@ -321,6 +333,7 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
         purchase_price_inr_per_gram:
           derivePurchasePricePerGram(eWeight, ePurchasePrice, ePurchaseValue, eMakingChargePercent)?.trim() ??
           null,
+        purchase_total_inr: ePurchaseValue.trim() ? ePurchaseValue.trim() : null,
         making_charge_percent: eMakingChargePercent.trim() ? eMakingChargePercent.trim() : null,
         notes: eNotes.trim(),
       })
@@ -366,6 +379,7 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
       purchase_price_inr_per_gram:
         derivePurchasePricePerGram(weight, purchasePricePerGram, purchaseValue, makingChargePercent) ||
         undefined,
+      purchase_total_inr: purchaseValue.trim() || undefined,
       making_charge_percent: makingChargePercent.trim() || undefined,
       notes: notes.trim() || undefined,
     }
@@ -584,8 +598,8 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
               </h5>
               <p className="pf-vault-form__section-hint">
                 Know your bill? Enter <strong>weight</strong>, <strong>total paid</strong>, and <strong>making charge
-                %</strong> if you have it. GST is applied automatically — {PERSONAL_VAULT_GST_ON_GOLD_PERCENT}% on gold
-                metal and {PERSONAL_VAULT_GST_ON_MAKING_PERCENT}% on making charges (same as Cridora marketplace).
+                %</strong> if you have it. GST is applied automatically — {gstGoldPct}% on gold
+                metal and {gstMakingPct}% on making charges (same as Cridora marketplace).
               </p>
               <div className="pf-vault-form__metal-grid">
                 <label className="pf-vault-field">
@@ -841,6 +855,12 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
                               · MC {parseN(h.making_charge_percent).toLocaleString('en-IN')}%
                             </>
                           ) : null}
+                          {describeHoldingBillBreakdown(h) ? (
+                            <>
+                              <br />
+                              <span className="pf-vault-acc__bill">{describeHoldingBillBreakdown(h)}</span>
+                            </>
+                          ) : null}
                         </span>
                       ) : null}
                       {h.purchase_jeweller_label ? (
@@ -1010,6 +1030,11 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
                               <textarea className="input" rows={2} value={eNotes} onChange={(e) => setENotes(e.target.value)} disabled={editBusy} />
                             </label>
                           </div>
+                          {editCostSummaryHint ? (
+                            <p className="pf-vault-form__section-hint pf-vault-form__derived-rate" role="status">
+                              {editCostSummaryHint}
+                            </p>
+                          ) : null}
                           <FormSubmitFoot
                             error={editFormError}
                             success={editFormSuccess}

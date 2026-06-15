@@ -19,7 +19,7 @@ class PlatformBillingTaxTests(TestCase):
 
     def test_default_rates(self):
         self.assertEqual(gst_on_gold_percent(), Decimal("3"))
-        self.assertEqual(gst_on_making_percent(), Decimal("18"))
+        self.assertEqual(gst_on_making_percent(), Decimal("5"))
 
     def test_admin_can_update_rates(self):
         set_gst_on_gold_percent("5")

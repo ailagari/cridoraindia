@@ -6,7 +6,7 @@ export type PlatformBillingTaxPayload = {
 }
 
 export const DEFAULT_GST_ON_GOLD_PERCENT = 3
-export const DEFAULT_GST_ON_MAKING_PERCENT = 18
+export const DEFAULT_GST_ON_MAKING_PERCENT = 5
 
 let cached: PlatformBillingTaxPayload | null = null
 let inflight: Promise<PlatformBillingTaxPayload | null> | null = null
