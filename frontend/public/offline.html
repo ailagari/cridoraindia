@@ -1,0 +1,474 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#07090f" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Cridora — We'll be right back</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+        background: #07090f;
+        color: #e8eaef;
+        font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      .page {
+        position: relative;
+        min-height: 100vh;
+        min-height: 100dvh;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1.5rem;
+      }
+
+      .bg-glow {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background:
+          radial-gradient(ellipse 80% 50% at 50% -10%, rgba(212, 168, 92, 0.18), transparent 60%),
+          radial-gradient(ellipse 60% 40% at 100% 100%, rgba(166, 122, 40, 0.12), transparent 55%),
+          radial-gradient(ellipse 50% 35% at 0% 80%, rgba(92, 47, 10, 0.14), transparent 50%);
+      }
+
+      .particles {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        overflow: hidden;
+      }
+
+      .particle {
+        position: absolute;
+        width: 4px;
+        height: 4px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #e0bc78, #a67a28);
+        opacity: 0;
+        animation: float-up var(--dur, 12s) var(--delay, 0s) infinite ease-in;
+      }
+
+      @keyframes float-up {
+        0% {
+          opacity: 0;
+          transform: translateY(0) scale(0.5);
+        }
+        10% {
+          opacity: 0.7;
+        }
+        90% {
+          opacity: 0.3;
+        }
+        100% {
+          opacity: 0;
+          transform: translateY(-100vh) scale(1.2);
+        }
+      }
+
+      .card {
+        position: relative;
+        z-index: 1;
+        width: min(100%, 28rem);
+        padding: 2rem 1.75rem 1.75rem;
+        border-radius: 1.25rem;
+        border: 1px solid rgba(212, 168, 92, 0.22);
+        background: linear-gradient(165deg, rgba(18, 22, 34, 0.95) 0%, rgba(10, 12, 20, 0.98) 100%);
+        box-shadow:
+          0 24px 80px rgba(0, 0, 0, 0.55),
+          inset 0 1px 0 rgba(255, 255, 255, 0.04);
+        text-align: center;
+      }
+
+      .logo-wrap {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 4rem;
+        height: 4rem;
+        margin-bottom: 1.25rem;
+        border-radius: 50%;
+        background: rgba(212, 168, 92, 0.08);
+        border: 1px solid rgba(212, 168, 92, 0.25);
+        animation: pulse-ring 3s ease-in-out infinite;
+      }
+
+      @keyframes pulse-ring {
+        0%,
+        100% {
+          box-shadow: 0 0 0 0 rgba(212, 168, 92, 0.25);
+        }
+        50% {
+          box-shadow: 0 0 0 12px rgba(212, 168, 92, 0);
+        }
+      }
+
+      .logo-wrap svg {
+        width: 2.25rem;
+        height: 2.25rem;
+      }
+
+      .status {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        margin-bottom: 1rem;
+        padding: 0.35rem 0.75rem;
+        border-radius: 999px;
+        font-size: 0.72rem;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        border: 1px solid rgba(212, 168, 92, 0.3);
+        background: rgba(212, 168, 92, 0.08);
+        color: #e0bc78;
+      }
+
+      .status-dot {
+        width: 0.45rem;
+        height: 0.45rem;
+        border-radius: 50%;
+        background: #e0bc78;
+        animation: blink 1.6s ease-in-out infinite;
+      }
+
+      @keyframes blink {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.35;
+        }
+      }
+
+      h1 {
+        margin: 0 0 0.65rem;
+        font-size: 1.45rem;
+        font-weight: 700;
+        line-height: 1.25;
+        color: #f5f6fa;
+      }
+
+      .subtitle {
+        margin: 0 0 1.25rem;
+        font-size: 0.95rem;
+        line-height: 1.55;
+        color: #a8b0c0;
+      }
+
+      .ml {
+        margin: 0 0 1.25rem;
+        font-size: 0.88rem;
+        line-height: 1.5;
+        color: #8b7355;
+        font-family: 'Noto Sans Malayalam', system-ui, sans-serif;
+      }
+
+      .fact-box {
+        margin: 0 0 1.5rem;
+        padding: 1rem 1.1rem;
+        border-radius: 0.85rem;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        text-align: left;
+      }
+
+      .fact-label {
+        display: block;
+        margin-bottom: 0.35rem;
+        font-size: 0.68rem;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #d4a85c;
+      }
+
+      .fact-text {
+        margin: 0;
+        font-size: 0.88rem;
+        line-height: 1.5;
+        color: #c5cad6;
+        min-height: 2.6em;
+        transition: opacity 0.35s ease;
+      }
+
+      .fact-text.fade {
+        opacity: 0;
+      }
+
+      .actions {
+        display: flex;
+        flex-direction: column;
+        gap: 0.65rem;
+      }
+
+      button,
+      a.btn-secondary {
+        appearance: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.45rem;
+        width: 100%;
+        padding: 0.85rem 1rem;
+        border-radius: 0.75rem;
+        font-size: 0.92rem;
+        font-weight: 600;
+        text-decoration: none;
+        cursor: pointer;
+        transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+      }
+
+      button {
+        border: none;
+        color: #0a0c14;
+        background: linear-gradient(135deg, #e0bc78 0%, #c4943a 45%, #a67a28 100%);
+        box-shadow: 0 8px 24px rgba(166, 122, 40, 0.35);
+      }
+
+      button:hover {
+        transform: translateY(-1px);
+      }
+
+      button:active {
+        transform: translateY(0);
+      }
+
+      button:disabled {
+        opacity: 0.65;
+        cursor: wait;
+        transform: none;
+      }
+
+      a.btn-secondary {
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.04);
+        color: #c5cad6;
+      }
+
+      a.btn-secondary:hover {
+        border-color: rgba(212, 168, 92, 0.35);
+        color: #e0bc78;
+      }
+
+      .foot {
+        margin-top: 1.25rem;
+        font-size: 0.75rem;
+        color: #6b7280;
+      }
+
+      .online-banner {
+        display: none;
+        margin-bottom: 1rem;
+        padding: 0.65rem 0.85rem;
+        border-radius: 0.65rem;
+        font-size: 0.82rem;
+        background: rgba(34, 197, 94, 0.12);
+        border: 1px solid rgba(34, 197, 94, 0.35);
+        color: #86efac;
+      }
+
+      .online-banner.show {
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <div class="bg-glow" aria-hidden="true"></div>
+      <div class="particles" id="particles" aria-hidden="true"></div>
+
+      <main class="card" role="main">
+        <div class="logo-wrap" aria-hidden="true">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+            <circle cx="20" cy="20" r="18" stroke="url(#cridoraGoldLine)" stroke-width="2.5" />
+            <path d="M14 20C14 16.6863 16.6863 14 20 14" stroke="#d4a85c" stroke-width="3" stroke-linecap="round" />
+            <path d="M26 20C26 23.3137 23.3137 26 20 26" stroke="#a67a28" stroke-width="3" stroke-linecap="round" />
+            <defs>
+              <linearGradient id="cridoraGoldLine" x1="2" y1="2" x2="38" y2="38" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stop-color="#e0bc78" />
+                <stop offset="55%" stop-color="#a67a28" />
+                <stop offset="100%" stop-color="#5c2f0a" />
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+
+        <div class="status" id="status-badge">
+          <span class="status-dot" aria-hidden="true"></span>
+          <span id="status-label">Checking connection</span>
+        </div>
+
+        <div class="online-banner" id="online-banner" role="status">
+          You're back online — tap Try again to reload Cridora.
+        </div>
+
+        <h1 id="headline">Polishing the vault…</h1>
+        <p class="subtitle" id="subtitle">
+          Cridora is temporarily unavailable. Your gold portfolio is safe — we're restoring service as quickly as we can.
+        </p>
+        <p class="ml" id="ml-line">സേവനം താൽക്കാലികമായി ലഭ്യമല്ല — ഞങ്ങൾ ഉടൻ തിരിച്ചെത്തും.</p>
+
+        <div class="fact-box" aria-live="polite">
+          <span class="fact-label">While you wait · Gold trivia</span>
+          <p class="fact-text" id="fact-text">India is one of the world's largest gold consumers — Kerala alone sees heavy demand during Vishu and Onam.</p>
+        </div>
+
+        <div class="actions">
+          <button type="button" id="retry-btn">Try again</button>
+          <a class="btn-secondary" href="/gold-rates" id="rates-link">View gold rates (when online)</a>
+        </div>
+
+        <p class="foot" id="foot-note">Cached offline page · Cridora India</p>
+      </main>
+    </div>
+
+    <script>
+      ;(function () {
+        var GOLD_FACTS = [
+          'India is one of the world\'s largest gold consumers — Kerala alone sees heavy demand during Vishu and Onam.',
+          '22K gold is about 91.6% pure — the standard for most Indian jewellery.',
+          'Gold has been used as money and ornament for over 5,000 years across civilizations.',
+          'A single gram of gold can be drawn into a wire nearly 3 km long.',
+          'Digital gold lets you buy fractions of a gram — perfect for monthly savings schemes.',
+          'Kerala\'s gold rate often tracks global spot prices plus local making charges and GST.',
+          '24K gold is 99.9% pure — preferred for coins and bars, softer for daily wear jewellery.',
+          'Silver and gold prices update through the day on Cridora when you\'re connected.',
+        ]
+
+        var params = new URLSearchParams(window.location.search)
+        var forcedMode = params.get('mode')
+        var factIndex = 0
+        var factEl = document.getElementById('fact-text')
+        var headline = document.getElementById('headline')
+        var subtitle = document.getElementById('subtitle')
+        var mlLine = document.getElementById('ml-line')
+        var statusLabel = document.getElementById('status-label')
+        var onlineBanner = document.getElementById('online-banner')
+        var retryBtn = document.getElementById('retry-btn')
+        var ratesLink = document.getElementById('rates-link')
+        var footNote = document.getElementById('foot-note')
+
+        function spawnParticles() {
+          var container = document.getElementById('particles')
+          if (!container) return
+          for (var i = 0; i < 18; i++) {
+            var p = document.createElement('span')
+            p.className = 'particle'
+            p.style.left = Math.random() * 100 + '%'
+            p.style.bottom = '-8px'
+            p.style.setProperty('--dur', 8 + Math.random() * 10 + 's')
+            p.style.setProperty('--delay', Math.random() * 8 + 's')
+            p.style.width = p.style.height = 2 + Math.random() * 4 + 'px'
+            container.appendChild(p)
+          }
+        }
+
+        function applyMode() {
+          var online = navigator.onLine
+          var maintenance = forcedMode === 'maintenance' || (online && forcedMode !== 'offline')
+
+          if (!online || forcedMode === 'offline') {
+            headline.textContent = 'You\'re offline'
+            subtitle.textContent =
+              'No internet right now — but this page works without a connection. Reconnect and tap Try again to open Cridora.'
+            mlLine.textContent = 'ഇപ്പോൾ ഓൺലൈൻ അല്ല — ഇന്റർനെറ്റ് തിരിച്ചു കിട്ടിയാൽ വീണ്ടും ശ്രമിക്കുക.'
+            statusLabel.textContent = 'Offline'
+            footNote.textContent = 'Saved on your device · Cridora India'
+            ratesLink.style.opacity = '0.5'
+            ratesLink.style.pointerEvents = 'none'
+            return
+          }
+
+          if (maintenance) {
+            headline.textContent = 'Polishing the vault…'
+            subtitle.textContent =
+              'Cridora is temporarily down for maintenance or experiencing an issue. Your data is safe — we\'re working to restore service.'
+            mlLine.textContent = 'സേവനം താൽക്കാലികമായി ലഭ്യമല്ല — ഞങ്ങൾ ഉടൻ തിരിച്ചെത്തും.'
+            statusLabel.textContent = 'Maintenance'
+            footNote.textContent = 'Service interruption · Cridora India'
+            return
+          }
+
+          headline.textContent = 'Connection hiccup'
+          subtitle.textContent = 'We couldn\'t reach Cridora just now. Check your connection or try again in a moment.'
+          mlLine.textContent = 'കണക്ഷൻ പ്രശ്നം — കുറച്ച് കഴിഞ്ഞ് വീണ്ടും ശ്രമിക്കുക.'
+          statusLabel.textContent = 'Unavailable'
+        }
+
+        function rotateFact() {
+          if (!factEl) return
+          factEl.classList.add('fade')
+          window.setTimeout(function () {
+            factIndex = (factIndex + 1) % GOLD_FACTS.length
+            factEl.textContent = GOLD_FACTS[factIndex]
+            factEl.classList.remove('fade')
+          }, 350)
+        }
+
+        function tryReload() {
+          retryBtn.disabled = true
+          retryBtn.textContent = 'Reconnecting…'
+          var target = sessionStorage.getItem('cridora-offline-return') || '/'
+          window.location.replace(target)
+        }
+
+        function onOnline() {
+          onlineBanner.classList.add('show')
+          retryBtn.disabled = false
+          retryBtn.textContent = 'Try again'
+          if (forcedMode === 'offline') {
+            forcedMode = null
+            applyMode()
+          }
+        }
+
+        function onOffline() {
+          onlineBanner.classList.remove('show')
+          forcedMode = 'offline'
+          applyMode()
+        }
+
+        if (document.referrer && document.referrer.indexOf(window.location.origin) === 0) {
+          try {
+            sessionStorage.setItem('cridora-offline-return', new URL(document.referrer).pathname + new URL(document.referrer).search)
+          } catch (e) {
+            sessionStorage.setItem('cridora-offline-return', '/')
+          }
+        }
+
+        spawnParticles()
+        applyMode()
+        window.setInterval(rotateFact, 6000)
+
+        retryBtn.addEventListener('click', tryReload)
+        window.addEventListener('online', onOnline)
+        window.addEventListener('offline', onOffline)
+
+        if (navigator.onLine) {
+          window.setTimeout(function () {
+            fetch(window.location.origin + '/favicon.svg', { method: 'HEAD', cache: 'no-store' })
+              .then(function (res) {
+                if (res.ok) onlineBanner.classList.add('show')
+              })
+              .catch(function () {})
+          }, 800)
+        }
+      })()
+    </script>
+  </body>
+</html>

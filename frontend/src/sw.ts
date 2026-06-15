@@ -1,16 +1,60 @@
 /// <reference lib="webworker" />
-import { cleanupOutdatedCaches, precacheAndRoute } from 'workbox-precaching'
+import { cleanupOutdatedCaches, matchPrecache, precacheAndRoute } from 'workbox-precaching'
+import { registerRoute, setCatchHandler } from 'workbox-routing'
 
 import {
   CRIDORA_PUSH_REFRESH_MESSAGE_TYPE,
   CRIDORA_PUSH_RESUBSCRIBE_MESSAGE_TYPE,
   CRIDORA_SHOW_LOCAL_TRAY_MESSAGE_TYPE,
 } from './lib/cridoraSwMessages'
+import {
+  isNavigationRequest,
+  OFFLINE_PAGE_URL,
+  shouldShowMaintenancePage,
+} from './lib/offlineFallback'
 
 declare const self: ServiceWorkerGlobalScope & { __WB_MANIFEST: unknown }
 
+const NAVIGATION_TIMEOUT_MS = 5000
+
 cleanupOutdatedCaches()
 precacheAndRoute(self.__WB_MANIFEST)
+
+async function serveOfflineShell(): Promise<Response> {
+  const cached = await matchPrecache(OFFLINE_PAGE_URL)
+  if (cached) return cached
+  return Response.error()
+}
+
+/** Navigation: network-first with offline / maintenance shell when origin is unreachable. */
+registerRoute(
+  ({ request }) => isNavigationRequest(request) && !request.url.includes(OFFLINE_PAGE_URL),
+  async ({ request }) => {
+    try {
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), NAVIGATION_TIMEOUT_MS)
+      const response = await fetch(request, { signal: controller.signal })
+      clearTimeout(timeoutId)
+      if (shouldShowMaintenancePage(response)) {
+        const offline = await serveOfflineShell()
+        if (offline.type !== 'error') return offline
+      }
+      return response
+    } catch {
+      const offline = await serveOfflineShell()
+      if (offline.type !== 'error') return offline
+      throw new Error('offline shell missing from precache')
+    }
+  },
+)
+
+setCatchHandler(async ({ request }) => {
+  if (request.mode === 'navigate') {
+    const offline = await serveOfflineShell()
+    if (offline.type !== 'error') return offline
+  }
+  return Response.error()
+})
 
 /** Required for vite-plugin-pwa / workbox-window “Refresh” (prompt mode). */
 self.addEventListener('message', (event: ExtendableMessageEvent) => {

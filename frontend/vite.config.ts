@@ -72,7 +72,7 @@ export default defineConfig(({ mode }) => {
         filename: 'sw.ts',
         registerType: 'prompt',
         injectRegister: null,
-        includeAssets: ['favicon.svg', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png', 'icons/icon-192-mask.png', 'icons/icon-512-mask.png'],
+        includeAssets: ['favicon.svg', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png', 'icons/icon-192-mask.png', 'icons/icon-512-mask.png', 'offline.html'],
         manifest: {
           name: 'Cridora India',
           short_name: 'Cridora',
