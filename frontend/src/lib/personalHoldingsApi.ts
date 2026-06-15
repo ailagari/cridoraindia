@@ -89,6 +89,37 @@ export function formatRateFromPurchaseValue(
   return bd?.ratePerGram ?? ''
 }
 
+export type PersonalVaultPricingMode = 'bill' | 'rate'
+
+export function buildPersonalVaultPurchasePayload(
+  mode: PersonalVaultPricingMode,
+  weightStr: string,
+  rateStr: string,
+  valueStr: string,
+  makingChargePercentStr: string,
+): {
+  purchase_price_inr_per_gram?: string
+  purchase_total_inr?: string | null
+  making_charge_percent?: string | null
+} {
+  if (mode === 'rate') {
+    const rate = rateStr.trim()
+    return {
+      purchase_price_inr_per_gram: rate || undefined,
+      purchase_total_inr: null,
+      making_charge_percent: null,
+    }
+  }
+  const value = valueStr.trim()
+  const mc = makingChargePercentStr.trim()
+  return {
+    purchase_price_inr_per_gram:
+      derivePurchasePricePerGram(weightStr, '', value, mc) || undefined,
+    purchase_total_inr: value || null,
+    making_charge_percent: mc || null,
+  }
+}
+
 export function derivePurchasePricePerGram(
   weightStr: string,
   rateStr: string,

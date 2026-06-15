@@ -8641,6 +8641,9 @@ select.input {
   gap: 0.45rem;
   margin-top: 0.35rem;
 }
+.pf-scope .pf-vault-form__chips--pricing {
+  margin-bottom: 0.15rem;
+}
 .pf-scope .pf-vault-form__chip {
   appearance: none;
   margin: 0;
