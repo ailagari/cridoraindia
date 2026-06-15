@@ -125,7 +125,53 @@ def fetch_josalukkas_rates_from_web() -> dict | None:
         parsed = parse_josalukkas_rates_from_html(html)
         if parsed is not None:
             return parsed
-    return None
+    return _fetch_goodreturns_today_parsed()
+
+
+def _fetch_goodreturns_today_parsed() -> dict | None:
+    """Fallback live Kerala board when Jos Alukkas HTML is unavailable."""
+    try:
+        from django.utils import timezone
+
+        from .goodreturns_kerala_rates import (
+            fetch_goodreturns_gold_for_date,
+            fetch_goodreturns_silver_for_date,
+        )
+    except ImportError:
+        return None
+
+    today = timezone.localdate()
+    gold_dec = fetch_goodreturns_gold_for_date(today)
+    if not gold_dec or gold_dec.get("22K") is None:
+        return None
+
+    gold: dict[str, float] = {}
+    for key in ("24K", "22K", "18K"):
+        val = gold_dec.get(key)
+        if val is not None:
+            gold[key] = float(val)
+    if gold.get("22K") is None:
+        return None
+    if gold.get("24K") is None:
+        gold["24K"] = round(gold["22K"] / 0.916, 2)
+    if gold.get("18K") is None:
+        gold["18K"] = round(gold["24K"] * 0.750, 2)
+    gold.setdefault("21K", round(gold["24K"] * 0.875, 2))
+
+    silver: dict[str, float] = {}
+    silver_dec = fetch_goodreturns_silver_for_date(today)
+    if silver_dec is not None:
+        s999 = round(float(silver_dec), 3)
+        silver["999"] = s999
+        silver["925"] = round(s999 * 0.925, 3)
+
+    return {
+        "gold": gold,
+        "silver": silver,
+        "source_updated_at": today.isoformat(),
+        "rate_date": today.isoformat(),
+        "source": "kerala_gold_rate",
+    }
 
 
 def build_spot_payload_from_josalukkas(parsed: dict) -> dict:

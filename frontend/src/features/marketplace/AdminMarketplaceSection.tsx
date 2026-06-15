@@ -350,7 +350,7 @@ function AdminPublishedRatesSummary(props: {
           <thead>
             <tr>
               <th>Metal</th>
-              <th className="tabular">International (reference)</th>
+              <th className="tabular">Kerala board (raw)</th>
               <th className="tabular">+Markup</th>
               <th className="tabular">Published</th>
             </tr>
@@ -515,7 +515,7 @@ export function AdminGoldTickerPanel() {
         <p className="dash-coming__text" style={{ marginBottom: 0, fontSize: '0.82rem', maxWidth: '52rem' }}>
           Configure live metal rates, alerts, and <strong>all platform fees and storefront disclosures</strong> here.{' '}
           <strong>Fractional investment markup</strong> (above) applies on top of jeweller board rates for vault purchases.{' '}
-          <strong>Live:</strong> markup on international raw spot, then deduction — jewellers and customers see the published
+          <strong>Live:</strong> Kerala board feed (Jos Alukkas, Goodreturns fallback) with admin markup/deduction — jewellers and customers see the published
           live market column. <strong>Manual:</strong> fixed gold (22K/18K/24K) and optional silver board rates (no row rules). Push alerts are configured under{' '}
           <strong>Pushes &amp; alerts</strong>.
         </p>
@@ -655,7 +655,7 @@ export function AdminGoldTickerPanel() {
             <thead>
               <tr>
                 <th scope="col">Metal</th>
-                <th className="tabular" scope="col" title="International raw reference">
+                <th className="tabular" scope="col" title="Kerala board raw reference (Jos Alukkas / Goodreturns)">
                   Raw ₹/g
                 </th>
                 <th scope="col" title="Markup: percent or fixed ₹ on raw">

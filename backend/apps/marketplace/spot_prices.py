@@ -54,8 +54,8 @@ def persist_last_good_live_raw_snapshot(raw_payload: dict) -> None:
 
 
 def get_raw_spot_payload_for_admin_preview() -> dict:
-    """Unadjusted international XAU/XAG INR ladder for admin UI only."""
-    data = _build_intl_spot_inr_from_feed()
+    """Unadjusted Kerala board INR ladder for admin markup preview (same feed as the public ticker)."""
+    data = _build_board_inr_from_feed()
     if data is not None:
         return data
     t = get_or_create_ticker()
@@ -68,15 +68,25 @@ def get_raw_spot_payload_for_admin_preview() -> dict:
             "gold": dict(snap["gold"]),
             "silver": dict(snap["silver"]) if isinstance(snap.get("silver"), dict) else {},
         }
+    intl = _build_intl_spot_inr_from_feed()
+    if intl is not None:
+        return intl
     return {}
 
 
-def invalidate_spot_price_cache() -> None:
+def invalidate_spot_price_cache(*, force_kerala_refresh: bool = False) -> None:
     cache.delete(_CACHE_KEY_INR)
+    if force_kerala_refresh:
+        cache.delete(_CACHE_KEY_LAST_GOOD)
     try:
-        from .josalukkas_rates import invalidate_josalukkas_rates_cache
+        from .josalukkas_rates import (
+            get_josalukkas_spot_payload_cached,
+            invalidate_josalukkas_rates_cache,
+        )
 
         invalidate_josalukkas_rates_cache()
+        if force_kerala_refresh:
+            get_josalukkas_spot_payload_cached(force_fetch=True)
     except Exception:
         pass
 

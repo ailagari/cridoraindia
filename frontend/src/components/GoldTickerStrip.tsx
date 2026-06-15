@@ -27,6 +27,18 @@ function numFromGold(block: Record<string, number> | undefined, key: string): nu
   return typeof v === 'number' && Number.isFinite(v) ? v : null
 }
 
+/** Published ticker ladder: manual board, or live Kerala feed with admin rules applied. */
+function publishedMarketGold(spot: SpotPricesPayload | null): Record<string, number> | undefined {
+  if (!spot?.gold || Object.keys(spot.gold).length === 0) {
+    return spot?.kerala_board?.gold
+  }
+  if (spot.source === 'manual_ticker') {
+    return spot.gold
+  }
+  // Live mode: spot.gold is Kerala board (Jos Alukkas / Goodreturns) + admin markup/deduction.
+  return spot.gold
+}
+
 /** User-facing footnote for published ladder (no international wording). */
 function liveMarketBasisNote(
   src: string | undefined,
@@ -108,8 +120,7 @@ export function GoldTickerStrip({ variant = 'public' }: Props) {
   const intl22 = numFromGold(liveGold, '22K')
   const intl24 = numFromGold(liveGold, '24K')
 
-  const boardGold = spot?.kerala_board?.gold
-  const marketGold = boardGold ?? spot?.gold
+  const marketGold = publishedMarketGold(spot)
   let market22 = numFromGold(marketGold, '22K')
   let market24 = numFromGold(marketGold, '24K')
 
@@ -122,7 +133,9 @@ export function GoldTickerStrip({ variant = 'public' }: Props) {
   }
 
   const basisSrc =
-    spot?.kerala_board?.source ?? spot?.cridora_base_source ?? adminFallback?.cridora_base_source
+    spot?.source === 'manual_ticker'
+      ? spot.source
+      : spot?.kerala_board?.source ?? spot?.cridora_base_source ?? spot?.source ?? adminFallback?.cridora_base_source
   const footPublic = liveMarketBasisNote(basisSrc, t)
   const footAdmin = adminPublishedBasisNote(basisSrc)
 
