@@ -73,9 +73,9 @@ def public_ads_payload() -> dict:
 
 
 def public_kerala_rates_payload() -> dict:
-    from .josalukkas_rates import get_josalukkas_spot_payload_cached
+    from .spot_prices import refresh_live_kerala_feed
 
-    board_live = get_josalukkas_spot_payload_cached()
+    board_live = refresh_live_kerala_feed()
     spot = public_spot_prices_payload(include_live_raw=False)
     board: dict = {}
     if isinstance(board_live, dict) and isinstance(board_live.get("gold"), dict):

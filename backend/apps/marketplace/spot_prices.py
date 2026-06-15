@@ -61,7 +61,7 @@ def persist_last_good_live_raw_snapshot(raw_payload: dict) -> None:
 
 def get_raw_spot_payload_for_admin_preview() -> dict:
     """Unadjusted Kerala board INR ladder for admin markup preview (always refreshes feed)."""
-    data = refresh_live_kerala_feed()
+    data = refresh_live_kerala_feed(force_fetch=True)
     if data is not None:
         return data
     return {}
@@ -92,7 +92,7 @@ def refresh_live_kerala_feed(*, force_fetch: bool = False) -> dict | None:
             if stale and isinstance(stale.get("gold"), dict) and stale["gold"].get("22K") is not None:
                 data = dict(stale)
             else:
-                data = _build_intl_spot_inr_from_feed()
+                data = None
 
     if data is not None and isinstance(data.get("gold"), dict) and data["gold"].get("22K") is not None:
         src = str(data.get("source") or "")

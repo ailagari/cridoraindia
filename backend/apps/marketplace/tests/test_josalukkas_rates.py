@@ -1,8 +1,13 @@
+from unittest.mock import patch
+
 from django.test import SimpleTestCase
 
 from apps.marketplace.josalukkas_rates import (
+    JOSALUKKAS_GOLD_URL,
+    JOSALUKKAS_KERALA_URL,
     _payload_fingerprint,
     build_spot_payload_from_josalukkas,
+    fetch_josalukkas_rates_from_web,
     parse_josalukkas_rates_from_html,
 )
 
@@ -56,3 +61,30 @@ class JosAlukkasRatesParseTests(SimpleTestCase):
 
     def test_parse_requires_22k(self):
         self.assertIsNone(parse_josalukkas_rates_from_html("<html></html>"))
+
+    @patch("apps.marketplace.josalukkas_rates._http_get_html")
+    def test_fetch_prefers_kerala_url_and_skips_goodreturns(self, mock_get):
+        mock_get.side_effect = lambda url, timeout=12.0: SAMPLE_HTML if url == JOSALUKKAS_KERALA_URL else None
+        parsed = fetch_josalukkas_rates_from_web()
+        self.assertIsNotNone(parsed)
+        assert parsed is not None
+        self.assertEqual(parsed["gold"]["22K"], 13645.0)
+        mock_get.assert_called_once_with(JOSALUKKAS_KERALA_URL)
+
+    @patch("apps.marketplace.josalukkas_rates._http_get_html")
+    def test_fetch_falls_back_to_india_url(self, mock_get):
+        def _get(url, timeout=12.0):
+            if url == JOSALUKKAS_KERALA_URL:
+                return None
+            if url == JOSALUKKAS_GOLD_URL:
+                return SAMPLE_HTML
+            return None
+
+        mock_get.side_effect = _get
+        parsed = fetch_josalukkas_rates_from_web()
+        self.assertIsNotNone(parsed)
+        self.assertEqual(mock_get.call_count, 2)
+
+    @patch("apps.marketplace.josalukkas_rates._http_get_html", return_value=None)
+    def test_fetch_returns_none_without_third_party_substitute(self, _mock_get):
+        self.assertIsNone(fetch_josalukkas_rates_from_web())

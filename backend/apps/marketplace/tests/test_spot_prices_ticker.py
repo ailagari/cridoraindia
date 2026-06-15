@@ -98,5 +98,6 @@ class SpotPricesTickerSourceTests(TestCase):
     def test_admin_preview_raw_matches_kerala_feed(self, mock_feed):
         mock_feed.return_value = dict(KERALA_LIVE)
         raw = get_raw_spot_payload_for_admin_preview()
+        mock_feed.assert_called_once_with(force_fetch=True)
         self.assertEqual(raw.get("source"), "kerala_gold_rate")
         self.assertEqual(raw["gold"]["22K"], 13645.0)

@@ -30,7 +30,12 @@ type LivePreviewRow = {
 
 type AdminTickerPayload = {
   live_metal_adjustments_json: Record<string, unknown>
-  live_spot_raw_preview: { source: string; rows: LivePreviewRow[] }
+  live_spot_raw_preview: {
+    source: string
+    source_updated_at?: string
+    rate_date?: string
+    rows: LivePreviewRow[]
+  }
   rate_move_alert_threshold_inr: string
   rate_alert_baseline_inr_per_gram_22k: string | null
   hourly_gold_push_enabled?: boolean
@@ -261,6 +266,8 @@ function AdminPublishedRatesSummary(props: {
   manual18Draft: string
   manualSilver999Draft: string
   rawPreviewSource?: string
+  rawPreviewUpdatedAt?: string
+  rawPreviewRateDate?: string
 }) {
   const {
     manualOn,
@@ -270,6 +277,8 @@ function AdminPublishedRatesSummary(props: {
     manual18Draft,
     manualSilver999Draft,
     rawPreviewSource,
+    rawPreviewUpdatedAt,
+    rawPreviewRateDate,
   } = props
 
   const liveByKey = new Map(
@@ -367,6 +376,8 @@ function AdminPublishedRatesSummary(props: {
       {rawPreviewSource ? (
         <p style={{ margin: '0.5rem 0 0', fontSize: '0.68rem', color: 'var(--text-faint)' }}>
           Live feed: {publicRateSourceLabel(rawPreviewSource)}
+          {rawPreviewUpdatedAt ? ` · Updated ${rawPreviewUpdatedAt}` : null}
+          {rawPreviewRateDate ? ` · Board date ${rawPreviewRateDate}` : null}
           {manualOn ? ' · Refreshed even while manual board is published' : null}
         </p>
       ) : (
@@ -650,6 +661,8 @@ export function AdminGoldTickerPanel() {
             manual18Draft={manual18Draft}
             manualSilver999Draft={manualSilver999Draft}
             rawPreviewSource={data.live_spot_raw_preview?.source}
+            rawPreviewUpdatedAt={data.live_spot_raw_preview?.source_updated_at}
+            rawPreviewRateDate={data.live_spot_raw_preview?.rate_date}
           />
         </>
       ) : null}

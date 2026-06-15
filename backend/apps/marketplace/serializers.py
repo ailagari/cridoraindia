@@ -171,7 +171,12 @@ class GoldTickerReadSerializer(serializers.ModelSerializer):
                     "final_inr_per_gram": str(adj),
                 }
             )
-        return {"source": raw.get("source") or "", "rows": rows}
+        return {
+            "source": raw.get("source") or "",
+            "source_updated_at": raw.get("source_updated_at") or "",
+            "rate_date": raw.get("rate_date") or "",
+            "rows": rows,
+        }
 
 
 class GoldTickerPublicSerializer(serializers.ModelSerializer):

@@ -12,9 +12,20 @@ from django.core.cache import cache
 
 logger = logging.getLogger(__name__)
 
-# Primary live feed: Jos Alukkas India gold-rate page (same rates shown on Kerala storefront).
+# Primary live feed: Jos Alukkas Kerala gold-rate page (admin reference board).
+JOSALUKKAS_KERALA_URL = "https://www.josalukkasonline.com/gold-rate-today/kerala/"
 JOSALUKKAS_GOLD_URL = "https://www.josalukkasonline.com/gold-rate-today"
-JOSALUKKAS_KERALA_FALLBACK_URL = "https://www.josalukkasonline.com/gold-rate-today/kerala/"
+# Back-compat alias used in tests/docs.
+JOSALUKKAS_KERALA_FALLBACK_URL = JOSALUKKAS_KERALA_URL
+
+_JOSALUKKAS_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+    ),
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "en-IN,en;q=0.9",
+}
 
 _CACHE_KEY = "marketplace_josalukkas_rates_v2"
 _CACHE_KEY_LAST_GOOD = "marketplace_josalukkas_rates_last_good_v2"
@@ -107,10 +118,7 @@ def parse_josalukkas_rates_from_html(html: str) -> dict | None:
 
 def _http_get_html(url: str, timeout: float = 12.0) -> str | None:
     try:
-        req = Request(
-            url,
-            headers={"User-Agent": "Mozilla/5.0 (compatible; CridoraIndia/1.0)"},
-        )
+        req = Request(url, headers=_JOSALUKKAS_HEADERS)
         with urlopen(req, timeout=timeout) as resp:
             return resp.read().decode("utf-8", "replace")
     except (HTTPError, URLError, TimeoutError, OSError, UnicodeDecodeError):
@@ -118,14 +126,15 @@ def _http_get_html(url: str, timeout: float = 12.0) -> str | None:
 
 
 def fetch_josalukkas_rates_from_web() -> dict | None:
-    for url in (JOSALUKKAS_GOLD_URL, JOSALUKKAS_KERALA_FALLBACK_URL):
+    """Fetch Jos Alukkas Kerala board only — no third-party substitutes."""
+    for url in (JOSALUKKAS_KERALA_URL, JOSALUKKAS_GOLD_URL):
         html = _http_get_html(url)
         if not html:
             continue
         parsed = parse_josalukkas_rates_from_html(html)
         if parsed is not None:
             return parsed
-    return _fetch_goodreturns_today_parsed()
+    return None
 
 
 def _fetch_goodreturns_today_parsed() -> dict | None:
@@ -170,7 +179,7 @@ def _fetch_goodreturns_today_parsed() -> dict | None:
         "silver": silver,
         "source_updated_at": today.isoformat(),
         "rate_date": today.isoformat(),
-        "source": "kerala_gold_rate",
+        "source": "goodreturns_kerala",
     }
 
 
@@ -254,15 +263,14 @@ def get_josalukkas_spot_payload_cached(*, force_fetch: bool = False) -> dict | N
     """
     import time
 
-    cached = cache.get(_CACHE_KEY)
-    if _payload_has_22k(cached) and not force_fetch:
-        return cached
-
     now_ts = time.time()
     stored_fp = cache.get(_CACHE_KEY_FINGERPRINT)
     last_good = cache.get(_CACHE_KEY_LAST_GOOD)
+    cached = cache.get(_CACHE_KEY)
 
     if not force_fetch and not _should_fetch_remote(now_ts):
+        if _payload_has_22k(cached):
+            return cached
         if _payload_has_22k(last_good):
             stale = {**last_good, "source": "kerala_gold_rate_stale"}
             cache.set(_CACHE_KEY, stale, timeout=_CACHE_TTL)
