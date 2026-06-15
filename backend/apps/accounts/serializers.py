@@ -585,7 +585,7 @@ class FestivalBroadcastNotificationCreateSerializer(serializers.Serializer):
     target_type = serializers.ChoiceField(
         choices=FestivalBroadcastNotification.TARGET_CHOICES,
         required=False,
-        default=FestivalBroadcastNotification.TARGET_ALL_USERS,
+        default=FestivalBroadcastNotification.TARGET_ALL_APP_INSTALLS,
     )
     target_metadata = serializers.JSONField(required=False, default=dict)
     engagement_context = serializers.CharField(required=False, allow_blank=True, max_length=32)
@@ -613,7 +613,7 @@ class FestivalBroadcastNotificationCreateSerializer(serializers.Serializer):
             scheduled_at=scheduled_at,
             expires_at=validated_data.get("expires_at"),
             target_type=validated_data.get("target_type")
-            or FestivalBroadcastNotification.TARGET_ALL_USERS,
+            or FestivalBroadcastNotification.TARGET_ALL_APP_INSTALLS,
             target_metadata=meta,
             engagement_context=(validated_data.get("engagement_context") or "")[:32],
             engagement_moment=(validated_data.get("engagement_moment") or "")[:32],

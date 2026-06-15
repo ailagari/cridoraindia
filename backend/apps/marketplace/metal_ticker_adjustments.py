@@ -17,6 +17,9 @@ METAL_ADMIN_ROWS: tuple[tuple[str, str, str], ...] = (
     ("silver", "925", "Silver 925"),
 )
 
+# Omitted from admin live preview when no source publishes the rate.
+OPTIONAL_LIVE_PREVIEW_KEYS: frozenset[tuple[str, str]] = frozenset({("gold", "21K")})
+
 METAL_CODE_TO_TICKER: dict[str, tuple[str, str]] = {
     "gold_22k": ("gold", "22K"),
     "gold_24k": ("gold", "24K"),

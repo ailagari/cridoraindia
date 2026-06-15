@@ -146,6 +146,9 @@ def admin_notification_stats_payload() -> dict:
         "web_push_anonymous": WebPushSubscription.objects.filter(user_id__isnull=True).count(),
         "native_fcm": NativePushToken.objects.count(),
     }
+    subs["total_push_devices"] = (
+        WebPushSubscription.objects.count() + NativePushToken.objects.count()
+    )
 
     return {
         "delivered_count": delivered,

@@ -558,8 +558,8 @@ export function AdminFestivalBroadcastPanel({ tab }: { tab?: HubTab }) {
             disabled={busy}
             onChange={(e) => setTargetType(e.target.value)}
           >
-            <option value="ALL_USERS">All customers</option>
-            <option value="ALL_APP_INSTALLS">All push subscribers</option>
+            <option value="ALL_APP_INSTALLS">All users (everyone with alerts on)</option>
+            <option value="ALL_USERS">Signed-in customers only</option>
             <option value="DEFAULT_JEWELLER_USERS">Default jeweller customers</option>
             <option value="SPECIFIC_JEWELLER_USERS">Jeweller customers (purchases)</option>
           </select>

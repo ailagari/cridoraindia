@@ -58,6 +58,19 @@ type AdminTickerPayload = {
   updated_at: string
 }
 
+const OPTIONAL_LIVE_METAL_KEYS = new Set(['21K'])
+
+function visibleMetalRows(
+  previewRows: LivePreviewRow[] | undefined,
+): Array<{ family: 'gold' | 'silver'; key: string; label: string }> {
+  const liveByKey = new Map(
+    (previewRows ?? []).map((r) => [`${r.family}:${r.key}`, r] as const),
+  )
+  return METAL_ROWS.filter(({ family, key }) => {
+    if (!OPTIONAL_LIVE_METAL_KEYS.has(key)) return true
+    return liveByKey.get(`${family}:${key}`)?.raw_inr_per_gram != null
+  })
+}
 const METAL_ROWS: Array<{ family: 'gold' | 'silver'; key: string; label: string }> = [
   { family: 'gold', key: '24K', label: 'Gold 24K' },
   { family: 'gold', key: '22K', label: 'Gold 22K' },
@@ -245,7 +258,6 @@ function manualTickerRates(
   const gold = {
     '24K': k24r,
     '22K': k22r,
-    '21K': Math.round(k24r * 0.875 * 100) / 100,
     '18K': k18r,
   }
   const silver: Record<string, number> = {}
@@ -338,7 +350,7 @@ function AdminPublishedRatesSummary(props: {
             </tr>
           </thead>
           <tbody>
-            {METAL_ROWS.map(({ family, key, label }) => {
+            {visibleMetalRows(previewRows).map(({ family, key, label }) => {
               const live = liveByKey.get(`${family}:${key}`)
               const published = publishedForRow(family, key)
               const decimals = family === 'silver' ? 3 : 2
@@ -704,7 +716,7 @@ export function AdminGoldTickerPanel() {
               </tr>
             </thead>
             <tbody>
-              {METAL_ROWS.map(({ family, key, label }) => {
+              {visibleMetalRows(data?.live_spot_raw_preview?.rows).map(({ family, key, label }) => {
                 const pr = previewRow(family, key)
                 const rawStr = pr?.raw_inr_per_gram
                 const rawNum = rawStr != null ? Number.parseFloat(rawStr) : NaN

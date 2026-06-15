@@ -5,6 +5,7 @@ from django.test import SimpleTestCase
 from apps.marketplace.josalukkas_rates import (
     JOSALUKKAS_GOLD_URL,
     JOSALUKKAS_KERALA_URL,
+    _merge_goodreturns_gaps,
     _payload_fingerprint,
     build_spot_payload_from_josalukkas,
     fetch_josalukkas_rates_from_web,
@@ -31,6 +32,17 @@ SAMPLE_HTML = """
 </div>
 """
 
+JOS_BOARD = {
+    "gold": {"24K": 14890.0, "22K": 13645.0, "18K": 11270.0},
+    "silver": {},
+    "source_updated_at": "10-06-26, 9:33:21 AM",
+    "rate_date": "2026-06-10",
+    "source": "kerala_gold_rate",
+}
+
+GR_GOLD = {"24K": 15153.0, "22K": 13890.0, "18K": 11365.0}
+GR_SILVER = {"999": 95.5, "925": 88.34}
+
 
 class JosAlukkasRatesParseTests(SimpleTestCase):
     def test_parse_rates_and_fingerprint(self):
@@ -42,7 +54,7 @@ class JosAlukkasRatesParseTests(SimpleTestCase):
         self.assertEqual(parsed["gold"]["24K"], 14890.0)
         self.assertEqual(parsed["gold"]["22K"], 13645.0)
         self.assertEqual(parsed["gold"]["18K"], 11270.0)
-        self.assertIn("21K", parsed["gold"])
+        self.assertNotIn("21K", parsed["gold"])
 
     def test_build_spot_payload(self):
         parsed = parse_josalukkas_rates_from_html(SAMPLE_HTML)
@@ -62,8 +74,20 @@ class JosAlukkasRatesParseTests(SimpleTestCase):
     def test_parse_requires_22k(self):
         self.assertIsNone(parse_josalukkas_rates_from_html("<html></html>"))
 
+    @patch("apps.marketplace.josalukkas_rates._goodreturns_silver_for_today", return_value=GR_SILVER)
+    @patch("apps.marketplace.josalukkas_rates._goodreturns_gold_for_today", return_value=GR_GOLD)
+    def test_merge_goodreturns_fills_silver_without_overwriting_jos_gold(self, _mock_gold, _mock_silver):
+        merged = _merge_goodreturns_gaps(dict(JOS_BOARD))
+        self.assertEqual(merged["gold"]["22K"], 13645.0)
+        self.assertEqual(merged["gold"]["24K"], 14890.0)
+        self.assertNotIn("21K", merged["gold"])
+        self.assertEqual(merged["silver"]["999"], 95.5)
+        self.assertEqual(merged["silver"]["925"], 88.34)
+        self.assertIn("silver:goodreturns", merged.get("gaps_filled_from", []))
+
+    @patch("apps.marketplace.josalukkas_rates._merge_goodreturns_gaps", side_effect=lambda b: b)
     @patch("apps.marketplace.josalukkas_rates._http_get_html")
-    def test_fetch_prefers_kerala_url_and_skips_goodreturns(self, mock_get):
+    def test_fetch_prefers_kerala_url(self, mock_get, _mock_merge):
         mock_get.side_effect = lambda url, timeout=12.0: SAMPLE_HTML if url == JOSALUKKAS_KERALA_URL else None
         parsed = fetch_josalukkas_rates_from_web()
         self.assertIsNotNone(parsed)
@@ -71,8 +95,9 @@ class JosAlukkasRatesParseTests(SimpleTestCase):
         self.assertEqual(parsed["gold"]["22K"], 13645.0)
         mock_get.assert_called_once_with(JOSALUKKAS_KERALA_URL)
 
+    @patch("apps.marketplace.josalukkas_rates._merge_goodreturns_gaps", side_effect=lambda b: b)
     @patch("apps.marketplace.josalukkas_rates._http_get_html")
-    def test_fetch_falls_back_to_india_url(self, mock_get):
+    def test_fetch_falls_back_to_india_url(self, mock_get, _mock_merge):
         def _get(url, timeout=12.0):
             if url == JOSALUKKAS_KERALA_URL:
                 return None
@@ -85,6 +110,19 @@ class JosAlukkasRatesParseTests(SimpleTestCase):
         self.assertIsNotNone(parsed)
         self.assertEqual(mock_get.call_count, 2)
 
+    @patch("apps.marketplace.josalukkas_rates._fetch_goodreturns_today_parsed")
     @patch("apps.marketplace.josalukkas_rates._http_get_html", return_value=None)
-    def test_fetch_returns_none_without_third_party_substitute(self, _mock_get):
-        self.assertIsNone(fetch_josalukkas_rates_from_web())
+    def test_fetch_falls_back_to_goodreturns_when_jos_unavailable(self, _mock_get, mock_gr):
+        mock_gr.return_value = {
+            "gold": GR_GOLD,
+            "silver": GR_SILVER,
+            "source": "goodreturns_kerala",
+            "source_updated_at": "2026-06-15",
+            "rate_date": "2026-06-15",
+        }
+        parsed = fetch_josalukkas_rates_from_web()
+        self.assertIsNotNone(parsed)
+        assert parsed is not None
+        self.assertEqual(parsed["source"], "goodreturns_kerala")
+        self.assertEqual(parsed["gold"]["22K"], 13890.0)
+        mock_gr.assert_called_once()

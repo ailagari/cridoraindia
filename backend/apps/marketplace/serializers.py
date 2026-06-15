@@ -36,6 +36,7 @@ from .pricing import (
 )
 from .metal_ticker_adjustments import (
     METAL_ADMIN_ROWS,
+    OPTIONAL_LIVE_PREVIEW_KEYS,
     admin_deduction_for_jeweller_metal,
     adjusted_inr_from_float,
     after_markup_inr_from_decimal,
@@ -132,6 +133,8 @@ class GoldTickerReadSerializer(serializers.ModelSerializer):
         rows: list[dict] = []
         for family, key, label in METAL_ADMIN_ROWS:
             rv = gold.get(key) if family == "gold" else silver.get(key)
+            if rv is None and (family, key) in OPTIONAL_LIVE_PREVIEW_KEYS:
+                continue
             if rv is None:
                 rows.append(
                     {

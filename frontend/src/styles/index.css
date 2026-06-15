@@ -10765,3 +10765,234 @@ select.input {
   color: var(--text-muted);
 }
 
+/* Single-form send message layout */
+.admin-msg-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.admin-msg-compose__head {
+  margin-bottom: 1.1rem;
+}
+
+.admin-msg-compose__intro {
+  margin: 0.35rem 0 0;
+  max-width: 36rem;
+}
+
+.admin-msg-form__layout {
+  display: grid;
+  gap: 1.25rem;
+  align-items: start;
+}
+
+@media (min-width: 840px) {
+  .admin-msg-form__layout {
+    grid-template-columns: minmax(0, 1fr) minmax(240px, 300px);
+    gap: 1.5rem;
+  }
+}
+
+.admin-msg-form__fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  min-width: 0;
+}
+
+.admin-msg-form__fields .field {
+  margin: 0;
+}
+
+.admin-msg-form__fields select,
+.admin-msg-form__fields input[type='datetime-local'],
+.admin-msg-form__fields input[type='url'],
+.admin-msg-form__fields input[type='number'],
+.admin-msg-form__fields input:not([type]),
+.admin-msg-textarea {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.admin-msg-field-hint {
+  margin: 0.3rem 0 0;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.admin-msg-check {
+  display: flex;
+  gap: 0.55rem;
+  align-items: flex-start;
+  font-size: 0.88rem;
+  line-height: 1.35;
+  cursor: pointer;
+}
+
+.admin-msg-check input {
+  margin-top: 0.15rem;
+  flex-shrink: 0;
+}
+
+.admin-msg-more-toggle {
+  align-self: flex-start;
+  padding-left: 0;
+  font-size: 0.85rem;
+}
+
+.admin-msg-advanced__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.85rem;
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  background: var(--veil-20, rgba(255, 255, 255, 0.02));
+}
+
+.admin-msg-submit {
+  width: 100%;
+  margin-top: 0.25rem;
+  min-height: 2.75rem;
+  font-size: 0.95rem;
+}
+
+@media (min-width: 840px) {
+  .admin-msg-submit {
+    width: auto;
+    align-self: flex-start;
+    min-width: 11rem;
+  }
+}
+
+.admin-msg-form__preview {
+  padding: 0.85rem;
+  border-radius: 12px;
+  border: 1px dashed var(--border-soft);
+  background: var(--veil-20);
+  min-width: 0;
+}
+
+@media (min-width: 840px) {
+  .admin-msg-form__preview {
+    position: sticky;
+    top: 1rem;
+  }
+}
+
+.admin-msg-preview-label {
+  margin: 0 0 0.5rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.admin-msg-preview-tabs {
+  margin-bottom: 0.65rem;
+}
+
+.admin-msg-preview-stage {
+  display: flex;
+  justify-content: center;
+}
+
+.admin-msg-history__title {
+  font-size: 1.05rem;
+  margin: 0 0 0.75rem;
+}
+
+.admin-msg-history-empty {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.admin-msg-history-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.admin-msg-history-item {
+  padding: 0.85rem 0.95rem;
+  border: 1px solid var(--border-soft);
+  border-radius: 12px;
+  background: var(--veil-20, rgba(255, 255, 255, 0.02));
+}
+
+.admin-msg-history-item__top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.4rem;
+}
+
+.admin-msg-history-item__when {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.admin-msg-history-item__title {
+  margin: 0 0 0.25rem;
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+
+.admin-msg-history-item__body {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.admin-msg-history-item__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 0.65rem;
+  padding-top: 0.55rem;
+  border-top: 1px solid var(--border-soft);
+}
+
+.admin-msg-history-item__reach {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.admin-msg-history-table {
+  display: none;
+}
+
+.admin-msg-history-table__preview {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (min-width: 900px) {
+  .admin-msg-history-list {
+    display: none;
+  }
+
+  .admin-msg-history-table {
+    display: block;
+  }
+}
+

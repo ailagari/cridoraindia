@@ -69,6 +69,28 @@ def _payload_for_user(row: FestivalBroadcastNotification, user: User) -> dict | 
     )
 
 
+def _broadcast_push_target(row: FestivalBroadcastNotification) -> bool:
+    """Everyone with push enabled (signed-in, guests, browser, mobile, PWA)."""
+    return row.target_type == FestivalBroadcastNotification.TARGET_ALL_APP_INSTALLS
+
+
+def _store_inbox_for_campaign_customers(
+    row: FestivalBroadcastNotification,
+    payload: dict,
+) -> None:
+    """Bell inbox rows for signed-in customers after a broadcast push."""
+    for uid in resolve_campaign_user_ids(row.target_type, row.target_metadata):
+        user = User.objects.filter(pk=uid, is_active=True).first()
+        if user is None:
+            continue
+        pref = get_or_create_preferences(user)
+        if not pref.allow_festival_alerts and not pref.allow_promotional:
+            continue
+        pl = _payload_for_user(row, user) if row.personalize_per_user else payload
+        if pl:
+            _store_campaign_inbox(row, user, pl)
+
+
 def _deliver_campaign_push(row: FestivalBroadcastNotification, payload: dict) -> int:
     jeweller_id = None
     if row.created_by_jeweller_id:
@@ -76,7 +98,7 @@ def _deliver_campaign_push(row: FestivalBroadcastNotification, payload: dict) ->
     if not promotional_allowed_for_jeweller(jeweller_id):
         return 0
 
-    if row.target_type == FestivalBroadcastNotification.TARGET_ALL_APP_INSTALLS:
+    if _broadcast_push_target(row):
         if row.personalize_per_user and (row.engagement_moment or "").strip():
             total = 0
             for uid in resolve_campaign_user_ids(row.target_type, row.target_metadata):
@@ -94,7 +116,12 @@ def _deliver_campaign_push(row: FestivalBroadcastNotification, payload: dict) ->
             if jeweller_id:
                 record_promotional_jeweller(jeweller_id)
             return total
-        return send_push_broadcast(payload)
+        total = send_push_broadcast(payload)
+        if row.store_in_inbox:
+            _store_inbox_for_campaign_customers(row, payload)
+        if jeweller_id and total:
+            record_promotional_jeweller(jeweller_id)
+        return total
 
     total = 0
     for uid in resolve_campaign_user_ids(row.target_type, row.target_metadata):

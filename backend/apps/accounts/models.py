@@ -2156,8 +2156,8 @@ class FestivalBroadcastNotification(models.Model):
     TARGET_DEFAULT_JEWELLER_USERS = "DEFAULT_JEWELLER_USERS"
     TARGET_SPECIFIC_USERS = "SPECIFIC_USERS"
     TARGET_CHOICES = [
-        (TARGET_ALL_USERS, "All customers"),
-        (TARGET_ALL_APP_INSTALLS, "All app installs"),
+        (TARGET_ALL_APP_INSTALLS, "Everyone with alerts on"),
+        (TARGET_ALL_USERS, "Signed-in customers only"),
         (TARGET_SPECIFIC_JEWELLER_USERS, "Jeweller customers"),
         (TARGET_DEFAULT_JEWELLER_USERS, "Default jeweller customers"),
         (TARGET_SPECIFIC_USERS, "Specific users"),
