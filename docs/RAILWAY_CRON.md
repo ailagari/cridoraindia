@@ -27,6 +27,7 @@ Triggers: live spot fetch (`/marketplace/spot-prices/`), public gold ticker GET 
 | `cross_redemption_process_outbox` | Every 1–2 minutes |
 | `generate_treasury_daily_report` | Daily |
 | `sync_kerala_gold_rates_history` | Once after deploy, then weekly until archive is full (~730 days) |
+| `refresh_kerala_board_rates` | Every 5 minutes (polls AKGSMA → Jos → Goodreturns; updates cache only when rates change) |
 
 Use separate **cron** services with `python manage.py <command>` start commands (not the main Gunicorn service).
 

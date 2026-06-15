@@ -381,12 +381,11 @@ def yesterday_change_for_metal(metal: str = "22K") -> dict[str, str | None]:
     return {"change_inr": str(ch), "change_pct": str(pct)}
 
 
-def latest_board_rates_payload(*, source_prefix: str = "kerala_gold") -> dict | None:
-    row = (
-        AkgsmaBoardRateHistory.objects.filter(source__startswith=source_prefix)
-        .order_by("-recorded_at")
-        .first()
-    )
+def latest_board_rates_payload(*, source_prefix: str | None = None) -> dict | None:
+    qs = AkgsmaBoardRateHistory.objects.order_by("-recorded_at")
+    if source_prefix:
+        qs = qs.filter(source__startswith=source_prefix)
+    row = qs.first()
     if row is None:
         row = AkgsmaBoardRateHistory.objects.order_by("-recorded_at").first()
     if row is None:

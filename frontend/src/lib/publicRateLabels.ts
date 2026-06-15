@@ -5,6 +5,7 @@ const CRIDORA_MANUAL = 'Cridora manual rate'
 const KERALA_GOLD = 'Kerala gold rate'
 
 const LIVE_SOURCES = new Set([
+  'akgsma_kerala',
   'kerala_gold_rate',
   'kerala_gold_rate_stale',
   'kerala_board',

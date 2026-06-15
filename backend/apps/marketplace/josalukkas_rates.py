@@ -1,4 +1,7 @@
-"""Fetch Kerala gold rates and serve cached board payloads for the ticker."""
+"""Fetch Kerala board rates and serve cached payloads for the ticker.
+
+Source priority: AKGSMA → Jos Alukkas Kerala → Goodreturns (gaps / full fallback).
+"""
 
 from __future__ import annotations
 
@@ -12,7 +15,7 @@ from django.core.cache import cache
 
 logger = logging.getLogger(__name__)
 
-# Primary live feed: Jos Alukkas Kerala gold-rate page (admin reference board).
+# Fallback #2: Jos Alukkas Kerala gold-rate page.
 JOSALUKKAS_KERALA_URL = "https://www.josalukkasonline.com/gold-rate-today/kerala/"
 JOSALUKKAS_GOLD_URL = "https://www.josalukkasonline.com/gold-rate-today"
 # Back-compat alias used in tests/docs.
@@ -27,10 +30,10 @@ _JOSALUKKAS_HEADERS = {
     "Accept-Language": "en-IN,en;q=0.9",
 }
 
-_CACHE_KEY = "marketplace_josalukkas_rates_v2"
-_CACHE_KEY_LAST_GOOD = "marketplace_josalukkas_rates_last_good_v2"
-_CACHE_KEY_FINGERPRINT = "marketplace_josalukkas_rates_fingerprint_v2"
-_CACHE_KEY_LAST_FETCH_TS = "marketplace_josalukkas_rates_last_fetch_ts_v2"
+_CACHE_KEY = "marketplace_kerala_board_rates_v3"
+_CACHE_KEY_LAST_GOOD = "marketplace_kerala_board_rates_last_good_v3"
+_CACHE_KEY_FINGERPRINT = "marketplace_kerala_board_rates_fingerprint_v3"
+_CACHE_KEY_LAST_FETCH_TS = "marketplace_kerala_board_rates_last_fetch_ts_v3"
 
 _CACHE_TTL = 120
 _CACHE_TTL_LAST_GOOD = 86400 * 7
@@ -159,40 +162,55 @@ def _goodreturns_silver_for_today() -> dict[str, float]:
     return {"999": s999, "925": round(s999 * 0.925, 3)}
 
 
-def _merge_goodreturns_gaps(board: dict) -> dict:
-    """
-    Keep Jos (or primary) gold/silver; fill only missing keys from Goodreturns Kerala.
-
-    Never overwrites gold values already scraped from Jos Alukkas.
-    """
+def _merge_source_gaps(
+    board: dict,
+    *,
+    gold: dict[str, float] | None,
+    silver: dict[str, float] | None,
+    gap_label: str,
+) -> dict:
+    """Fill only missing gold/silver keys from a secondary source; never overwrite primary."""
     out = {
         **board,
         "gold": dict(board.get("gold") or {}),
         "silver": dict(board.get("silver") or {}),
     }
-    gr_gold = _goodreturns_gold_for_today()
-    gr_silver = _goodreturns_silver_for_today()
+    gaps: list[str] = list(board.get("gaps_filled_from") or [])
 
-    if gr_gold:
+    if gold:
         for key in _GOLD_BOARD_KEYS:
-            if out["gold"].get(key) is None and gr_gold.get(key) is not None:
-                out["gold"][key] = gr_gold[key]
+            if out["gold"].get(key) is None and gold.get(key) is not None:
+                out["gold"][key] = gold[key]
+                gaps.append(f"gold_{key}:{gap_label}")
 
-    for key in ("999", "925"):
-        if out["silver"].get(key) is None and gr_silver.get(key) is not None:
-            out["silver"][key] = gr_silver[key]
+    if silver:
+        for key in ("999", "925"):
+            if out["silver"].get(key) is None and silver.get(key) is not None:
+                out["silver"][key] = silver[key]
+        if not (board.get("silver") or {}) and silver.get("999") is not None:
+            gaps.append(f"silver:{gap_label}")
 
-    gaps: list[str] = []
-    if gr_silver and board.get("silver") == {}:
-        gaps.append("silver:goodreturns")
-    if gr_gold:
-        for key in _GOLD_BOARD_KEYS:
-            if (board.get("gold") or {}).get(key) is None and out["gold"].get(key) is not None:
-                gaps.append(f"gold_{key}:goodreturns")
     if gaps:
         out["gaps_filled_from"] = gaps
-
     return out
+
+
+def _merge_jos_gaps(board: dict, jos: dict) -> dict:
+    jos_gold = jos.get("gold") if isinstance(jos.get("gold"), dict) else {}
+    jos_silver = jos.get("silver") if isinstance(jos.get("silver"), dict) else {}
+    return _merge_source_gaps(
+        board,
+        gold={str(k): float(v) for k, v in jos_gold.items()},
+        silver={str(k): float(v) for k, v in jos_silver.items()},
+        gap_label="jos_alukkas",
+    )
+
+
+def _merge_goodreturns_gaps(board: dict) -> dict:
+    """Keep primary board gold/silver; fill only missing keys from Goodreturns Kerala."""
+    gr_gold = _goodreturns_gold_for_today()
+    gr_silver = _goodreturns_silver_for_today()
+    return _merge_source_gaps(board, gold=gr_gold, silver=gr_silver, gap_label="goodreturns")
 
 
 def _fetch_goodreturns_today_parsed() -> dict | None:
@@ -218,20 +236,47 @@ def _fetch_goodreturns_today_parsed() -> dict | None:
     }
 
 
-def fetch_josalukkas_rates_from_web() -> dict | None:
-    """
-    Jos Alukkas Kerala first; Goodreturns fills missing silver/gold keys only.
-
-    If Jos is unavailable, fall back to the full Goodreturns Kerala board.
-    """
+def _fetch_josalukkas_parsed() -> dict | None:
+    """Jos Alukkas Kerala (then India page) without Goodreturns merge."""
     for url in (JOSALUKKAS_KERALA_URL, JOSALUKKAS_GOLD_URL):
         html = _http_get_html(url)
         if not html:
             continue
         parsed = parse_josalukkas_rates_from_html(html)
         if parsed is not None:
-            return _merge_goodreturns_gaps(parsed)
+            return parsed
+    return None
+
+
+def fetch_kerala_board_rates_from_web() -> dict | None:
+    """
+    AKGSMA first; Jos Alukkas fills missing keys; Goodreturns fills remaining gaps.
+
+    If AKGSMA and Jos are unavailable, fall back to the full Goodreturns Kerala board.
+    """
+    from .akgsma_rates import fetch_akgsma_rates_from_web
+
+    board: dict | None = None
+
+    akgsma = fetch_akgsma_rates_from_web()
+    if akgsma is not None and (akgsma.get("gold") or {}).get("22K") is not None:
+        board = akgsma
+
+    jos = _fetch_josalukkas_parsed()
+    if jos is not None:
+        if board is not None:
+            board = _merge_jos_gaps(board, jos)
+        else:
+            board = jos
+
+    if board is not None:
+        return _merge_goodreturns_gaps(board)
+
     return _fetch_goodreturns_today_parsed()
+
+
+# Backward-compatible alias used across spot_prices and tests.
+fetch_josalukkas_rates_from_web = fetch_kerala_board_rates_from_web
 
 
 def build_spot_payload_from_josalukkas(parsed: dict) -> dict:
@@ -266,7 +311,7 @@ def _db_stale_payload() -> dict | None:
         from .kerala_board_history import latest_board_rates_payload
     except ImportError:
         return None
-    return latest_board_rates_payload(source_prefix="kerala_gold")
+    return latest_board_rates_payload()
 
 
 def _enrich_payload_silver(payload: dict) -> dict:

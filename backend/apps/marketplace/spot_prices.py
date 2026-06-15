@@ -233,7 +233,7 @@ def _build_intl_spot_inr_from_feed() -> dict | None:
 
 
 def _kerala_gold_source_label(src: str) -> str:
-    if src in ("kerala_gold_rate", "kerala_gold_rate_stale"):
+    if src in ("akgsma_kerala", "kerala_gold_rate", "kerala_gold_rate_stale", "goodreturns_kerala"):
         return src
     return "kerala_gold_rate_stale"
 

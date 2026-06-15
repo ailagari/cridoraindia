@@ -6,11 +6,21 @@ from apps.marketplace.josalukkas_rates import (
     JOSALUKKAS_GOLD_URL,
     JOSALUKKAS_KERALA_URL,
     _merge_goodreturns_gaps,
+    _merge_jos_gaps,
     _payload_fingerprint,
     build_spot_payload_from_josalukkas,
     fetch_josalukkas_rates_from_web,
+    fetch_kerala_board_rates_from_web,
     parse_josalukkas_rates_from_html,
 )
+
+JOS_BOARD = {
+    "gold": {"24K": 14890.0, "22K": 13645.0, "18K": 11270.0},
+    "silver": {},
+    "source_updated_at": "10-06-26, 9:33:21 AM",
+    "rate_date": "2026-06-10",
+    "source": "kerala_gold_rate",
+}
 
 SAMPLE_HTML = """
 <div class="card-bottom">
@@ -32,12 +42,12 @@ SAMPLE_HTML = """
 </div>
 """
 
-JOS_BOARD = {
-    "gold": {"24K": 14890.0, "22K": 13645.0, "18K": 11270.0},
-    "silver": {},
-    "source_updated_at": "10-06-26, 9:33:21 AM",
-    "rate_date": "2026-06-10",
-    "source": "kerala_gold_rate",
+AKGSMA_BOARD = {
+    "gold": {"24K": 15163.76, "22K": 13890.0, "18K": 11475.0},
+    "silver": {"999": 265.0, "925": 245.125},
+    "source_updated_at": "2026-06-15",
+    "rate_date": "2026-06-15",
+    "source": "akgsma_kerala",
 }
 
 GR_GOLD = {"24K": 15153.0, "22K": 13890.0, "18K": 11365.0}
@@ -85,9 +95,42 @@ class JosAlukkasRatesParseTests(SimpleTestCase):
         self.assertEqual(merged["silver"]["925"], 88.34)
         self.assertIn("silver:goodreturns", merged.get("gaps_filled_from", []))
 
+    def test_merge_jos_gaps_does_not_overwrite_akgsma_gold(self):
+        merged = _merge_jos_gaps(dict(AKGSMA_BOARD), JOS_BOARD)
+        self.assertEqual(merged["gold"]["22K"], 13890.0)
+        self.assertEqual(merged["gold"]["18K"], 11475.0)
+        self.assertAlmostEqual(merged["gold"]["24K"], 15163.76)
+        self.assertEqual(merged["silver"]["999"], 265.0)
+
+    @patch("apps.marketplace.josalukkas_rates._merge_goodreturns_gaps", side_effect=lambda b: b)
+    @patch("apps.marketplace.josalukkas_rates._fetch_josalukkas_parsed")
+    @patch("apps.marketplace.akgsma_rates.fetch_akgsma_rates_from_web")
+    def test_fetch_prefers_akgsma_over_jos(self, mock_akgsma, mock_jos, _mock_merge):
+        mock_akgsma.return_value = dict(AKGSMA_BOARD)
+        mock_jos.return_value = dict(JOS_BOARD)
+        parsed = fetch_kerala_board_rates_from_web()
+        self.assertIsNotNone(parsed)
+        assert parsed is not None
+        self.assertEqual(parsed["source"], "akgsma_kerala")
+        self.assertEqual(parsed["gold"]["22K"], 13890.0)
+        mock_akgsma.assert_called_once()
+        mock_jos.assert_called_once()
+
+    @patch("apps.marketplace.josalukkas_rates._merge_goodreturns_gaps", side_effect=lambda b: b)
+    @patch("apps.marketplace.josalukkas_rates._fetch_josalukkas_parsed")
+    @patch("apps.marketplace.akgsma_rates.fetch_akgsma_rates_from_web", return_value=None)
+    def test_fetch_uses_jos_when_akgsma_unavailable(self, _mock_akgsma, mock_jos, _mock_merge):
+        mock_jos.return_value = dict(JOS_BOARD)
+        parsed = fetch_kerala_board_rates_from_web()
+        self.assertIsNotNone(parsed)
+        assert parsed is not None
+        self.assertEqual(parsed["source"], "kerala_gold_rate")
+        self.assertEqual(parsed["gold"]["22K"], 13645.0)
+
     @patch("apps.marketplace.josalukkas_rates._merge_goodreturns_gaps", side_effect=lambda b: b)
     @patch("apps.marketplace.josalukkas_rates._http_get_html")
-    def test_fetch_prefers_kerala_url(self, mock_get, _mock_merge):
+    @patch("apps.marketplace.akgsma_rates.fetch_akgsma_rates_from_web", return_value=None)
+    def test_fetch_jos_prefers_kerala_url(self, _mock_akgsma, mock_get, _mock_merge):
         mock_get.side_effect = lambda url, timeout=12.0: SAMPLE_HTML if url == JOSALUKKAS_KERALA_URL else None
         parsed = fetch_josalukkas_rates_from_web()
         self.assertIsNotNone(parsed)
@@ -97,7 +140,8 @@ class JosAlukkasRatesParseTests(SimpleTestCase):
 
     @patch("apps.marketplace.josalukkas_rates._merge_goodreturns_gaps", side_effect=lambda b: b)
     @patch("apps.marketplace.josalukkas_rates._http_get_html")
-    def test_fetch_falls_back_to_india_url(self, mock_get, _mock_merge):
+    @patch("apps.marketplace.akgsma_rates.fetch_akgsma_rates_from_web", return_value=None)
+    def test_fetch_jos_falls_back_to_india_url(self, _mock_akgsma, mock_get, _mock_merge):
         def _get(url, timeout=12.0):
             if url == JOSALUKKAS_KERALA_URL:
                 return None
@@ -111,8 +155,9 @@ class JosAlukkasRatesParseTests(SimpleTestCase):
         self.assertEqual(mock_get.call_count, 2)
 
     @patch("apps.marketplace.josalukkas_rates._fetch_goodreturns_today_parsed")
-    @patch("apps.marketplace.josalukkas_rates._http_get_html", return_value=None)
-    def test_fetch_falls_back_to_goodreturns_when_jos_unavailable(self, _mock_get, mock_gr):
+    @patch("apps.marketplace.josalukkas_rates._fetch_josalukkas_parsed", return_value=None)
+    @patch("apps.marketplace.akgsma_rates.fetch_akgsma_rates_from_web", return_value=None)
+    def test_fetch_falls_back_to_goodreturns_when_boards_unavailable(self, _mock_akgsma, _mock_jos, mock_gr):
         mock_gr.return_value = {
             "gold": GR_GOLD,
             "silver": GR_SILVER,

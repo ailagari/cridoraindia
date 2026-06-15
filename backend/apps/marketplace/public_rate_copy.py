@@ -26,6 +26,7 @@ CHART_DAILY_NOTE = (
 
 _LIVE_SOURCES = frozenset(
     {
+        "akgsma_kerala",
         "kerala_gold_rate",
         "kerala_gold_rate_stale",
         "kerala_board",
