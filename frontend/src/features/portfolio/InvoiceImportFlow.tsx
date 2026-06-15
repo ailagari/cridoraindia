@@ -12,6 +12,9 @@ import {
   type InvoiceExtractDTO,
   type PersonalHoldingDTO,
 } from '@/lib/personalHoldingsApi'
+import { fetchPlatformBillingTax } from '@/lib/platformBillingTax'
+import { DEFAULT_PERSONAL_VAULT_PURITY, normalizePersonalVaultPurity } from '@/lib/personalVaultPurity'
+import { PersonalVaultPuritySelect } from '@/features/portfolio/PersonalVaultPuritySelect'
 
 const CATS = [
   { v: 'ornament', l: 'Ornament' },
@@ -73,7 +76,7 @@ export function InvoiceImportFlow({
   const [title, setTitle] = useState('')
   const [category, setCategory] = useState('ornament')
   const [weight, setWeight] = useState('')
-  const [purity, setPurity] = useState('BIS 916')
+  const [purity, setPurity] = useState(DEFAULT_PERSONAL_VAULT_PURITY)
   const [purchasePricePerGram, setPurchasePricePerGram] = useState('')
   const [purchaseValue, setPurchaseValue] = useState('')
   const [makingChargePercent, setMakingChargePercent] = useState('')
@@ -81,6 +84,7 @@ export function InvoiceImportFlow({
   const [purchaseDate, setPurchaseDate] = useState('')
   const [invoiceNumber, setInvoiceNumber] = useState('')
   const [confidence, setConfidence] = useState<'high' | 'medium' | 'low'>('medium')
+  const [billingTaxReady, setBillingTaxReady] = useState(false)
 
   const costSummaryHint = useMemo(
     () =>
@@ -90,7 +94,7 @@ export function InvoiceImportFlow({
         purchaseValue,
         makingChargePercent,
       ),
-    [weight, purchasePricePerGram, purchaseValue, makingChargePercent],
+    [weight, purchasePricePerGram, purchaseValue, makingChargePercent, billingTaxReady],
   )
   const rateFromBill = isGoldRateDerivedFromBill(weight, purchaseValue)
 
@@ -102,7 +106,7 @@ export function InvoiceImportFlow({
     setTitle('')
     setCategory('ornament')
     setWeight('')
-    setPurity('BIS 916')
+    setPurity(DEFAULT_PERSONAL_VAULT_PURITY)
     setPurchasePricePerGram('')
     setPurchaseValue('')
     setMakingChargePercent('')
@@ -118,11 +122,27 @@ export function InvoiceImportFlow({
     }
   }, [open, resetFlow])
 
+  useEffect(() => {
+    void fetchPlatformBillingTax().then(() => setBillingTaxReady(true))
+  }, [])
+
+  useEffect(() => {
+    if (!billingTaxReady) return
+    const synced = recalcRateFromBillOrValue(
+      weight,
+      purchasePricePerGram,
+      purchaseValue,
+      makingChargePercent,
+    )
+    setPurchasePricePerGram(synced.rate)
+    setPurchaseValue(synced.value)
+  }, [billingTaxReady])
+
   const applyExtract = (data: InvoiceExtractDTO) => {
     setTitle(data.title)
     setCategory(CATS.some((c) => c.v === data.category) ? data.category : 'other')
     setWeight(data.weight_grams)
-    setPurity(data.purity)
+    setPurity(normalizePersonalVaultPurity(data.purity))
     setPurchaseSource(data.purchase_source)
     setPurchaseDate(data.purchase_date ?? '')
     setPurchasePricePerGram(data.purchase_price_inr_per_gram ?? '')
@@ -188,7 +208,7 @@ export function InvoiceImportFlow({
         title: t,
         category,
         weight_grams: w,
-        purity: purity.trim() || 'BIS 916',
+        purity: normalizePersonalVaultPurity(purity),
         purchase_source: purchaseSource.trim() || undefined,
         purchase_date: purchaseDate.trim() || undefined,
         purchase_price_inr_per_gram:
@@ -384,12 +404,7 @@ export function InvoiceImportFlow({
               </label>
               <label className="pf-vault-field">
                 <span>Purity</span>
-                <input
-                  className="input pf-vault-form__input"
-                  value={purity}
-                  onChange={(e) => setPurity(e.target.value)}
-                  disabled={busy}
-                />
+                <PersonalVaultPuritySelect value={purity} onChange={setPurity} disabled={busy} />
               </label>
               <label className="pf-vault-field">
                 <span>Total purchase value (₹, optional)</span>

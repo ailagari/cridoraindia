@@ -26,8 +26,7 @@ class PersonalVaultBillingTests(TestCase):
         mc = Decimal("5.7")
         rate = derive_metal_rate_from_bill(weight, total, making_charge_percent=mc)
         self.assertIsNotNone(rate)
-        self.assertGreater(rate, Decimal("13000"))
-        self.assertLess(rate, Decimal("15000"))
+        self.assertEqual(rate, Decimal("13890.6897"))
 
     def test_bill_breakdown_from_total(self):
         bd = personal_vault_bill_breakdown(

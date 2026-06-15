@@ -21,7 +21,13 @@ import {
   type PersonalDocumentDTO,
   type PersonalHoldingDTO,
 } from '@/lib/personalHoldingsApi'
-import { resolveGstOnGoldPercent, resolveGstOnMakingPercent } from '@/lib/platformBillingTax'
+import {
+  fetchPlatformBillingTax,
+  resolveGstOnGoldPercent,
+  resolveGstOnMakingPercent,
+} from '@/lib/platformBillingTax'
+import { DEFAULT_PERSONAL_VAULT_PURITY, normalizePersonalVaultPurity } from '@/lib/personalVaultPurity'
+import { PersonalVaultPuritySelect } from '@/features/portfolio/PersonalVaultPuritySelect'
 
 function parseN(s: string): number {
   const n = Number.parseFloat(s)
@@ -142,7 +148,7 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
   const [title, setTitle] = useState('')
   const [category, setCategory] = useState('ornament')
   const [weight, setWeight] = useState('')
-  const [purity, setPurity] = useState('BIS 916')
+  const [purity, setPurity] = useState(DEFAULT_PERSONAL_VAULT_PURITY)
   const [purchasePricePerGram, setPurchasePricePerGram] = useState('')
   const [purchaseValue, setPurchaseValue] = useState('')
   const [makingChargePercent, setMakingChargePercent] = useState('')
@@ -150,6 +156,7 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
   const [purchaseDate, setPurchaseDate] = useState('')
   const [notes, setNotes] = useState('')
   const [approvedJewellers, setApprovedJewellers] = useState<JewellerStorefrontDTO[]>([])
+  const [billingTaxReady, setBillingTaxReady] = useState(false)
 
   const [vaultPage, setVaultPage] = useState(1)
   const [vaultOpenIds, setVaultOpenIds] = useState<Set<number>>(() => new Set())
@@ -173,7 +180,7 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
         purchaseValue,
         makingChargePercent,
       ),
-    [weight, purchasePricePerGram, purchaseValue, makingChargePercent],
+    [weight, purchasePricePerGram, purchaseValue, makingChargePercent, billingTaxReady],
   )
   const editCostSummaryHint = useMemo(
     () =>
@@ -183,7 +190,7 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
         ePurchaseValue,
         eMakingChargePercent,
       ),
-    [eWeight, ePurchasePrice, ePurchaseValue, eMakingChargePercent],
+    [eWeight, ePurchasePrice, ePurchaseValue, eMakingChargePercent, billingTaxReady],
   )
   const gstGoldPct = resolveGstOnGoldPercent()
   const gstMakingPct = resolveGstOnMakingPercent()
@@ -206,6 +213,34 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
   useEffect(() => {
     void refresh()
   }, [refresh])
+
+  useEffect(() => {
+    void fetchPlatformBillingTax().then(() => setBillingTaxReady(true))
+  }, [])
+
+  useEffect(() => {
+    if (!billingTaxReady) return
+    const synced = recalcRateFromBillOrValue(
+      weight,
+      purchasePricePerGram,
+      purchaseValue,
+      makingChargePercent,
+    )
+    setPurchasePricePerGram(synced.rate)
+    setPurchaseValue(synced.value)
+  }, [billingTaxReady])
+
+  useEffect(() => {
+    if (!billingTaxReady || editingId == null) return
+    const synced = recalcRateFromBillOrValue(
+      eWeight,
+      ePurchasePrice,
+      ePurchaseValue,
+      eMakingChargePercent,
+    )
+    setEPurchasePrice(synced.rate)
+    setEPurchaseValue(synced.value)
+  }, [billingTaxReady, editingId])
 
   const totalVaultPages = Math.max(1, Math.ceil(rows.length / VAULT_PAGE_SIZE))
   const pageRows = useMemo(() => {
@@ -269,7 +304,7 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
     setETitle(h.title)
     setECategory(h.category)
     setEWeight(h.weight_grams)
-    setEPurity(h.purity)
+    setEPurity(normalizePersonalVaultPurity(h.purity))
     setEPurchasePrice(h.purchase_price_inr_per_gram ?? '')
     setEPurchaseValue(purchaseValueFromHolding(h))
     setEMakingChargePercent(h.making_charge_percent ?? '')
@@ -297,7 +332,7 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
     setPurchaseValue('')
     setMakingChargePercent('')
     setCategory('ornament')
-    setPurity('BIS 916')
+    setPurity(DEFAULT_PERSONAL_VAULT_PURITY)
   }
 
   const finishAddSuccess = async (label: string, newId?: number) => {
@@ -327,7 +362,7 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
         title: eTitle.trim(),
         category: eCategory,
         weight_grams: eWeight.trim(),
-        purity: ePurity.trim() || 'BIS 916',
+        purity: normalizePersonalVaultPurity(ePurity),
         purchase_source: ePurchaseSource.trim(),
         purchase_date: ePurchaseDate.trim() || null,
         purchase_price_inr_per_gram:
@@ -373,7 +408,7 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
       title: title.trim(),
       category,
       weight_grams: weight.trim(),
-      purity: purity.trim() || 'BIS 916',
+      purity: normalizePersonalVaultPurity(purity),
       purchase_source: purchaseSource.trim() || undefined,
       purchase_date: purchaseDate.trim() || undefined,
       purchase_price_inr_per_gram:
@@ -631,12 +666,10 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
                   </div>
                 </label>
                 <label className="pf-vault-field">
-                  <span>Purity / hallmark</span>
-                  <input
-                    className="input pf-vault-form__input"
+                  <span>Purity</span>
+                  <PersonalVaultPuritySelect
                     value={purity}
-                    onChange={(e) => setPurity(e.target.value)}
-                    placeholder="BIS 916"
+                    onChange={setPurity}
                     disabled={busy}
                   />
                 </label>
@@ -942,7 +975,12 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
                             </label>
                             <label className="pf-vault-field">
                               <span>Purity</span>
-                              <input className="input" value={ePurity} onChange={(e) => setEPurity(e.target.value)} disabled={editBusy} />
+                              <PersonalVaultPuritySelect
+                                value={ePurity}
+                                onChange={setEPurity}
+                                disabled={editBusy}
+                                className="input"
+                              />
                             </label>
                             <label className="pf-vault-field">
                               <span>Total purchase value (₹, optional)</span>

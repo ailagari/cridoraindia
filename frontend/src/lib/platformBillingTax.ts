@@ -44,9 +44,16 @@ export async function fetchPlatformBillingTax(force = false): Promise<PlatformBi
       if (!res.ok || data.gst_on_gold_percent == null || data.gst_on_making_percent == null) {
         return null
       }
+      let gold = parsePercent(data.gst_on_gold_percent, DEFAULT_GST_ON_GOLD_PERCENT)
+      let making = parsePercent(data.gst_on_making_percent, DEFAULT_GST_ON_MAKING_PERCENT)
+      // Misconfigured platform row (both zero) — use India ornament defaults for bill math.
+      if (gold === 0 && making === 0) {
+        gold = DEFAULT_GST_ON_GOLD_PERCENT
+        making = DEFAULT_GST_ON_MAKING_PERCENT
+      }
       cached = {
-        gst_on_gold_percent: String(data.gst_on_gold_percent),
-        gst_on_making_percent: String(data.gst_on_making_percent),
+        gst_on_gold_percent: String(gold),
+        gst_on_making_percent: String(making),
       }
       return cached
     } finally {

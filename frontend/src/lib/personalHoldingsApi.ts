@@ -1,7 +1,8 @@
 import { authFetch, authUpload, apiUrl, getStoredAccess } from '@/lib/api'
 import type { PortfolioTotalsDTO } from '@/lib/goldTransferApi'
 
-import { ornamentBillFromMetal } from '@/lib/goldBillingTax'
+import { ornamentBillFromMetal, ornamentBillFromTotal } from '@/lib/goldBillingTax'
+import { DEFAULT_PERSONAL_VAULT_PURITY, normalizePersonalVaultPurity } from '@/lib/personalVaultPurity'
 import {
   DEFAULT_GST_ON_GOLD_PERCENT,
   DEFAULT_GST_ON_MAKING_PERCENT,
@@ -29,50 +30,45 @@ export type PersonalVaultBillBreakdown = {
   ratePerGram: string
 }
 
-/** Multiplier on pre-GST metal ₹ to reach invoice total (metal + MC + GST on both). */
-function billTotalMultiplier(makingChargePercentStr: string): number {
-  const mc = parsePersonalHoldingNumber(makingChargePercentStr)
-  return 1 + resolveGstOnGoldPercent() / 100 + (mc / 100) * (1 + resolveGstOnMakingPercent() / 100)
-}
-
-function metalInrFromBillInputs(
-  weightStr: string,
-  opts: { rateStr?: string; totalStr?: string; makingChargePercentStr?: string },
-): number | null {
-  const w = parsePersonalHoldingNumber(weightStr)
-  if (w <= 0) return null
-  const mc = opts.makingChargePercentStr ?? ''
-  if (opts.totalStr?.trim()) {
-    const total = parsePersonalHoldingNumber(opts.totalStr)
-    if (total <= 0) return null
-    return total / billTotalMultiplier(mc)
-  }
-  if (opts.rateStr?.trim()) {
-    const rate = parsePersonalHoldingNumber(opts.rateStr)
-    if (rate <= 0) return null
-    return w * rate
-  }
-  return null
-}
-
 export function breakdownPersonalVaultBill(
   weightStr: string,
   opts: { rateStr?: string; totalStr?: string; makingChargePercentStr?: string },
 ): PersonalVaultBillBreakdown | null {
   const w = parsePersonalHoldingNumber(weightStr)
-  const metal = metalInrFromBillInputs(weightStr, opts)
-  if (metal == null || w <= 0 || metal <= 0) return null
+  if (w <= 0) return null
   const mcPct = parsePersonalHoldingNumber(opts.makingChargePercentStr ?? '')
-  const raw = ornamentBillFromMetal(metal, mcPct)
-  if (!raw) return null
-  return {
-    metalInr: raw.metalInr.toFixed(2),
-    makingInr: raw.makingInr.toFixed(2),
-    gstOnGoldInr: raw.gstOnGoldInr.toFixed(2),
-    gstOnMakingInr: raw.gstOnMakingInr.toFixed(2),
-    totalInr: raw.totalInr.toFixed(2),
-    ratePerGram: (metal / w).toFixed(4),
+
+  if (opts.totalStr?.trim()) {
+    const total = parsePersonalHoldingNumber(opts.totalStr)
+    if (total <= 0) return null
+    const raw = ornamentBillFromTotal(w, total, mcPct)
+    if (!raw) return null
+    return {
+      metalInr: raw.metalInr.toFixed(2),
+      makingInr: raw.makingInr.toFixed(2),
+      gstOnGoldInr: raw.gstOnGoldInr.toFixed(2),
+      gstOnMakingInr: raw.gstOnMakingInr.toFixed(2),
+      totalInr: raw.totalInr.toFixed(2),
+      ratePerGram: raw.ratePerGram.toFixed(4),
+    }
   }
+
+  if (opts.rateStr?.trim()) {
+    const rate = parsePersonalHoldingNumber(opts.rateStr)
+    if (rate <= 0) return null
+    const raw = ornamentBillFromMetal(w * rate, mcPct)
+    if (!raw) return null
+    return {
+      metalInr: raw.metalInr.toFixed(2),
+      makingInr: raw.makingInr.toFixed(2),
+      gstOnGoldInr: raw.gstOnGoldInr.toFixed(2),
+      gstOnMakingInr: raw.gstOnMakingInr.toFixed(2),
+      totalInr: raw.totalInr.toFixed(2),
+      ratePerGram: rate.toFixed(4),
+    }
+  }
+
+  return null
 }
 
 export function formatPurchaseValueFromRate(
@@ -445,7 +441,7 @@ export async function analyzeInvoice(
       title: String(parsed.title ?? '').trim(),
       category: String(parsed.category ?? 'ornament').trim(),
       weight_grams: String(parsed.weight_grams ?? '').trim(),
-      purity: String(parsed.purity ?? 'BIS 916').trim() || 'BIS 916',
+      purity: normalizePersonalVaultPurity(String(parsed.purity ?? DEFAULT_PERSONAL_VAULT_PURITY)),
       purchase_date: parsed.purchase_date ?? null,
       purchase_source: String(parsed.purchase_source ?? '').trim(),
       purchase_price_inr_per_gram:
