@@ -94,7 +94,7 @@ export function GoldTickerStrip({ variant = 'public' }: Props) {
 
   useLivePoll(load, pollMs, true)
 
-  const rawGold = spot?.kerala_board?.gold
+  const rawGold = spot?.kerala_board?.gold ?? spot?.live_raw_spot?.gold
   const raw22 = numFromGold(rawGold, '22K')
   const raw24 = numFromGold(rawGold, '24K')
 
@@ -146,7 +146,7 @@ export function GoldTickerStrip({ variant = 'public' }: Props) {
           maxWidth: 'min(560px, 100%)',
         }}
       >
-        {spot?.source !== 'manual_ticker' && raw22 != null ? (
+        {raw22 != null ? (
           <>
             <span style={{ fontWeight: 800, color: 'var(--text-faint)', letterSpacing: '0.06em' }}>
               Raw Kerala

@@ -38,9 +38,9 @@ class SpotPricesTickerSourceTests(TestCase):
             ]
         )
 
-    @patch("apps.marketplace.spot_prices._build_board_inr_from_feed")
-    def test_live_mode_uses_kerala_board_not_manual(self, mock_board):
-        mock_board.return_value = dict(KERALA_LIVE)
+    @patch("apps.marketplace.josalukkas_rates.get_josalukkas_spot_payload_cached")
+    def test_live_mode_uses_kerala_board_not_manual(self, mock_feed):
+        mock_feed.return_value = dict(KERALA_LIVE)
         invalidate_spot_price_cache(force_kerala_refresh=True)
 
         payload = public_spot_prices_payload()
@@ -49,9 +49,9 @@ class SpotPricesTickerSourceTests(TestCase):
         self.assertEqual(payload["gold"]["22K"], 13645.0)
         self.assertEqual(payload["kerala_board"]["gold"]["22K"], 13645.0)
 
-    @patch("apps.marketplace.spot_prices._build_board_inr_from_feed")
-    def test_manual_mode_overrides_kerala_feed(self, mock_board):
-        mock_board.return_value = dict(KERALA_LIVE)
+    @patch("apps.marketplace.josalukkas_rates.get_josalukkas_spot_payload_cached")
+    def test_manual_mode_overrides_kerala_feed(self, mock_feed):
+        mock_feed.return_value = dict(KERALA_LIVE)
         self.ticker.manual_ticker_enabled = True
         self.ticker.ticker_manual_22k_inr_per_gram = Decimal("9999.00")
         self.ticker.save()
@@ -60,11 +60,25 @@ class SpotPricesTickerSourceTests(TestCase):
         payload = public_spot_prices_payload()
         self.assertEqual(payload.get("source"), "manual_ticker")
         self.assertEqual(payload["gold"]["22K"], 9999.0)
-        self.assertNotIn("kerala_board", payload)
+        self.assertIn("kerala_board", payload)
+        self.assertEqual(payload["kerala_board"]["gold"]["22K"], 13645.0)
 
-    @patch("apps.marketplace.spot_prices._build_board_inr_from_feed")
-    def test_switching_off_manual_returns_kerala_rates(self, mock_board):
-        mock_board.return_value = dict(KERALA_LIVE)
+    @patch("apps.marketplace.josalukkas_rates.get_josalukkas_spot_payload_cached")
+    def test_manual_mode_admin_payload_includes_live_raw(self, mock_feed):
+        mock_feed.return_value = dict(KERALA_LIVE)
+        self.ticker.manual_ticker_enabled = True
+        self.ticker.ticker_manual_22k_inr_per_gram = Decimal("9999.00")
+        self.ticker.save()
+        invalidate_spot_price_cache(force_kerala_refresh=True)
+
+        payload = public_spot_prices_payload(include_live_raw=True)
+        self.assertEqual(payload.get("source"), "manual_ticker")
+        self.assertIsNotNone(payload.get("live_raw_spot"))
+        self.assertEqual(payload["live_raw_spot"]["gold"]["22K"], 13645.0)
+
+    @patch("apps.marketplace.josalukkas_rates.get_josalukkas_spot_payload_cached")
+    def test_switching_off_manual_returns_kerala_rates(self, mock_feed):
+        mock_feed.return_value = dict(KERALA_LIVE)
 
         self.ticker.manual_ticker_enabled = True
         self.ticker.ticker_manual_22k_inr_per_gram = Decimal("8888.00")
@@ -80,9 +94,9 @@ class SpotPricesTickerSourceTests(TestCase):
         self.assertEqual(live_payload.get("source"), "kerala_gold_rate")
         self.assertEqual(live_payload["gold"]["22K"], 13645.0)
 
-    @patch("apps.marketplace.spot_prices._build_board_inr_from_feed")
-    def test_admin_preview_raw_matches_kerala_feed(self, mock_board):
-        mock_board.return_value = dict(KERALA_LIVE)
+    @patch("apps.marketplace.josalukkas_rates.get_josalukkas_spot_payload_cached")
+    def test_admin_preview_raw_matches_kerala_feed(self, mock_feed):
+        mock_feed.return_value = dict(KERALA_LIVE)
         raw = get_raw_spot_payload_for_admin_preview()
         self.assertEqual(raw.get("source"), "kerala_gold_rate")
         self.assertEqual(raw["gold"]["22K"], 13645.0)

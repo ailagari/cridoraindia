@@ -60,24 +60,65 @@ def persist_last_good_live_raw_snapshot(raw_payload: dict) -> None:
 
 
 def get_raw_spot_payload_for_admin_preview() -> dict:
-    """Unadjusted Kerala board INR ladder for admin markup preview (same feed as the public ticker)."""
-    data = _build_board_inr_from_feed()
+    """Unadjusted Kerala board INR ladder for admin markup preview (always refreshes feed)."""
+    data = refresh_live_kerala_feed()
     if data is not None:
         return data
-    t = get_or_create_ticker()
-    snap = t.last_good_live_raw_snapshot_json
-    if isinstance(snap, dict) and isinstance(snap.get("gold"), dict) and snap["gold"].get("22K") is not None:
-        return {
-            "currency": "INR",
-            "unit": "per_gram",
-            "source": "db_snapshot",
-            "gold": dict(snap["gold"]),
-            "silver": dict(snap["silver"]) if isinstance(snap.get("silver"), dict) else {},
-        }
-    intl = _build_intl_spot_inr_from_feed()
-    if intl is not None:
-        return intl
     return {}
+
+
+def refresh_live_kerala_feed(*, force_fetch: bool = False) -> dict | None:
+    """
+    Fetch Kerala board rates, persist snapshot, and warm spot caches.
+
+    Runs regardless of manual ticker mode so admins can compare live vs manual board.
+    """
+    from .josalukkas_rates import get_josalukkas_spot_payload_cached
+
+    data = get_josalukkas_spot_payload_cached(force_fetch=force_fetch)
+    if data is None:
+        ticker = get_or_create_ticker()
+        snap = ticker.last_good_live_raw_snapshot_json
+        if isinstance(snap, dict) and isinstance(snap.get("gold"), dict) and snap["gold"].get("22K") is not None:
+            data = {
+                "currency": "INR",
+                "unit": "per_gram",
+                "source": "db_snapshot",
+                "gold": dict(snap["gold"]),
+                "silver": dict(snap["silver"]) if isinstance(snap.get("silver"), dict) else {},
+            }
+        else:
+            stale = cache.get(_CACHE_KEY_LAST_GOOD)
+            if stale and isinstance(stale.get("gold"), dict) and stale["gold"].get("22K") is not None:
+                data = dict(stale)
+            else:
+                data = _build_intl_spot_inr_from_feed()
+
+    if data is not None and isinstance(data.get("gold"), dict) and data["gold"].get("22K") is not None:
+        src = str(data.get("source") or "")
+        if src not in ("db_snapshot", "platform_floor"):
+            persist_last_good_live_raw_snapshot(data)
+        cache.set(_CACHE_KEY_INR, data, timeout=_CACHE_TTL)
+        cache.set(_CACHE_KEY_LAST_GOOD, data, timeout=_CACHE_TTL_LAST_GOOD)
+    return data
+
+
+def _attach_kerala_board_from_live(payload: dict, live_feed: dict | None) -> dict:
+    """Attach raw Kerala board ladder for admin reference while manual rates are published."""
+    if not live_feed:
+        return payload
+    gold_block = live_feed.get("gold")
+    if not isinstance(gold_block, dict) or gold_block.get("22K") is None:
+        return payload
+    out = dict(payload)
+    out["kerala_board"] = {
+        "gold": dict(gold_block),
+        "silver": dict(live_feed.get("silver") or {}),
+        "source": live_feed.get("source"),
+        "source_updated_at": live_feed.get("source_updated_at"),
+        "rate_date": live_feed.get("rate_date"),
+    }
+    return out
 
 
 def invalidate_spot_price_cache(*, force_kerala_refresh: bool = False) -> None:
@@ -93,6 +134,7 @@ def invalidate_spot_price_cache(*, force_kerala_refresh: bool = False) -> None:
         invalidate_josalukkas_rates_cache()
         if force_kerala_refresh:
             get_josalukkas_spot_payload_cached(force_fetch=True)
+            refresh_live_kerala_feed(force_fetch=True)
     except Exception:
         pass
 
@@ -377,14 +419,17 @@ def _platform_ticker_fallback_inr() -> dict:
 
 def public_spot_prices_payload(*, include_live_raw: bool = False) -> dict:
     """Spot ladder + platform 22K base. International raw ladder only when include_live_raw=True (admin)."""
+    live_feed = refresh_live_kerala_feed()
     ticker = get_or_create_ticker()
     if (
         ticker.manual_ticker_enabled
         and ticker.ticker_manual_22k_inr_per_gram is not None
         and ticker.ticker_manual_22k_inr_per_gram > 0
     ):
+        manual_payload = _manual_ticker_spot_payload(ticker)
         return _finalize_spot_payload(
-            _manual_ticker_spot_payload(ticker), include_live_raw=include_live_raw
+            _attach_kerala_board_from_live(manual_payload, live_feed),
+            include_live_raw=include_live_raw,
         )
 
     cached = cache.get(_CACHE_KEY_INR)

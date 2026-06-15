@@ -253,6 +253,83 @@ function manualTickerRates(
   return { gold, silver }
 }
 
+function LiveKeralaPreviewTable({
+  rows,
+  rawPreviewSource,
+  title = 'Live Kerala ₹/g',
+  subtitle = '(saved rules · current raw feed)',
+}: {
+  rows: LivePreviewRow[]
+  rawPreviewSource?: string
+  title?: string
+  subtitle?: string
+}) {
+  return (
+    <div
+      className="card"
+      style={{
+        padding: '0.65rem 0.75rem',
+        borderRadius: 12,
+        border: '1px solid var(--border-soft)',
+        marginBottom: '1rem',
+        background: 'var(--veil-35)',
+      }}
+    >
+      <p style={{ margin: '0 0 0.35rem', fontWeight: 700, fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+        {title}{' '}
+        <span style={{ fontWeight: 500, color: 'var(--text-faint)' }}>{subtitle}</span>
+      </p>
+      <div className="dash-table-scroll">
+        <table className="admin-user-table" style={{ fontSize: '0.78rem', margin: 0 }}>
+          <thead>
+            <tr>
+              <th>Metal</th>
+              <th className="tabular">Kerala raw ₹/g</th>
+              <th className="tabular">+Markup</th>
+              <th className="tabular">Published</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.length === 0 ? (
+              <tr>
+                <td colSpan={4} style={{ color: 'var(--text-muted)' }}>
+                  Fetching live Kerala feed…
+                </td>
+              </tr>
+            ) : (
+              rows.map((r) => (
+                <tr key={`${r.family}-${r.key}`}>
+                  <td style={{ fontWeight: 600 }}>{r.label}</td>
+                  <td className="tabular" style={{ color: 'var(--text-muted)' }}>
+                    {r.raw_inr_per_gram != null
+                      ? `₹${formatMaybeStrInr(r.raw_inr_per_gram, r.family === 'silver' ? 3 : 2)}`
+                      : '—'}
+                  </td>
+                  <td className="tabular" style={{ color: 'var(--text-muted)', fontWeight: 600 }}>
+                    {r.after_markup_inr_per_gram != null
+                      ? `₹${formatMaybeStrInr(r.after_markup_inr_per_gram, r.family === 'silver' ? 3 : 2)}`
+                      : '—'}
+                  </td>
+                  <td className="tabular" style={{ color: 'var(--gold-light)', fontWeight: 700 }}>
+                    {r.final_inr_per_gram != null
+                      ? `₹${formatMaybeStrInr(r.final_inr_per_gram, r.family === 'silver' ? 3 : 2)}`
+                      : '—'}
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+      {rawPreviewSource ? (
+        <p style={{ margin: '0.4rem 0 0', fontSize: '0.68rem', color: 'var(--text-faint)' }}>
+          Feed: {publicRateSourceLabel(rawPreviewSource)}
+        </p>
+      ) : null}
+    </div>
+  )
+}
+
 function AdminPublishedRatesSummary(props: {
   manualOn: boolean
   previewRows: LivePreviewRow[] | undefined
@@ -274,118 +351,80 @@ function AdminPublishedRatesSummary(props: {
 
   if (manualOn) {
     const rates = manualTickerRates(manual22Draft, manual24Draft, manual18Draft, manualSilver999Draft)
+    const liveRows = previewRows ?? []
     return (
-      <div
-        className="card"
-        style={{
-          padding: '0.65rem 0.75rem',
-          borderRadius: 12,
-          border: '1px solid var(--border-soft)',
-          marginBottom: '1rem',
-          background: 'var(--veil-35)',
-        }}
-      >
-        <p style={{ margin: '0 0 0.45rem', fontWeight: 700, fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-          Manual board ₹/g
-        </p>
-        {!rates ? (
-          <p style={{ margin: 0, fontSize: '0.76rem', color: 'var(--text-muted)' }}>Enter 22K to preview.</p>
-        ) : (
-          <div className="dash-table-scroll">
-            <table className="admin-user-table" style={{ fontSize: '0.78rem', margin: 0 }}>
-              <thead>
-                <tr>
-                  <th>Metal</th>
-                  <th className="tabular">Board ₹/g</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(['24K', '22K', '21K', '18K'] as const).map((k) => (
-                  <tr key={k}>
-                    <td style={{ fontWeight: 600 }}>Gold {k}</td>
-                    <td className="tabular" style={{ color: 'var(--gold-light)', fontWeight: 700 }}>
-                      ₹{formatFinal('gold', rates.gold[k])}
-                    </td>
-                  </tr>
-                ))}
-                {(['999', '925'] as const).map((k) => (
-                  <tr key={k}>
-                    <td style={{ fontWeight: 600 }}>Silver {k}</td>
-                    <td className="tabular" style={{ color: 'var(--gold-light)', fontWeight: 700 }}>
-                      {rates.silver[k] != null ? `₹${formatFinal('silver', rates.silver[k])}` : '—'}
-                    </td>
-                  </tr>
-                ))}
-                {Object.keys(rates.silver).length === 0 ? (
+      <>
+        <div
+          className="card"
+          style={{
+            padding: '0.65rem 0.75rem',
+            borderRadius: 12,
+            border: '1px solid var(--gold-border)',
+            marginBottom: '1rem',
+            background: 'var(--gold-bg)',
+          }}
+        >
+          <p style={{ margin: '0 0 0.45rem', fontWeight: 700, fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+            Published manual board ₹/g <span style={{ fontWeight: 500 }}>(customers see this)</span>
+          </p>
+          {!rates ? (
+            <p style={{ margin: 0, fontSize: '0.76rem', color: 'var(--text-muted)' }}>Enter 22K to preview.</p>
+          ) : (
+            <div className="dash-table-scroll">
+              <table className="admin-user-table" style={{ fontSize: '0.78rem', margin: 0 }}>
+                <thead>
                   <tr>
-                    <td colSpan={2} style={{ fontSize: '0.72rem', color: 'var(--text-muted)', paddingTop: 6 }}>
-                      Silver omitted until you enter 999 ₹/g (925 is derived as 999 × 0.925).
-                    </td>
+                    <th>Metal</th>
+                    <th className="tabular">Board ₹/g</th>
                   </tr>
-                ) : null}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+                </thead>
+                <tbody>
+                  {(['24K', '22K', '21K', '18K'] as const).map((k) => (
+                    <tr key={k}>
+                      <td style={{ fontWeight: 600 }}>Gold {k}</td>
+                      <td className="tabular" style={{ color: 'var(--gold-light)', fontWeight: 700 }}>
+                        ₹{formatFinal('gold', rates.gold[k])}
+                      </td>
+                    </tr>
+                  ))}
+                  {(['999', '925'] as const).map((k) => (
+                    <tr key={k}>
+                      <td style={{ fontWeight: 600 }}>Silver {k}</td>
+                      <td className="tabular" style={{ color: 'var(--gold-light)', fontWeight: 700 }}>
+                        {rates.silver[k] != null ? `₹${formatFinal('silver', rates.silver[k])}` : '—'}
+                      </td>
+                    </tr>
+                  ))}
+                  {Object.keys(rates.silver).length === 0 ? (
+                    <tr>
+                      <td colSpan={2} style={{ fontSize: '0.72rem', color: 'var(--text-muted)', paddingTop: 6 }}>
+                        Silver omitted until you enter 999 ₹/g (925 is derived as 999 × 0.925).
+                      </td>
+                    </tr>
+                  ) : null}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+        <LiveKeralaPreviewTable
+          rows={liveRows}
+          rawPreviewSource={rawPreviewSource}
+          title="Live Kerala reference"
+          subtitle="(always refreshed for comparison — not published while manual is on)"
+        />
+      </>
     )
   }
 
   const rows = previewRows ?? []
   return (
-    <div
-      className="card"
-      style={{
-        padding: '0.65rem 0.75rem',
-        borderRadius: 12,
-        border: '1px solid var(--border-soft)',
-        marginBottom: '1rem',
-        background: 'var(--veil-35)',
-      }}
-    >
-      <p style={{ margin: '0 0 0.35rem', fontWeight: 700, fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-        Published ₹/g <span style={{ fontWeight: 500, color: 'var(--text-faint)' }}>(saved rules · current raw)</span>
-      </p>
-      <div className="dash-table-scroll">
-        <table className="admin-user-table" style={{ fontSize: '0.78rem', margin: 0 }}>
-          <thead>
-            <tr>
-              <th>Metal</th>
-              <th className="tabular">Kerala raw ₹/g</th>
-              <th className="tabular">+Markup</th>
-              <th className="tabular">Published</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => (
-              <tr key={`${r.family}-${r.key}`}>
-                <td style={{ fontWeight: 600 }}>{r.label}</td>
-                <td className="tabular" style={{ color: 'var(--text-muted)' }}>
-                  {r.raw_inr_per_gram != null
-                    ? `₹${formatMaybeStrInr(r.raw_inr_per_gram, r.family === 'silver' ? 3 : 2)}`
-                    : '—'}
-                </td>
-                <td className="tabular" style={{ color: 'var(--text-muted)', fontWeight: 600 }}>
-                  {r.after_markup_inr_per_gram != null
-                    ? `₹${formatMaybeStrInr(r.after_markup_inr_per_gram, r.family === 'silver' ? 3 : 2)}`
-                    : '—'}
-                </td>
-                <td className="tabular" style={{ color: 'var(--gold-light)', fontWeight: 700 }}>
-                  {r.final_inr_per_gram != null
-                    ? `₹${formatMaybeStrInr(r.final_inr_per_gram, r.family === 'silver' ? 3 : 2)}`
-                    : '—'}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      {rawPreviewSource ? (
-        <p style={{ margin: '0.4rem 0 0', fontSize: '0.68rem', color: 'var(--text-faint)' }}>
-          Feed: {publicRateSourceLabel(rawPreviewSource)}
-        </p>
-      ) : null}
-    </div>
+    <LiveKeralaPreviewTable
+      rows={rows}
+      rawPreviewSource={rawPreviewSource}
+      title="Published ₹/g"
+      subtitle="(saved rules · current raw)"
+    />
   )
 }
 
@@ -518,22 +557,39 @@ export function AdminGoldTickerPanel() {
           <strong>Fractional investment markup</strong> (above) applies on top of jeweller board rates for vault purchases.{' '}
           <strong>Live:</strong> Cridora refreshes Kerala gold rates in the background; optional admin markup/deduction applies before publishing.{' '}
           Jewellers can follow the Cridora live rate or set their own board rates on their storefront.{' '}
-          <strong>Manual:</strong> fixed gold (22K/18K/24K) and optional silver board rates (no row rules). Push alerts are configured under{' '}
+          <strong>Manual:</strong> fixed gold (22K/18K/24K) and optional silver board rates (no row rules). Live Kerala feed still refreshes below for comparison. Push alerts are configured under{' '}
           <strong>Pushes &amp; alerts</strong>.
         </p>
         {data ? (
           <ul className="admin-ticker-panel__meta" aria-label="Current ticker snapshot">
             <li>
-              <span className="admin-ticker-panel__meta-k">Live 22K</span>
+              <span className="admin-ticker-panel__meta-k">{manualOn ? 'Published 22K' : 'Live 22K'}</span>
               <strong className="tabular">
                 ₹{formatMaybeStrInr(data.platform_base_inr_per_gram_22k)}
               </strong>
               <span style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>/g</span>
             </li>
+            {manualOn ? (
+              <li>
+                <span className="admin-ticker-panel__meta-k">Kerala live 22K</span>
+                <strong className="tabular">
+                  {previewRow('gold', '22K')?.raw_inr_per_gram
+                    ? `₹${formatMaybeStrInr(previewRow('gold', '22K')!.raw_inr_per_gram!)}`
+                    : '—'}
+                </strong>
+                <span style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>/g</span>
+              </li>
+            ) : null}
             <li>
               <span className="admin-ticker-panel__meta-k">Feed</span>
               <span>{data.cridora_base_source ? data.cridora_base_source.replace(/_/g, ' ') : '—'}</span>
             </li>
+            {manualOn && data.live_spot_raw_preview?.source ? (
+              <li>
+                <span className="admin-ticker-panel__meta-k">Live feed</span>
+                <span>{publicRateSourceLabel(data.live_spot_raw_preview.source)}</span>
+              </li>
+            ) : null}
             <li>
               <span className="admin-ticker-panel__meta-k">Alert baseline</span>
               <strong className="tabular">{data.rate_alert_baseline_inr_per_gram_22k ?? '—'}</strong>

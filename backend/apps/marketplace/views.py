@@ -432,9 +432,7 @@ class AdminGoldTickerView(APIView):
             return Response(ser.errors, status=status.HTTP_400_BAD_REQUEST)
         ser.save()
         ticker.refresh_from_db()
-        invalidate_spot_price_cache(
-            force_kerala_refresh=not ticker.manual_ticker_enabled,
-        )
+        invalidate_spot_price_cache(force_kerala_refresh=True)
         try:
             from decimal import Decimal
 
