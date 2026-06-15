@@ -205,12 +205,26 @@ export function recalcRateFromBillOrValue(
   return { rate: '', value: '' }
 }
 
+/** Re-derive gold ₹/g from a user-entered bill total without changing the total. */
+export function recalcRateOnlyFromBillTotal(
+  weightStr: string,
+  valueStr: string,
+  makingChargePercentStr: string,
+): string {
+  if (!valueStr.trim()) return ''
+  return formatRateFromPurchaseValue(weightStr, valueStr, makingChargePercentStr)
+}
+
 export function purchaseValueFromHolding(h: {
+  purchase_total_inr?: string | null
   purchase_cost_basis_inr: string
   purchase_price_inr_per_gram: string | null
   making_charge_percent?: string | null
   weight_grams: string
 }): string {
+  const stored = (h.purchase_total_inr ?? '').trim()
+  if (stored) return stored
+
   const basis = parsePersonalHoldingNumber(h.purchase_cost_basis_inr)
   if (basis > 0 && h.purchase_price_inr_per_gram) {
     return formatPurchaseValueFromRate(
@@ -279,6 +293,7 @@ export type PersonalHoldingDTO = {
   purchase_date: string | null
   purchase_source: string
   purchase_price_inr_per_gram: string | null
+  purchase_total_inr: string | null
   making_charge_percent: string | null
   purchase_cost_basis_inr: string
   reference_gain_inr: string

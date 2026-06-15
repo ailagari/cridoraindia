@@ -2356,6 +2356,13 @@ class PersonalGoldHolding(models.Model):
         blank=True,
         help_text="Optional: making charge as % of metal value at purchase.",
     )
+    purchase_total_inr = models.DecimalField(
+        max_digits=18,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Optional: total bill amount the customer entered (₹) — preserved as entered.",
+    )
     estimated_current_value_inr = models.DecimalField(
         max_digits=18,
         decimal_places=2,

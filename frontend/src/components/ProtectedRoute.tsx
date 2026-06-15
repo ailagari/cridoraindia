@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth, type UserType } from '@/context/AuthContext'
-import { getStoredAccess } from '@/lib/api'
+import { getStoredAccess, getStoredRefresh } from '@/lib/api'
 import { dashboardLandingPath } from '@/lib/routes'
 
 type Props = {
@@ -22,7 +22,7 @@ export function ProtectedRoute({ allow, children }: Props) {
     )
   }
 
-  if (!user || !getStoredAccess()) {
+  if (!user || (!getStoredAccess() && !getStoredRefresh())) {
     return <Navigate to="/login" state={{ from: loc }} replace />
   }
 

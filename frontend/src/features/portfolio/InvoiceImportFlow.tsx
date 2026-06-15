@@ -8,6 +8,7 @@ import {
   describePersonalVaultCostSummary,
   isGoldRateDerivedFromBill,
   recalcRateFromBillOrValue,
+  recalcRateOnlyFromBillTotal,
   uploadPersonalDocument,
   type InvoiceExtractDTO,
   type PersonalHoldingDTO,
@@ -128,14 +129,11 @@ export function InvoiceImportFlow({
 
   useEffect(() => {
     if (!billingTaxReady) return
-    const synced = recalcRateFromBillOrValue(
-      weight,
-      purchasePricePerGram,
-      purchaseValue,
-      makingChargePercent,
-    )
-    setPurchasePricePerGram(synced.rate)
-    setPurchaseValue(synced.value)
+    if (purchaseValue.trim()) {
+      setPurchasePricePerGram(
+        recalcRateOnlyFromBillTotal(weight, purchaseValue, makingChargePercent),
+      )
+    }
   }, [billingTaxReady])
 
   const applyExtract = (data: InvoiceExtractDTO) => {

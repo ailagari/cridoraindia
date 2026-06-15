@@ -2,7 +2,7 @@ from decimal import Decimal
 
 from django.test import TestCase
 
-from apps.accounts.models import PlatformOperationalSettings
+from apps.accounts.models import PlatformOperationalSettings, User
 from apps.accounts.services.personal_vault_billing import (
     derive_metal_rate_from_bill,
     personal_vault_bill_breakdown,
@@ -46,3 +46,28 @@ class PersonalVaultBillingTests(TestCase):
             making_charge_percent=Decimal("0"),
         )
         self.assertEqual(rate, Decimal("10000.0000"))
+
+    def test_create_holding_preserves_purchase_total_inr(self):
+        customer = User.objects.create_user(
+            username="vaultcust@example.com",
+            email="vaultcust@example.com",
+            password="test-pass",
+            user_type=User.CUSTOMER,
+            kyc_status=User.KYC_VERIFIED,
+        )
+        from apps.accounts.models import PersonalGoldHolding
+
+        h = PersonalGoldHolding.objects.create(
+            user=customer,
+            title="Chain",
+            category=PersonalGoldHolding.CATEGORY_ORNAMENT,
+            weight_grams=Decimal("1.1890"),
+            purity="22K",
+            purchase_price_inr_per_gram=Decimal("13890.6897"),
+            making_charge_percent=Decimal("5.7"),
+            purchase_total_inr=Decimal("18000.00"),
+            created_by_type=PersonalGoldHolding.CREATED_BY_USER,
+            created_by_id=customer.id,
+        )
+        h.refresh_from_db()
+        self.assertEqual(h.purchase_total_inr, Decimal("18000.00"))

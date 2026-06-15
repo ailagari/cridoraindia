@@ -84,6 +84,10 @@ function readAuthPersistence(): AuthPersistence {
   return v === 'session' ? 'session' : 'local'
 }
 
+export function getAuthPersistence(): AuthPersistence {
+  return readAuthPersistence()
+}
+
 export function setAuthPersistence(mode: AuthPersistence): void {
   localStorage.setItem(AUTH_PERSISTENCE_KEY, mode)
 }
@@ -92,8 +96,12 @@ function authStorage(): Storage {
   return readAuthPersistence() === 'session' ? sessionStorage : localStorage
 }
 
+/** Prefer the active persistence store; fall back to the other for legacy keys. */
 function readTokenFromStores(key: string): string | null {
-  return sessionStorage.getItem(key) ?? localStorage.getItem(key)
+  const primary = authStorage().getItem(key)
+  if (primary) return primary
+  const fallback = authStorage() === sessionStorage ? localStorage : sessionStorage
+  return fallback.getItem(key)
 }
 
 export function getStoredAccess(): string | null {
@@ -219,24 +227,101 @@ export async function apiFetch(
   }
 }
 
-async function refreshTokens(): Promise<string | null> {
-  const refresh = getStoredRefresh()
-  if (!refresh) return null
-  const refr = await fetch(apiUrl('/api/v1/auth/token/refresh/'), {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ refresh }),
-  })
+let refreshInFlight: Promise<string | null> | null = null
+
+function accessChangedSince(previous: string | null): string | null {
+  const current = getStoredAccess()
+  if (!current || current === previous) return null
+  return current
+}
+
+/** Single-flight refresh; never signs out on transient network/server errors. */
+async function performTokenRefresh(): Promise<string | null> {
+  const refreshAtStart = getStoredRefresh()
+  const accessAtStart = getStoredAccess()
+  if (!refreshAtStart) return null
+
+  let refr: Response
+  try {
+    refr = await fetch(apiUrl('/api/v1/auth/token/refresh/'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh: refreshAtStart }),
+    })
+  } catch {
+    return accessChangedSince(accessAtStart)
+  }
+
   const data = (await refr.json().catch(() => ({}))) as {
     access?: string
     refresh?: string
   }
-  if (!refr.ok || !data.access) {
-    invalidateSession()
-    return null
+
+  if (refr.ok && data.access) {
+    storeTokens(data.access, data.refresh ?? refreshAtStart)
+    return data.access
   }
-  storeTokens(data.access, data.refresh ?? refresh)
-  return data.access
+
+  const rotated = accessChangedSince(accessAtStart)
+  const refreshNow = getStoredRefresh()
+  if (rotated && refreshNow && refreshNow !== refreshAtStart) {
+    return rotated
+  }
+
+  if (refr.status === 401 || refr.status === 403) {
+    invalidateSession()
+  }
+  return null
+}
+
+function refreshTokens(): Promise<string | null> {
+  if (!refreshInFlight) {
+    refreshInFlight = performTokenRefresh().finally(() => {
+      refreshInFlight = null
+    })
+  }
+  return refreshInFlight
+}
+
+async function resolveAccessAfterUnauthorized(previousAccess: string): Promise<string | null> {
+  const refreshed = await refreshTokens()
+  if (refreshed) return refreshed
+  return accessChangedSince(previousAccess)
+}
+
+function sessionStillStored(): boolean {
+  return Boolean(getStoredAccess() || getStoredRefresh())
+}
+
+type AuthRequestRunner = (access: string) => Promise<Response>
+
+async function authRequestWithRefresh(
+  previousAccess: string,
+  run: AuthRequestRunner,
+  staleResponse: Response,
+): Promise<Response> {
+  const nextAccess = await resolveAccessAfterUnauthorized(previousAccess)
+  if (!nextAccess) {
+    return staleResponse
+  }
+
+  const retry = await run(nextAccess)
+  if (retry.status !== 401) {
+    return retry
+  }
+
+  const again = await resolveAccessAfterUnauthorized(nextAccess)
+  if (again) {
+    const retry2 = await run(again)
+    if (retry2.status !== 401) {
+      return retry2
+    }
+  }
+
+  if (sessionStillStored()) {
+    invalidateSession()
+  }
+  return retry
 }
 
 /** Authenticated requests with JWT refresh on 401 */
@@ -259,7 +344,7 @@ export async function authFetch(
 
   assertApiReachable()
 
-  const run = async (access: string) => {
+  const run: AuthRequestRunner = async (access: string) => {
     try {
       return await fetch(apiUrl(path), {
         ...rest,
@@ -273,22 +358,19 @@ export async function authFetch(
 
   let access = getStoredAccess()
   if (!access) {
-    throw new Error('Not signed in')
+    if (getStoredRefresh()) {
+      access = (await refreshTokens()) ?? getStoredAccess()
+    }
+    if (!access) {
+      throw new Error('Not signed in')
+    }
   }
-  let res = await run(access)
+
+  const res = await run(access)
   if (res.status !== 401) {
     return res
   }
-  const next = await refreshTokens()
-  if (!next) {
-    invalidateSession()
-    return res
-  }
-  const retry = await run(next)
-  if (retry.status === 401) {
-    invalidateSession()
-  }
-  return retry
+  return authRequestWithRefresh(access, run, res)
 }
 
 export async function authUpload(
@@ -301,25 +383,22 @@ export async function authUpload(
     h.set('Authorization', `Bearer ${access}`)
     return h
   }
-  const run = (access: string) =>
+  const run: AuthRequestRunner = (access: string) =>
     fetch(apiUrl(path), { method, headers: makeHeaders(access), body: formData })
 
   let access = getStoredAccess()
   if (!access) {
-    throw new Error('Not signed in')
+    if (getStoredRefresh()) {
+      access = (await refreshTokens()) ?? getStoredAccess()
+    }
+    if (!access) {
+      throw new Error('Not signed in')
+    }
   }
-  let res = await run(access)
+
+  const res = await run(access)
   if (res.status !== 401) {
     return res
   }
-  const next = await refreshTokens()
-  if (!next) {
-    invalidateSession()
-    return res
-  }
-  const retry = await run(next)
-  if (retry.status === 401) {
-    invalidateSession()
-  }
-  return retry
+  return authRequestWithRefresh(access, run, res)
 }

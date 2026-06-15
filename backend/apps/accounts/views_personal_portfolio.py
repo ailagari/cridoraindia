@@ -184,6 +184,11 @@ def _holding_detail_dict(
         "making_charge_percent": (
             str(h.making_charge_percent) if h.making_charge_percent is not None else None
         ),
+        "purchase_total_inr": (
+            str(h.purchase_total_inr.quantize(Decimal("0.01")))
+            if h.purchase_total_inr is not None
+            else None
+        ),
         "purchase_cost_basis_inr": str(basis) if basis is not None else "",
         "reference_gain_inr": gain_inr_s,
         "reference_gain_percent": gain_pct_s,
@@ -431,6 +436,13 @@ class PersonalHoldingsListCreateView(APIView):
             )
             if merr:
                 return Response({"detail": merr}, status=status.HTTP_400_BAD_REQUEST)
+        purchase_total_inr = None
+        if request.data.get("purchase_total_inr") not in (None, "", "null"):
+            purchase_total_inr, terr = _parse_purchase_total_inr_field(
+                request.data.get("purchase_total_inr")
+            )
+            if terr:
+                return Response({"detail": terr}, status=status.HTTP_400_BAD_REQUEST)
         purchase_price_inr_per_gram, perr = _resolve_holding_purchase_fields(
             weight_grams=weight_grams,
             purchase_price_inr_per_gram_raw=request.data.get("purchase_price_inr_per_gram"),
@@ -460,6 +472,7 @@ class PersonalHoldingsListCreateView(APIView):
                 purchase_source=purchase_source,
                 purchase_price_inr_per_gram=purchase_price_inr_per_gram,
                 making_charge_percent=making_charge_percent,
+                purchase_total_inr=purchase_total_inr,
                 is_self_declared=True,
                 verification_status=PersonalGoldHolding.SELF_DECLARED,
                 created_by_type=PersonalGoldHolding.CREATED_BY_USER,
@@ -536,6 +549,7 @@ class PersonalHoldingDetailView(APIView):
                 and "purchase_price_inr_per_gram" in request.data
             ):
                 h.purchase_price_inr_per_gram = None
+                h.purchase_total_inr = None
             else:
                 ppv, perr = _resolve_holding_purchase_fields(
                     weight_grams=h.weight_grams,
@@ -546,6 +560,15 @@ class PersonalHoldingDetailView(APIView):
                 if perr:
                     return Response({"detail": perr}, status=status.HTTP_400_BAD_REQUEST)
                 h.purchase_price_inr_per_gram = ppv
+        if "purchase_total_inr" in request.data:
+            raw_total = request.data.get("purchase_total_inr")
+            if raw_total in (None, "", "null"):
+                h.purchase_total_inr = None
+            else:
+                purchase_total_inr, terr = _parse_purchase_total_inr_field(raw_total)
+                if terr:
+                    return Response({"detail": terr}, status=status.HTTP_400_BAD_REQUEST)
+                h.purchase_total_inr = purchase_total_inr
         if "making_charge_percent" in request.data:
             raw_mc = request.data.get("making_charge_percent")
             if raw_mc in (None, "", "null"):

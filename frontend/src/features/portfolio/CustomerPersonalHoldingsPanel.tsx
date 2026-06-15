@@ -16,6 +16,7 @@ import {
   openPersonalDocumentDownload,
   purchaseValueFromHolding,
   recalcRateFromBillOrValue,
+  recalcRateOnlyFromBillTotal,
   updatePersonalHolding,
   uploadPersonalDocument,
   type PersonalDocumentDTO,
@@ -220,26 +221,28 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
 
   useEffect(() => {
     if (!billingTaxReady) return
-    const synced = recalcRateFromBillOrValue(
-      weight,
-      purchasePricePerGram,
-      purchaseValue,
-      makingChargePercent,
-    )
-    setPurchasePricePerGram(synced.rate)
-    setPurchaseValue(synced.value)
+    if (purchaseValue.trim()) {
+      setPurchasePricePerGram(
+        recalcRateOnlyFromBillTotal(weight, purchaseValue, makingChargePercent),
+      )
+      return
+    }
+    if (purchasePricePerGram.trim()) {
+      const synced = recalcRateFromBillOrValue(
+        weight,
+        purchasePricePerGram,
+        '',
+        makingChargePercent,
+      )
+      setPurchaseValue(synced.value)
+    }
   }, [billingTaxReady])
 
   useEffect(() => {
-    if (!billingTaxReady || editingId == null) return
-    const synced = recalcRateFromBillOrValue(
-      eWeight,
-      ePurchasePrice,
-      ePurchaseValue,
-      eMakingChargePercent,
+    if (!billingTaxReady || editingId == null || !ePurchaseValue.trim()) return
+    setEPurchasePrice(
+      recalcRateOnlyFromBillTotal(eWeight, ePurchaseValue, eMakingChargePercent),
     )
-    setEPurchasePrice(synced.rate)
-    setEPurchaseValue(synced.value)
   }, [billingTaxReady, editingId])
 
   const totalVaultPages = Math.max(1, Math.ceil(rows.length / VAULT_PAGE_SIZE))
@@ -305,8 +308,13 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
     setECategory(h.category)
     setEWeight(h.weight_grams)
     setEPurity(normalizePersonalVaultPurity(h.purity))
-    setEPurchasePrice(h.purchase_price_inr_per_gram ?? '')
-    setEPurchaseValue(purchaseValueFromHolding(h))
+    const storedPurchaseValue = purchaseValueFromHolding(h)
+    setEPurchaseValue(storedPurchaseValue)
+    setEPurchasePrice(
+      storedPurchaseValue
+        ? recalcRateOnlyFromBillTotal(h.weight_grams, storedPurchaseValue, h.making_charge_percent ?? '')
+        : (h.purchase_price_inr_per_gram ?? ''),
+    )
     setEMakingChargePercent(h.making_charge_percent ?? '')
     setEPurchaseSource(h.purchase_source)
     setEPurchaseDate(h.purchase_date?.slice(0, 10) ?? '')

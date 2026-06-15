@@ -13,7 +13,6 @@ import {
   getStoredAccess,
   getStoredRefresh,
   getStoredUserJson,
-  invalidateSession,
   SESSION_INVALIDATED_EVENT,
   setAuthPersistence,
   storeTokens,
@@ -84,20 +83,69 @@ function saveUser(u: AuthUser) {
   storeUserJson(JSON.stringify(u))
 }
 
+function parseMePayload(data: Record<string, unknown>): AuthUser {
+  return {
+    id: Number(data.id),
+    email: String(data.email),
+    first_name: String(data.first_name ?? ''),
+    last_name: String(data.last_name ?? ''),
+    user_type: data.user_type as UserType,
+    kyc_status: String(data.kyc_status ?? 'pending'),
+    business_name: typeof data.business_name === 'string' ? data.business_name : '',
+    profile_photo_url: typeof data.profile_photo_url === 'string' ? data.profile_photo_url : '',
+    logo_url: typeof data.logo_url === 'string' ? data.logo_url : '',
+  }
+}
+
+function hasStoredSession(): boolean {
+  return Boolean(getStoredAccess() || getStoredRefresh())
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    const token = getStoredAccess()
-    const cached = readStoredUser()
-    if (token && cached) {
-      setUser(cached)
-    } else if (!token && cached) {
-      clearTokens()
+  const refreshProfile = useCallback(async () => {
+    if (!hasStoredSession()) {
+      setUser(null)
+      return
     }
-    setLoading(false)
+    try {
+      const res = await authFetch('/api/v1/auth/me/')
+      if (!res.ok) {
+        if (!hasStoredSession()) {
+          setUser(null)
+        }
+        return
+      }
+      const data = (await res.json()) as Record<string, unknown>
+      const u = parseMePayload(data)
+      saveUser(u)
+      setUser(u)
+    } catch {
+      // Transient network errors — keep cached session (remember-me stays signed in).
+    }
   }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      const cached = readStoredUser()
+      if (cached && hasStoredSession()) {
+        setUser(cached)
+        await refreshProfile()
+      } else if (cached && !hasStoredSession()) {
+        clearTokens()
+        setUser(null)
+      }
+      if (!cancelled) {
+        setLoading(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [refreshProfile])
 
   useEffect(() => {
     const onInvalidated = () => setUser(null)
@@ -109,24 +157,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (loading) return
-    if (!user || !getStoredAccess()) return
+    if (!user || !hasStoredSession()) return
     void ensureBackgroundPushDelivery({ promptIfNeeded: false })
   }, [loading, user])
 
   useEffect(() => {
     if (loading) return
-    const retryBackgroundPush = () => {
-      if (!user || !getStoredAccess()) return
+    const onVisible = () => {
       if (document.visibilityState !== 'visible') return
-      void ensureBackgroundPushDelivery({ promptIfNeeded: false })
+      if (user && hasStoredSession()) {
+        void ensureBackgroundPushDelivery({ promptIfNeeded: false })
+      }
+      if (hasStoredSession()) {
+        void refreshProfile()
+      }
     }
-    document.addEventListener('visibilitychange', retryBackgroundPush)
-    window.addEventListener('focus', retryBackgroundPush)
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('focus', onVisible)
     return () => {
-      document.removeEventListener('visibilitychange', retryBackgroundPush)
-      window.removeEventListener('focus', retryBackgroundPush)
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('focus', onVisible)
     }
-  }, [loading, user])
+  }, [loading, user, refreshProfile])
 
   const persistSession = useCallback((data: Record<string, unknown>) => {
     const access = String(data.access ?? '')
@@ -224,32 +276,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     clearTokens()
     setUser(null)
-  }, [])
-
-  const refreshProfile = useCallback(async () => {
-    if (!getStoredAccess()) return
-    const res = await authFetch('/api/v1/auth/me/')
-    if (!res.ok) {
-      if (res.status === 401 || !getStoredAccess()) {
-        invalidateSession()
-        setUser(null)
-      }
-      return
-    }
-    const data = (await res.json()) as Record<string, unknown>
-    const u: AuthUser = {
-      id: Number(data.id),
-      email: String(data.email),
-      first_name: String(data.first_name ?? ''),
-      last_name: String(data.last_name ?? ''),
-      user_type: data.user_type as UserType,
-      kyc_status: String(data.kyc_status ?? 'pending'),
-      business_name: typeof data.business_name === 'string' ? data.business_name : '',
-      profile_photo_url: typeof data.profile_photo_url === 'string' ? data.profile_photo_url : '',
-      logo_url: typeof data.logo_url === 'string' ? data.logo_url : '',
-    }
-    saveUser(u)
-    setUser(u)
   }, [])
 
   const changePassword = useCallback(
