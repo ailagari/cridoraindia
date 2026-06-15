@@ -3,6 +3,138 @@ import type { PortfolioTotalsDTO } from '@/lib/goldTransferApi'
 
 export type { PortfolioTotalsDTO }
 
+export function parsePersonalHoldingNumber(s: string): number {
+  const n = Number.parseFloat(s)
+  return Number.isFinite(n) ? n : 0
+}
+
+function metalValueMultiplier(makingChargePercentStr: string): number {
+  const mc = parsePersonalHoldingNumber(makingChargePercentStr)
+  if (mc <= 0) return 1
+  return 1 + mc / 100
+}
+
+export function formatPurchaseValueFromRate(
+  weightStr: string,
+  rateStr: string,
+  makingChargePercentStr = '',
+): string {
+  const w = parsePersonalHoldingNumber(weightStr)
+  const r = parsePersonalHoldingNumber(rateStr)
+  if (w <= 0 || r <= 0) return ''
+  const metal = w * r
+  return (metal * metalValueMultiplier(makingChargePercentStr)).toFixed(2)
+}
+
+export function formatRateFromPurchaseValue(
+  weightStr: string,
+  valueStr: string,
+  makingChargePercentStr = '',
+): string {
+  const w = parsePersonalHoldingNumber(weightStr)
+  const v = parsePersonalHoldingNumber(valueStr)
+  if (w <= 0 || v <= 0) return ''
+  const metal = v / metalValueMultiplier(makingChargePercentStr)
+  return (metal / w).toFixed(4)
+}
+
+export function derivePurchasePricePerGram(
+  weightStr: string,
+  rateStr: string,
+  valueStr: string,
+  makingChargePercentStr = '',
+): string | undefined {
+  const w = parsePersonalHoldingNumber(weightStr)
+  const v = parsePersonalHoldingNumber(valueStr)
+  // Bill total is the source of truth when provided — backs out making charge to get metal ₹/g.
+  if (w > 0 && v > 0) {
+    return formatRateFromPurchaseValue(weightStr, valueStr, makingChargePercentStr)
+  }
+  const rate = rateStr.trim()
+  if (rate) return rate
+  return undefined
+}
+
+export function isDerivedGoldRateFromPurchaseValue(
+  weightStr: string,
+  rateStr: string,
+  valueStr: string,
+  makingChargePercentStr = '',
+): boolean {
+  const w = parsePersonalHoldingNumber(weightStr)
+  const v = parsePersonalHoldingNumber(valueStr)
+  if (w <= 0 || v <= 0) return false
+  const derived = formatRateFromPurchaseValue(weightStr, valueStr, makingChargePercentStr)
+  if (!derived) return false
+  const entered = rateStr.trim()
+  if (!entered) return true
+  return Math.abs(parsePersonalHoldingNumber(entered) - parsePersonalHoldingNumber(derived)) < 0.0001
+}
+
+export function describeDerivedGoldRate(
+  weightStr: string,
+  valueStr: string,
+  makingChargePercentStr = '',
+): string {
+  const w = parsePersonalHoldingNumber(weightStr)
+  const v = parsePersonalHoldingNumber(valueStr)
+  if (w <= 0 || v <= 0) return ''
+  const rate = formatRateFromPurchaseValue(weightStr, valueStr, makingChargePercentStr)
+  if (!rate) return ''
+  const rateInr = parsePersonalHoldingNumber(rate).toLocaleString('en-IN')
+  const mc = parsePersonalHoldingNumber(makingChargePercentStr)
+  if (mc > 0) {
+    return `Gold rate ₹${rateInr}/g calculated from bill total after ${mc}% making charge.`
+  }
+  return `Gold rate ₹${rateInr}/g calculated from bill total ÷ weight.`
+}
+
+export function isGoldRateDerivedFromBill(weightStr: string, valueStr: string): boolean {
+  return parsePersonalHoldingNumber(weightStr) > 0 && valueStr.trim() !== ''
+}
+
+/** When bill total is known, always derive ₹/g from it (making charge strips out MC first). */
+export function recalcRateFromBillOrValue(
+  weightStr: string,
+  rateStr: string,
+  valueStr: string,
+  makingChargePercentStr: string,
+): { rate: string; value: string } {
+  if (valueStr.trim()) {
+    return {
+      rate: formatRateFromPurchaseValue(weightStr, valueStr, makingChargePercentStr),
+      value: valueStr,
+    }
+  }
+  if (rateStr.trim()) {
+    return {
+      rate: rateStr,
+      value: formatPurchaseValueFromRate(weightStr, rateStr, makingChargePercentStr),
+    }
+  }
+  return { rate: '', value: '' }
+}
+
+export function purchaseValueFromHolding(h: {
+  purchase_cost_basis_inr: string
+  purchase_price_inr_per_gram: string | null
+  making_charge_percent?: string | null
+  weight_grams: string
+}): string {
+  const basis = parsePersonalHoldingNumber(h.purchase_cost_basis_inr)
+  const mc = parsePersonalHoldingNumber(h.making_charge_percent ?? '')
+  if (basis > 0) {
+    if (mc > 0) return (basis * metalValueMultiplier(h.making_charge_percent ?? '')).toFixed(2)
+    return h.purchase_cost_basis_inr
+  }
+  const w = parsePersonalHoldingNumber(h.weight_grams)
+  const r = parsePersonalHoldingNumber(h.purchase_price_inr_per_gram ?? '')
+  if (w > 0 && r > 0) {
+    return formatPurchaseValueFromRate(h.weight_grams, h.purchase_price_inr_per_gram ?? '', h.making_charge_percent ?? '')
+  }
+  return ''
+}
+
 async function readResponseJson<T extends object>(res: Response): Promise<T | null> {
   const text = await res.text()
   const t = text.trim()
@@ -44,6 +176,7 @@ export type PersonalHoldingDTO = {
   purchase_date: string | null
   purchase_source: string
   purchase_price_inr_per_gram: string | null
+  making_charge_percent: string | null
   purchase_cost_basis_inr: string
   reference_gain_inr: string
   reference_gain_percent: string
@@ -229,6 +362,7 @@ export async function createPersonalHolding(body: {
   purchase_source?: string
   purchase_date?: string
   purchase_price_inr_per_gram?: string
+  making_charge_percent?: string
   notes?: string
 }): Promise<
   { ok: true; data: PersonalHoldingDTO | null } | { ok: false; detail: string }
@@ -258,6 +392,7 @@ export async function updatePersonalHolding(
     purchase_source: string
     purchase_date: string | null
     purchase_price_inr_per_gram: string | null
+    making_charge_percent: string | null
     notes: string
   }>,
 ): Promise<

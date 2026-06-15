@@ -2335,6 +2335,13 @@ class PersonalGoldHolding(models.Model):
         blank=True,
         help_text="Optional: what you paid per gram (₹/g) — used for indicative gain vs reference mark.",
     )
+    making_charge_percent = models.DecimalField(
+        max_digits=7,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Optional: making charge as % of metal value at purchase.",
+    )
     estimated_current_value_inr = models.DecimalField(
         max_digits=18,
         decimal_places=2,

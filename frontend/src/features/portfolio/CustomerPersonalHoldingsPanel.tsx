@@ -7,9 +7,14 @@ import {
   createPersonalHolding,
   deletePersonalDocument,
   deletePersonalHolding,
+  derivePurchasePricePerGram,
+  describeDerivedGoldRate,
   fetchPersonalHoldings,
   fetchPersonalVaultDocuments,
+  isGoldRateDerivedFromBill,
   openPersonalDocumentDownload,
+  purchaseValueFromHolding,
+  recalcRateFromBillOrValue,
   updatePersonalHolding,
   uploadPersonalDocument,
   type PersonalDocumentDTO,
@@ -137,6 +142,8 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
   const [weight, setWeight] = useState('')
   const [purity, setPurity] = useState('BIS 916')
   const [purchasePricePerGram, setPurchasePricePerGram] = useState('')
+  const [purchaseValue, setPurchaseValue] = useState('')
+  const [makingChargePercent, setMakingChargePercent] = useState('')
   const [purchaseSource, setPurchaseSource] = useState('')
   const [purchaseDate, setPurchaseDate] = useState('')
   const [notes, setNotes] = useState('')
@@ -150,9 +157,18 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
   const [eWeight, setEWeight] = useState('')
   const [ePurity, setEPurity] = useState('')
   const [ePurchasePrice, setEPurchasePrice] = useState('')
+  const [ePurchaseValue, setEPurchaseValue] = useState('')
+  const [eMakingChargePercent, setEMakingChargePercent] = useState('')
   const [ePurchaseSource, setEPurchaseSource] = useState('')
   const [ePurchaseDate, setEPurchaseDate] = useState('')
   const [eNotes, setENotes] = useState('')
+
+  const addDerivedGoldRateHint = useMemo(
+    () => describeDerivedGoldRate(weight, purchaseValue, makingChargePercent),
+    [weight, purchaseValue, makingChargePercent],
+  )
+  const addRateFromBill = isGoldRateDerivedFromBill(weight, purchaseValue)
+  const editRateFromBill = isGoldRateDerivedFromBill(eWeight, ePurchaseValue)
 
   const refresh = useCallback(async (): Promise<PersonalHoldingDTO[]> => {
     setLoadErr('')
@@ -235,6 +251,8 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
     setEWeight(h.weight_grams)
     setEPurity(h.purity)
     setEPurchasePrice(h.purchase_price_inr_per_gram ?? '')
+    setEPurchaseValue(purchaseValueFromHolding(h))
+    setEMakingChargePercent(h.making_charge_percent ?? '')
     setEPurchaseSource(h.purchase_source)
     setEPurchaseDate(h.purchase_date?.slice(0, 10) ?? '')
     setENotes(h.notes)
@@ -256,6 +274,8 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
     setPurchaseSource('')
     setPurchaseDate('')
     setPurchasePricePerGram('')
+    setPurchaseValue('')
+    setMakingChargePercent('')
     setCategory('ornament')
     setPurity('BIS 916')
   }
@@ -290,7 +310,10 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
         purity: ePurity.trim() || 'BIS 916',
         purchase_source: ePurchaseSource.trim(),
         purchase_date: ePurchaseDate.trim() || null,
-        purchase_price_inr_per_gram: ePurchasePrice.trim() ? ePurchasePrice.trim() : null,
+        purchase_price_inr_per_gram:
+          derivePurchasePricePerGram(eWeight, ePurchasePrice, ePurchaseValue, eMakingChargePercent)?.trim() ??
+          null,
+        making_charge_percent: eMakingChargePercent.trim() ? eMakingChargePercent.trim() : null,
         notes: eNotes.trim(),
       })
       if (!res.ok) {
@@ -332,7 +355,10 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
       purity: purity.trim() || 'BIS 916',
       purchase_source: purchaseSource.trim() || undefined,
       purchase_date: purchaseDate.trim() || undefined,
-      purchase_price_inr_per_gram: purchasePricePerGram.trim() || undefined,
+      purchase_price_inr_per_gram:
+        derivePurchasePricePerGram(weight, purchasePricePerGram, purchaseValue, makingChargePercent) ||
+        undefined,
+      making_charge_percent: makingChargePercent.trim() || undefined,
       notes: notes.trim() || undefined,
     }
     try {
@@ -548,7 +574,11 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
               <h5 id="pf-vault-section-metal" className="pf-vault-form__section-title">
                 Metal details
               </h5>
-              <p className="pf-vault-form__section-hint">Weight must be greater than zero. Purity defaults to BIS 916.</p>
+              <p className="pf-vault-form__section-hint">
+                Know your bill amount? Enter <strong>weight</strong>, <strong>total paid</strong>, and{' '}
+                <strong>making charge %</strong> if you have it — gold ₹/g is calculated for you. Or enter ₹/g directly
+                if you already know the rate.
+              </p>
               <div className="pf-vault-form__metal-grid">
                 <label className="pf-vault-field">
                   <span>Weight</span>
@@ -556,7 +586,18 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
                     <input
                       className="input pf-vault-form__input tabular pf-vault-form__input--with-suffix"
                       value={weight}
-                      onChange={(e) => setWeight(e.target.value)}
+                      onChange={(e) => {
+                        const next = e.target.value
+                        setWeight(next)
+                        const synced = recalcRateFromBillOrValue(
+                          next,
+                          purchasePricePerGram,
+                          purchaseValue,
+                          makingChargePercent,
+                        )
+                        setPurchasePricePerGram(synced.rate)
+                        setPurchaseValue(synced.value)
+                      }}
                       inputMode="decimal"
                       placeholder="0.000"
                       autoComplete="off"
@@ -577,18 +618,78 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
                     disabled={busy}
                   />
                 </label>
-                <label className="pf-vault-field pf-vault-field--wide">
-                  <span>Purchase rate (₹/g, optional)</span>
+                <label className="pf-vault-field">
+                  <span>Total purchase value (₹, optional)</span>
                   <input
                     className="input pf-vault-form__input tabular"
-                    value={purchasePricePerGram}
-                    onChange={(e) => setPurchasePricePerGram(e.target.value)}
+                    value={purchaseValue}
+                    onChange={(e) => {
+                      const next = e.target.value
+                      const synced = recalcRateFromBillOrValue(
+                        weight,
+                        purchasePricePerGram,
+                        next,
+                        makingChargePercent,
+                      )
+                      setPurchaseValue(synced.value)
+                      setPurchasePricePerGram(synced.rate)
+                    }}
                     inputMode="decimal"
-                    placeholder="What you paid per gram of gold"
+                    placeholder="Total bill amount"
                     disabled={busy}
                   />
                 </label>
+                <label className="pf-vault-field">
+                  <span>Making charge % (optional)</span>
+                  <div className="pf-vault-form__suffix-wrap">
+                    <input
+                      className="input pf-vault-form__input tabular pf-vault-form__input--with-suffix"
+                      value={makingChargePercent}
+                      onChange={(e) => {
+                        const next = e.target.value
+                        setMakingChargePercent(next)
+                        const synced = recalcRateFromBillOrValue(
+                          weight,
+                          purchasePricePerGram,
+                          purchaseValue,
+                          next,
+                        )
+                        setPurchasePricePerGram(synced.rate)
+                        setPurchaseValue(synced.value)
+                      }}
+                      inputMode="decimal"
+                      placeholder="e.g. 12"
+                      disabled={busy}
+                    />
+                    <span className="pf-vault-form__suffix" aria-hidden>
+                      %
+                    </span>
+                  </div>
+                </label>
+                <label className="pf-vault-field pf-vault-field--wide">
+                  <span>{addRateFromBill ? 'Gold rate (₹/g, calculated)' : 'Gold rate (₹/g, optional)'}</span>
+                  <input
+                    className="input pf-vault-form__input tabular"
+                    value={purchasePricePerGram}
+                    onChange={(e) => {
+                      const next = e.target.value
+                      const synced = recalcRateFromBillOrValue(weight, next, '', makingChargePercent)
+                      setPurchasePricePerGram(synced.rate)
+                      setPurchaseValue(synced.value)
+                    }}
+                    readOnly={addRateFromBill}
+                    inputMode="decimal"
+                    placeholder={addRateFromBill ? 'Calculated from bill' : 'If you know the gold rate'}
+                    disabled={busy}
+                    aria-readonly={addRateFromBill}
+                  />
+                </label>
               </div>
+              {addDerivedGoldRateHint ? (
+                <p className="pf-vault-form__section-hint pf-vault-form__derived-rate" role="status">
+                  {addDerivedGoldRateHint}
+                </p>
+              ) : null}
             </section>
 
             <section className="pf-vault-form__section pf-vault-form__section--full" aria-labelledby="pf-vault-section-prov">
@@ -724,8 +825,14 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
                       ) : null}
                       {h.purchase_price_inr_per_gram ? (
                         <span className="pf-vault-acc__basis">
-                          ₹{parseN(h.purchase_price_inr_per_gram).toLocaleString('en-IN')}/g · basis ~₹
+                          ₹{parseN(h.purchase_price_inr_per_gram).toLocaleString('en-IN')}/g · metal ~₹
                           {parseN(h.purchase_cost_basis_inr).toLocaleString('en-IN')}
+                          {h.making_charge_percent ? (
+                            <>
+                              {' '}
+                              · MC {parseN(h.making_charge_percent).toLocaleString('en-IN')}%
+                            </>
+                          ) : null}
                         </span>
                       ) : null}
                       {h.purchase_jeweller_label ? (
@@ -787,20 +894,87 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
                             </label>
                             <label className="pf-vault-field">
                               <span>Weight (g)</span>
-                              <input className="input tabular" value={eWeight} onChange={(e) => setEWeight(e.target.value)} disabled={editBusy} />
+                              <input
+                                className="input tabular"
+                                value={eWeight}
+                                onChange={(e) => {
+                                  const next = e.target.value
+                                  setEWeight(next)
+                                  const synced = recalcRateFromBillOrValue(
+                                    next,
+                                    ePurchasePrice,
+                                    ePurchaseValue,
+                                    eMakingChargePercent,
+                                  )
+                                  setEPurchasePrice(synced.rate)
+                                  setEPurchaseValue(synced.value)
+                                }}
+                                disabled={editBusy}
+                              />
                             </label>
                             <label className="pf-vault-field">
                               <span>Purity</span>
                               <input className="input" value={ePurity} onChange={(e) => setEPurity(e.target.value)} disabled={editBusy} />
                             </label>
                             <label className="pf-vault-field">
-                              <span>Purchase ₹/g (optional)</span>
+                              <span>Total purchase value (₹, optional)</span>
+                              <input
+                                className="input tabular"
+                                value={ePurchaseValue}
+                                onChange={(e) => {
+                                  const synced = recalcRateFromBillOrValue(
+                                    eWeight,
+                                    ePurchasePrice,
+                                    e.target.value,
+                                    eMakingChargePercent,
+                                  )
+                                  setEPurchaseValue(synced.value)
+                                  setEPurchasePrice(synced.rate)
+                                }}
+                                placeholder="Total bill amount"
+                                disabled={editBusy}
+                              />
+                            </label>
+                            <label className="pf-vault-field">
+                              <span>Making charge % (optional)</span>
+                              <input
+                                className="input tabular"
+                                value={eMakingChargePercent}
+                                onChange={(e) => {
+                                  const next = e.target.value
+                                  setEMakingChargePercent(next)
+                                  const synced = recalcRateFromBillOrValue(
+                                    eWeight,
+                                    ePurchasePrice,
+                                    ePurchaseValue,
+                                    next,
+                                  )
+                                  setEPurchasePrice(synced.rate)
+                                  setEPurchaseValue(synced.value)
+                                }}
+                                placeholder="e.g. 12"
+                                disabled={editBusy}
+                              />
+                            </label>
+                            <label className="pf-vault-field">
+                              <span>{editRateFromBill ? 'Gold rate (₹/g, calculated)' : 'Gold rate (₹/g, optional)'}</span>
                               <input
                                 className="input tabular"
                                 value={ePurchasePrice}
-                                onChange={(e) => setEPurchasePrice(e.target.value)}
-                                placeholder="Leave blank to clear"
+                                onChange={(e) => {
+                                  const synced = recalcRateFromBillOrValue(
+                                    eWeight,
+                                    e.target.value,
+                                    '',
+                                    eMakingChargePercent,
+                                  )
+                                  setEPurchasePrice(synced.rate)
+                                  setEPurchaseValue(synced.value)
+                                }}
+                                readOnly={editRateFromBill}
+                                placeholder={editRateFromBill ? 'Calculated from bill' : 'If you know the gold rate'}
                                 disabled={editBusy}
+                                aria-readonly={editRateFromBill}
                               />
                             </label>
                             <label className="pf-vault-field">

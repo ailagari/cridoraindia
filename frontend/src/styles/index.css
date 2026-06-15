@@ -8754,6 +8754,71 @@ select.input {
   min-width: 8.5rem;
 }
 
+@media (max-width: 767px) {
+  .pf-scope .pf-vault-hero--bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .pf-scope .pf-vault-hero__actions {
+    width: 100%;
+    flex: 1 1 auto;
+    flex-direction: column;
+    align-items: stretch;
+    align-self: stretch;
+  }
+
+  .pf-scope .pf-vault-hero__cta {
+    width: 100%;
+    white-space: normal;
+    text-align: center;
+  }
+
+  .pf-scope .pf-vault-import-pick__actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .pf-scope .pf-vault-import-pick__actions .btn {
+    width: 100%;
+  }
+
+  .pf-scope .pf-vault-form__footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .pf-scope .pf-vault-form__mvp {
+    max-width: none;
+  }
+
+  .pf-scope .pf-vault-form__actions.form-submit-foot {
+    width: 100%;
+  }
+
+  .pf-scope .pf-vault-form__actions .form-submit-foot__actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .pf-scope .pf-vault-form__actions .form-submit-foot__actions > .btn {
+    width: 100%;
+  }
+
+  .pf-scope .pf-vault-form__submit {
+    min-width: 0;
+  }
+
+  .pf-scope .pf-vault-edit__action-btns {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .pf-scope .pf-vault-edit__action-btns .btn {
+    width: 100%;
+  }
+}
+
 .pf-scope .pf-vault-form__saving {
   margin: 0 1.35rem;
   padding: 0.55rem 0.85rem;

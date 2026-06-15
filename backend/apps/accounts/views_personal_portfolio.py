@@ -58,6 +58,21 @@ def _parse_purchase_price_inr_per_gram_field(raw) -> tuple[Decimal | None, str |
     return pp.quantize(Decimal("0.0001")), None
 
 
+def _parse_making_charge_percent_field(raw) -> tuple[Decimal | None, str | None]:
+    """Return (quantized value, error_detail). None value with no error means clear field."""
+    if raw in (None, "", "null"):
+        return None, None
+    try:
+        mc = Decimal(str(raw))
+    except Exception:
+        return None, "Invalid making_charge_percent."
+    if mc < 0:
+        return None, "making_charge_percent must be >= 0."
+    if mc > 100:
+        return None, "making_charge_percent cannot exceed 100."
+    return mc.quantize(Decimal("0.01")), None
+
+
 def _recalc_holding_inr(h: PersonalGoldHolding) -> None:
     rate, _ = reference_gold_rate_inr_per_gram()
     h.estimated_current_value_inr = calculate_holding_value_inr(h.weight_grams, rate)
@@ -118,6 +133,9 @@ def _holding_detail_dict(
         "purchase_source": h.purchase_source or "",
         "purchase_price_inr_per_gram": (
             str(h.purchase_price_inr_per_gram) if h.purchase_price_inr_per_gram is not None else None
+        ),
+        "making_charge_percent": (
+            str(h.making_charge_percent) if h.making_charge_percent is not None else None
         ),
         "purchase_cost_basis_inr": str(basis) if basis is not None else "",
         "reference_gain_inr": gain_inr_s,
@@ -345,6 +363,13 @@ class PersonalHoldingsListCreateView(APIView):
             )
             if perr:
                 return Response({"detail": perr}, status=status.HTTP_400_BAD_REQUEST)
+        making_charge_percent = None
+        if request.data.get("making_charge_percent") not in (None, "", "null"):
+            making_charge_percent, merr = _parse_making_charge_percent_field(
+                request.data.get("making_charge_percent")
+            )
+            if merr:
+                return Response({"detail": merr}, status=status.HTTP_400_BAD_REQUEST)
         purchase_date = None
         if request.data.get("purchase_date"):
             from datetime import date as date_cls
@@ -365,6 +390,7 @@ class PersonalHoldingsListCreateView(APIView):
                 purchase_date=purchase_date,
                 purchase_source=purchase_source,
                 purchase_price_inr_per_gram=purchase_price_inr_per_gram,
+                making_charge_percent=making_charge_percent,
                 is_self_declared=True,
                 verification_status=PersonalGoldHolding.SELF_DECLARED,
                 created_by_type=PersonalGoldHolding.CREATED_BY_USER,
@@ -441,6 +467,15 @@ class PersonalHoldingDetailView(APIView):
                 if perr:
                     return Response({"detail": perr}, status=status.HTTP_400_BAD_REQUEST)
                 h.purchase_price_inr_per_gram = ppv
+        if "making_charge_percent" in request.data:
+            raw_mc = request.data.get("making_charge_percent")
+            if raw_mc in (None, "", "null"):
+                h.making_charge_percent = None
+            else:
+                mcv, merr = _parse_making_charge_percent_field(raw_mc)
+                if merr:
+                    return Response({"detail": merr}, status=status.HTTP_400_BAD_REQUEST)
+                h.making_charge_percent = mcv
         if "weight_grams" in request.data:
             try:
                 wg = Decimal(str(request.data.get("weight_grams") or "0"))
