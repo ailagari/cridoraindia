@@ -314,7 +314,7 @@
         </div>
 
         <div class="online-banner" id="online-banner" role="status">
-          You're back online — tap Try again to reload Cridora.
+          Cridora is back — reloading now…
         </div>
 
         <h1 id="headline">Polishing the vault…</h1>
@@ -385,8 +385,8 @@
           if (!online || forcedMode === 'offline') {
             headline.textContent = 'You\'re offline'
             subtitle.textContent =
-              'No internet right now — but this page works without a connection. Reconnect and tap Try again to open Cridora.'
-            mlLine.textContent = 'ഇപ്പോൾ ഓൺലൈൻ അല്ല — ഇന്റർനെറ്റ് തിരിച്ചു കിട്ടിയാൽ വീണ്ടും ശ്രമിക്കുക.'
+              'No internet right now — but this page works without a connection. We\'ll open Cridora automatically when you\'re back online.'
+            mlLine.textContent = 'ഇപ്പോൾ ഓൺലൈൻ അല്ല — ഇന്റർനെറ്റ് തിരിച്ചു കിട്ടിയാൽ Cridora സ്വയം തുറക്കും.'
             statusLabel.textContent = 'Offline'
             footNote.textContent = 'Saved on your device · Cridora India'
             ratesLink.style.opacity = '0.5'
@@ -397,7 +397,7 @@
           if (maintenance) {
             headline.textContent = 'Polishing the vault…'
             subtitle.textContent =
-              'Cridora is temporarily down for maintenance or experiencing an issue. Your data is safe — we\'re working to restore service.'
+              'Cridora is temporarily down for maintenance or experiencing an issue. Your data is safe — we\'ll reload automatically when service is restored.'
             mlLine.textContent = 'സേവനം താൽക്കാലികമായി ലഭ്യമല്ല — ഞങ്ങൾ ഉടൻ തിരിച്ചെത്തും.'
             statusLabel.textContent = 'Maintenance'
             footNote.textContent = 'Service interruption · Cridora India'
@@ -405,7 +405,7 @@
           }
 
           headline.textContent = 'Connection hiccup'
-          subtitle.textContent = 'We couldn\'t reach Cridora just now. Check your connection or try again in a moment.'
+          subtitle.textContent = 'We couldn\'t reach Cridora just now. Checking automatically — you\'ll be redirected when it\'s back.'
           mlLine.textContent = 'കണക്ഷൻ പ്രശ്നം — കുറച്ച് കഴിഞ്ഞ് വീണ്ടും ശ്രമിക്കുക.'
           statusLabel.textContent = 'Unavailable'
         }
@@ -420,14 +420,88 @@
           }, 350)
         }
 
-        function tryReload() {
+        var PROBE_INTERVAL_MS = 4000
+        var RELOAD_DELAY_MS = 600
+        var probeTimer = null
+        var reloading = false
+
+        function returnTarget() {
+          return sessionStorage.getItem('cridora-offline-return') || '/'
+        }
+
+        function probeLive() {
+          if (reloading) return Promise.resolve(false)
+          var target = returnTarget()
+          var url = new URL(target, window.location.origin).href
+          return fetch(url, { method: 'HEAD', cache: 'no-store', credentials: 'same-origin' })
+            .then(function (res) {
+              return res.ok && res.status < 500
+            })
+            .catch(function () {
+              return fetch(url, { method: 'GET', cache: 'no-store', credentials: 'same-origin' })
+                .then(function (res) {
+                  return res.ok && res.status < 500
+                })
+                .catch(function () {
+                  return false
+                })
+            })
+        }
+
+        function scheduleReload() {
+          if (reloading) return
+          reloading = true
+          if (probeTimer) {
+            window.clearInterval(probeTimer)
+            probeTimer = null
+          }
+          onlineBanner.classList.add('show')
+          headline.textContent = 'Welcome back'
+          subtitle.textContent = 'Cridora is live again — taking you there now.'
+          mlLine.textContent = 'Cridora തിരിച്ചെത്തി — നിങ്ങളെ റീഡയറക്ട് ചെയ്യുന്നു.'
+          statusLabel.textContent = 'Back online'
           retryBtn.disabled = true
-          retryBtn.textContent = 'Reconnecting…'
-          var target = sessionStorage.getItem('cridora-offline-return') || '/'
-          window.location.replace(target)
+          retryBtn.textContent = 'Reloading…'
+          window.setTimeout(function () {
+            window.location.replace(returnTarget())
+          }, RELOAD_DELAY_MS)
+        }
+
+        function startProbing() {
+          if (probeTimer || reloading) return
+          probeTimer = window.setInterval(function () {
+            probeLive().then(function (live) {
+              if (live) scheduleReload()
+            })
+          }, PROBE_INTERVAL_MS)
+          probeLive().then(function (live) {
+            if (live) scheduleReload()
+          })
+        }
+
+        function stopProbing() {
+          if (probeTimer) {
+            window.clearInterval(probeTimer)
+            probeTimer = null
+          }
+        }
+
+        function tryReload() {
+          if (reloading) return
+          retryBtn.disabled = true
+          retryBtn.textContent = 'Checking…'
+          probeLive().then(function (live) {
+            if (live) {
+              scheduleReload()
+            } else {
+              retryBtn.disabled = false
+              retryBtn.textContent = 'Try again'
+            }
+          })
         }
 
         function onOnline() {
+          onlineBanner.textContent = 'Connection restored — checking Cridora…'
           onlineBanner.classList.add('show')
           retryBtn.disabled = false
           retryBtn.textContent = 'Try again'
@@ -435,12 +509,15 @@
             forcedMode = null
             applyMode()
           }
+          startProbing()
         }
 
         function onOffline() {
           onlineBanner.classList.remove('show')
+          onlineBanner.textContent = 'Cridora is back — reloading now…'
           forcedMode = 'offline'
           applyMode()
+          stopProbing()
         }
 
         if (document.referrer && document.referrer.indexOf(window.location.origin) === 0) {
@@ -459,15 +536,7 @@
         window.addEventListener('online', onOnline)
         window.addEventListener('offline', onOffline)
 
-        if (navigator.onLine) {
-          window.setTimeout(function () {
-            fetch(window.location.origin + '/favicon.svg', { method: 'HEAD', cache: 'no-store' })
-              .then(function (res) {
-                if (res.ok) onlineBanner.classList.add('show')
-              })
-              .catch(function () {})
-          }, 800)
-        }
+        startProbing()
       })()
     </script>
   </body>

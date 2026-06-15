@@ -916,20 +916,30 @@ html[data-theme='light'] .pub-ref .tt-k {
   background: var(--gold);
 }
 .ref-dash-shell .sb-icon {
-  width: 14px;
-  height: 14px;
+  width: 18px;
+  height: 18px;
   flex-shrink: 0;
-  opacity: 0.6;
   display: flex;
   align-items: center;
   justify-content: center;
+  color: inherit;
 }
 .ref-dash-shell .sb-icon svg {
-  width: 14px;
-  height: 14px;
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+.ref-dash-shell .sb-item:not(.is-active) .sb-icon svg {
+  opacity: 0.78;
 }
 .ref-dash-shell .sb-item.is-active .sb-icon {
+  color: var(--gold-hi);
+}
+.ref-dash-shell .sb-item.is-active .sb-icon svg {
   opacity: 1;
+}
+.ref-dash-shell .sb-item:hover:not(.is-active) .sb-icon svg {
+  opacity: 0.92;
 }
 
 .ref-dash-shell .mobile-tab-ico {
@@ -942,6 +952,13 @@ html[data-theme='light'] .pub-ref .tt-k {
 .ref-dash-shell .mobile-tab-ico svg {
   width: 22px;
   height: 22px;
+  display: block;
+}
+.ref-dash-shell .btab:not(.is-active) .mobile-tab-ico svg {
+  opacity: 0.55;
+}
+.ref-dash-shell .btab.is-active .mobile-tab-ico svg {
+  opacity: 1;
 }
 .ref-dash-shell .mobile-tab-label {
   font-size: 0.55rem;
