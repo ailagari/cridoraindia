@@ -158,6 +158,9 @@
   gap: 12px;
   margin-bottom: 20px;
 }
+.ref-dash-shell .dash-content .stat-row--holdings {
+  grid-template-columns: repeat(5, 1fr);
+}
 .ref-dash-shell .dash-content .stat {
   background: var(--s0);
   border: 1px solid var(--b0);
@@ -185,6 +188,9 @@
 }
 .ref-dash-shell .dash-content .stat.d::before {
   background: linear-gradient(90deg, var(--gold-lo), var(--gold-hi));
+}
+.ref-dash-shell .dash-content .stat.e::before {
+  background: linear-gradient(90deg, #7c3aed, #a78bfa);
 }
 .ref-dash-shell .dash-content .stat-lbl {
   font-size: 0.6rem;

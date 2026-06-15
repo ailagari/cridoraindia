@@ -272,7 +272,7 @@ export function CustomerPortfolioOverviewDash(props: {
         </div>
       </div>
 
-      <div className="stat-row mb20">
+      <div className="stat-row stat-row--holdings mb20">
         <div className="stat a">
           <div className="stat-lbl">Fractional gold</div>
           <div className="stat-val c-gold tn">
@@ -296,6 +296,14 @@ export function CustomerPortfolioOverviewDash(props: {
             <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--ink2)' }}> g</span>
           </div>
           <div className="stat-sub">Recurring plan</div>
+        </div>
+        <div className="stat e">
+          <div className="stat-lbl">Personal gold</div>
+          <div className="stat-val tn" style={{ color: '#a78bfa' }}>
+            {fmtGramsMasked(personalGramsPortfolio, masked, 3)}
+            <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--ink2)' }}> g</span>
+          </div>
+          <div className="stat-sub">Jewellery you recorded</div>
         </div>
         <div className="stat d">
           <div className="stat-lbl">Live 22K rate</div>
@@ -370,7 +378,7 @@ export function CustomerPortfolioOverviewDash(props: {
           <div className="hr" />
           <div
             className="pf-mini-gram-strip"
-            style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8, fontSize: '0.72rem', textAlign: 'center' }}
+            style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 8, fontSize: '0.72rem', textAlign: 'center' }}
           >
             <div>
               <div className="t-fa fw7" style={{ fontSize: '0.6rem', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>
@@ -390,6 +398,14 @@ export function CustomerPortfolioOverviewDash(props: {
               </div>
               <div className="fw7 tn" style={{ color: 'var(--info)' }}>
                 {fmtGramsMasked(schemeG, masked, 2)} g
+              </div>
+            </div>
+            <div>
+              <div className="t-fa fw7" style={{ fontSize: '0.6rem', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>
+                Personal
+              </div>
+              <div className="fw7 tn" style={{ color: '#a78bfa' }}>
+                {fmtGramsMasked(personalGramsPortfolio, masked, 2)} g
               </div>
             </div>
           </div>
