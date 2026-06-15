@@ -10,6 +10,7 @@ import {
   type GoldTickerPayload,
   type SpotPricesPayload,
 } from '@/lib/marketplaceApi'
+import { publicRateBasisLabel, publicRateSourceLabel } from '@/lib/publicRateLabels'
 import { useLivePoll } from '@/lib/useLivePoll'
 
 function formatInr(n: number, fractionDigits = 0): string {
@@ -17,7 +18,7 @@ function formatInr(n: number, fractionDigits = 0): string {
 }
 
 type Props = {
-  /** Public site banner; jeweller/admin/customer dashboards; admin includes international reference. */
+  /** Public site banner; jeweller/admin/customer dashboards. */
   variant?: 'public' | 'jeweller' | 'admin' | 'customer'
 }
 
@@ -27,19 +28,14 @@ function numFromGold(block: Record<string, number> | undefined, key: string): nu
   return typeof v === 'number' && Number.isFinite(v) ? v : null
 }
 
-/** Published ticker ladder: manual board, or live Kerala feed with admin rules applied. */
+/** Published ticker ladder: manual board or Cridora live Kerala gold rate. */
 function publishedMarketGold(spot: SpotPricesPayload | null): Record<string, number> | undefined {
   if (!spot?.gold || Object.keys(spot.gold).length === 0) {
     return spot?.kerala_board?.gold
   }
-  if (spot.source === 'manual_ticker') {
-    return spot.gold
-  }
-  // Live mode: spot.gold is Kerala board (Jos Alukkas / Goodreturns) + admin markup/deduction.
   return spot.gold
 }
 
-/** User-facing footnote for published ladder (no international wording). */
 function liveMarketBasisNote(
   src: string | undefined,
   t: (key: MessageKey) => string,
@@ -58,25 +54,7 @@ function liveMarketBasisNote(
     case 'admin_fallback':
       return t('ticker.basis.fallback')
     default:
-      return src ? src.replace(/_/g, ' ') : t('ticker.basis.live')
-  }
-}
-
-/** Admin ticker: explain how published rate relates to international raw. */
-function adminPublishedBasisNote(src: string | undefined): string {
-  switch (src) {
-    case 'manual_ticker':
-      return 'Cridora manual board (no international row)'
-    case 'live_spot':
-      return 'International spot + admin markup/deduction → live market'
-    case 'stale_spot_cache':
-      return 'Stale international snapshot + admin markup/deduction'
-    case 'db_snapshot':
-      return 'Saved international snapshot + admin markup/deduction'
-    case 'admin_fallback':
-      return 'Platform fallback (no fresh international snapshot)'
-    default:
-      return src ? src.replace(/_/g, ' ') : 'Live market'
+      return publicRateBasisLabel(src)
   }
 }
 
@@ -116,9 +94,9 @@ export function GoldTickerStrip({ variant = 'public' }: Props) {
 
   useLivePoll(load, pollMs, true)
 
-  const liveGold = spot?.live_raw_spot?.gold
-  const intl22 = numFromGold(liveGold, '22K')
-  const intl24 = numFromGold(liveGold, '24K')
+  const rawGold = spot?.kerala_board?.gold
+  const raw22 = numFromGold(rawGold, '22K')
+  const raw24 = numFromGold(rawGold, '24K')
 
   const marketGold = publishedMarketGold(spot)
   let market22 = numFromGold(marketGold, '22K')
@@ -137,12 +115,7 @@ export function GoldTickerStrip({ variant = 'public' }: Props) {
       ? spot.source
       : spot?.kerala_board?.source ?? spot?.cridora_base_source ?? spot?.source ?? adminFallback?.cridora_base_source
   const footPublic = liveMarketBasisNote(basisSrc, t)
-  const footAdmin = adminPublishedBasisNote(basisSrc)
-
-  const intlHint =
-    spot?.live_raw_spot?.source != null && spot.live_raw_spot.source !== ''
-      ? spot.live_raw_spot.source.replace(/_/g, ' ')
-      : 'international'
+  const footAdmin = publicRateSourceLabel(basisSrc, spot?.source_label)
 
   if (variant === 'customer') {
     return (
@@ -173,20 +146,24 @@ export function GoldTickerStrip({ variant = 'public' }: Props) {
           maxWidth: 'min(560px, 100%)',
         }}
       >
-        <span style={{ fontWeight: 800, color: 'var(--text-faint)', letterSpacing: '0.06em' }}>
-          Intl ref.
-        </span>
-        <span style={{ fontWeight: 700, color: 'var(--text-muted)' }}>22K</span>
-        <span className="tabular" style={{ color: 'var(--text)', fontWeight: 600 }}>
-          {intl22 != null ? `₹${formatInr(intl22, 2)}/g` : '—'}
-        </span>
-        <span style={{ fontWeight: 700, color: 'var(--text-muted)' }}>24K</span>
-        <span className="tabular" style={{ color: 'var(--text)', fontWeight: 600 }}>
-          {intl24 != null ? `₹${formatInr(intl24, 2)}/g` : '—'}
-        </span>
-        <span style={{ color: 'var(--text-faint)' }}>|</span>
+        {spot?.source !== 'manual_ticker' && raw22 != null ? (
+          <>
+            <span style={{ fontWeight: 800, color: 'var(--text-faint)', letterSpacing: '0.06em' }}>
+              Raw Kerala
+            </span>
+            <span style={{ fontWeight: 700, color: 'var(--text-muted)' }}>22K</span>
+            <span className="tabular" style={{ color: 'var(--text)', fontWeight: 600 }}>
+              ₹{formatInr(raw22, 2)}/g
+            </span>
+            <span style={{ fontWeight: 700, color: 'var(--text-muted)' }}>24K</span>
+            <span className="tabular" style={{ color: 'var(--text)', fontWeight: 600 }}>
+              {raw24 != null ? `₹${formatInr(raw24, 2)}/g` : '—'}
+            </span>
+            <span style={{ color: 'var(--text-faint)' }}>|</span>
+          </>
+        ) : null}
         <span style={{ fontWeight: 800, color: 'var(--gold-light)', letterSpacing: '0.06em' }}>
-          Live market
+          Cridora live
         </span>
         <span style={{ fontWeight: 700, color: 'var(--text-muted)' }}>22K</span>
         <span className="tabular" style={{ color: 'var(--gold-light)', fontWeight: 700 }}>
@@ -197,7 +174,7 @@ export function GoldTickerStrip({ variant = 'public' }: Props) {
           {market24 != null ? `₹${formatInr(market24, 2)}/g` : '—'}
         </span>
         <span style={{ fontSize: '0.62rem', color: 'var(--text-faint)', flex: '1 1 100%' }}>
-          Raw INR/g ({intlHint}) · {footAdmin} · ~{pollLabel}
+          {footAdmin} · ~{pollLabel}
         </span>
       </div>
     )
@@ -218,7 +195,7 @@ export function GoldTickerStrip({ variant = 'public' }: Props) {
         }}
       >
         <span style={{ fontWeight: 800, color: 'var(--gold-light)', letterSpacing: '0.06em' }}>
-          Live market
+          Cridora live
         </span>
         <span style={{ fontWeight: 700, color: 'var(--text-muted)' }}>22K</span>
         <span className="tabular" style={{ color: 'var(--gold-light)', fontWeight: 700 }}>

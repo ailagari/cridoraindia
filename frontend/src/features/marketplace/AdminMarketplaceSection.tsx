@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
 import { AdminFractionalMarkupPanel } from '@/features/admin/AdminFractionalMarkupPanel'
 import { authFetch } from '@/lib/api'
+import { publicRateSourceLabel } from '@/lib/publicRateLabels'
 import { LIVE_ADMIN_TICKER_POLL_MS } from '@/lib/liveDeskIntervals'
 import { useLivePoll } from '@/lib/useLivePoll'
 
@@ -350,7 +351,7 @@ function AdminPublishedRatesSummary(props: {
           <thead>
             <tr>
               <th>Metal</th>
-              <th className="tabular">Kerala board (raw)</th>
+              <th className="tabular">Kerala raw ₹/g</th>
               <th className="tabular">+Markup</th>
               <th className="tabular">Published</th>
             </tr>
@@ -381,7 +382,7 @@ function AdminPublishedRatesSummary(props: {
       </div>
       {rawPreviewSource ? (
         <p style={{ margin: '0.4rem 0 0', fontSize: '0.68rem', color: 'var(--text-faint)' }}>
-          Raw snapshot: {rawPreviewSource.replace(/_/g, ' ')}
+          Feed: {publicRateSourceLabel(rawPreviewSource)}
         </p>
       ) : null}
     </div>
@@ -513,10 +514,11 @@ export function AdminGoldTickerPanel() {
           Ticker &amp; fees
         </h2>
         <p className="dash-coming__text" style={{ marginBottom: 0, fontSize: '0.82rem', maxWidth: '52rem' }}>
-          Configure live metal rates, alerts, and <strong>all platform fees and storefront disclosures</strong> here.{' '}
+          Configure Cridora live Kerala gold rates, alerts, and <strong>all platform fees and storefront disclosures</strong> here.{' '}
           <strong>Fractional investment markup</strong> (above) applies on top of jeweller board rates for vault purchases.{' '}
-          <strong>Live:</strong> Kerala board feed (Jos Alukkas, Goodreturns fallback) with admin markup/deduction — jewellers and customers see the published
-          live market column. <strong>Manual:</strong> fixed gold (22K/18K/24K) and optional silver board rates (no row rules). Push alerts are configured under{' '}
+          <strong>Live:</strong> Cridora refreshes Kerala gold rates in the background; optional admin markup/deduction applies before publishing.{' '}
+          Jewellers can follow the Cridora live rate or set their own board rates on their storefront.{' '}
+          <strong>Manual:</strong> fixed gold (22K/18K/24K) and optional silver board rates (no row rules). Push alerts are configured under{' '}
           <strong>Pushes &amp; alerts</strong>.
         </p>
         {data ? (
@@ -646,8 +648,7 @@ export function AdminGoldTickerPanel() {
           <p className="admin-ticker-panel__section-title">Live markup rules (draft)</p>
         <div className="admin-ticker-adj-table-wrap">
           <p className="admin-ticker-panel__draft-banner">
-            <strong>Live ladder (draft)</strong> — raw feed{' '}
-            <strong>{data?.live_spot_raw_preview?.source?.replace(/_/g, ' ') || '—'}</strong>. Edits apply after{' '}
+            <strong>Live ladder (draft)</strong> — Cridora live Kerala gold rate. Edits apply after{' '}
             <strong>Save</strong>.
           </p>
           <div className="dash-table-scroll">
@@ -655,7 +656,7 @@ export function AdminGoldTickerPanel() {
             <thead>
               <tr>
                 <th scope="col">Metal</th>
-                <th className="tabular" scope="col" title="Kerala board raw reference (Jos Alukkas / Goodreturns)">
+                <th className="tabular" scope="col" title="Kerala gold rate before admin markup">
                   Raw ₹/g
                 </th>
                 <th scope="col" title="Markup: percent or fixed ₹ on raw">

@@ -5,6 +5,7 @@ import { mergeJewellerListWithDemos } from '@/lib/jewellerMarketplaceDemos'
 import { jewellerStorefrontFeatureChips } from '@/features/marketplace/jewellerMarketplaceShared'
 import { LIVE_STOREFRONT_GRID_POLL_MS } from '@/lib/liveDeskIntervals'
 import { fetchVerifiedJewellers, type JewellerStorefrontDTO } from '@/lib/marketplaceApi'
+import { publicRateSourceLabel } from '@/lib/publicRateLabels'
 import { useLiveCridoraBase } from '@/hooks/useLiveCridoraBase'
 import {
   canPromoteJewellerToPrimary,
@@ -414,7 +415,7 @@ export function JewellerMarketplaceGrid({ intro, variant = 'public', wallet: wal
           ₹{liveBase?.platformBaseInrPerGram22k ? formatInr(parseNum(liveBase.platformBaseInrPerGram22k), 2) : '—'}/g
         </span>
         <span style={{ color: 'var(--text-faint)' }}>
-          {liveBase?.source ? liveBase.source.replace(/_/g, ' ') : ''}
+          {publicRateSourceLabel(liveBase?.source)}
         </span>
         <span style={{ color: 'var(--text-faint)', marginLeft: 'auto' }}>Directory refreshes every minute</span>
       </div>

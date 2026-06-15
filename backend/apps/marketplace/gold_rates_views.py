@@ -23,6 +23,7 @@ from .kerala_board_history import (
     yesterday_change_for_metal,
 )
 from .models import GoldRatesAdPlacement, ensure_default_gold_rates_ad_placements, get_or_create_gold_rates_page_config
+from .public_rate_copy import attach_public_rate_labels, public_rate_source_label
 from .spot_prices import public_spot_prices_payload
 
 
@@ -111,19 +112,24 @@ def public_kerala_rates_payload() -> dict:
         "silver999": yesterday_change_for_metal("silver999"),
     }
 
-    return {
-        "region": "Kerala",
-        "currency": "INR",
-        "unit": "per_gram",
-        "source": board.get("source") or spot.get("cridora_base_source") or spot.get("source"),
-        "source_updated_at": board.get("source_updated_at"),
-        "rate_date": board.get("rate_date"),
-        "gold": {k: v for k, v in gold_rates.items() if v is not None},
-        "silver": {k: v for k, v in silver_rates.items() if v is not None},
-        "daily_change": changes,
-        "latest_point": kerala_board_history_latest_point(board or spot),
-        "note": spot.get("note"),
-    }
+    return attach_public_rate_labels(
+        {
+            "region": "Kerala",
+            "currency": "INR",
+            "unit": "per_gram",
+            "source": board.get("source") or spot.get("cridora_base_source") or spot.get("source"),
+            "source_label": public_rate_source_label(
+                board.get("source") or spot.get("cridora_base_source") or spot.get("source")
+            ),
+            "source_updated_at": board.get("source_updated_at"),
+            "rate_date": board.get("rate_date"),
+            "gold": {k: v for k, v in gold_rates.items() if v is not None},
+            "silver": {k: v for k, v in silver_rates.items() if v is not None},
+            "daily_change": changes,
+            "latest_point": kerala_board_history_latest_point(board or spot),
+            "note": spot.get("note"),
+        }
+    )
 
 
 class MarketplaceKeralaGoldRatesView(APIView):

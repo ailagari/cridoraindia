@@ -17,6 +17,12 @@ from .metal_ticker_adjustments import (
     adjusted_inr_from_decimal,
     apply_live_adjustments_to_spot_payload,
 )
+from .public_rate_copy import (
+    CRIDORA_LIVE_RATE_NOTE,
+    CRIDORA_LIVE_RATE_STALE_NOTE,
+    CRIDORA_MANUAL_RATE_NOTE,
+    attach_public_rate_labels,
+)
 from .models import GoldTickerConfig, get_or_create_ticker
 
 TROY_OZ_TO_GRAMS = 31.1035
@@ -320,7 +326,7 @@ def _manual_ticker_spot_payload(ticker) -> dict:
         "currency": "INR",
         "unit": "per_gram",
         "source": "manual_ticker",
-        "note": "Admin-set ticker rates (override global spot for platform 22K base and public ticker).",
+        "note": CRIDORA_MANUAL_RATE_NOTE,
         "gold": {
             "24K": k24,
             "22K": k22_r,
@@ -403,7 +409,7 @@ def public_spot_prices_payload(*, include_live_raw: bool = False) -> dict:
             merged = {
                 **stale,
                 "source": "kerala_gold_rate_stale",
-                "note": "Last stored Jos Alukkas gold rate — feed temporarily unavailable.",
+                "note": CRIDORA_LIVE_RATE_STALE_NOTE,
             }
             payload = apply_live_adjustments_to_spot_payload(merged, ticker)
             board_raw = merged.get("gold") if isinstance(merged.get("gold"), dict) else {}
@@ -440,4 +446,4 @@ class MarketplaceSpotPricesView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
-        return Response(public_spot_prices_payload(include_live_raw=False))
+        return Response(attach_public_rate_labels(public_spot_prices_payload(include_live_raw=False)))

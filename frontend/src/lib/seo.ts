@@ -52,7 +52,7 @@ export const PAGE_SEO: Record<string, PageSeo> = {
   '/gold-rates/india': {
     title: 'Gold Rate in India Today — Live Kerala 22K & 24K Prices | Cridora India',
     description:
-      'Today\'s gold rate in India with live Kerala board references — 22K, 24K, 18K and silver per gram. Historical charts, daily rate table, and jewellery value calculator.',
+      'Today\'s gold rate in India with Cridora live Kerala gold references — 22K, 24K, 18K and silver per gram. Historical charts, daily rate table, and jewellery value calculator.',
     path: '/gold-rates/india',
     keywords:
       'gold rate India, gold rate today India, gold price India, 22K gold rate India, 24K gold rate today, Kerala gold rate, gold rate per gram India, silver rate India',

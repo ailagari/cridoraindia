@@ -208,7 +208,7 @@ def apply_live_adjustments_to_spot_payload(raw_payload: dict, ticker: Any) -> di
             new_silver[k] = float(adj)
 
     base_note = str(raw_payload.get("note") or "").strip()
-    extra = "Cridora reference = live + admin markup, then deduction."
+    extra = "Cridora live Kerala gold rate with platform markup/deduction applied."
     note = f"{base_note} {extra}".strip()
     return {
         **raw_payload,

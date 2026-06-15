@@ -13,6 +13,12 @@ from django.db.models import Max, Min
 from django.utils import timezone
 
 from .models import AkgsmaBoardDailySnapshot, AkgsmaBoardRateHistory, KeralaGoldRateDaily
+from .public_rate_copy import (
+    CHART_DAILY_NOTE,
+    CHART_INTRADAY_NOTE,
+    CRIDORA_LIVE_RATE_STALE_NOTE,
+    public_rate_source_label,
+)
 
 _DEBOUNCE_KEY = "kerala_board_hist:debounce_v1"
 _RETENTION_DAYS = 730
@@ -286,7 +292,7 @@ def fetch_board_history_payload(*, range_key: str, metal: str = "22K", max_point
             "metal": mk,
             "granularity": "intraday",
             "retention_days": _RETENTION_DAYS,
-            "note": "Kerala board indicative ₹/g — sampled when published rates change.",
+            "note": CHART_INTRADAY_NOTE,
             "points": points,
         }
 
@@ -328,7 +334,7 @@ def fetch_board_history_payload(*, range_key: str, metal: str = "22K", max_point
         "metal": mk,
         "granularity": "daily",
         "retention_days": _RETENTION_DAYS,
-        "note": "Daily Kerala gold/silver close ₹/g — up to 2 years stored; today updates with Jos Alukkas live ticker.",
+        "note": CHART_DAILY_NOTE,
         "points": [{k: v for k, v in pt.items() if v is not None} for pt in points],
     }
 
@@ -351,7 +357,7 @@ def fetch_board_daily_table(*, limit: int = 60, offset: int = 0) -> dict[str, An
                 "gold_22k": str(r.inr_per_gram_22k),
                 "gold_18k": str(r.inr_per_gram_18k),
                 "silver_999": str(r.silver_999_inr) if r.silver_999_inr is not None else None,
-                "source": r.source,
+                "source_label": public_rate_source_label(r.source),
             }
             for r in rows
         ],
@@ -399,7 +405,7 @@ def latest_board_rates_payload(*, source_prefix: str = "kerala_gold") -> dict | 
             "currency": "INR",
             "unit": "per_gram",
             "source": "kerala_gold_rate_stale",
-            "note": "Last stored Jos Alukkas gold rate — feed temporarily unavailable.",
+            "note": CRIDORA_LIVE_RATE_STALE_NOTE,
             "rate_date": snap.board_date or snap.snapshot_date.isoformat(),
             "gold": gold,
             "silver": silver,
@@ -417,7 +423,7 @@ def latest_board_rates_payload(*, source_prefix: str = "kerala_gold") -> dict | 
         "currency": "INR",
         "unit": "per_gram",
         "source": "kerala_gold_rate_stale",
-        "note": "Last stored Jos Alukkas gold rate — feed temporarily unavailable.",
+        "note": CRIDORA_LIVE_RATE_STALE_NOTE,
         "rate_date": row.board_date or "",
         "gold": gold,
         "silver": silver,

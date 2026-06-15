@@ -5,6 +5,7 @@ from unittest.mock import patch
 
 from django.test import TestCase
 
+from apps.marketplace.public_rate_copy import CRIDORA_LIVE_RATE_NOTE
 from apps.marketplace.models import get_or_create_ticker
 from apps.marketplace.spot_prices import (
     get_raw_spot_payload_for_admin_preview,
@@ -16,7 +17,7 @@ KERALA_LIVE = {
     "currency": "INR",
     "unit": "per_gram",
     "source": "kerala_gold_rate",
-    "note": "Jos Alukkas gold rate (24K / 22K / 18K) — indicative India reference.",
+    "note": CRIDORA_LIVE_RATE_NOTE,
     "source_updated_at": "10-06-26, 9:33:21 AM",
     "rate_date": "2026-06-10",
     "gold": {"24K": 14890.0, "22K": 13645.0, "18K": 11270.0, "21K": 13028.75},

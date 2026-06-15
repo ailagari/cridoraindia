@@ -175,13 +175,15 @@ def _fetch_goodreturns_today_parsed() -> dict | None:
 
 
 def build_spot_payload_from_josalukkas(parsed: dict) -> dict:
+    from .public_rate_copy import CRIDORA_LIVE_RATE_NOTE
+
     gold_src = parsed.get("gold") if isinstance(parsed.get("gold"), dict) else {}
     silver_src = parsed.get("silver") if isinstance(parsed.get("silver"), dict) else {}
     return {
         "currency": "INR",
         "unit": "per_gram",
         "source": str(parsed.get("source") or "kerala_gold_rate"),
-        "note": "Jos Alukkas gold rate (24K / 22K / 18K) — indicative India reference.",
+        "note": CRIDORA_LIVE_RATE_NOTE,
         "source_updated_at": str(parsed.get("source_updated_at") or ""),
         "rate_date": str(parsed.get("rate_date") or ""),
         "gold": {str(k): float(v) for k, v in gold_src.items()},

@@ -69,14 +69,14 @@ export const enMessages = {
   'mobile.discoverAudience': 'Discover audience',
   'mobile.shopDestination': 'Shop destination',
 
-  'ticker.liveMarket': 'Live market',
-  'ticker.indiaFacing': 'India-facing indicative ₹/g · updates every ~{interval}',
-  'ticker.basis.manual': 'Admin-set board rate',
-  'ticker.basis.keralaGold': 'Kerala gold rate',
-  'ticker.basis.keralaGoldStale': 'Kerala gold rate (last stored)',
-  'ticker.basis.published': 'Published platform rate',
-  'ticker.basis.fallback': 'Platform fallback rate',
-  'ticker.basis.live': 'Live market',
+  'ticker.liveMarket': 'Cridora live rate',
+  'ticker.indiaFacing': 'Kerala gold rate · updates every ~{interval}',
+  'ticker.basis.manual': 'Cridora manual rate',
+  'ticker.basis.keralaGold': 'Cridora live rate',
+  'ticker.basis.keralaGoldStale': 'Cridora live rate (cached)',
+  'ticker.basis.published': 'Cridora live rate',
+  'ticker.basis.fallback': 'Cridora fallback rate',
+  'ticker.basis.live': 'Cridora live rate',
 
   'home.tagline': 'Trusted digital gold infrastructure',
   'home.positioning':
@@ -671,15 +671,15 @@ export const enMessages = {
   'goldRates.breadcrumb': 'Kerala gold rates',
   'goldRates.heading': 'Kerala Gold Rate Today',
   'goldRates.subheading':
-    'Live indicative gold (24K, 22K, 18K) and silver rates for Kerala — updated from published board references with historical charts and calculator.',
+    'Cridora live Kerala gold rate — indicative 24K, 22K, 18K and silver per gram, with historical charts and calculator. Jewellers may follow this rate or set their own.',
   'goldRates.lastUpdated': 'Last updated',
   'goldRates.updatedUnknown': 'Awaiting feed',
-  'goldRates.source': 'Source',
+  'goldRates.source': 'Rate',
   'goldRates.todayRates': "Today's rates (₹ per gram)",
   'goldRates.disclaimer':
-    'Rates shown are indicative references for Kerala. Actual showroom rates may differ by city, making charges, and GST. Not investment advice.',
+    'Rates shown are Cridora live Kerala gold references. Jewellers may use this rate or set their own board rates. Showroom prices may differ by making charges and GST. Not investment advice.',
   'goldRates.priceChart': 'Weekly & Monthly Graph of Gold Price in Kerala',
-  'goldRates.chartLead': 'Track daily history plus live Jos Alukkas rates. Hover on the line to see the date and price per gram.',
+  'goldRates.chartLead': 'Track daily history plus the Cridora live Kerala gold rate. Hover on the line to see the date and price per gram.',
   'goldRates.metalTabs': 'Chart metal',
   'goldRates.chartRange': 'Chart range',
   'goldRates.chartEmpty': 'Historical chart data will appear as daily rates are recorded (up to 2 years).',
@@ -700,7 +700,7 @@ export const enMessages = {
   'goldRates.calcTotal': 'Estimated total',
   'goldRates.calcWaiting': 'Enter weight to calculate.',
   'goldRates.historyTable': 'Daily rate history',
-  'goldRates.historyTableLead': 'Archived daily Kerala board closes — up to two years on record.',
+  'goldRates.historyTableLead': 'Archived daily Kerala gold closes — up to two years on record.',
   'goldRates.colDate': 'Date',
   'goldRates.colSilver': 'Silver 999',
   'goldRates.loadMore': 'Load more dates',
@@ -708,7 +708,7 @@ export const enMessages = {
   'goldRates.faqTitle': 'Common questions',
   'goldRates.faq1q': 'How often are rates updated?',
   'goldRates.faq1a':
-    'Live rates are sourced from Jos Alukkas and refresh about every two minutes when prices change. Charts and today’s row update with the ticker.',
+    'Cridora refreshes the live Kerala gold rate in the background about every two minutes when prices change. Charts and today’s row update with the ticker.',
   'goldRates.faq2q': 'What is 22K (916) gold?',
   'goldRates.faq2a':
     '22 karat gold is 91.6% pure — the BIS 916 hallmark standard used for most Indian jewellery.',
@@ -724,9 +724,9 @@ export const enMessages = {
   'goldRatesIndia.heading': 'Gold Rate in India Today',
   'goldRatesIndia.pageTitleMl': 'ഇന്ത്യ സ്വർണ്ണ വില ഇന്ന് — Live 22K, 24K | Cridora India',
   'goldRatesIndia.pageDescriptionMl':
-    'ഇന്ത്യ സ്വർണ്ണ വില ഇന്ന് — Kerala board 22K, 24K, 18K, silver per gram. Chart, history, calculator.',
+    'ഇന്ത്യ സ്വർണ്ണ വില ഇന്ന് — Cridora live Kerala gold rate 22K, 24K, 18K, silver per gram. Chart, history, calculator.',
   'goldRatesIndia.subheading':
-    'Live indicative gold (24K, 22K, 18K) and silver rates for India — Kerala board reference with per-gram prices updated throughout the day.',
+    'Cridora live Kerala gold rate for India — indicative 24K, 22K, 18K and silver per gram, updated throughout the day.',
   'goldRatesIndia.todayRates': "Today's gold rate in India (₹ per gram)",
   'goldRatesIndia.keralaSection': 'Kerala gold rate — detailed charts & history',
   'goldRatesIndia.keralaLead':
@@ -734,7 +734,7 @@ export const enMessages = {
   'goldRatesIndia.keralaCta': 'View Kerala gold rate today',
   'goldRatesIndia.faq1q': 'What is the gold rate in India today?',
   'goldRatesIndia.faq1a':
-    'Gold rates vary by city and purity. Cridora publishes live indicative 22K, 24K, and 18K rates per gram based on Kerala board references, refreshed every few minutes.',
+    'Gold rates vary by city and purity. Cridora publishes live indicative 22K, 24K, and 18K Kerala gold rates per gram, refreshed every few minutes. Jewellers may follow this or set their own rates.',
   'goldRatesIndia.faq2q': 'How is 22K gold rate calculated?',
   'goldRatesIndia.faq2a':
     '22 karat (916 BIS) gold is 91.6% pure. The 22K rate is derived from the 24K base rate adjusted for purity — the standard for most Indian jewellery.',
@@ -745,16 +745,16 @@ export const enMessages = {
   'goldRatesCity.pageTitle': '{city} Gold Rate Today — Live 22K, 24K & Silver | Cridora India',
   'goldRatesCity.pageTitleMl': '{city} സ്വർണ്ണ വില ഇന്ന് — Live 22K, 24K | Cridora India',
   'goldRatesCity.pageDescription':
-    'Check live gold rate in {city}, Kerala today — 22K (916), 24K, 18K gold and silver 999 per gram. Updated every few minutes on Cridora India.',
+    'Check Cridora live Kerala gold rate in {city} today — 22K (916), 24K, 18K gold and silver 999 per gram. Updated every few minutes on Cridora India.',
   'goldRatesCity.pageDescriptionMl':
-    '{goldPrice} ഇന്ന് — 22K, 24K, 18K, silver per gram. Live Kerala board reference on Cridora India.',
+    '{goldPrice} ഇന്ന് — 22K, 24K, 18K, silver per gram. Cridora live Kerala gold rate on Cridora India.',
   'goldRatesCity.heading': '{city} Gold Rate Today',
   'goldRatesCity.headingMl': '{goldPrice} ഇന്ന്',
   'goldRatesCity.subheading':
-    'Live indicative gold and silver rates for {city} ({cityMl}), Kerala — Kerala board reference with per-gram prices.',
+    'Cridora live Kerala gold and silver for {city} ({cityMl}). Jewellers may follow this rate or set their own board rates.',
   'goldRatesCity.todayRates': "Today's gold rate in {city} (₹ per gram)",
   'goldRatesCity.cityDisclaimer':
-    'Rates shown are indicative Kerala board references. Showroom rates in {city} may differ by making charges and GST.',
+    'Indicative Cridora live Kerala gold rate. Jewellers may use this or set their own rates; showroom prices in {city} may differ by making charges and GST.',
   'goldRatesCity.detailSection': '{city} gold rate — charts & full history',
   'goldRatesCity.detailLead':
     'View interactive price charts, 2-year daily history, and jewellery calculator on our full Kerala gold rates page.',
@@ -767,7 +767,7 @@ export const enMessages = {
   'goldRatesCity.allIndia': 'Gold rate India',
   'goldRatesCity.faq1q': 'What is the gold rate in {city} today?',
   'goldRatesCity.faq1a':
-    'Cridora publishes live indicative 22K, 24K, and 18K gold rates per gram for {city} based on Kerala board references, refreshed every few minutes.',
+    'Cridora publishes live indicative 22K, 24K, and 18K Kerala gold rates per gram for {city}, refreshed every few minutes.',
   'goldRatesCity.faq3q': 'Do {city} jewellers charge the same rate?',
   'goldRatesCity.faq3a':
     'Showroom rates in {city} may include making charges, wastage, and GST. Use our calculator on the Kerala page for estimates.',

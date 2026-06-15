@@ -30,6 +30,8 @@ export type SpotPricesPayload = {
   currency: string
   unit: string
   source: string
+  /** User-facing label — never names third-party feeds. */
+  source_label?: string
   note?: string
   usd_to_inr?: number
   usd_to_inr_source?: string
@@ -38,7 +40,7 @@ export type SpotPricesPayload = {
   /** Raw Kerala gold rate ₹/g (unadjusted board reference). */
   kerala_board?: KeralaBoardPayload
   ticker_items?: Array<{ label: string; value?: number; text?: string }>
-  /** Unadjusted international INR/g ladder — present only on admin spot-prices endpoint. */
+  /** Admin-only secondary reference ladder (not shown on public site). */
   live_raw_spot?: LiveRawSpotPayload | null
   /** Canonical 22K ₹/g (published live market base). */
   platform_base_inr_per_gram_22k?: string
@@ -225,6 +227,7 @@ export type KeralaGoldRatesPayload = {
   currency: string
   unit: string
   source?: string
+  source_label?: string
   source_updated_at?: string
   rate_date?: string
   gold: Record<string, number>
@@ -245,7 +248,7 @@ export type KeralaGoldRatesDailyRow = {
   gold_22k: string
   gold_18k: string
   silver_999?: string | null
-  source?: string
+  source_label?: string
 }
 
 export type KeralaGoldRatesDailyPayload = {

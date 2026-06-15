@@ -18,6 +18,7 @@ import {
   type KeralaGoldRatesHistoryPayload,
   type KeralaGoldRatesPayload,
 } from '@/lib/marketplaceApi'
+import { publicRateSourceLabel } from '@/lib/publicRateLabels'
 import {
   breadcrumbJsonLd,
   faqJsonLd,
@@ -309,10 +310,11 @@ export function GoldRatesPage() {
         <p className="gr-page__sub">{t('goldRates.subheading')}</p>
         <p className="gr-page__meta">
           {t('goldRates.lastUpdated')}: <strong>{updatedLabel}</strong>
-          {rates?.source ? (
+          {rates?.source || rates?.source_label ? (
             <>
               {' '}
-              · {t('goldRates.source')}: <em>{String(rates.source).replace(/_/g, ' ')}</em>
+              · {t('goldRates.source')}:{' '}
+              <em>{publicRateSourceLabel(rates?.source, rates?.source_label)}</em>
             </>
           ) : null}
         </p>
