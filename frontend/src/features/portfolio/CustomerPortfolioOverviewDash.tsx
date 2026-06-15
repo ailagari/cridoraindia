@@ -61,6 +61,7 @@ export function CustomerPortfolioOverviewDash(props: {
   summaryGrams: number
   summaryMarketValueInr: number
   summaryAllocatedCost: number
+  summaryTotalPaidInr: number
   summaryPnlInr: number
   summaryPnlPct: number | null
   vaultGramsPortfolio: number
@@ -88,6 +89,7 @@ export function CustomerPortfolioOverviewDash(props: {
     summaryGrams,
     summaryMarketValueInr,
     summaryAllocatedCost,
+    summaryTotalPaidInr,
     summaryPnlInr,
     summaryPnlPct,
     vaultGramsPortfolio,
@@ -238,6 +240,13 @@ export function CustomerPortfolioOverviewDash(props: {
           <div className="hero-stat">
             <div className="hs-lbl">Invested</div>
             <div className="hs-val tn">₹{fmtInr(summaryAllocatedCost, masked)}</div>
+            <div className="hs-hint">Metal value only · excl. GST</div>
+            {summaryTotalPaidInr > 0 ? (
+              <div className="hs-paid">
+                Total paid ₹{fmtInr(summaryTotalPaidInr, masked)}
+                <span className="hs-paid__tag"> incl. GST</span>
+              </div>
+            ) : null}
           </div>
           <div className="hero-stat">
             <div className="hs-lbl">Unrealised P/L</div>

@@ -128,6 +128,29 @@
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
+.ref-dash-shell .dash-content .hs-hint {
+  margin-top: 3px;
+  font-size: 0.5rem;
+  font-weight: 500;
+  line-height: 1.25;
+  letter-spacing: 0.02em;
+  color: var(--ink3);
+  opacity: 0.85;
+  text-transform: none;
+}
+.ref-dash-shell .dash-content .hs-paid {
+  margin-top: 5px;
+  font-size: 0.58rem;
+  font-weight: 600;
+  line-height: 1.3;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink2);
+}
+.ref-dash-shell .dash-content .hs-paid__tag {
+  font-weight: 500;
+  font-size: 0.5rem;
+  color: var(--ink3);
+}
 
 .ref-dash-shell .dash-content .stat-row {
   display: grid;

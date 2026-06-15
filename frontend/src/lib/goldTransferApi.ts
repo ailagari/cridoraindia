@@ -40,9 +40,12 @@ export type LiabilityCreditRowDTO = {
 export type PortfolioUnrealizedDTO = {
   market_value_inr: string
   allocated_cost_inr: string
+  /** Pro-rated sum of fractional purchase total_inr (metal + GST) for current holdings. */
+  allocated_total_paid_inr?: string
   unrealized_pnl_inr: string
   unrealized_pnl_percent: string
   purchase_basis_inr_total?: string
+  purchase_total_inr_total?: string
   purchase_basis_grams_total?: string
   grams_allocated_for_cost?: string
   basis_note: string
@@ -61,6 +64,8 @@ export type PortfolioTotalsDTO = {
   cridora_estimated_value_inr?: string
   personal_estimated_value_inr?: string
   personal_recorded_cost_basis_inr?: string
+  /** Sum of invoice totals recorded on personal holdings (incl. GST/making where entered). */
+  personal_recorded_purchase_total_inr?: string
   personal_gain_on_recorded_cost_inr?: string
   personal_gain_on_recorded_cost_percent?: string
   total_estimated_value_inr?: string

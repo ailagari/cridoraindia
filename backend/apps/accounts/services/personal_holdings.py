@@ -100,6 +100,13 @@ def customer_portfolio_totals_payload(user: User) -> dict[str, Any]:
         ),
     )["b"] or Decimal("0")
     recorded_basis = recorded_basis.quantize(Decimal("0.01"))
+
+    personal_purchase_total = PersonalGoldHolding.objects.filter(
+        user=user, is_removed=False, purchase_total_inr__isnull=False
+    ).aggregate(
+        t=Coalesce(Sum("purchase_total_inr"), Decimal("0")),
+    )["t"] or Decimal("0")
+    personal_purchase_total = personal_purchase_total.quantize(Decimal("0.01"))
     personal_gain_inr_s = ""
     personal_gain_pct_s = ""
     if recorded_basis > 0:
@@ -134,6 +141,9 @@ def customer_portfolio_totals_payload(user: User) -> dict[str, Any]:
         "cridora_estimated_value_inr": str(cridora_est_inr),
         "personal_estimated_value_inr": str(ref_personal_inr.quantize(Decimal("0.01"))),
         "personal_recorded_cost_basis_inr": str(recorded_basis) if recorded_basis > 0 else "",
+        "personal_recorded_purchase_total_inr": (
+            str(personal_purchase_total) if personal_purchase_total > 0 else ""
+        ),
         "personal_gain_on_recorded_cost_inr": personal_gain_inr_s,
         "personal_gain_on_recorded_cost_percent": personal_gain_pct_s,
         "total_estimated_value_inr": str(total_est_inr),

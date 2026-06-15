@@ -305,6 +305,9 @@ export function CustomerPortfolioPanel() {
   const unrealized = wallet?.portfolio_unrealized
   const pnlInr = unrealized ? parseInrNum(unrealized.unrealized_pnl_inr) : 0
   const allocatedCost = unrealized ? parseInrNum(unrealized.allocated_cost_inr) : 0
+  const allocatedTotalPaid = unrealized
+    ? parseInrNum(unrealized.allocated_total_paid_inr ?? '')
+    : 0
   const pnlPctStr = unrealized?.unrealized_pnl_percent?.trim() ?? ''
   const pnlPct = pnlPctStr !== '' ? Number.parseFloat(pnlPctStr) : NaN
 
@@ -346,9 +349,16 @@ export function CustomerPortfolioPanel() {
 
   const personalRecordedBasisInr = useMemo(() => safeMoneyStr(pt?.personal_recorded_cost_basis_inr), [pt])
 
+  const personalPurchaseTotalInr = useMemo(
+    () => safeMoneyStr(pt?.personal_recorded_purchase_total_inr),
+    [pt],
+  )
+
   const personalPnLInrPortfolio = useMemo(() => safeMoneyStr(pt?.personal_gain_on_recorded_cost_inr), [pt])
 
   const fullAllocatedPortfolio = allocatedCost + personalRecordedBasisInr
+
+  const fullTotalPaidPortfolio = allocatedTotalPaid + personalPurchaseTotalInr
 
   const fullPnLPortfolio = pnlInr + personalPnLInrPortfolio
 
@@ -366,6 +376,8 @@ export function CustomerPortfolioPanel() {
   const displayPortfolioMarketInr = jewelleryVaultOnlyView ? marketValueInr : fullMarketValuePortfolio
 
   const displayPortfolioAllocated = jewelleryVaultOnlyView ? allocatedCost : fullAllocatedPortfolio
+
+  const displayPortfolioTotalPaid = jewelleryVaultOnlyView ? allocatedTotalPaid : fullTotalPaidPortfolio
 
   const displayPortfolioPnlInr = jewelleryVaultOnlyView ? pnlInr : fullPnLPortfolio
 
@@ -446,6 +458,7 @@ export function CustomerPortfolioPanel() {
               summaryGrams={displayPortfolioGrams}
               summaryMarketValueInr={displayPortfolioMarketInr}
               summaryAllocatedCost={displayPortfolioAllocated}
+              summaryTotalPaidInr={displayPortfolioTotalPaid}
               summaryPnlInr={displayPortfolioPnlInr}
               summaryPnlPct={displayPortfolioPnlPct}
               vaultGramsPortfolio={vaultGramsPortfolio}

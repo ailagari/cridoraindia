@@ -37,18 +37,22 @@ def customer_portfolio_unrealized_summary(
         status=FractionalGoldPurchase.COMPLETED,
     ).aggregate(
         gold_pre_gst=Sum("gold_value_inr_pre_gst"),
+        total_paid=Sum("total_inr"),
         grams=Sum("grams"),
     )
     pur_cost_inr = agg["gold_pre_gst"] or Decimal("0")
+    pur_total_inr = agg["total_paid"] or Decimal("0")
     pur_g = agg["grams"] or Decimal("0")
 
     if pur_g <= 0 or pur_cost_inr <= 0:
         return {
             "market_value_inr": str(market_q),
             "allocated_cost_inr": "0.00",
+            "allocated_total_paid_inr": "0.00",
             "unrealized_pnl_inr": str(market_q),
             "unrealized_pnl_percent": "",
             "purchase_basis_inr_total": "0.00",
+            "purchase_total_inr_total": "0.00",
             "purchase_basis_grams_total": "0",
             "grams_allocated_for_cost": "0",
             "basis_note": (
@@ -61,6 +65,7 @@ def customer_portfolio_unrealized_summary(
     if grams_costed < 0:
         grams_costed = Decimal("0")
     allocated = (grams_costed / pur_g * pur_cost_inr).quantize(Decimal("0.01"))
+    allocated_total_paid = (grams_costed / pur_g * pur_total_inr).quantize(Decimal("0.01"))
     pnl = (market_q - allocated).quantize(Decimal("0.01"))
     pct_s = ""
     if allocated > 0:
@@ -69,16 +74,18 @@ def customer_portfolio_unrealized_summary(
 
     return {
         "purchase_basis_inr_total": str(pur_cost_inr.quantize(Decimal("0.01"))),
+        "purchase_total_inr_total": str(pur_total_inr.quantize(Decimal("0.01")),
         "purchase_basis_grams_total": str(pur_g),
         "grams_allocated_for_cost": str(grams_costed),
         "allocated_cost_inr": str(allocated),
+        "allocated_total_paid_inr": str(allocated_total_paid),
         "market_value_inr": str(market_q),
         "unrealized_pnl_inr": str(pnl),
         "unrealized_pnl_percent": pct_s,
         "basis_note": (
             "Unrealized P&L compares live vault marks (estimated metal value) to gold purchase cost "
-            "allocated from your completed fractional buys — metal ₹ excluding GST and fees (GST/taxes "
-            "shown separately on receipts). Transfers or legacy balances can skew this estimate."
+            "allocated from your completed fractional buys — metal ₹ excluding GST (see total paid incl. GST "
+            "on Invested). Transfers or legacy balances can skew this estimate."
         ),
     }
 
