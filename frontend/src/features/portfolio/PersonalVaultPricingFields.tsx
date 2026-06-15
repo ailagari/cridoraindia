@@ -7,6 +7,11 @@ import {
 
 export type { PersonalVaultPriceAnchor }
 
+const PRICING_MODES: { v: PersonalVaultPriceAnchor; l: string }[] = [
+  { v: 'total', l: 'Bill total + making charge %' },
+  { v: 'rate', l: 'Rate per gram + making charge %' },
+]
+
 export function detectPersonalVaultPriceAnchor(h: {
   purchase_total_inr?: string | null
   purchase_price_inr_per_gram?: string | null
@@ -56,6 +61,8 @@ export function PersonalVaultPricingFields({
   disabled,
   gridClassName = 'pf-vault-form__metal-grid',
 }: PersonalVaultPricingFieldsProps) {
+  const totalMode = anchor === 'total'
+
   const applySync = (
     nextAnchor: PersonalVaultPriceAnchor,
     nextWeight: string,
@@ -63,7 +70,6 @@ export function PersonalVaultPricingFields({
     nextRate: string,
     nextMc: string,
   ) => {
-    onAnchorChange(nextAnchor)
     const synced = syncPersonalVaultPricing(nextAnchor, nextWeight, nextValue, nextRate, nextMc)
     onPurchaseValueChange(synced.total)
     onPurchasePricePerGramChange(synced.rate)
@@ -71,17 +77,23 @@ export function PersonalVaultPricingFields({
 
   useEffect(() => {
     if (!billingTaxReady) return
-    const synced = syncPersonalVaultPricing(anchor, weight, purchaseValue, purchasePricePerGram, makingChargePercent)
-    onPurchaseValueChange(synced.total)
-    onPurchasePricePerGramChange(synced.rate)
+    applySync(anchor, weight, purchaseValue, purchasePricePerGram, makingChargePercent)
     // eslint-disable-next-line react-hooks/exhaustive-deps -- re-sync once GST settings load
   }, [billingTaxReady])
 
+  const handleAnchorChange = (next: PersonalVaultPriceAnchor) => {
+    if (next === anchor) return
+    onAnchorChange(next)
+    applySync(next, weight, purchaseValue, purchasePricePerGram, makingChargePercent)
+  }
+
   const handleValueChange = (nextValue: string) => {
+    onPurchaseValueChange(nextValue)
     applySync('total', weight, nextValue, purchasePricePerGram, makingChargePercent)
   }
 
   const handleRateChange = (nextRate: string) => {
+    onPurchasePricePerGramChange(nextRate)
     applySync('rate', weight, purchaseValue, nextRate, makingChargePercent)
   }
 
@@ -95,15 +107,47 @@ export function PersonalVaultPricingFields({
     applySync(anchor, nextWeight, purchaseValue, purchasePricePerGram, makingChargePercent)
   }
 
-  const rateCalculated = anchor === 'total' && purchaseValue.trim() !== ''
-  const totalCalculated = anchor === 'rate' && purchasePricePerGram.trim() !== ''
+  const showCalculatedRate = totalMode && purchaseValue.trim() !== ''
+  const showCalculatedTotal = !totalMode && purchasePricePerGram.trim() !== ''
 
   return (
     <>
+      <div className="pf-vault-field">
+        <span id="pf-vault-pricing-mode-label">How do you want to enter purchase cost?</span>
+        <div
+          className="pf-vault-form__chips pf-vault-form__chips--pricing"
+          role="group"
+          aria-labelledby="pf-vault-pricing-mode-label"
+        >
+          {PRICING_MODES.map((m) => (
+            <button
+              key={m.v}
+              type="button"
+              className={`pf-vault-form__chip${anchor === m.v ? ' pf-vault-form__chip--active' : ''}`}
+              aria-pressed={anchor === m.v}
+              onClick={() => handleAnchorChange(m.v)}
+              disabled={disabled}
+            >
+              {m.l}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <p className="pf-vault-form__section-hint">
-        Enter <strong>weight</strong> and either <strong>total paid</strong> or <strong>gold rate per gram</strong>,
-        plus optional <strong>making charge %</strong>. The other amount is calculated with {gstGoldPct}% GST on gold
-        metal and {gstMakingPct}% GST on making charges.
+        {totalMode ? (
+          <>
+            Enter <strong>weight</strong>, <strong>total paid</strong>, and optional <strong>making charge
+            %</strong>. Gold rate per gram is calculated with {gstGoldPct}% GST on gold and {gstMakingPct}% GST on
+            making charges.
+          </>
+        ) : (
+          <>
+            Enter <strong>weight</strong>, <strong>gold rate per gram</strong>, and optional <strong>making charge
+            %</strong>. Total purchase value is calculated with {gstGoldPct}% GST on gold and {gstMakingPct}% GST on
+            making charges.
+          </>
+        )}
       </p>
 
       <div className={gridClassName}>
@@ -129,50 +173,93 @@ export function PersonalVaultPricingFields({
           <PersonalVaultPuritySelect value={purity} onChange={onPurityChange} disabled={disabled} />
         </label>
 
-        <label className="pf-vault-field">
-          <span>{totalCalculated ? 'Total purchase value (₹, calculated)' : 'Total purchase value (₹)'}</span>
-          <input
-            className="input pf-vault-form__input tabular"
-            value={purchaseValue}
-            onChange={(e) => handleValueChange(e.target.value)}
-            readOnly={totalCalculated}
-            aria-readonly={totalCalculated}
-            inputMode="decimal"
-            placeholder="Total bill amount"
-            disabled={disabled}
-          />
-        </label>
-
-        <label className="pf-vault-field">
-          <span>Making charge % (optional)</span>
-          <div className="pf-vault-form__suffix-wrap">
-            <input
-              className="input pf-vault-form__input tabular pf-vault-form__input--with-suffix"
-              value={makingChargePercent}
-              onChange={(e) => handleMcChange(e.target.value)}
-              inputMode="decimal"
-              placeholder="e.g. 5.7"
-              disabled={disabled}
-            />
-            <span className="pf-vault-form__suffix" aria-hidden>
-              %
-            </span>
-          </div>
-        </label>
-
-        <label className="pf-vault-field pf-vault-field--wide">
-          <span>{rateCalculated ? 'Gold rate (₹/g, calculated)' : 'Gold rate (₹/g)'}</span>
-          <input
-            className="input pf-vault-form__input tabular"
-            value={purchasePricePerGram}
-            onChange={(e) => handleRateChange(e.target.value)}
-            readOnly={rateCalculated}
-            aria-readonly={rateCalculated}
-            inputMode="decimal"
-            placeholder={rateCalculated ? 'Calculated from bill' : 'e.g. 13890'}
-            disabled={disabled}
-          />
-        </label>
+        {totalMode ? (
+          <>
+            <label className="pf-vault-field">
+              <span>Total purchase value (₹)</span>
+              <input
+                className="input pf-vault-form__input tabular"
+                value={purchaseValue}
+                onChange={(e) => handleValueChange(e.target.value)}
+                inputMode="decimal"
+                placeholder="Total bill amount"
+                disabled={disabled}
+              />
+            </label>
+            <label className="pf-vault-field">
+              <span>Making charge % (optional)</span>
+              <div className="pf-vault-form__suffix-wrap">
+                <input
+                  className="input pf-vault-form__input tabular pf-vault-form__input--with-suffix"
+                  value={makingChargePercent}
+                  onChange={(e) => handleMcChange(e.target.value)}
+                  inputMode="decimal"
+                  placeholder="e.g. 5.7"
+                  disabled={disabled}
+                />
+                <span className="pf-vault-form__suffix" aria-hidden>
+                  %
+                </span>
+              </div>
+            </label>
+            {showCalculatedRate ? (
+              <label className="pf-vault-field pf-vault-field--wide">
+                <span>Gold rate (₹/g, calculated)</span>
+                <input
+                  className="input pf-vault-form__input tabular"
+                  value={purchasePricePerGram}
+                  readOnly
+                  aria-readonly
+                  placeholder="Calculated from bill"
+                  disabled={disabled}
+                />
+              </label>
+            ) : null}
+          </>
+        ) : (
+          <>
+            <label className="pf-vault-field">
+              <span>Gold rate (₹/g)</span>
+              <input
+                className="input pf-vault-form__input tabular"
+                value={purchasePricePerGram}
+                onChange={(e) => handleRateChange(e.target.value)}
+                inputMode="decimal"
+                placeholder="e.g. 13890"
+                disabled={disabled}
+              />
+            </label>
+            <label className="pf-vault-field">
+              <span>Making charge % (optional)</span>
+              <div className="pf-vault-form__suffix-wrap">
+                <input
+                  className="input pf-vault-form__input tabular pf-vault-form__input--with-suffix"
+                  value={makingChargePercent}
+                  onChange={(e) => handleMcChange(e.target.value)}
+                  inputMode="decimal"
+                  placeholder="e.g. 5.7"
+                  disabled={disabled}
+                />
+                <span className="pf-vault-form__suffix" aria-hidden>
+                  %
+                </span>
+              </div>
+            </label>
+            {showCalculatedTotal ? (
+              <label className="pf-vault-field pf-vault-field--wide">
+                <span>Total purchase value (₹, calculated)</span>
+                <input
+                  className="input pf-vault-form__input tabular"
+                  value={purchaseValue}
+                  readOnly
+                  aria-readonly
+                  placeholder="Calculated from rate"
+                  disabled={disabled}
+                />
+              </label>
+            ) : null}
+          </>
+        )}
       </div>
 
       {costSummaryHint ? (
