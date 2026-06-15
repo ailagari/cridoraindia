@@ -74,7 +74,7 @@ def customer_portfolio_unrealized_summary(
 
     return {
         "purchase_basis_inr_total": str(pur_cost_inr.quantize(Decimal("0.01"))),
-        "purchase_total_inr_total": str(pur_total_inr.quantize(Decimal("0.01")),
+        "purchase_total_inr_total": str(pur_total_inr.quantize(Decimal("0.01"))),
         "purchase_basis_grams_total": str(pur_g),
         "grams_allocated_for_cost": str(grams_costed),
         "allocated_cost_inr": str(allocated),
