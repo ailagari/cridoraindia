@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { DashboardLayout } from '@/components/DashboardLayout'
+import { JewellerAlertBrandingPanel } from '@/features/jeweller/JewellerAlertBrandingPanel'
 import { JewellerBusinessProfilePanel } from '@/features/jeweller/JewellerBusinessProfilePanel'
 import { JewellerReferralPanel } from '@/features/jeweller/JewellerReferralPanel'
 import { JewellerKybWorkflow } from '@/features/jeweller/JewellerKybWorkflow'
@@ -181,10 +182,13 @@ export function JewellerDashboardPage() {
           <JewellerKybWorkflow />
         </div>
       ) : null}
+      {active === 'prof_alert_branding' ? (
+        <JewellerAlertBrandingPanel />
+      ) : null}
       {active === 'prof_notifications' ? (
         <NotificationSettingsPanel
           title="Notifications"
-          description="Manage push delivery and operational alerts for your jeweller account."
+          description="Choose how you receive operational alerts on this device."
         />
       ) : null}
       {active === 'prof_security' ? (

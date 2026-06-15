@@ -1,70 +1,60 @@
 import { useState } from 'react'
 import { AdminEngagementTemplatesPanel } from '@/features/admin/AdminEngagementTemplatesPanel'
-import { AdminFestivalBroadcastPanel } from '@/features/admin/AdminFestivalBroadcastPanel'
+import { AdminGoldAlertsPanel } from '@/features/admin/AdminGoldAlertsPanel'
 import { AdminNotificationStatsPanel } from '@/features/admin/AdminNotificationStatsPanel'
+import { AdminSendMessagePanel } from '@/features/admin/AdminSendMessagePanel'
 import { NotificationSettingsPanel } from '@/features/settings/NotificationSettingsPanel'
 
-type Tab = 'campaigns' | 'gold' | 'templates' | 'prefs' | 'stats'
+type Tab = 'send' | 'templates' | 'gold' | 'stats' | 'prefs'
+
+const TABS: { id: Tab; label: string; hint: string }[] = [
+  { id: 'send', label: 'Send message', hint: 'Schedule phone alerts' },
+  { id: 'templates', label: 'Message templates', hint: 'Reusable wording' },
+  { id: 'gold', label: 'Gold auto-alerts', hint: 'Automatic rate alerts' },
+  { id: 'stats', label: 'Stats', hint: 'Delivery overview' },
+  { id: 'prefs', label: 'My alerts', hint: 'This device' },
+]
 
 export function AdminNotificationsHubPanel() {
-  const [tab, setTab] = useState<Tab>('campaigns')
+  const [tab, setTab] = useState<Tab>('send')
 
   return (
     <div className="dash-panel-max">
       <div className="card" style={{ marginBottom: '1rem' }}>
         <h2 className="dash-coming__title" style={{ marginTop: 0 }}>
-          Pushes &amp; alerts
+          Message center
         </h2>
-        <p className="dash-coming__text">
-          Schedule campaigns, configure gold movement alerts, and manage how you receive admin tray notifications.
+        <p className="dash-coming__text" style={{ marginBottom: '0.75rem', maxWidth: 720 }}>
+          Send calm, factual alerts to customers. Schedule campaigns, edit automatic message
+          templates, and manage gold rate notifications.
         </p>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.75rem' }}>
-          <button
-            type="button"
-            className={`btn${tab === 'campaigns' ? ' btn-primary' : ' btn-ghost'}`}
-            onClick={() => setTab('campaigns')}
-          >
-            Campaigns
-          </button>
-          <button
-            type="button"
-            className={`btn${tab === 'gold' ? ' btn-primary' : ' btn-ghost'}`}
-            onClick={() => setTab('gold')}
-          >
-            Gold alerts
-          </button>
-          <button
-            type="button"
-            className={`btn${tab === 'templates' ? ' btn-primary' : ' btn-ghost'}`}
-            onClick={() => setTab('templates')}
-          >
-            Templates
-          </button>
-          <button
-            type="button"
-            className={`btn${tab === 'prefs' ? ' btn-primary' : ' btn-ghost'}`}
-            onClick={() => setTab('prefs')}
-          >
-            My preferences
-          </button>
-          <button
-            type="button"
-            className={`btn${tab === 'stats' ? ' btn-primary' : ' btn-ghost'}`}
-            onClick={() => setTab('stats')}
-          >
-            Analytics
-          </button>
+        <div className="admin-msg-hub-tabs" role="tablist">
+          {TABS.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              role="tab"
+              aria-selected={tab === t.id}
+              className={`btn${tab === t.id ? ' btn-primary' : ' btn-ghost'}`}
+              title={t.hint}
+              onClick={() => setTab(t.id)}
+            >
+              {t.label}
+            </button>
+          ))}
         </div>
       </div>
+
+      {tab === 'send' ? <AdminSendMessagePanel /> : null}
+      {tab === 'templates' ? <AdminEngagementTemplatesPanel /> : null}
+      {tab === 'gold' ? <AdminGoldAlertsPanel /> : null}
       {tab === 'stats' ? <AdminNotificationStatsPanel /> : null}
       {tab === 'prefs' ? (
         <NotificationSettingsPanel
-          title="Admin notification preferences"
-          description="Control KYC/KYB tray alerts and optional promotional pushes sent to your admin account."
+          title="Admin phone alerts"
+          description="Control how this admin account receives KYC and operational tray alerts on this device."
         />
       ) : null}
-      {tab === 'templates' ? <AdminEngagementTemplatesPanel /> : null}
-      {tab === 'campaigns' || tab === 'gold' ? <AdminFestivalBroadcastPanel tab={tab} /> : null}
     </div>
   )
 }

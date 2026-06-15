@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type CSSProperties, type FormEvent, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { authFetch } from '@/lib/api'
 
 type TemplateRow = {
@@ -17,62 +17,48 @@ type MomentGuide = {
   key: string
   label?: string
   when_fires?: string
-  audience?: string
   suggested_variables?: string[]
-  title_example?: string
-  body_example?: string
-}
-
-type ContextGuide = {
-  key: string
-  label?: string
-  use_when?: string
-  set_via?: string
-  note?: string
-}
-
-type UseCase = {
-  title: string
-  steps: string[]
-  sample_key?: string
-}
-
-type SampleTemplate = {
-  name: string
-  category: string
-  context: string
-  locale: string
-  title_template: string
-  body_template: string
-  variables: string[]
 }
 
 type GuidePayload = {
   moments: string[]
   contexts: string[]
   variables: Record<string, string[]>
-  formatting_rules: string[]
   moment_guides: MomentGuide[]
-  context_guides: ContextGuide[]
-  use_cases: UseCase[]
-  sample_templates: SampleTemplate[]
+  context_guides: { key: string; label?: string; use_when?: string }[]
+  sample_templates: {
+    name: string
+    category: string
+    context: string
+    locale: string
+    title_template: string
+    body_template: string
+    variables: string[]
+  }[]
+  formatting_rules: string[]
 }
 
-const sectionStyle: CSSProperties = {
-  marginTop: '1.25rem',
-  paddingTop: '1rem',
-  borderTop: '1px solid var(--dash-border, #e8e8e8)',
+const MOMENT_LABELS: Record<string, string> = {
+  portfolio_growth: 'Portfolio gained value',
+  portfolio_milestone: 'Portfolio milestone',
+  holding_appreciation: 'One holding gained value',
+  holding_milestone: 'Holding milestone',
+  market_awareness: 'Gold rate moved',
 }
 
-function GuideSection({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <section style={sectionStyle}>
-      <h4 className="dash-table-title" style={{ fontSize: '1rem', marginTop: 0 }}>
-        {title}
-      </h4>
-      {children}
-    </section>
-  )
+const CONTEXT_LABELS: Record<string, string> = {
+  default: 'Everyday',
+  festival: 'Festival season',
+  educational: 'Educational tip',
+  jeweller_campaign: 'Jeweller campaign',
+}
+
+function momentLabel(key: string): string {
+  return MOMENT_LABELS[key] || key.replace(/_/g, ' ')
+}
+
+function contextLabel(key: string): string {
+  return CONTEXT_LABELS[key] || key
 }
 
 export function AdminEngagementTemplatesPanel() {
@@ -80,18 +66,24 @@ export function AdminEngagementTemplatesPanel() {
   const [guide, setGuide] = useState<GuidePayload | null>(null)
   const [err, setErr] = useState('')
   const [okMsg, setOkMsg] = useState('')
+  const [showReference, setShowReference] = useState(false)
+  const [createBusy, setCreateBusy] = useState(false)
   const [previewTitle, setPreviewTitle] = useState('')
   const [previewBody, setPreviewBody] = useState('')
-  const [selectedId, setSelectedId] = useState<number | null>(null)
-  const [showGuide, setShowGuide] = useState(true)
-  const [createBusy, setCreateBusy] = useState(false)
+  const [previewId, setPreviewId] = useState<number | null>(null)
+
   const [formName, setFormName] = useState('')
-  const [formMoment, setFormMoment] = useState('portfolio_growth')
+  const [formMoment, setFormMoment] = useState('market_awareness')
   const [formContext, setFormContext] = useState('default')
   const [formLocale, setFormLocale] = useState('en')
   const [formTitle, setFormTitle] = useState('')
   const [formBody, setFormBody] = useState('')
-  const [formVars, setFormVars] = useState('')
+
+  const titleRef = useRef<HTMLInputElement>(null)
+  const bodyRef = useRef<HTMLTextAreaElement>(null)
+  const [insertTarget, setInsertTarget] = useState<'title' | 'body'>('body')
+
+  const allVariables = collectGuideVariables(guide)
 
   const load = useCallback(async () => {
     setErr('')
@@ -113,36 +105,48 @@ export function AdminEngagementTemplatesPanel() {
     void load()
   }, [load])
 
+  function insertVariable(varName: string) {
+    const token = `{{${varName}}}`
+    if (insertTarget === 'title') {
+      const el = titleRef.current
+      setFormTitle((prev) => prev + (el && document.activeElement === el ? '' : prev.endsWith(' ') ? '' : ' ') + token)
+      if (el) {
+        const next = (formTitle + ' ' + token).trim()
+        setFormTitle(next)
+        el.focus()
+      }
+    } else {
+      const el = bodyRef.current
+      const next = (formBody + (formBody && !formBody.endsWith(' ') ? ' ' : '') + token).trim()
+      setFormBody(next)
+      el?.focus()
+    }
+  }
+
   async function runPreview(id: number) {
     setErr('')
     const res = await authFetch('/api/v1/admin/notification-templates/preview/', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ template_id: id }),
+      jsonBody: { template_id: id },
     })
-    const data = (await res.json().catch(() => ({}))) as {
-      title?: string
-      body?: string
-      detail?: string
-    }
+    const data = (await res.json().catch(() => ({}))) as { title?: string; body?: string; detail?: string }
     if (!res.ok) {
       setErr(data.detail || 'Preview failed')
       return
     }
     setPreviewTitle(data.title || '')
     setPreviewBody(data.body || '')
-    setSelectedId(id)
+    setPreviewId(id)
   }
 
-  function applySample(s: SampleTemplate) {
+  function applySample(s: GuidePayload['sample_templates'][0]) {
     setFormName(s.name)
     setFormMoment(s.category)
     setFormContext(s.context)
     setFormLocale(s.locale)
     setFormTitle(s.title_template)
     setFormBody(s.body_template)
-    setFormVars(s.variables.join(', '))
-    setOkMsg(`Sample "${s.name}" loaded into the create form below.`)
+    setOkMsg(`Loaded sample "${s.name}". Edit and save below.`)
   }
 
   async function createTemplate(e: FormEvent) {
@@ -151,390 +155,243 @@ export function AdminEngagementTemplatesPanel() {
     setOkMsg('')
     setCreateBusy(true)
     try {
-      const variables = formVars
-        .split(',')
-        .map((v) => v.trim())
-        .filter(Boolean)
+      const vars = [...formTitle.matchAll(/\{\{(\w+)\}\}/g), ...formBody.matchAll(/\{\{(\w+)\}\}/g)].map(
+        (m) => m[1],
+      )
+      const uniqueVars = [...new Set(vars)]
       const res = await authFetch('/api/v1/admin/notification-templates/', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+        jsonBody: {
           name: formName.trim(),
           category: formMoment,
           context: formContext,
           locale: formLocale,
           title_template: formTitle.trim(),
           body_template: formBody.trim(),
-          variables,
+          variables: uniqueVars,
           is_active: true,
-        }),
+        },
       })
       const data = (await res.json().catch(() => ({}))) as { detail?: string }
       if (!res.ok) {
         setErr(typeof data.detail === 'string' ? data.detail : `Create failed (${res.status})`)
         return
       }
-      setOkMsg('Template created. It is live for matching events immediately.')
+      setOkMsg('Template saved. It applies to matching automatic alerts immediately.')
       setFormName('')
       setFormTitle('')
       setFormBody('')
-      setFormVars('')
       await load()
     } finally {
       setCreateBusy(false)
     }
   }
 
+  const suggestedVars =
+    guide?.moment_guides.find((m) => m.key === formMoment)?.suggested_variables ?? []
+
   return (
     <div className="dash-panel-max">
       <div className="card">
         <h3 className="dash-coming__title" style={{ marginTop: 0 }}>
-          Engagement templates
+          Message templates
         </h3>
-        <p className="dash-coming__text">
-          Notifications are built from <strong>facts</strong> (portfolio value, holding name, festival name) plus{' '}
-          <strong>templates</strong> you edit here. No code deploy is needed to change wording — only to add new
-          moments or variables.
-        </p>
-        <p className="dash-footnote" style={{ maxWidth: 720 }}>
-          Lookup key: <strong>moment</strong> + <strong>context</strong> + <strong>locale</strong>. Example:{' '}
-          <code>holding_appreciation</code> + <code>festival</code> + <code>en</code> for English Vishu copy.
+        <p className="dash-coming__text" style={{ maxWidth: 680, marginBottom: '1rem' }}>
+          Templates power automatic alerts (gold moves, portfolio gains, festivals). Use plain
+          language and short titles. Variables like <code>{'{{holding_name}}'}</code> fill in real
+          customer details.
         </p>
 
-        <button
-          type="button"
-          className="btn btn-ghost"
-          style={{ marginTop: '0.5rem' }}
-          onClick={() => setShowGuide((v) => !v)}
-        >
-          {showGuide ? 'Hide guide' : 'Show full guide'}
+        <button type="button" className="btn btn-ghost" onClick={() => setShowReference((v) => !v)}>
+          {showReference ? 'Hide' : 'Show'} technical reference
         </button>
 
         {err ? <p className="form-error">{err}</p> : null}
-        {okMsg ? (
-          <p className="dash-footnote" style={{ color: 'var(--ok, #2ecc71)' }}>
-            {okMsg}
-          </p>
-        ) : null}
+        {okMsg ? <p style={{ color: 'var(--ok)' }}>{okMsg}</p> : null}
 
-        {showGuide && guide ? (
-          <>
-            <GuideSection title="How it works">
-              <ol className="dash-coming__text" style={{ margin: 0, paddingLeft: '1.25rem' }}>
-                <li>Gold price ingest or a scheduled campaign triggers an event.</li>
-                <li>The system builds facts for each customer (names, ₹ values, festival name).</li>
-                <li>
-                  The active <strong>context</strong> is chosen (platform festival window, campaign, or default).
-                </li>
-                <li>
-                  The matching template row is rendered: <code>{'{{variable}}'}</code> → real values.
-                </li>
-                <li>Result goes to inbox and tray (existing delivery — unchanged).</li>
-              </ol>
-            </GuideSection>
-
-            <GuideSection title="Moments — when each template runs">
-              <p className="dash-footnote" style={{ marginBottom: '0.75rem' }}>
-                <strong>Moment</strong> is stored as <code>category</code> on each row. Pick the moment that matches
-                the story you want; context and locale select the wording variant.
-              </p>
-              <div style={{ overflowX: 'auto' }}>
-                <table className="dash-table">
-                  <thead>
-                    <tr>
-                      <th>Moment</th>
-                      <th>When it fires</th>
-                      <th>Good variables</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {guide.moment_guides.map((m) => (
-                      <tr key={m.key}>
-                        <td>
-                          <code className="engagement-guide-code">{m.key}</code>
-                          {m.label ? (
-                            <>
-                              <br />
-                              <span className="dash-footnote">{m.label}</span>
-                            </>
-                          ) : null}
-                        </td>
-                        <td style={{ maxWidth: 280 }}>{m.when_fires || '—'}</td>
-                        <td>
-                          {(m.suggested_variables || []).map((v) => (
-                            <code key={v} className="engagement-var-chip" style={{ marginRight: '0.35rem' }}>
-                              {`{{${v}}}`}
-                            </code>
-                          ))}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </GuideSection>
-
-            <GuideSection title="Contexts — tone and season">
-              <p className="dash-footnote" style={{ marginBottom: '0.75rem' }}>
-                Do <strong>not</strong> create a new context for every holiday. Use <code>festival</code> and set the
-                holiday name in Gold alerts or the campaign (<code>{'{{festival_name}}'}</code>).
-              </p>
-              <div style={{ overflowX: 'auto' }}>
-                <table className="dash-table">
-                  <thead>
-                    <tr>
-                      <th>Context</th>
-                      <th>Use when</th>
-                      <th>How to activate</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {guide.context_guides.map((c) => (
-                      <tr key={c.key}>
-                        <td>
-                          <code className="engagement-guide-code">{c.key}</code>
-                        </td>
-                        <td>{c.use_when || '—'}</td>
-                        <td>
-                          {c.set_via || '—'}
-                          {c.note ? (
-                            <p className="dash-footnote" style={{ margin: '0.35rem 0 0' }}>
-                              {c.note}
-                            </p>
-                          ) : null}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </GuideSection>
-
-            <GuideSection title="Variables reference">
-              <p className="dash-footnote" style={{ marginBottom: '0.75rem' }}>
-                Copy-paste into title or body. Values are pre-formatted (₹, %) for the customer locale.
-              </p>
-              {Object.entries(guide.variables).map(([group, vars]) => (
-                <div key={group} className="engagement-var-group" style={{ marginBottom: '0.75rem' }}>
-                  <strong style={{ textTransform: 'capitalize' }}>{group}</strong>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginTop: '0.25rem' }}>
-                    {vars.map((v) => (
-                      <code key={v} className="engagement-var-chip">
-                        {`{{${v}}}`}
-                      </code>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </GuideSection>
-
-            <GuideSection title="Formatting rules">
-              <ul className="dash-coming__text" style={{ margin: 0, paddingLeft: '1.25rem' }}>
-                {guide.formatting_rules.map((rule) => (
-                  <li key={rule}>{rule}</li>
-                ))}
-              </ul>
-            </GuideSection>
-
-            <GuideSection title="Sample templates (copy into create form)">
-              <p className="dash-footnote" style={{ marginBottom: '0.75rem' }}>
-                Click <strong>Use sample</strong> to fill the create form. Adjust wording, then save. Unique key must
-                not already exist.
-              </p>
-              {guide.sample_templates.map((s) => (
-                <div
-                  key={`${s.category}-${s.context}-${s.locale}`}
-                  className="card engagement-sample-card"
-                  style={{ marginBottom: '0.75rem', padding: '0.75rem 1rem' }}
-                >
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center' }}>
-                    <strong>{s.name}</strong>
-                    <code className="engagement-guide-code">
-                      {s.category}/{s.context}/{s.locale}
-                    </code>
-                    <button type="button" className="btn btn-ghost btn-sm" onClick={() => applySample(s)}>
-                      Use sample
-                    </button>
-                  </div>
-                  <p className="dash-footnote" style={{ margin: '0.5rem 0 0.15rem' }}>
-                    <strong>Title:</strong> {s.title_template}
-                  </p>
-                  <p className="dash-footnote" style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
-                    <strong>Body:</strong> {s.body_template}
-                  </p>
-                </div>
-              ))}
-            </GuideSection>
-
-            <GuideSection title="Use cases (step by step)">
-              {guide.use_cases.map((uc) => (
-                <div key={uc.title} style={{ marginBottom: '1rem' }}>
-                  <strong>{uc.title}</strong>
-                  {uc.sample_key ? (
-                    <span className="dash-footnote">
-                      {' '}
-                      — template key <code className="engagement-guide-code">{uc.sample_key}</code>
-                    </span>
-                  ) : null}
-                  <ol className="dash-footnote" style={{ margin: '0.35rem 0 0', paddingLeft: '1.25rem' }}>
-                    {uc.steps.map((step) => (
-                      <li key={step}>{step}</li>
-                    ))}
-                  </ol>
-                </div>
-              ))}
-            </GuideSection>
-          </>
-        ) : null}
-
-        <GuideSection title="Create a new template">
-          <form onSubmit={(e) => void createTemplate(e)}>
-            <div className="field">
-              <label htmlFor="tpl-name">Admin label (internal)</label>
-              <input
-                id="tpl-name"
-                type="text"
-                value={formName}
-                onChange={(e) => setFormName(e.target.value)}
-                placeholder="e.g. Holding appreciation — Vishu 2026"
-                required
-              />
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.75rem' }}>
-              <div className="field">
-                <label htmlFor="tpl-moment">Moment</label>
-                <select id="tpl-moment" value={formMoment} onChange={(e) => setFormMoment(e.target.value)}>
-                  {(guide?.moments || ['portfolio_growth']).map((m) => (
-                    <option key={m} value={m}>
-                      {m}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="field">
-                <label htmlFor="tpl-ctx">Context</label>
-                <select id="tpl-ctx" value={formContext} onChange={(e) => setFormContext(e.target.value)}>
-                  {(guide?.contexts || ['default']).map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="field">
-                <label htmlFor="tpl-locale">Locale</label>
-                <select id="tpl-locale" value={formLocale} onChange={(e) => setFormLocale(e.target.value)}>
-                  <option value="en">en</option>
-                  <option value="ml">ml</option>
-                </select>
-              </div>
-            </div>
-            <div className="field">
-              <label htmlFor="tpl-title">Title template</label>
-              <input
-                id="tpl-title"
-                type="text"
-                maxLength={180}
-                value={formTitle}
-                onChange={(e) => setFormTitle(e.target.value)}
-                placeholder="Portfolio value update"
-                required
-              />
-            </div>
-            <div className="field">
-              <label htmlFor="tpl-body">Body template</label>
-              <textarea
-                id="tpl-body"
-                className="dash-textarea"
-                rows={4}
-                value={formBody}
-                onChange={(e) => setFormBody(e.target.value)}
-                placeholder="Your {{holding_name}} is now {{holding_value}}…"
-                required
-              />
-            </div>
-            <div className="field">
-              <label htmlFor="tpl-vars">Variables used (comma-separated, optional)</label>
-              <input
-                id="tpl-vars"
-                type="text"
-                value={formVars}
-                onChange={(e) => setFormVars(e.target.value)}
-                placeholder="holding_name, holding_value, festival_name"
-              />
-            </div>
-            <button type="submit" className="btn btn-primary" disabled={createBusy}>
-              {createBusy ? 'Saving…' : 'Create template'}
-            </button>
-          </form>
-        </GuideSection>
-
-        <GuideSection title="Active templates">
-          <p className="dash-footnote" style={{ marginBottom: '0.5rem' }}>
-            Preview uses a real customer&apos;s facts when available. Seed defaults:{' '}
-            <code>python manage.py seed_engagement_templates</code>
-          </p>
-          <div style={{ overflowX: 'auto' }}>
-            <table className="dash-table">
-              <thead>
-                <tr>
-                  <th>Moment</th>
-                  <th>Context</th>
-                  <th>Locale</th>
-                  <th>Name</th>
-                  <th>Active</th>
-                  <th />
-                </tr>
-              </thead>
-              <tbody>
-                {rows.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="dash-footnote">
-                      No templates — run seed command on the server.
-                    </td>
-                  </tr>
-                ) : (
-                  rows.map((r) => (
-                    <tr key={r.id}>
-                      <td>
-                        <code className="engagement-guide-code">{r.category}</code>
-                      </td>
-                      <td>
-                        <code className="engagement-guide-code">{r.context}</code>
-                      </td>
-                      <td>{r.locale}</td>
-                      <td>{r.name}</td>
-                      <td>{r.is_active ? 'Yes' : 'No'}</td>
-                      <td>
-                        <button
-                          type="button"
-                          className="btn btn-ghost btn-sm"
-                          onClick={() => void runPreview(r.id)}
-                        >
-                          Preview
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </GuideSection>
-
-        {selectedId != null ? (
-          <div className="card engagement-preview-box" style={{ marginTop: '1rem', padding: '1rem' }}>
-            <strong>Preview (template #{selectedId})</strong>
-            <p className="dash-footnote" style={{ margin: '0.5rem 0 0' }}>
-              Tray may truncate long bodies (~120 chars).
+        {showReference && guide ? (
+          <div style={{ marginTop: '1rem', fontSize: '0.88rem' }}>
+            <p className="dash-footnote">
+              Unique key: <strong>when</strong> + <strong>tone</strong> + <strong>language</strong>
             </p>
+            <ul className="dash-coming__text">
+              {guide.formatting_rules.slice(0, 4).map((r) => (
+                <li key={r}>{r}</li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+
+        {guide && guide.sample_templates.length > 0 ? (
+          <div style={{ marginTop: '1.25rem' }}>
+            <h4 style={{ marginBottom: '0.5rem' }}>Start from a sample</h4>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+              {guide.sample_templates.map((s) => (
+                <button
+                  key={`${s.category}-${s.context}-${s.locale}-${s.name}`}
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={() => applySample(s)}
+                >
+                  {s.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
+        <form onSubmit={(e) => void createTemplate(e)} style={{ marginTop: '1.5rem' }}>
+          <h4 style={{ marginTop: 0 }}>Create or edit wording</h4>
+          <div className="field">
+            <label htmlFor="tpl-name">Internal name</label>
+            <input
+              id="tpl-name"
+              value={formName}
+              onChange={(e) => setFormName(e.target.value)}
+              placeholder="e.g. Festival greeting — English"
+              required
+            />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.75rem' }}>
+            <div className="field">
+              <label htmlFor="tpl-moment">When it runs</label>
+              <select id="tpl-moment" value={formMoment} onChange={(e) => setFormMoment(e.target.value)}>
+                {(guide?.moments || Object.keys(MOMENT_LABELS)).map((m) => (
+                  <option key={m} value={m}>
+                    {momentLabel(m)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="field">
+              <label htmlFor="tpl-ctx">Tone</label>
+              <select id="tpl-ctx" value={formContext} onChange={(e) => setFormContext(e.target.value)}>
+                {(guide?.contexts || Object.keys(CONTEXT_LABELS)).map((c) => (
+                  <option key={c} value={c}>
+                    {contextLabel(c)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="field">
+              <label htmlFor="tpl-locale">Language</label>
+              <select id="tpl-locale" value={formLocale} onChange={(e) => setFormLocale(e.target.value)}>
+                <option value="en">English</option>
+                <option value="ml">Malayalam</option>
+              </select>
+            </div>
+          </div>
+
+          <p className="dash-footnote" style={{ margin: '0.5rem 0' }}>
+            Click a variable to insert into {insertTarget === 'title' ? 'title' : 'body'}:
+          </p>
+          <div className="admin-tpl-var-bar">
+            <button type="button" className="btn btn-ghost" style={{ fontSize: '0.72rem' }} onClick={() => setInsertTarget('title')}>
+              Edit title
+            </button>
+            <button type="button" className="btn btn-ghost" style={{ fontSize: '0.72rem' }} onClick={() => setInsertTarget('body')}>
+              Edit body
+            </button>
+            {suggestedVars.map((v) => (
+              <button
+                key={v}
+                type="button"
+                className="admin-tpl-var-chip"
+                onClick={() => insertVariable(v)}
+              >
+                {`{{${v}}}`}
+              </button>
+            ))}
+            {allVariables.map((v) =>
+              suggestedVars.includes(v) ? null : (
+                <button key={v} type="button" className="admin-tpl-var-chip" onClick={() => insertVariable(v)}>
+                  {`{{${v}}}`}
+                </button>
+              ),
+            )}
+          </div>
+
+          <div className="field">
+            <label htmlFor="tpl-title">Title (keep short for phone)</label>
+            <input
+              id="tpl-title"
+              ref={titleRef}
+              value={formTitle}
+              onFocus={() => setInsertTarget('title')}
+              onChange={(e) => setFormTitle(e.target.value)}
+              placeholder="Gold rate alert"
+              maxLength={180}
+              required
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="tpl-body">Message body</label>
+            <textarea
+              id="tpl-body"
+              ref={bodyRef}
+              className="dash-textarea"
+              rows={4}
+              value={formBody}
+              onFocus={() => setInsertTarget('body')}
+              onChange={(e) => setFormBody(e.target.value)}
+              placeholder="Gold rate moved {{gold_change_percent}} — now {{gold_price}}."
+              required
+            />
+          </div>
+          <button type="submit" className="btn btn-primary" disabled={createBusy}>
+            {createBusy ? 'Saving…' : 'Save template'}
+          </button>
+        </form>
+
+        {previewId != null ? (
+          <div className="admin-msg-preview-inline">
+            <strong>Preview (template #{previewId})</strong>
             <p style={{ margin: '0.5rem 0 0' }}>
               <strong>{previewTitle}</strong>
             </p>
             <p style={{ margin: '0.25rem 0 0', whiteSpace: 'pre-wrap' }}>{previewBody}</p>
           </div>
         ) : null}
+
+        <h4 style={{ marginTop: '1.5rem' }}>Active templates ({rows.length})</h4>
+        {rows.length === 0 ? (
+          <p className="dash-footnote">No templates yet. Use a sample above or run seed on the server.</p>
+        ) : (
+          <div className="admin-tpl-cards">
+            {rows.map((r) => (
+              <div key={r.id} className="admin-tpl-card">
+                <div className="admin-tpl-card-head">
+                  <div>
+                    <strong>{r.name}</strong>
+                    <p className="dash-footnote" style={{ margin: '0.2rem 0 0' }}>
+                      {momentLabel(r.category)} · {contextLabel(r.context)} · {r.locale}
+                      {r.is_active ? '' : ' · inactive'}
+                    </p>
+                  </div>
+                  <button type="button" className="btn btn-ghost btn-sm" onClick={() => void runPreview(r.id)}>
+                    Preview
+                  </button>
+                </div>
+                <p style={{ margin: '0.5rem 0 0', fontSize: '0.85rem' }}>
+                  <strong>Title:</strong> {r.title_template}
+                </p>
+                <p style={{ margin: '0.25rem 0 0', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                  {r.body_template}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )
+}
+
+function collectGuideVariables(guide: GuidePayload | null): string[] {
+  if (!guide) return []
+  const out = new Set<string>()
+  for (const list of Object.values(guide.variables)) {
+    for (const v of list) out.add(v)
+  }
+  return [...out].sort()
 }

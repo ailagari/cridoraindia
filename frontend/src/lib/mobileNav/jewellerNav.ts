@@ -54,6 +54,7 @@ export const JEWELLER_NAV_GROUPS: DashboardNavGroup[] = [
     icon: 'profile',
     items: [
       { sectionKey: 'prof_more', label: 'Shop & business' },
+      { sectionKey: 'prof_alert_branding', label: 'Customer alerts' },
       { sectionKey: 'prof_notifications', label: 'Notifications' },
       { sectionKey: 'prof_security', label: 'Password & security' },
       { sectionKey: 'prof_kyb', label: 'KYB' },
@@ -95,6 +96,7 @@ export const JEWELLER_LEGACY_SECTION: Record<string, string> = {
   profile_security: 'prof_security',
   profile_notifications: 'prof_notifications',
   prof_notifications: 'prof_notifications',
+  prof_alert_branding: 'prof_alert_branding',
 }
 
 export function normalizeJewellerSection(raw: string | null): string | null {
