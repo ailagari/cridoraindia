@@ -8,8 +8,10 @@ import {
   deletePersonalDocument,
   deletePersonalHolding,
   derivePurchasePricePerGram,
-  describeDerivedGoldRate,
+  describePersonalVaultCostSummary,
   fetchPersonalHoldings,
+  PERSONAL_VAULT_GST_ON_GOLD_PERCENT,
+  PERSONAL_VAULT_GST_ON_MAKING_PERCENT,
   fetchPersonalVaultDocuments,
   isGoldRateDerivedFromBill,
   openPersonalDocumentDownload,
@@ -163,9 +165,15 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
   const [ePurchaseDate, setEPurchaseDate] = useState('')
   const [eNotes, setENotes] = useState('')
 
-  const addDerivedGoldRateHint = useMemo(
-    () => describeDerivedGoldRate(weight, purchaseValue, makingChargePercent),
-    [weight, purchaseValue, makingChargePercent],
+  const addCostSummaryHint = useMemo(
+    () =>
+      describePersonalVaultCostSummary(
+        weight,
+        purchasePricePerGram,
+        purchaseValue,
+        makingChargePercent,
+      ),
+    [weight, purchasePricePerGram, purchaseValue, makingChargePercent],
   )
   const addRateFromBill = isGoldRateDerivedFromBill(weight, purchaseValue)
   const editRateFromBill = isGoldRateDerivedFromBill(eWeight, ePurchaseValue)
@@ -575,9 +583,9 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
                 Metal details
               </h5>
               <p className="pf-vault-form__section-hint">
-                Know your bill amount? Enter <strong>weight</strong>, <strong>total paid</strong>, and{' '}
-                <strong>making charge %</strong> if you have it — gold ₹/g is calculated for you. Or enter ₹/g directly
-                if you already know the rate.
+                Know your bill? Enter <strong>weight</strong>, <strong>total paid</strong>, and <strong>making charge
+                %</strong> if you have it. GST is applied automatically — {PERSONAL_VAULT_GST_ON_GOLD_PERCENT}% on gold
+                metal and {PERSONAL_VAULT_GST_ON_MAKING_PERCENT}% on making charges (same as Cridora marketplace).
               </p>
               <div className="pf-vault-form__metal-grid">
                 <label className="pf-vault-field">
@@ -658,7 +666,7 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
                         setPurchaseValue(synced.value)
                       }}
                       inputMode="decimal"
-                      placeholder="e.g. 12"
+                      placeholder="e.g. 12 — GST added automatically"
                       disabled={busy}
                     />
                     <span className="pf-vault-form__suffix" aria-hidden>
@@ -685,9 +693,9 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
                   />
                 </label>
               </div>
-              {addDerivedGoldRateHint ? (
+              {addCostSummaryHint ? (
                 <p className="pf-vault-form__section-hint pf-vault-form__derived-rate" role="status">
-                  {addDerivedGoldRateHint}
+                  {addCostSummaryHint}
                 </p>
               ) : null}
             </section>
@@ -952,7 +960,7 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
                                   setEPurchasePrice(synced.rate)
                                   setEPurchaseValue(synced.value)
                                 }}
-                                placeholder="e.g. 12"
+                                placeholder="e.g. 12 — GST added automatically"
                                 disabled={editBusy}
                               />
                             </label>

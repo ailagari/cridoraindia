@@ -5,9 +5,11 @@ import {
   analyzeInvoice,
   createPersonalHolding,
   derivePurchasePricePerGram,
-  describeDerivedGoldRate,
+  describePersonalVaultCostSummary,
   formatPurchaseValueFromRate,
   isGoldRateDerivedFromBill,
+  PERSONAL_VAULT_GST_ON_GOLD_PERCENT,
+  PERSONAL_VAULT_GST_ON_MAKING_PERCENT,
   recalcRateFromBillOrValue,
   uploadPersonalDocument,
   type InvoiceExtractDTO,
@@ -83,9 +85,15 @@ export function InvoiceImportFlow({
   const [invoiceNumber, setInvoiceNumber] = useState('')
   const [confidence, setConfidence] = useState<'high' | 'medium' | 'low'>('medium')
 
-  const derivedGoldRateHint = useMemo(
-    () => describeDerivedGoldRate(weight, purchaseValue, makingChargePercent),
-    [weight, purchaseValue, makingChargePercent],
+  const costSummaryHint = useMemo(
+    () =>
+      describePersonalVaultCostSummary(
+        weight,
+        purchasePricePerGram,
+        purchaseValue,
+        makingChargePercent,
+      ),
+    [weight, purchasePricePerGram, purchaseValue, makingChargePercent],
   )
   const rateFromBill = isGoldRateDerivedFromBill(weight, purchaseValue)
 
@@ -422,7 +430,7 @@ export function InvoiceImportFlow({
                     setPurchaseValue(synced.value)
                   }}
                   inputMode="decimal"
-                  placeholder="e.g. 12"
+                  placeholder="e.g. 12 — GST added automatically"
                   disabled={busy}
                 />
               </label>
@@ -444,9 +452,9 @@ export function InvoiceImportFlow({
                 />
               </label>
             </div>
-            {derivedGoldRateHint ? (
+            {costSummaryHint ? (
               <p className="pf-vault-form__section-hint pf-vault-form__derived-rate" role="status">
-                {derivedGoldRateHint}
+                {costSummaryHint}
               </p>
             ) : null}
             <label className="pf-vault-field">

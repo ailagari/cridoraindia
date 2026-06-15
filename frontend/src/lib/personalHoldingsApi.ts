@@ -8,10 +8,67 @@ export function parsePersonalHoldingNumber(s: string): number {
   return Number.isFinite(n) ? n : 0
 }
 
-function metalValueMultiplier(makingChargePercentStr: string): number {
-  const mc = parsePersonalHoldingNumber(makingChargePercentStr)
-  if (mc <= 0) return 1
-  return 1 + mc / 100
+/** Aligned with marketplace ornament billing: 3% on gold metal, 18% on making charges. */
+export const PERSONAL_VAULT_GST_ON_GOLD_PERCENT = 3
+export const PERSONAL_VAULT_GST_ON_MAKING_PERCENT = 18
+
+export type PersonalVaultBillBreakdown = {
+  metalInr: string
+  makingInr: string
+  gstOnGoldInr: string
+  gstOnMakingInr: string
+  totalInr: string
+  ratePerGram: string
+}
+
+/** Multiplier on pre-GST metal ₹ to reach invoice total (metal + MC + GST on both). */
+function billTotalMultiplier(makingChargePercentStr: string): number {
+  const mc = parsePersonalHoldingNumber(makingChargePercentStr) / 100
+  const gstGold = PERSONAL_VAULT_GST_ON_GOLD_PERCENT / 100
+  const gstMc = PERSONAL_VAULT_GST_ON_MAKING_PERCENT / 100
+  return 1 + gstGold + mc * (1 + gstMc)
+}
+
+function metalInrFromBillInputs(
+  weightStr: string,
+  opts: { rateStr?: string; totalStr?: string; makingChargePercentStr?: string },
+): number | null {
+  const w = parsePersonalHoldingNumber(weightStr)
+  if (w <= 0) return null
+  const mc = opts.makingChargePercentStr ?? ''
+  if (opts.totalStr?.trim()) {
+    const total = parsePersonalHoldingNumber(opts.totalStr)
+    if (total <= 0) return null
+    return total / billTotalMultiplier(mc)
+  }
+  if (opts.rateStr?.trim()) {
+    const rate = parsePersonalHoldingNumber(opts.rateStr)
+    if (rate <= 0) return null
+    return w * rate
+  }
+  return null
+}
+
+export function breakdownPersonalVaultBill(
+  weightStr: string,
+  opts: { rateStr?: string; totalStr?: string; makingChargePercentStr?: string },
+): PersonalVaultBillBreakdown | null {
+  const w = parsePersonalHoldingNumber(weightStr)
+  const metal = metalInrFromBillInputs(weightStr, opts)
+  if (metal == null || w <= 0 || metal <= 0) return null
+  const mcPct = parsePersonalHoldingNumber(opts.makingChargePercentStr ?? '')
+  const making = (metal * mcPct) / 100
+  const gstOnGold = (metal * PERSONAL_VAULT_GST_ON_GOLD_PERCENT) / 100
+  const gstOnMaking = (making * PERSONAL_VAULT_GST_ON_MAKING_PERCENT) / 100
+  const total = metal + making + gstOnGold + gstOnMaking
+  return {
+    metalInr: metal.toFixed(2),
+    makingInr: making.toFixed(2),
+    gstOnGoldInr: gstOnGold.toFixed(2),
+    gstOnMakingInr: gstOnMaking.toFixed(2),
+    totalInr: total.toFixed(2),
+    ratePerGram: (metal / w).toFixed(4),
+  }
 }
 
 export function formatPurchaseValueFromRate(
@@ -19,11 +76,8 @@ export function formatPurchaseValueFromRate(
   rateStr: string,
   makingChargePercentStr = '',
 ): string {
-  const w = parsePersonalHoldingNumber(weightStr)
-  const r = parsePersonalHoldingNumber(rateStr)
-  if (w <= 0 || r <= 0) return ''
-  const metal = w * r
-  return (metal * metalValueMultiplier(makingChargePercentStr)).toFixed(2)
+  const bd = breakdownPersonalVaultBill(weightStr, { rateStr, makingChargePercentStr })
+  return bd?.totalInr ?? ''
 }
 
 export function formatRateFromPurchaseValue(
@@ -31,11 +85,8 @@ export function formatRateFromPurchaseValue(
   valueStr: string,
   makingChargePercentStr = '',
 ): string {
-  const w = parsePersonalHoldingNumber(weightStr)
-  const v = parsePersonalHoldingNumber(valueStr)
-  if (w <= 0 || v <= 0) return ''
-  const metal = v / metalValueMultiplier(makingChargePercentStr)
-  return (metal / w).toFixed(4)
+  const bd = breakdownPersonalVaultBill(weightStr, { totalStr: valueStr, makingChargePercentStr })
+  return bd?.ratePerGram ?? ''
 }
 
 export function derivePurchasePricePerGram(
@@ -76,17 +127,56 @@ export function describeDerivedGoldRate(
   valueStr: string,
   makingChargePercentStr = '',
 ): string {
-  const w = parsePersonalHoldingNumber(weightStr)
-  const v = parsePersonalHoldingNumber(valueStr)
-  if (w <= 0 || v <= 0) return ''
-  const rate = formatRateFromPurchaseValue(weightStr, valueStr, makingChargePercentStr)
-  if (!rate) return ''
-  const rateInr = parsePersonalHoldingNumber(rate).toLocaleString('en-IN')
+  const bd = breakdownPersonalVaultBill(weightStr, {
+    totalStr: valueStr,
+    makingChargePercentStr,
+  })
+  if (!bd) return ''
+  const rateInr = parsePersonalHoldingNumber(bd.ratePerGram).toLocaleString('en-IN')
+  const gstGold = parsePersonalHoldingNumber(bd.gstOnGoldInr).toLocaleString('en-IN')
+  const gstMc = parsePersonalHoldingNumber(bd.gstOnMakingInr).toLocaleString('en-IN')
   const mc = parsePersonalHoldingNumber(makingChargePercentStr)
   if (mc > 0) {
-    return `Gold rate ₹${rateInr}/g calculated from bill total after ${mc}% making charge.`
+    return `Gold rate ₹${rateInr}/g — from bill after ${mc}% making, ${PERSONAL_VAULT_GST_ON_GOLD_PERCENT}% GST on gold (₹${gstGold}), ${PERSONAL_VAULT_GST_ON_MAKING_PERCENT}% GST on making (₹${gstMc}).`
   }
-  return `Gold rate ₹${rateInr}/g calculated from bill total ÷ weight.`
+  return `Gold rate ₹${rateInr}/g — from bill after ${PERSONAL_VAULT_GST_ON_GOLD_PERCENT}% GST on gold (₹${gstGold}).`
+}
+
+function inrLabel(n: string): string {
+  return parsePersonalHoldingNumber(n).toLocaleString('en-IN')
+}
+
+/** Live bill summary for the vault form (from bill total or from gold rate). */
+export function describePersonalVaultCostSummary(
+  weightStr: string,
+  rateStr: string,
+  valueStr: string,
+  makingChargePercentStr: string,
+): string {
+  const bd = valueStr.trim()
+    ? breakdownPersonalVaultBill(weightStr, { totalStr: valueStr, makingChargePercentStr })
+    : rateStr.trim()
+      ? breakdownPersonalVaultBill(weightStr, { rateStr, makingChargePercentStr })
+      : null
+  if (!bd) return ''
+
+  if (valueStr.trim()) {
+    return describeDerivedGoldRate(weightStr, valueStr, makingChargePercentStr)
+  }
+
+  const mc = parsePersonalHoldingNumber(makingChargePercentStr)
+  const bits = [
+    `Metal ₹${inrLabel(bd.metalInr)}`,
+    `GST on gold (${PERSONAL_VAULT_GST_ON_GOLD_PERCENT}%): ₹${inrLabel(bd.gstOnGoldInr)}`,
+  ]
+  if (mc > 0) {
+    bits.push(
+      `Making (${mc}%): ₹${inrLabel(bd.makingInr)}`,
+      `GST on making (${PERSONAL_VAULT_GST_ON_MAKING_PERCENT}%): ₹${inrLabel(bd.gstOnMakingInr)}`,
+    )
+  }
+  bits.push(`Estimated bill total: ₹${inrLabel(bd.totalInr)}`)
+  return bits.join(' · ')
 }
 
 export function isGoldRateDerivedFromBill(weightStr: string, valueStr: string): boolean {
@@ -122,10 +212,12 @@ export function purchaseValueFromHolding(h: {
   weight_grams: string
 }): string {
   const basis = parsePersonalHoldingNumber(h.purchase_cost_basis_inr)
-  const mc = parsePersonalHoldingNumber(h.making_charge_percent ?? '')
-  if (basis > 0) {
-    if (mc > 0) return (basis * metalValueMultiplier(h.making_charge_percent ?? '')).toFixed(2)
-    return h.purchase_cost_basis_inr
+  if (basis > 0 && h.purchase_price_inr_per_gram) {
+    return formatPurchaseValueFromRate(
+      h.weight_grams,
+      h.purchase_price_inr_per_gram,
+      h.making_charge_percent ?? '',
+    )
   }
   const w = parsePersonalHoldingNumber(h.weight_grams)
   const r = parsePersonalHoldingNumber(h.purchase_price_inr_per_gram ?? '')
