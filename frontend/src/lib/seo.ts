@@ -1,5 +1,6 @@
 /** Canonical site URL — always use www for SEO consistency. */
 import { CITY_PAGE_SEO, GOLD_RATE_CITIES, goldRateCityPath } from '@/content/goldRateCities'
+import { INDIA_CITY_PAGE_SEO } from '@/content/indiaGoldRateCities'
 
 export const SITE_URL = 'https://www.cridoraindia.com'
 
@@ -16,7 +17,7 @@ export function goldRatesOgImage(label?: string): string {
 export const GOLD_RATES_FEED_URL = `${SITE_URL}/feed/gold-rates.xml`
 
 export const DEFAULT_KEYWORDS =
-  'gold rate today, Kerala gold rate, gold rate in India, 22K gold rate, 24K gold rate, silver rate Kerala, gold price Kerala, gold rate Kochi, gold rate India today, digital gold portfolio, jeweller Kerala'
+  'gold rate today, gold rate today in India, Kerala gold rate, gold rate in India, 22K gold rate, 24K gold rate, silver rate Kerala, gold price India, gold rate India today, gold calculator India, digital gold portfolio, jeweller India'
 
 export function absoluteUrl(path: string): string {
   const p = path.startsWith('/') ? path : `/${path}`
@@ -90,6 +91,7 @@ export const PAGE_SEO: Record<string, PageSeo> = {
     path: '/features',
   },
   ...CITY_PAGE_SEO,
+  ...INDIA_CITY_PAGE_SEO,
 }
 
 export function seoForPath(pathname: string): PageSeo {
@@ -141,11 +143,30 @@ export function organizationJsonLd(): Record<string, unknown> {
     '@type': 'Organization',
     name: SITE_NAME,
     url: SITE_URL,
-    logo: `${SITE_URL}/icon-512.png`,
+    logo: {
+      '@type': 'ImageObject',
+      url: `${SITE_URL}/icon-512.png`,
+      width: 512,
+      height: 512,
+    },
     description:
-      'Digital gold portfolio platform with live Kerala gold rates, jeweller engagement, and marketplace for India.',
+      'Live gold rates in India (22K, 24K, 18K per gram), free gold jewellery calculator with GST, digital gold portfolio tracking, and verified jeweller platform across India.',
     areaServed: { '@type': 'Country', name: 'India' },
-    sameAs: [],
+    foundingLocation: { '@type': 'Place', name: 'Kerala, India' },
+    knowsAbout: [
+      'Gold rate today India',
+      'Kerala gold rate',
+      '22K gold price',
+      '24K gold price',
+      'Gold jewellery calculator',
+      'GST on gold India',
+      'BIS hallmark gold',
+    ],
+    sameAs: [
+      'https://www.instagram.com/cridoraindia',
+      'https://www.facebook.com/cridoraindia',
+      'https://twitter.com/cridoraindia',
+    ],
   }
 }
 
@@ -208,6 +229,75 @@ export function goldCalculatorWebAppJsonLd(path: string): Record<string, unknown
     provider: { '@type': 'Organization', name: SITE_NAME, url: SITE_URL },
     inLanguage: ['en-IN', 'ml-IN'],
   }
+}
+
+/**
+ * PriceSpecification schema blocks for live gold rates.
+ * Enables Google's price-related rich results for gold queries.
+ */
+export function priceSpecificationJsonLd(opts: {
+  r22: number | null
+  r24: number | null
+  r18?: number | null
+  city?: string
+}): Record<string, unknown>[] {
+  const location = opts.city ?? 'India'
+  const today = new Date().toISOString().slice(0, 10)
+  const blocks: Record<string, unknown>[] = []
+  if (opts.r22 != null) {
+    blocks.push({
+      '@context': 'https://schema.org',
+      '@type': 'Product',
+      name: `22K Gold per gram — ${location}`,
+      description: `Live 22K (916 BIS hallmark) gold rate per gram in ${location}. Updated every few minutes on Cridora India.`,
+      category: 'Precious Metal',
+      brand: { '@type': 'Brand', name: 'BIS 916 Hallmark Gold' },
+      offers: {
+        '@type': 'Offer',
+        priceCurrency: 'INR',
+        price: opts.r22.toFixed(2),
+        priceValidUntil: today,
+        availability: 'https://schema.org/InStock',
+        seller: { '@type': 'Organization', name: SITE_NAME, url: SITE_URL },
+      },
+    })
+  }
+  if (opts.r24 != null) {
+    blocks.push({
+      '@context': 'https://schema.org',
+      '@type': 'Product',
+      name: `24K Gold per gram — ${location}`,
+      description: `Live 24K (999 pure) gold rate per gram in ${location}. Updated every few minutes on Cridora India.`,
+      category: 'Precious Metal',
+      brand: { '@type': 'Brand', name: '24K Pure Gold' },
+      offers: {
+        '@type': 'Offer',
+        priceCurrency: 'INR',
+        price: opts.r24.toFixed(2),
+        priceValidUntil: today,
+        availability: 'https://schema.org/InStock',
+        seller: { '@type': 'Organization', name: SITE_NAME, url: SITE_URL },
+      },
+    })
+  }
+  if (opts.r18 != null) {
+    blocks.push({
+      '@context': 'https://schema.org',
+      '@type': 'Product',
+      name: `18K Gold per gram — ${location}`,
+      description: `Live 18K (750 hallmark) gold rate per gram in ${location} on Cridora India.`,
+      category: 'Precious Metal',
+      offers: {
+        '@type': 'Offer',
+        priceCurrency: 'INR',
+        price: opts.r18.toFixed(2),
+        priceValidUntil: today,
+        availability: 'https://schema.org/InStock',
+        seller: { '@type': 'Organization', name: SITE_NAME, url: SITE_URL },
+      },
+    })
+  }
+  return blocks
 }
 
 export function goldCalculatorHowToJsonLd(): Record<string, unknown> {

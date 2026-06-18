@@ -73,7 +73,19 @@ class GoldTickerConfig(models.Model):
     hourly_gold_push_link = models.CharField(
         max_length=512,
         default="/marketplace",
-        help_text="In-app path opened when the hourly digest is tapped.",
+        help_text="Fallback in-app path when hourly digest tap targets are not set.",
+    )
+    hourly_gold_push_link_guest = models.CharField(
+        max_length=512,
+        blank=True,
+        default="",
+        help_text="In-app path for guests tapping the hourly digest (defaults to hourly_gold_push_link).",
+    )
+    hourly_gold_push_link_authenticated = models.CharField(
+        max_length=512,
+        blank=True,
+        default="",
+        help_text="In-app path for signed-in users tapping the hourly digest (defaults to hourly_gold_push_link).",
     )
     rate_move_alert_title = models.CharField(
         max_length=120,
@@ -84,7 +96,19 @@ class GoldTickerConfig(models.Model):
     rate_move_alert_link = models.CharField(
         max_length=512,
         default="/marketplace",
-        help_text="In-app path opened when a threshold alert is tapped.",
+        help_text="Fallback in-app path when threshold alert tap targets are not set.",
+    )
+    rate_move_alert_link_guest = models.CharField(
+        max_length=512,
+        blank=True,
+        default="",
+        help_text="In-app path for guests tapping a threshold alert (defaults to rate_move_alert_link).",
+    )
+    rate_move_alert_link_authenticated = models.CharField(
+        max_length=512,
+        blank=True,
+        default="",
+        help_text="In-app path for signed-in users tapping a threshold alert (defaults to rate_move_alert_link).",
     )
     gold_push_image_url = models.URLField(
         max_length=512,

@@ -8,13 +8,14 @@ from django.core.cache import cache
 from django.db import transaction
 from django.utils import timezone
 
-from apps.accounts.push_payload import build_push_payload
+from apps.accounts.push_tap_links import build_tap_push_payload
 from apps.accounts.webpush_service import push_delivery_configured, send_push_broadcast_localized
 
 from .gold_push_copy import (
     format_gold_price_move_body,
     gold_hourly_push_title,
 )
+from .gold_push_tap_links import hourly_gold_tap_paths
 from .models import GoldTickerConfig, get_or_create_ticker
 from .spot_prices import resolve_cridora_base_22k_inr
 
@@ -41,7 +42,9 @@ def run_hourly_gold_price_push_digest(*, force: bool = False) -> dict:
 
     body: str | None = None
     title = "Gold price update"
-    link = "/marketplace"
+    guest = "/marketplace"
+    auth = "/marketplace"
+    fb = "/marketplace"
     image_url = ""
     with transaction.atomic():
         t = GoldTickerConfig.objects.select_for_update().get(pk=ticker_pk)
@@ -50,7 +53,7 @@ def run_hourly_gold_price_push_digest(*, force: bool = False) -> dict:
             return result
 
         title = (t.hourly_gold_push_title or "Gold price update").strip() or "Gold price update"
-        link = (t.hourly_gold_push_link or "/marketplace").strip() or "/marketplace"
+        guest, auth, fb = hourly_gold_tap_paths(t)
         image_url = (t.gold_push_image_url or "").strip()
 
         baseline = t.hourly_gold_push_baseline_inr_per_gram_22k
@@ -88,17 +91,21 @@ def run_hourly_gold_price_push_digest(*, force: bool = False) -> dict:
             return result
         n = send_push_broadcast_localized(
             {
-                "en": build_push_payload(
+                "en": build_tap_push_payload(
                     title=(title if title else gold_hourly_push_title("en")),
                     body=format_gold_price_move_body(baseline=baseline, current=current, locale="en"),
-                    url=link,
+                    fallback_url=fb,
+                    url_guest=guest,
+                    url_authenticated=auth,
                     tag="cridora-gold-hourly",
                     image_url=image_url or None,
                 ),
-                "ml": build_push_payload(
+                "ml": build_tap_push_payload(
                     title=gold_hourly_push_title("ml"),
                     body=format_gold_price_move_body(baseline=baseline, current=current, locale="ml"),
-                    url=link,
+                    fallback_url=fb,
+                    url_guest=guest,
+                    url_authenticated=auth,
                     tag="cridora-gold-hourly",
                     image_url=image_url or None,
                 ),
@@ -139,7 +146,7 @@ def evaluate_hourly_digest_on_price_ingest(
             return result
 
         title = (t.hourly_gold_push_title or "Gold price update").strip() or "Gold price update"
-        link = (t.hourly_gold_push_link or "/marketplace").strip() or "/marketplace"
+        guest, auth, fb = hourly_gold_tap_paths(t)
         image_url = (t.gold_push_image_url or "").strip()
 
         baseline = t.hourly_gold_push_baseline_inr_per_gram_22k
@@ -172,17 +179,21 @@ def evaluate_hourly_digest_on_price_ingest(
         )
 
     payloads = {
-        "en": build_push_payload(
+        "en": build_tap_push_payload(
             title=title,
             body=format_gold_price_move_body(baseline=baseline, current=current, locale="en"),
-            url=link,
+            fallback_url=fb,
+            url_guest=guest,
+            url_authenticated=auth,
             tag="cridora-gold-hourly",
             image_url=image_url or None,
         ),
-        "ml": build_push_payload(
+        "ml": build_tap_push_payload(
             title=gold_hourly_push_title("ml"),
             body=format_gold_price_move_body(baseline=baseline, current=current, locale="ml"),
-            url=link,
+            fallback_url=fb,
+            url_guest=guest,
+            url_authenticated=auth,
             tag="cridora-gold-hourly",
             image_url=image_url or None,
         ),

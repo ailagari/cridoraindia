@@ -743,15 +743,27 @@ export const enMessages = {
   'goldRates.loadMore': 'Load more dates',
   'goldRates.loading': 'Loading…',
   'goldRates.faqTitle': 'Common questions',
-  'goldRates.faq1q': 'How often are rates updated?',
+  'goldRates.faq1q': 'How often are gold rates updated?',
   'goldRates.faq1a':
-    'Cridora refreshes the live Kerala gold rate in the background about every two minutes when prices change. Charts and today’s row update with the ticker.',
+    'Cridora refreshes live Kerala gold rates every two minutes when prices change. Charts and today’s daily row update with the ticker.',
   'goldRates.faq2q': 'What is 22K (916) gold?',
   'goldRates.faq2a':
-    '22 karat gold is 91.6% pure — the BIS 916 hallmark standard used for most Indian jewellery.',
+    '22 karat gold is 91.6% pure — the BIS 916 hallmark standard used for most Indian jewellery. The remaining 8.4% is typically copper or silver for added durability.',
   'goldRates.faq3q': 'Can I buy gold on Cridora?',
   'goldRates.faq3a':
-    'Cridora helps you track holdings and connect with verified jewellers. Browse the marketplace or sign up to manage your portfolio.',
+    'Cridora helps you track gold holdings and connect with verified jewellers. Browse the marketplace or sign up to manage your digital gold portfolio.',
+  'goldRates.faq4q': 'What is the difference between 22K and 24K gold?',
+  'goldRates.faq4a':
+    '24K gold is 99.9% pure, used for coins and bullion but too soft for jewellery. 22K (91.6% pure) is the most popular choice for Indian jewellery — durable for daily wear. 18K (75% pure) is preferred for diamond and studded jewellery.',
+  'goldRates.faq5q': 'What is BIS hallmark on gold jewellery?',
+  'goldRates.faq5a':
+    'BIS (Bureau of Indian Standards) hallmark certifies gold purity. The “916” hallmark means 22 karat (91.6%) gold. Hallmarking is mandatory in India for registered jewellers. Always insist on BIS hallmarked gold.',
+  'goldRates.faq6q': 'How is GST calculated on gold jewellery in India?',
+  'goldRates.faq6a':
+    'GST on gold jewellery = 3% on gold metal value + 18% on making charges. Example: ₹50,000 gold + ₹5,000 making = GST of ₹1,500 + ₹900 = ₹2,400 total. Use the Cridora Gold Calculator for instant estimates.',
+  'goldRates.faq7q': 'What factors affect gold price in India?',
+  'goldRates.faq7a':
+    'Key factors: (1) International LBMA London spot price. (2) USD/INR exchange rate. (3) MCX (Multi Commodity Exchange) trading. (4) India import duty (~15%). (5) Festival and wedding season demand. (6) Global economic and geopolitical events.',
   'goldRates.sidebar': 'Sidebar',
   'goldRates.sidebarCridora': 'Track gold with Cridora',
   'goldRates.sidebarCridoraBody':

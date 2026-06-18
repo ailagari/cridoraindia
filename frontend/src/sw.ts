@@ -97,9 +97,27 @@ type PushPayload = {
   title?: string
   body?: string
   url?: string
+  url_guest?: string
+  url_authenticated?: string
   tag?: string
   image?: string
   id?: string
+}
+
+function relativeInAppPath(raw: string | undefined, fallback = '/'): string {
+  const value = (raw || fallback).trim() || fallback
+  try {
+    const u = new URL(value, self.location.origin)
+    return `${u.pathname}${u.search}${u.hash}` || '/'
+  } catch {
+    return value.startsWith('/') ? value : `/${value}`
+  }
+}
+
+function notificationTapResolverUrl(guestPath: string, authPath: string): string {
+  const g = encodeURIComponent(guestPath)
+  const a = encodeURIComponent(authPath)
+  return new URL(`/notification-tap?g=${g}&a=${a}`, self.location.origin).href
 }
 
 async function postTrayAck(body: Record<string, string>): Promise<void> {
@@ -156,7 +174,9 @@ self.addEventListener('push', (event: PushEvent) => {
   const title = (data.title || fallback.title || 'Cridora').trim() || 'Cridora'
   const bodyRaw = typeof data.body === 'string' ? data.body.trim() : ''
   const body = bodyRaw.length > 0 ? bodyRaw : 'Open Cridora for details.'
-  const targetUrl = new URL(data.url || '/', self.location.origin).href
+  const guestPath = relativeInAppPath(data.url_guest, data.url || '/')
+  const authPath = relativeInAppPath(data.url_authenticated, data.url || guestPath)
+  const targetUrl = notificationTapResolverUrl(guestPath, authPath)
   const iconHref = new URL('/icon-192.png', self.location.origin).href
   const imageRaw = typeof data.image === 'string' ? data.image.trim() : ''
   const imageHref =
@@ -174,7 +194,13 @@ self.addEventListener('push', (event: PushEvent) => {
     vibrate: [180, 80, 120],
     renotify: true,
     requireInteraction: false,
-    data: { url: targetUrl, tag, notification_id: notificationId },
+    data: {
+      url: targetUrl,
+      url_guest: guestPath,
+      url_authenticated: authPath,
+      tag,
+      notification_id: notificationId,
+    },
     tag,
     ...(imageHref ? { image: imageHref } : {}),
   } as NotificationOptions
@@ -213,9 +239,12 @@ self.addEventListener('push', (event: PushEvent) => {
 
 self.addEventListener('notificationclick', (event: NotificationEvent) => {
   event.notification.close()
-  const nd = event.notification.data as { url?: string; tag?: string; notification_id?: string } | undefined
-  const raw = nd?.url
-  const targetUrl = new URL(raw || '/', self.location.origin).href
+  const nd = event.notification.data as
+    | { url?: string; url_guest?: string; url_authenticated?: string; tag?: string; notification_id?: string }
+    | undefined
+  const guestPath = relativeInAppPath(nd?.url_guest, nd?.url || '/')
+  const authPath = relativeInAppPath(nd?.url_authenticated, nd?.url || guestPath)
+  const targetUrl = notificationTapResolverUrl(guestPath, authPath)
   const tag = typeof nd?.tag === 'string' ? nd.tag : ''
   const notificationId = typeof nd?.notification_id === 'string' ? nd.notification_id : ''
   event.waitUntil(

@@ -48,6 +48,44 @@ GOLD_RATE_CITIES: list[dict[str, str]] = [
 
 CITY_BY_SLUG = {c["slug"]: c for c in GOLD_RATE_CITIES}
 
+# Major Indian cities for national gold rate pages (non-Kerala)
+INDIA_GOLD_RATE_CITIES: list[dict[str, str]] = [
+    {"slug": "mumbai", "name": "Mumbai", "state": "Maharashtra"},
+    {"slug": "delhi", "name": "Delhi", "state": "Delhi"},
+    {"slug": "chennai", "name": "Chennai", "state": "Tamil Nadu"},
+    {"slug": "bangalore", "name": "Bangalore", "state": "Karnataka", "alt": "Bengaluru"},
+    {"slug": "hyderabad", "name": "Hyderabad", "state": "Telangana"},
+    {"slug": "pune", "name": "Pune", "state": "Maharashtra"},
+    {"slug": "kolkata", "name": "Kolkata", "state": "West Bengal"},
+    {"slug": "jaipur", "name": "Jaipur", "state": "Rajasthan"},
+    {"slug": "ahmedabad", "name": "Ahmedabad", "state": "Gujarat"},
+    {"slug": "surat", "name": "Surat", "state": "Gujarat"},
+    {"slug": "lucknow", "name": "Lucknow", "state": "Uttar Pradesh"},
+    {"slug": "nagpur", "name": "Nagpur", "state": "Maharashtra"},
+    {"slug": "indore", "name": "Indore", "state": "Madhya Pradesh"},
+    {"slug": "bhopal", "name": "Bhopal", "state": "Madhya Pradesh"},
+    {"slug": "visakhapatnam", "name": "Visakhapatnam", "state": "Andhra Pradesh", "alt": "Vizag"},
+    {"slug": "patna", "name": "Patna", "state": "Bihar"},
+    {"slug": "vadodara", "name": "Vadodara", "state": "Gujarat"},
+    {"slug": "ludhiana", "name": "Ludhiana", "state": "Punjab"},
+    {"slug": "agra", "name": "Agra", "state": "Uttar Pradesh"},
+    {"slug": "nashik", "name": "Nashik", "state": "Maharashtra"},
+    {"slug": "rajkot", "name": "Rajkot", "state": "Gujarat"},
+    {"slug": "varanasi", "name": "Varanasi", "state": "Uttar Pradesh"},
+    {"slug": "coimbatore", "name": "Coimbatore", "state": "Tamil Nadu"},
+    {"slug": "madurai", "name": "Madurai", "state": "Tamil Nadu"},
+    {"slug": "mysuru", "name": "Mysuru", "state": "Karnataka", "alt": "Mysore"},
+    {"slug": "chandigarh", "name": "Chandigarh", "state": "Punjab"},
+    {"slug": "guwahati", "name": "Guwahati", "state": "Assam"},
+    {"slug": "bhubaneswar", "name": "Bhubaneswar", "state": "Odisha"},
+]
+
+INDIA_CITY_BY_SLUG = {c["slug"]: c for c in INDIA_GOLD_RATE_CITIES}
+
+ALL_CITY_SLUGS = frozenset(
+    {c["slug"] for c in GOLD_RATE_CITIES} | {c["slug"] for c in INDIA_GOLD_RATE_CITIES}
+)
+
 
 def _city_seo(city: dict[str, str]) -> dict[str, str]:
     name = city["name"]
@@ -61,6 +99,29 @@ def _city_seo(city: dict[str, str]) -> dict[str, str]:
         "keywords": (
             f"{name} gold rate today, gold rate {name}, {name} gold price, 22K gold rate Kerala, "
             f"24K gold rate Kerala, {city['gold_ml']}, gold rate Kerala"
+        ),
+        "path": path,
+    }
+
+
+def _india_city_seo(city: dict[str, str]) -> dict[str, str]:
+    name = city["name"]
+    state = city["state"]
+    alt = city.get("alt", "")
+    alt_note = f" ({alt})" if alt else ""
+    path = f"/gold-rates/{city['slug']}"
+    alt_kw = f", {alt} gold rate today" if alt else ""
+    return {
+        "title": f"{name} Gold Rate Today — Live 22K, 24K & Silver Price India | Cridora",
+        "description": (
+            f"Live gold rate in {name}{alt_note}, {state} today per gram — 22K (916 BIS), 24K, 18K gold "
+            "and silver 999. Check today's gold price, free jewellery calculator with GST. "
+            "Updated every few minutes on Cridora India."
+        ),
+        "keywords": (
+            f"{name} gold rate today, gold rate in {name}, {name} gold price today, "
+            f"gold rate {name} per gram, 22K gold rate {name}, 24K gold rate {name}, "
+            f"today gold rate {name}, gold price India today, gold rate India{alt_kw}"
         ),
         "path": path,
     }
@@ -143,6 +204,10 @@ for _city in GOLD_RATE_CITIES:
     _meta = _city_seo(_city)
     ROUTE_SEO[_meta["path"]] = _meta
 
+for _city in INDIA_GOLD_RATE_CITIES:
+    _meta = _india_city_seo(_city)
+    ROUTE_SEO[_meta["path"]] = _meta
+
 ML_GOLD_META: dict[str, dict[str, str]] = {
     "/gold-rates/kerala": {
         "title": "കേരള സ്വർണ്ണ വില ഇന്ന് — Live 22K, 24K & Silver | Cridora India",
@@ -173,6 +238,7 @@ for _city in GOLD_RATE_CITIES:
 GOLD_RATE_BASE_PATHS = frozenset(
     {"/gold-rates/kerala", "/gold-rates/india", "/gold-rates"}
     | {f"/gold-rates/{c['slug']}" for c in GOLD_RATE_CITIES}
+    | {f"/gold-rates/{c['slug']}" for c in INDIA_GOLD_RATE_CITIES}
 )
 
 GOLD_CALCULATOR_BASE_PATHS = frozenset({"/gold-calculator"})
@@ -199,10 +265,13 @@ SITEMAP_PATHS: list[tuple[str, str, str]] = [
     ("/ml/gold-rates/kerala", "hourly", "0.98"),
     ("/gold-calculator", "hourly", "0.97"),
     ("/ml/gold-calculator", "hourly", "0.95"),
-    ("/gold-rates/india", "daily", "0.95"),
+    ("/gold-rates/india", "daily", "0.96"),
     ("/ml/gold-rates/india", "daily", "0.93"),
+    # Kerala city pages (en + ml)
     *[(f"/gold-rates/{c['slug']}", "hourly", "0.92") for c in GOLD_RATE_CITIES],
     *[(f"/ml/gold-rates/{c['slug']}", "hourly", "0.90") for c in GOLD_RATE_CITIES],
+    # National India city pages
+    *[(f"/gold-rates/{c['slug']}", "hourly", "0.91") for c in INDIA_GOLD_RATE_CITIES],
     ("/jewellers", "weekly", "0.8"),
     ("/marketplace", "daily", "0.85"),
     ("/how-it-works", "monthly", "0.7"),
@@ -407,7 +476,30 @@ def _prerender_body(path: str, meta: dict[str, str], rates: dict[str, Any] | Non
     heading = _prerender_heading(path, meta)
     rates_html = _rates_summary_html(rates)
     lang = "ml-IN" if path.startswith("/ml/") else "en-IN"
-    city_links = " ".join(
+
+    # For India city pages, link to other India cities and calculator
+    slug = base.rsplit("/", 1)[-1] if "/" in base else ""
+    is_india_city = slug in INDIA_CITY_BY_SLUG
+    if is_india_city:
+        city_data = INDIA_CITY_BY_SLUG[slug]
+        city_links = " ".join(
+            f'<a href="{SITE_URL}/gold-rates/{c["slug"]}">{html.escape(c["name"])} gold rate</a>'
+            for c in INDIA_GOLD_RATE_CITIES[:10]
+            if c["slug"] != slug
+        )
+        return f"""<noscript>
+  <article id="seo-prerender" lang="en-IN">
+    <h1>{html.escape(heading)}</h1>
+    <p>{html.escape(meta["description"])}</p>
+    {rates_html}
+    <p>Gold rates in {html.escape(city_data["name"])}, {html.escape(city_data["state"])} — indicative India reference price based on MCX and major jeweller associations. Actual jewellery prices include making charges and GST.</p>
+    <nav aria-label="Gold rate in Indian cities">{city_links}</nav>
+    <p><a href="{SITE_URL}/gold-rates/india">All India gold rates</a></p>
+    <p><a href="{SITE_URL}/gold-calculator">Gold jewellery calculator with GST</a></p>
+  </article>
+</noscript>
+"""
+    kerala_city_links = " ".join(
         f'<a href="{SITE_URL}/gold-rates/{c["slug"]}">{html.escape(c["name"])} gold rate</a>'
         for c in GOLD_RATE_CITIES[:8]
     )
@@ -417,12 +509,161 @@ def _prerender_body(path: str, meta: dict[str, str], rates: dict[str, Any] | Non
     <h1>{html.escape(heading)}</h1>
     <p>{html.escape(meta["description"])}</p>
     {rates_html}
-    <nav aria-label="Gold rate cities">{city_links}</nav>
+    <nav aria-label="Gold rate cities">{kerala_city_links}</nav>
     <p><a href="{SITE_URL}/gold-rates/kerala">Kerala gold rate charts and history</a></p>
+    <p><a href="{SITE_URL}/gold-calculator">Gold jewellery price calculator India</a></p>
     {ml_link}
   </article>
 </noscript>
 """
+
+
+_COMMON_GOLD_FAQS = [
+    {
+        "@type": "Question",
+        "name": "How often are gold rates updated on Cridora?",
+        "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Cridora refreshes live gold rates approximately every two minutes when market prices change. The Kerala board rates and MCX reference prices are polled automatically in the background.",
+        },
+    },
+    {
+        "@type": "Question",
+        "name": "What is 22K (916) gold?",
+        "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "22 karat gold is 91.6% pure gold — the BIS 916 hallmark standard widely used for Indian jewellery. The remaining 8.4% is typically copper or silver for added durability.",
+        },
+    },
+    {
+        "@type": "Question",
+        "name": "What is the difference between 22K and 24K gold?",
+        "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "24K gold is 99.9% pure gold, used for coins and bullion. 22K gold (91.6% pure) is the most popular choice for jewellery in India because it is harder and more durable than 24K. 18K gold (75% pure) is used for studded and diamond jewellery.",
+        },
+    },
+    {
+        "@type": "Question",
+        "name": "What is BIS hallmark on gold?",
+        "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "BIS (Bureau of Indian Standards) hallmark on gold jewellery certifies the purity of gold. The '916' hallmark denotes 22K (91.6%) gold. Hallmarking is mandatory in India for all gold jewellery above a certain weight. Always insist on BIS hallmarked gold when buying.",
+        },
+    },
+    {
+        "@type": "Question",
+        "name": "How is GST calculated on gold jewellery in India?",
+        "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "GST on gold jewellery in India is charged at two rates: 3% GST on the gold metal value, and 18% GST on making charges. So for a piece with ₹50,000 metal value and ₹5,000 making charges, GST = ₹1,500 (3% of gold) + ₹900 (18% of making) = ₹2,400 total.",
+        },
+    },
+    {
+        "@type": "Question",
+        "name": "What is the gold rate per sovereign (8 grams)?",
+        "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "One sovereign of gold equals 8 grams. Multiply today's 22K gold rate per gram by 8 to get the sovereign price. For example, if 22K gold is ₹7,200/gram, one sovereign costs ₹57,600.",
+        },
+    },
+    {
+        "@type": "Question",
+        "name": "Why does the gold rate vary between cities in India?",
+        "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Gold rates across Indian cities are largely similar as they are based on MCX (Multi Commodity Exchange) prices and international LBMA rates. Minor variations occur due to local jeweller association pricing, state-level taxes, transportation costs, and demand. Kerala follows AKGSMA and Kerala Sarafa board rates, which are among the most widely followed in South India.",
+        },
+    },
+    {
+        "@type": "Question",
+        "name": "Is it a good time to buy gold in India?",
+        "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Gold is a long-term store of value and a hedge against inflation in India. Experts suggest buying gold regularly (monthly) rather than trying to time the market. Festival seasons (Dhanteras, Akshay Tritiya) traditionally see high demand. Always check the live rate and buy BIS hallmarked gold from a verified jeweller.",
+        },
+    },
+    {
+        "@type": "Question",
+        "name": "How do I calculate gold jewellery price with making charges?",
+        "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Gold jewellery price = (Weight in grams × Gold rate per gram) + Making charges + GST. Making charges vary from 8–25% of gold value depending on design complexity. Use the free Cridora Gold Calculator at cridoraindia.com/gold-calculator to get an instant estimate with live rates and GST.",
+        },
+    },
+    {
+        "@type": "Question",
+        "name": "What factors affect gold price in India?",
+        "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Key factors affecting India gold price: (1) International spot price on LBMA, London. (2) USD to INR exchange rate — a weaker rupee raises domestic gold price. (3) MCX trading sentiment. (4) RBI and government import duty (currently 15%). (5) Festive and wedding season demand. (6) Global economic uncertainty and geopolitical events.",
+        },
+    },
+]
+
+
+def _price_spec_blocks(rates: dict[str, Any] | None, city: str = "India") -> list[dict[str, Any]]:
+    """Generate PriceSpecification schema for live gold rates — enables rich results."""
+    if not rates:
+        return []
+    gold = rates.get("gold") if isinstance(rates.get("gold"), dict) else {}
+    from datetime import date
+    today = date.today().isoformat()
+    blocks = []
+    r22 = gold.get("22K")
+    r24 = gold.get("24K")
+    r18 = gold.get("18K")
+    if r22 is not None:
+        blocks.append({
+            "@context": "https://schema.org",
+            "@type": "Product",
+            "name": f"22K Gold per gram — {city}",
+            "description": f"Live 22K (916 BIS hallmark) gold rate per gram in {city}. Updated every few minutes on Cridora India.",
+            "category": "Precious Metal",
+            "brand": {"@type": "Brand", "name": "BIS 916 Hallmark Gold"},
+            "offers": {
+                "@type": "Offer",
+                "priceCurrency": "INR",
+                "price": f"{float(r22):.2f}",
+                "priceValidUntil": today,
+                "availability": "https://schema.org/InStock",
+                "seller": {"@type": "Organization", "name": SITE_NAME, "url": SITE_URL},
+            },
+        })
+    if r24 is not None:
+        blocks.append({
+            "@context": "https://schema.org",
+            "@type": "Product",
+            "name": f"24K Gold per gram — {city}",
+            "description": f"Live 24K pure gold rate per gram in {city}. Updated every few minutes on Cridora India.",
+            "category": "Precious Metal",
+            "brand": {"@type": "Brand", "name": "24K Pure Gold"},
+            "offers": {
+                "@type": "Offer",
+                "priceCurrency": "INR",
+                "price": f"{float(r24):.2f}",
+                "priceValidUntil": today,
+                "availability": "https://schema.org/InStock",
+                "seller": {"@type": "Organization", "name": SITE_NAME, "url": SITE_URL},
+            },
+        })
+    if r18 is not None:
+        blocks.append({
+            "@context": "https://schema.org",
+            "@type": "Product",
+            "name": f"18K Gold per gram — {city}",
+            "description": f"Live 18K (750 hallmark) gold rate per gram in {city} on Cridora India.",
+            "category": "Precious Metal",
+            "offers": {
+                "@type": "Offer",
+                "priceCurrency": "INR",
+                "price": f"{float(r18):.2f}",
+                "priceValidUntil": today,
+                "availability": "https://schema.org/InStock",
+                "seller": {"@type": "Organization", "name": SITE_NAME, "url": SITE_URL},
+            },
+        })
+    return blocks
 
 
 def _json_ld_for_path(path: str, meta: dict[str, str], rates: dict[str, Any] | None) -> list[dict[str, Any]]:
@@ -433,7 +674,14 @@ def _json_ld_for_path(path: str, meta: dict[str, str], rates: dict[str, Any] | N
             "@type": "Organization",
             "name": SITE_NAME,
             "url": SITE_URL,
-            "logo": DEFAULT_OG_IMAGE,
+            "logo": {"@type": "ImageObject", "url": DEFAULT_OG_IMAGE, "width": 512, "height": 512},
+            "description": "Live gold rates in India (22K, 24K, 18K per gram), free gold calculator with GST, digital gold portfolio tracking, and verified jeweller platform.",
+            "areaServed": {"@type": "Country", "name": "India"},
+            "sameAs": [
+                "https://www.instagram.com/cridoraindia",
+                "https://www.facebook.com/cridoraindia",
+                "https://twitter.com/cridoraindia",
+            ],
         },
         {
             "@context": "https://schema.org",
@@ -441,6 +689,11 @@ def _json_ld_for_path(path: str, meta: dict[str, str], rates: dict[str, Any] | N
             "name": SITE_NAME,
             "url": SITE_URL,
             "inLanguage": ["en-IN", "ml-IN"],
+            "potentialAction": {
+                "@type": "SearchAction",
+                "target": f"{SITE_URL}/jewellers?q={{search_term_string}}",
+                "query-input": "required name=search_term_string",
+            },
         },
     ]
     if _is_gold_rate_path(path):
@@ -448,6 +701,18 @@ def _json_ld_for_path(path: str, meta: dict[str, str], rates: dict[str, Any] | N
         date_modified = None
         if rates:
             date_modified = rates.get("rate_date") or rates.get("source_updated_at")
+
+        # Determine city name for PriceSpec
+        city_name = "Kerala, India"
+        if base.startswith("/gold-rates/") and base not in ("/gold-rates/kerala", "/gold-rates/india", "/gold-rates"):
+            slug = base.rsplit("/", 1)[-1]
+            if slug in INDIA_CITY_BY_SLUG:
+                city_name = INDIA_CITY_BY_SLUG[slug]["name"]
+            elif slug in CITY_BY_SLUG:
+                city_name = f"{CITY_BY_SLUG[slug]['name']}, Kerala"
+        elif base == "/gold-rates/india":
+            city_name = "India"
+
         blocks.append(
             {
                 "@context": "https://schema.org",
@@ -455,8 +720,9 @@ def _json_ld_for_path(path: str, meta: dict[str, str], rates: dict[str, Any] | N
                 "name": meta["title"],
                 "description": meta["description"],
                 "url": url,
-                "about": {"@type": "Thing", "name": "Gold price in Kerala, India"},
+                "about": {"@type": "Thing", "name": "Gold price in India"},
                 **({"dateModified": str(date_modified)} if date_modified else {}),
+                "datePublished": str(date_modified or "2024-01-01"),
                 "inLanguage": "ml-IN" if path.startswith("/ml/") else "en-IN",
             }
         )
@@ -468,39 +734,53 @@ def _json_ld_for_path(path: str, meta: dict[str, str], rates: dict[str, Any] | N
                 "description": meta["description"],
                 "url": url,
                 "dateModified": str(date_modified or ""),
-                "author": {"@type": "Organization", "name": SITE_NAME},
+                "datePublished": str(date_modified or "2024-01-01"),
+                "author": {"@type": "Organization", "name": SITE_NAME, "url": SITE_URL},
                 "publisher": {
                     "@type": "Organization",
                     "name": SITE_NAME,
                     "logo": {"@type": "ImageObject", "url": DEFAULT_OG_IMAGE},
                 },
+                "about": {"@type": "Thing", "name": "Gold price India"},
+                "keywords": meta.get("keywords", ""),
             }
         )
+
+        # PriceSpecification — enables Google's gold price rich result
+        blocks.extend(_price_spec_blocks(rates, city=city_name))
+
         if base in ("/gold-rates/kerala", "/gold-rates/india"):
             blocks.append(
                 {
                     "@context": "https://schema.org",
                     "@type": "FAQPage",
-                    "mainEntity": [
-                        {
-                            "@type": "Question",
-                            "name": "How often are Kerala gold rates updated?",
-                            "acceptedAnswer": {
-                                "@type": "Answer",
-                                "text": "Live rates refresh about every two minutes when prices change.",
-                            },
-                        },
-                        {
-                            "@type": "Question",
-                            "name": "What is 22K (916) gold?",
-                            "acceptedAnswer": {
-                                "@type": "Answer",
-                                "text": "22 karat gold is 91.6% pure — the BIS 916 hallmark standard used for most Indian jewellery.",
-                            },
-                        },
-                    ],
+                    "mainEntity": _COMMON_GOLD_FAQS,
                 }
             )
+        elif base.startswith("/gold-rates/") and base not in ("/gold-rates/kerala", "/gold-rates/india"):
+            slug = base.rsplit("/", 1)[-1]
+            city_data = INDIA_CITY_BY_SLUG.get(slug) or CITY_BY_SLUG.get(slug)
+            city_label = city_data["name"] if city_data else slug.title()
+            extra_faq = [
+                {
+                    "@type": "Question",
+                    "name": f"What is the gold rate in {city_label} today?",
+                    "acceptedAnswer": {
+                        "@type": "Answer",
+                        "text": f"Today's gold rate in {city_label} per gram is available live on Cridora India — 22K (916 BIS), 24K, and 18K. Rates are updated every few minutes from Kerala board and India reference prices.",
+                    },
+                },
+                {
+                    "@type": "Question",
+                    "name": f"How is gold priced in {city_label}?",
+                    "acceptedAnswer": {
+                        "@type": "Answer",
+                        "text": f"Gold price in {city_label} is primarily determined by MCX (Multi Commodity Exchange) spot prices and international London Bullion Market rates, adjusted for USD/INR exchange rate and India import duty of 15%.",
+                    },
+                },
+            ] + _COMMON_GOLD_FAQS[:5]
+            blocks.append({"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": extra_faq})
+
         if base == "/gold-rates/kerala":
             blocks.append(
                 {
@@ -518,6 +798,23 @@ def _json_ld_for_path(path: str, meta: dict[str, str], rates: dict[str, Any] | N
                     ],
                 }
             )
+        if base == "/gold-rates/india":
+            blocks.append(
+                {
+                    "@context": "https://schema.org",
+                    "@type": "ItemList",
+                    "name": "Gold rate in major Indian cities today",
+                    "itemListElement": [
+                        {
+                            "@type": "ListItem",
+                            "position": i + 1,
+                            "name": f"{c['name']} gold rate today",
+                            "url": f"{SITE_URL}/gold-rates/{c['slug']}",
+                        }
+                        for i, c in enumerate(INDIA_GOLD_RATE_CITIES[:10])
+                    ],
+                }
+            )
     if _is_gold_calculator_path(path):
         date_modified = None
         if rates:
@@ -532,44 +829,38 @@ def _json_ld_for_path(path: str, meta: dict[str, str], rates: dict[str, Any] | N
                     "url": url,
                     "about": {"@type": "Thing", "name": "Gold jewellery price calculator India"},
                     **({"dateModified": str(date_modified)} if date_modified else {}),
+                    "datePublished": str(date_modified or "2024-01-01"),
                     "inLanguage": "ml-IN" if path.startswith("/ml/") else "en-IN",
                 },
                 {
                     "@context": "https://schema.org",
                     "@type": "WebApplication",
-                    "name": "Cridora Gold Jewellery Calculator",
+                    "name": "Cridora Gold Jewellery Calculator India",
                     "url": url,
                     "applicationCategory": "FinanceApplication",
                     "operatingSystem": "Any",
+                    "browserRequirements": "Requires JavaScript",
                     "offers": {"@type": "Offer", "price": "0", "priceCurrency": "INR"},
                     "description": meta["description"],
                     "provider": {"@type": "Organization", "name": SITE_NAME, "url": SITE_URL},
+                    "featureList": [
+                        "Live 22K, 24K, 18K gold rates",
+                        "GST calculation (3% on gold, 18% on making)",
+                        "Making charges in ₹/gram or percentage",
+                        "Sovereign and kilogram weight support",
+                    ],
                 },
                 {
                     "@context": "https://schema.org",
                     "@type": "HowTo",
                     "name": "How to calculate gold jewellery price in India",
+                    "description": "Use weight, purity, live gold rate, making charges, and GST to estimate ornament price.",
+                    "totalTime": "PT1M",
                     "step": [
-                        {
-                            "@type": "HowToStep",
-                            "name": "Enter gold weight",
-                            "text": "Enter weight in grams, sovereign (8 g), or kilograms.",
-                        },
-                        {
-                            "@type": "HowToStep",
-                            "name": "Select purity",
-                            "text": "Choose 24K, 22K (916 BIS), or 18K gold purity.",
-                        },
-                        {
-                            "@type": "HowToStep",
-                            "name": "Add making charges",
-                            "text": "Optional making charge as rupees per gram or percentage of metal value.",
-                        },
-                        {
-                            "@type": "HowToStep",
-                            "name": "View total with GST",
-                            "text": "See metal value, making charges, GST on gold (3%), GST on making (18%), and total.",
-                        },
+                        {"@type": "HowToStep", "name": "Enter gold weight", "text": "Enter weight in grams, sovereign (8 g), or kilograms."},
+                        {"@type": "HowToStep", "name": "Select purity", "text": "Choose 24K, 22K (916 BIS), or 18K gold purity."},
+                        {"@type": "HowToStep", "name": "Add making charges", "text": "Enter making charge as ₹ per gram or as a percentage of the metal value."},
+                        {"@type": "HowToStep", "name": "View total with GST", "text": "See metal value, making charges, GST on gold (3%), GST on making (18%), and the estimated total price."},
                     ],
                 },
                 {
@@ -578,13 +869,10 @@ def _json_ld_for_path(path: str, meta: dict[str, str], rates: dict[str, Any] | N
                     "mainEntity": [
                         {
                             "@type": "Question",
-                            "name": "How does the Cridora gold calculator work?",
+                            "name": "How does the Cridora gold jewellery calculator work?",
                             "acceptedAnswer": {
                                 "@type": "Answer",
-                                "text": (
-                                    "Multiply live gold rate per gram by weight for metal value, add making charges, "
-                                    "then apply GST on gold and making to get an estimated ornament price."
-                                ),
+                                "text": "Multiply live gold rate per gram by weight to get metal value. Add making charges (₹/gram or % of metal value). Apply GST: 3% on gold metal value and 18% on making charges. The total is your estimated jewellery price.",
                             },
                         },
                         {
@@ -592,10 +880,31 @@ def _json_ld_for_path(path: str, meta: dict[str, str], rates: dict[str, Any] | N
                             "name": "How is GST calculated on gold jewellery?",
                             "acceptedAnswer": {
                                 "@type": "Answer",
-                                "text": (
-                                    "GST on gold metal is typically 3% of gold value; GST on making charges is 18% "
-                                    "of the making charge amount in India."
-                                ),
+                                "text": "GST on gold in India: 3% on the gold metal value + 18% on making charges. For example, ₹50,000 gold + ₹5,000 making = ₹1,500 GST on gold + ₹900 GST on making = ₹2,400 total GST.",
+                            },
+                        },
+                        {
+                            "@type": "Question",
+                            "name": "What is 916 BIS hallmark gold?",
+                            "acceptedAnswer": {
+                                "@type": "Answer",
+                                "text": "916 BIS hallmark certifies the gold is 22 karat (91.6% pure). BIS hallmarking is mandatory in India for gold jewellery sold by registered jewellers.",
+                            },
+                        },
+                        {
+                            "@type": "Question",
+                            "name": "How many grams is one sovereign of gold?",
+                            "acceptedAnswer": {
+                                "@type": "Answer",
+                                "text": "One sovereign equals 8 grams of gold in India. Sovereign is a common weight unit used in Kerala and South India for gold jewellery transactions.",
+                            },
+                        },
+                        {
+                            "@type": "Question",
+                            "name": "What is making charge in gold jewellery?",
+                            "acceptedAnswer": {
+                                "@type": "Answer",
+                                "text": "Making charge is the labour cost for crafting gold jewellery, charged by jewellers as a flat ₹/gram amount or as a percentage (typically 8–25%) of the gold value. It varies by design complexity, jeweller, and city.",
                             },
                         },
                     ],
@@ -687,16 +996,22 @@ Sitemap: {SITE_URL}/sitemap.xml
 
 
 def sitemap_xml() -> str:
+    from datetime import datetime, timezone
+
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     lines = [
         '<?xml version="1.0" encoding="UTF-8"?>',
         '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
     ]
     for path, changefreq, priority in SITEMAP_PATHS:
         loc = f"{SITE_URL}{path if path != '/' else '/'}"
+        # Live gold rate pages always show today as lastmod (content updates hourly)
+        lastmod = today if changefreq in ("hourly", "daily") else "2025-01-01"
         lines.extend(
             [
                 "  <url>",
                 f"    <loc>{loc}</loc>",
+                f"    <lastmod>{lastmod}</lastmod>",
                 f"    <changefreq>{changefreq}</changefreq>",
                 f"    <priority>{priority}</priority>",
                 "  </url>",

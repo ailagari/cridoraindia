@@ -54,7 +54,11 @@ def send_fcm_payload(token: str, payload: dict[str, Any]) -> None:
         "tag": tag,
         "id": stable_id,
     }
-    if image:
+    for extra_key in ("url_guest", "url_authenticated", "image"):
+        extra_val = str(payload.get(extra_key) or "").strip()
+        if extra_val:
+            data_payload[extra_key] = extra_val
+    if image and "image" not in data_payload:
         data_payload["image"] = image
     data_payload = {key: str(value) for key, value in data_payload.items()}
     android_notification = messaging.AndroidNotification(

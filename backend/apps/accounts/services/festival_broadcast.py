@@ -11,7 +11,7 @@ from django.contrib.auth import get_user_model
 
 from apps.accounts.models import AdminNotification, FestivalBroadcastNotification, WebPushSubscription
 from apps.accounts.models import PortfolioUserNotification
-from apps.accounts.push_payload import build_push_payload
+from apps.accounts.push_tap_links import build_tap_push_payload
 from apps.accounts.services.campaign_audience import resolve_campaign_user_ids
 from apps.accounts.services.deliver_engagement import deliver_engagement
 from apps.accounts.services.engagement_context import EngagementContextResult
@@ -44,6 +44,12 @@ def _campaign_engagement_context(row: FestivalBroadcastNotification) -> Engageme
     )
 
 
+def _campaign_tap_paths(row: FestivalBroadcastNotification) -> tuple[str, str, str]:
+    guest = (row.link_path_guest or "/").strip() or "/"
+    auth = (row.link_path_authenticated or guest).strip() or guest
+    return guest, auth, guest
+
+
 def _payload_for_user(row: FestivalBroadcastNotification, user: User) -> dict | None:
     moment = (row.engagement_moment or "").strip()
     if row.personalize_per_user and moment:
@@ -60,10 +66,27 @@ def _payload_for_user(row: FestivalBroadcastNotification, user: User) -> dict | 
         body = row.body.strip()
     if not body:
         return None
-    return build_push_payload(
+    guest, auth, fb = _campaign_tap_paths(row)
+    return build_tap_push_payload(
         title=title[:120],
         body=body,
-        url="/",
+        fallback_url=fb,
+        url_guest=guest,
+        url_authenticated=auth,
+        tag=f"cridora-festival-{row.pk}",
+        image_url=(row.image_url or "").strip() or (row.logo_url or "").strip() or None,
+        for_authenticated_user=True,
+    )
+
+
+def _broadcast_payload_for_row(row: FestivalBroadcastNotification) -> dict:
+    guest, auth, fb = _campaign_tap_paths(row)
+    return build_tap_push_payload(
+        title=row.title.strip() or "Cridora",
+        body=row.body.strip(),
+        fallback_url=fb,
+        url_guest=guest,
+        url_authenticated=auth,
         tag=f"cridora-festival-{row.pk}",
         image_url=(row.image_url or "").strip() or (row.logo_url or "").strip() or None,
     )
@@ -148,7 +171,7 @@ def _store_campaign_inbox(row: FestivalBroadcastNotification, user: User, payloa
             user,
             moment=moment,
             context=_campaign_engagement_context(row),
-            link_path="/",
+            link_path=(payload.get("url_authenticated") or payload.get("url") or "/"),
             category=PortfolioUserNotification.CATEGORY_PROMO,
             priority=PortfolioUserNotification.PRIORITY_LOW,
             notification_type="festival_campaign",
@@ -164,7 +187,7 @@ def _store_campaign_inbox(row: FestivalBroadcastNotification, user: User, payloa
         kind=PortfolioUserNotification.KIND_SYSTEM,
         title=(payload.get("title") or "Cridora")[:180],
         body=payload.get("body") or "",
-        link_path="/",
+        link_path=(payload.get("url_authenticated") or payload.get("url") or "/"),
         category=PortfolioUserNotification.CATEGORY_PROMO,
         priority=PortfolioUserNotification.PRIORITY_LOW,
         notification_type="festival_campaign",
@@ -275,13 +298,7 @@ def process_due_festival_broadcasts(*, limit: int = 50) -> int:
                         "festival_broadcast id=%s subscription stats log failed; continuing send",
                         row.pk,
                     )
-                payload = build_push_payload(
-                    title=row.title.strip() or "Cridora",
-                    body=row.body.strip(),
-                    url="/",
-                    tag=f"cridora-festival-{row.pk}",
-                    image_url=(row.image_url or "").strip() or (row.logo_url or "").strip() or None,
-                )
+                payload = _broadcast_payload_for_row(row)
                 n = _deliver_campaign_push(row, payload)
                 row.status = FestivalBroadcastNotification.STATUS_SENT
                 row.sent_at = now
@@ -300,7 +317,7 @@ def process_due_festival_broadcasts(*, limit: int = 50) -> int:
                     kind=AdminNotification.KIND_FESTIVAL_BROADCAST_SENT,
                     title=row.title.strip() or "Festival broadcast sent",
                     body=preview,
-                    link_path="/",
+                    link_path=(payload.get("url_authenticated") or payload.get("url") or "/"),
                     actor=row.created_by,
                 )
             except Exception as exc:

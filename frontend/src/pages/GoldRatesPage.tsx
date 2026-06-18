@@ -28,6 +28,7 @@ import {
   newsArticleJsonLd,
   organizationJsonLd,
   PAGE_SEO,
+  priceSpecificationJsonLd,
   webSiteJsonLd,
 } from '@/lib/seo'
 import { useLivePoll } from '@/lib/useLivePoll'
@@ -170,6 +171,19 @@ export function GoldRatesPage() {
       : ads?.page_description || t('goldRates.pageDescription')
   const seoBase = PAGE_SEO['/gold-rates/kerala']
 
+  const r22Live = useMemo(() => {
+    const v = rates?.gold['22K']
+    return v != null ? Number(v) : null
+  }, [rates])
+  const r24Live = useMemo(() => {
+    const v = rates?.gold['24K']
+    return v != null ? Number(v) : null
+  }, [rates])
+  const r18Live = useMemo(() => {
+    const v = rates?.gold['18K']
+    return v != null ? Number(v) : null
+  }, [rates])
+
   const jsonLd = useMemo(
     () => [
       organizationJsonLd(),
@@ -191,13 +205,18 @@ export function GoldRatesPage() {
         { name: 'Home', path: '/' },
         { name: 'Kerala gold rates', path: '/gold-rates/kerala' },
       ]),
+      ...priceSpecificationJsonLd({ r22: r22Live, r24: r24Live, r18: r18Live, city: 'Kerala, India' }),
       faqJsonLd([
         { question: t('goldRates.faq1q'), answer: t('goldRates.faq1a') },
         { question: t('goldRates.faq2q'), answer: t('goldRates.faq2a') },
         { question: t('goldRates.faq3q'), answer: t('goldRates.faq3a') },
+        { question: t('goldRates.faq4q'), answer: t('goldRates.faq4a') },
+        { question: t('goldRates.faq5q'), answer: t('goldRates.faq5a') },
+        { question: t('goldRates.faq6q'), answer: t('goldRates.faq6a') },
+        { question: t('goldRates.faq7q'), answer: t('goldRates.faq7a') },
       ]),
     ],
-    [pageTitle, pageDescription, rates, t, locale],
+    [pageTitle, pageDescription, rates, r22Live, r24Live, r18Live, t, locale],
   )
 
   useEffect(() => {
@@ -465,6 +484,22 @@ export function GoldRatesPage() {
               <div>
                 <dt>{t('goldRates.faq3q')}</dt>
                 <dd>{t('goldRates.faq3a')}</dd>
+              </div>
+              <div>
+                <dt>{t('goldRates.faq4q')}</dt>
+                <dd>{t('goldRates.faq4a')}</dd>
+              </div>
+              <div>
+                <dt>{t('goldRates.faq5q')}</dt>
+                <dd>{t('goldRates.faq5a')}</dd>
+              </div>
+              <div>
+                <dt>{t('goldRates.faq6q')}</dt>
+                <dd>{t('goldRates.faq6a')}</dd>
+              </div>
+              <div>
+                <dt>{t('goldRates.faq7q')}</dt>
+                <dd>{t('goldRates.faq7a')}</dd>
               </div>
             </dl>
           </section>

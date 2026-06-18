@@ -6,11 +6,12 @@ from decimal import Decimal
 
 from django.db import transaction
 
-from apps.accounts.push_payload import build_push_payload
+from apps.accounts.push_tap_links import build_tap_push_payload
 from apps.accounts.services.notification_push_queue import enqueue_push_delivery
 from apps.accounts.webpush_service import push_delivery_configured, send_push_broadcast_localized
 
 from .gold_push_copy import format_gold_price_move_body, gold_rate_alert_title
+from .gold_push_tap_links import rate_move_tap_paths
 from .models import GoldTickerConfig, get_or_create_ticker
 
 
@@ -33,7 +34,9 @@ def evaluate_platform_threshold_broadcast(
     ticker_pk = get_or_create_ticker().pk
 
     title = "Gold rate alert"
-    link = "/marketplace"
+    guest = "/marketplace"
+    auth = "/marketplace"
+    fb = "/marketplace"
     image_url = ""
     baseline = previous_rate.quantize(Decimal("0.01"))
 
@@ -49,7 +52,7 @@ def evaluate_platform_threshold_broadcast(
             return result
 
         title = (t.rate_move_alert_title or "Gold rate alert").strip() or "Gold rate alert"
-        link = (t.rate_move_alert_link or "/marketplace").strip() or "/marketplace"
+        guest, auth, fb = rate_move_tap_paths(t)
         image_url = (t.gold_push_image_url or "").strip()
 
         stored_baseline = t.rate_alert_baseline_inr_per_gram_22k
@@ -71,10 +74,12 @@ def evaluate_platform_threshold_broadcast(
     payloads = {}
     for loc in ("en", "ml"):
         title_loc = (title if loc == "en" else gold_rate_alert_title(loc)).strip() or gold_rate_alert_title(loc)
-        payloads[loc] = build_push_payload(
+        payloads[loc] = build_tap_push_payload(
             title=title_loc,
             body=format_gold_price_move_body(baseline=baseline, current=current, locale=loc),
-            url=link,
+            fallback_url=fb,
+            url_guest=guest,
+            url_authenticated=auth,
             tag="cridora-gold-rate",
             image_url=image_url or None,
         )

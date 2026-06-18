@@ -32,9 +32,11 @@ import { JewellerDashboardPage } from '@/pages/dashboard/JewellerDashboardPage'
 import { DashboardIndexRedirect } from '@/pages/dashboard/DashboardIndexRedirect'
 import { RedirectPreserveSearch } from '@/pages/dashboard/RedirectPreserveSearch'
 import { NativeNotificationBridge } from '@/components/NativeNotificationBridge'
+import { WebPushTapBridge } from '@/components/WebPushTapBridge'
 import { PushActivationPrompt } from '@/components/PushActivationPrompt'
 import { NativeAppSplash } from '@/components/NativeAppSplash'
 import { NativeAppEntryRoute } from '@/components/NativeAppEntryRoute'
+import { NotificationTapRedirectPage } from '@/pages/NotificationTapRedirectPage'
 import { PlatformBillingTaxBootstrap } from '@/components/PlatformBillingTaxBootstrap'
 import { isNativePlatform } from '@/lib/capacitorPlatform'
 import '@/styles/index.css'
@@ -59,6 +61,7 @@ export default function App() {
     <AppRouter>
       <ScrollToTop />
       <NativeNotificationBridge />
+      <WebPushTapBridge />
       <ThemeProvider>
         <ToastProvider>
         <AuthProvider>
@@ -90,6 +93,7 @@ export default function App() {
               <Route path="gold-calculator" element={<GoldCalculatorPage />} />
               {goldRatesMalayalamRoutes}
               <Route path="login" element={<LoginPage />} />
+              <Route path="notification-tap" element={<NotificationTapRedirectPage />} />
               <Route path="signup" element={<SignupPage />} />
               <Route path="jeweller/apply" element={<JewellerApplyPage />} />
             </Route>

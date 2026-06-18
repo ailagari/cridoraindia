@@ -6,3 +6,6 @@ export const CRIDORA_PUSH_RESUBSCRIBE_MESSAGE_TYPE = 'cridora-push-resubscribe' 
 
 /** Client asks the service worker to show a local tray notification (iOS PWA reliability). */
 export const CRIDORA_SHOW_LOCAL_TRAY_MESSAGE_TYPE = 'cridora-show-local-tray' as const
+
+/** Service worker forwards notification tap targets to the SPA for auth-aware routing. */
+export const CRIDORA_NOTIFICATION_NAVIGATE_MESSAGE_TYPE = 'cridora-notification-navigate' as const

@@ -175,7 +175,7 @@ export function GoldRatesIndiaPage() {
             </div>
           </section>
 
-          <GoldRatesCityLinks />
+          <GoldRatesCityLinks showIndiaCities />
 
           <section className="gr-section gr-faq" aria-labelledby="gr-india-faq">
             <h2 id="gr-india-faq" className="gr-section__title">

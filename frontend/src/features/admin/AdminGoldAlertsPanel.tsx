@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
 import { authFetch } from '@/lib/api'
+import {
+  NotificationTapTargetFields,
+  useTapTargetState,
+} from '@/components/admin/NotificationTapTargetFields'
 
 type GoldAlertSettings = {
   platform_base_inr_per_gram_22k: string
@@ -7,7 +11,13 @@ type GoldAlertSettings = {
   rate_move_alerts_enabled: boolean
   hourly_gold_push_enabled: boolean
   hourly_gold_push_title: string
+  hourly_gold_push_link: string
+  hourly_gold_push_link_guest: string
+  hourly_gold_push_link_authenticated: string
   rate_move_alert_title: string
+  rate_move_alert_link: string
+  rate_move_alert_link_guest: string
+  rate_move_alert_link_authenticated: string
   gold_push_image_url: string
   holding_gain_threshold_inr?: string
   max_gold_alerts_per_day?: number
@@ -40,6 +50,9 @@ export function AdminGoldAlertsPanel() {
   const [portfolioInr, setPortfolioInr] = useState('500')
   const [portfolioPct, setPortfolioPct] = useState('2')
 
+  const hourlyTap = useTapTargetState('/gold-rates/kerala', '/gold-rates/kerala')
+  const thresholdTap = useTapTargetState('/gold-rates/kerala', '/userdashboard?section=portfolio_overview')
+
   const load = useCallback(async () => {
     setLoadErr('')
     const res = await authFetch('/api/v1/admin/gold-ticker/')
@@ -60,7 +73,25 @@ export function AdminGoldAlertsPanel() {
     setMaxPerDay(String(data.max_gold_alerts_per_day ?? 3))
     setPortfolioInr(data.portfolio_gain_threshold_inr ?? '500')
     setPortfolioPct(data.portfolio_gain_threshold_percent ?? '2')
-  }, [])
+    const hourlyGuest =
+      data.hourly_gold_push_link_guest?.trim() ||
+      data.hourly_gold_push_link?.trim() ||
+      '/gold-rates/kerala'
+    const hourlyAuth =
+      data.hourly_gold_push_link_authenticated?.trim() ||
+      data.hourly_gold_push_link?.trim() ||
+      hourlyGuest
+    hourlyTap.loadFromPaths(hourlyGuest, hourlyAuth)
+    const thresholdGuest =
+      data.rate_move_alert_link_guest?.trim() ||
+      data.rate_move_alert_link?.trim() ||
+      '/gold-rates/kerala'
+    const thresholdAuth =
+      data.rate_move_alert_link_authenticated?.trim() ||
+      data.rate_move_alert_link?.trim() ||
+      '/userdashboard?section=portfolio_overview'
+    thresholdTap.loadFromPaths(thresholdGuest, thresholdAuth)
+  }, [hourlyTap.loadFromPaths, thresholdTap.loadFromPaths])
 
   useEffect(() => {
     void load()
@@ -76,11 +107,15 @@ export function AdminGoldAlertsPanel() {
         jsonBody: {
           hourly_gold_push_enabled: hourlyOn,
           hourly_gold_push_title: hourlyTitle.trim() || 'Gold price update',
-          hourly_gold_push_link: '/marketplace',
+          hourly_gold_push_link: hourlyTap.guestPath,
+          hourly_gold_push_link_guest: hourlyTap.guestPath,
+          hourly_gold_push_link_authenticated: hourlyTap.authPath,
           rate_move_alerts_enabled: thresholdOn,
           rate_move_alert_threshold_inr: thresholdInr.trim(),
           rate_move_alert_title: thresholdTitle.trim() || 'Gold rate alert',
-          rate_move_alert_link: '/marketplace',
+          rate_move_alert_link: thresholdTap.guestPath,
+          rate_move_alert_link_guest: thresholdTap.guestPath,
+          rate_move_alert_link_authenticated: thresholdTap.authPath,
           gold_push_image_url: goldImage.trim(),
           holding_gain_threshold_inr: holdingGain.trim(),
           max_gold_alerts_per_day: Number.parseInt(maxPerDay.trim(), 10) || 3,
@@ -168,6 +203,20 @@ export function AdminGoldAlertsPanel() {
           <label htmlFor="g-th-title">Big move title</label>
           <input id="g-th-title" value={thresholdTitle} onChange={(e) => setThresholdTitle(e.target.value)} />
         </div>
+        <NotificationTapTargetFields
+          idPrefix="g-threshold"
+          guestLabel="Big move alert — guests tap opens"
+          authLabel="Big move alert — signed-in tap opens"
+          guestPreset={thresholdTap.guestPreset}
+          guestCustom={thresholdTap.guestCustom}
+          authPreset={thresholdTap.authPreset}
+          authCustom={thresholdTap.authCustom}
+          onGuestPresetChange={thresholdTap.setGuestPreset}
+          onGuestCustomChange={thresholdTap.setGuestCustom}
+          onAuthPresetChange={thresholdTap.setAuthPreset}
+          onAuthCustomChange={thresholdTap.setAuthCustom}
+          disabled={busy}
+        />
 
         <label style={{ display: 'flex', gap: '0.65rem', margin: '1rem 0', cursor: 'pointer' }}>
           <input type="checkbox" checked={hourlyOn} onChange={(e) => setHourlyOn(e.target.checked)} />
@@ -179,6 +228,20 @@ export function AdminGoldAlertsPanel() {
           <label htmlFor="g-hr-title">Hourly title</label>
           <input id="g-hr-title" value={hourlyTitle} onChange={(e) => setHourlyTitle(e.target.value)} />
         </div>
+        <NotificationTapTargetFields
+          idPrefix="g-hourly"
+          guestLabel="Hourly alert — guests tap opens"
+          authLabel="Hourly alert — signed-in tap opens"
+          guestPreset={hourlyTap.guestPreset}
+          guestCustom={hourlyTap.guestCustom}
+          authPreset={hourlyTap.authPreset}
+          authCustom={hourlyTap.authCustom}
+          onGuestPresetChange={hourlyTap.setGuestPreset}
+          onGuestCustomChange={hourlyTap.setGuestCustom}
+          onAuthPresetChange={hourlyTap.setAuthPreset}
+          onAuthCustomChange={hourlyTap.setAuthCustom}
+          disabled={busy}
+        />
 
         <h4 style={{ marginTop: '1.25rem' }}>Customer holding alerts</h4>
         <div className="field">

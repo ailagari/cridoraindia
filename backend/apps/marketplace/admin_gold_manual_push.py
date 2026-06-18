@@ -4,9 +4,10 @@ from __future__ import annotations
 
 from decimal import Decimal
 
-from apps.accounts.push_payload import build_push_payload
+from apps.accounts.push_tap_links import build_tap_push_payload
 from apps.accounts.webpush_service import push_delivery_configured, send_push_broadcast_localized
 from apps.marketplace.gold_push_copy import format_gold_price_move_body, gold_rate_alert_title
+from apps.marketplace.gold_push_tap_links import rate_move_tap_paths
 from apps.marketplace.models import get_or_create_ticker
 from apps.marketplace.platform_gold_notify import notify_customers_platform_gold_move
 from apps.marketplace.spot_prices import resolve_cridora_base_22k_inr
@@ -31,7 +32,7 @@ def send_manual_gold_price_notification(
     current = current.quantize(Decimal("0.01"))
     ticker = get_or_create_ticker()
 
-    link = (link_path or ticker.rate_move_alert_link or "/marketplace").strip() or "/marketplace"
+    guest, auth, fb = rate_move_tap_paths(ticker)
     img = (image_url or ticker.gold_push_image_url or "").strip()
     title_en = (title or ticker.rate_move_alert_title or "Gold price update").strip() or "Gold price update"
 
@@ -41,20 +42,28 @@ def send_manual_gold_price_notification(
     else:
         body_en = (body or "").strip()
 
+    if link_path:
+        fb = (link_path or fb).strip() or fb
+        guest, auth = fb, fb
+
     payloads = {
-        "en": build_push_payload(
+        "en": build_tap_push_payload(
             title=title_en,
             body=body_en,
-            url=link,
+            fallback_url=fb,
+            url_guest=guest,
+            url_authenticated=auth,
             tag="cridora-gold-manual",
             image_url=img or None,
         ),
-        "ml": build_push_payload(
+        "ml": build_tap_push_payload(
             title=gold_rate_alert_title("ml"),
             body=format_gold_price_move_body(baseline=current, current=current, locale="ml")
             if use_live_price_line
             else body_en,
-            url=link,
+            fallback_url=fb,
+            url_guest=guest,
+            url_authenticated=auth,
             tag="cridora-gold-manual",
             image_url=img or None,
         ),
@@ -64,7 +73,7 @@ def send_manual_gold_price_notification(
         baseline=current,
         current=current,
         title=title_en,
-        link=link,
+        link=auth,
         image_url=img,
         body=body_en,
     )

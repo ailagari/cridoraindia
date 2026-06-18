@@ -1,5 +1,5 @@
-import { type FormEvent, useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { type FormEvent, useEffect, useMemo, useState } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
 import { usePublicLocale } from '@/i18n/PublicLocaleProvider'
 import { dashboardLandingPath } from '@/lib/routes'
@@ -12,6 +12,17 @@ export function LoginPage() {
   const { login, user, loading } = useAuth()
   const { t } = usePublicLocale()
   const navigate = useNavigate()
+  const location = useLocation()
+  const returnPath = useMemo(() => {
+    const next = new URLSearchParams(location.search).get('next')
+    if (next && next.startsWith('/')) return next
+    const from = (location.state as { from?: { pathname: string; search?: string; hash?: string } } | null)
+      ?.from
+    if (from?.pathname) {
+      return `${from.pathname}${from.search ?? ''}${from.hash ?? ''}`
+    }
+    return null
+  }, [location.search, location.state])
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [rememberMe, setRememberMe] = useState(true)
@@ -20,8 +31,8 @@ export function LoginPage() {
 
   useEffect(() => {
     if (loading || !user) return
-    navigate(dashboardLandingPath(user), { replace: true })
-  }, [loading, user, navigate])
+    navigate(returnPath ?? dashboardLandingPath(user), { replace: true })
+  }, [loading, user, navigate, returnPath])
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault()
@@ -29,7 +40,7 @@ export function LoginPage() {
     setBusy(true)
     try {
       const u = await login(email, password, rememberMe)
-      navigate(dashboardLandingPath(u), { replace: true })
+      navigate(returnPath ?? dashboardLandingPath(u), { replace: true })
     } catch (err) {
       setError(err instanceof Error ? err.message : t('auth.signInFailed'))
     } finally {

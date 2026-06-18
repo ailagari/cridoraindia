@@ -563,6 +563,8 @@ class FestivalBroadcastNotificationSerializer(serializers.ModelSerializer):
             "festival_message",
             "personalize_per_user",
             "store_in_inbox",
+            "link_path_guest",
+            "link_path_authenticated",
             "status",
             "sent_at",
             "push_recipient_count",
@@ -594,6 +596,13 @@ class FestivalBroadcastNotificationCreateSerializer(serializers.Serializer):
     festival_message = serializers.CharField(required=False, allow_blank=True, max_length=500)
     personalize_per_user = serializers.BooleanField(required=False, default=False)
     store_in_inbox = serializers.BooleanField(required=False, default=False)
+    link_path_guest = serializers.CharField(required=False, allow_blank=True, max_length=512, default="/")
+    link_path_authenticated = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        max_length=512,
+        default="/userdashboard?section=portfolio_overview",
+    )
 
     def create(self, validated_data):
         request = self.context["request"]
@@ -621,6 +630,11 @@ class FestivalBroadcastNotificationCreateSerializer(serializers.Serializer):
             festival_message=(validated_data.get("festival_message") or "")[:500],
             personalize_per_user=bool(validated_data.get("personalize_per_user")),
             store_in_inbox=bool(validated_data.get("store_in_inbox")),
+            link_path_guest=(validated_data.get("link_path_guest") or "/").strip() or "/",
+            link_path_authenticated=(
+                (validated_data.get("link_path_authenticated") or "/userdashboard?section=portfolio_overview").strip()
+                or "/userdashboard?section=portfolio_overview"
+            ),
             created_by=request.user,
         )
 

@@ -2243,6 +2243,16 @@ class FestivalBroadcastNotification(models.Model):
         default=False,
         help_text="Also create PortfolioUserNotification rows for recipients.",
     )
+    link_path_guest = models.CharField(
+        max_length=512,
+        default="/",
+        help_text="In-app path when a guest (not signed in) taps this push.",
+    )
+    link_path_authenticated = models.CharField(
+        max_length=512,
+        default="/userdashboard?section=portfolio_overview",
+        help_text="In-app path when a signed-in user taps this push.",
+    )
     created_by_jeweller = models.ForeignKey(
         User,
         null=True,

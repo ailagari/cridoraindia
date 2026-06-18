@@ -7,6 +7,7 @@ import { readStoredPublicLocale } from '@/i18n/engine'
 import { isNativeAndroid } from '@/lib/capacitorPlatform'
 import { fetchPushDeviceStatus, isDeviceStatusDeliverable } from '@/lib/pushDeviceStatus'
 import type { AppNotification } from '@/lib/mockNotifications'
+import type { NotificationTapPayload } from '@/lib/notificationTapTargets'
 
 const CHANNEL_ID = 'cridora-alerts'
 const CHANNEL_NAME = 'Cridora alerts'
@@ -21,7 +22,7 @@ export function isNativeFcmEnabled(): boolean {
 
 let bridgeReady = false
 let pushListenersAttached = false
-let navigateHandler: ((path: string) => void) | null = null
+let navigateHandler: ((target: string | NotificationTapPayload) => void) | null = null
 let lastFcmToken: string | null = null
 let tokenWaiters: Array<(token: string) => void> = []
 const notifiedIds = loadNotifiedIds()
@@ -191,6 +192,12 @@ function attachPushListeners(): void {
       typeof notification.data?.body === 'string' && notification.data.body.trim()
         ? notification.data.body.trim()
         : (notification.body ?? 'Open Cridora for details.')
+    const urlGuest =
+      typeof notification.data?.url_guest === 'string' ? notification.data.url_guest : undefined
+    const urlAuth =
+      typeof notification.data?.url_authenticated === 'string'
+        ? notification.data.url_authenticated
+        : undefined
     const url =
       typeof notification.data?.url === 'string' ? notification.data.url : '/'
     const image =
@@ -200,30 +207,38 @@ function attachPushListeners(): void {
       title,
       body,
       link_path: url,
+      url_guest: urlGuest,
+      url_authenticated: urlAuth,
       image_url: image,
     })
   })
 
   PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
-    const url =
-      typeof action.notification.data?.url === 'string'
-        ? action.notification.data.url
-        : '/'
-    navigateHandler?.(url)
+    const data = action.notification.data ?? {}
+    navigateHandler?.({
+      url: typeof data.url === 'string' ? data.url : '/',
+      url_guest: typeof data.url_guest === 'string' ? data.url_guest : undefined,
+      url_authenticated:
+        typeof data.url_authenticated === 'string' ? data.url_authenticated : undefined,
+    })
   })
 }
 
 function attachLocalTapListener(): void {
   LocalNotifications.addListener('localNotificationActionPerformed', (action) => {
-    const url =
-      typeof action.notification.extra?.url === 'string'
-        ? action.notification.extra.url
-        : '/'
-    navigateHandler?.(url)
+    const extra = action.notification.extra ?? {}
+    navigateHandler?.({
+      url: typeof extra.url === 'string' ? extra.url : '/',
+      url_guest: typeof extra.url_guest === 'string' ? extra.url_guest : undefined,
+      url_authenticated:
+        typeof extra.url_authenticated === 'string' ? extra.url_authenticated : undefined,
+    })
   })
 }
 
-export function setNativeNotificationNavigator(navigate: (path: string) => void): void {
+export function setNativeNotificationNavigator(
+  navigate: (target: string | NotificationTapPayload) => void,
+): void {
   navigateHandler = navigate
 }
 
@@ -367,6 +382,8 @@ export async function showTrayNotification(item: {
   title: string
   body: string
   link_path?: string
+  url_guest?: string
+  url_authenticated?: string
   image_url?: string
 }): Promise<void> {
   if (!isNativeAndroid()) return
@@ -388,7 +405,12 @@ export async function showTrayNotification(item: {
           smallIcon: 'ic_stat_cridora',
           iconColor: '#D4AF37',
           schedule: { at: new Date(Date.now() + 300) },
-          extra: { url: item.link_path ?? '/', ...(hasImage ? { image: imageUrl } : {}) },
+          extra: {
+            url: item.link_path ?? '/',
+            ...(item.url_guest ? { url_guest: item.url_guest } : {}),
+            ...(item.url_authenticated ? { url_authenticated: item.url_authenticated } : {}),
+            ...(hasImage ? { image: imageUrl } : {}),
+          },
           ...(hasImage
             ? {
                 largeIcon: imageUrl,

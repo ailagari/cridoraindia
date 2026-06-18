@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { authFetch } from '@/lib/api'
 import {
+  NotificationTapTargetFields,
+  useTapTargetState,
+} from '@/components/admin/NotificationTapTargetFields'
+import {
   NotificationPreviewStage,
   type PreviewTab,
 } from '@/components/notifications/NotificationPreviewMocks'
@@ -75,6 +79,8 @@ export function AdminSendMessagePanel() {
   const [scheduledLocal, setScheduledLocal] = useState(defaultScheduleLocal)
   const [storeInbox, setStoreInbox] = useState(true)
   const [previewTab, setPreviewTab] = useState<PreviewTab>('phone')
+
+  const tapTargets = useTapTargetState('/', '/userdashboard?section=portfolio_overview')
 
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [festName, setFestName] = useState('')
@@ -171,6 +177,8 @@ export function AdminSendMessagePanel() {
           target_type: targetType,
           target_metadata: meta,
           store_in_inbox: storeInbox,
+          link_path_guest: tapTargets.guestPath,
+          link_path_authenticated: tapTargets.authPath,
           festival_name: festName.trim(),
           engagement_moment: engagementMoment.trim(),
           engagement_context: festName.trim() ? 'festival' : '',
@@ -319,6 +327,22 @@ export function AdminSendMessagePanel() {
                 />
                 <span>Also show in customer bell (in-app inbox)</span>
               </label>
+
+              <div className="admin-msg-tap-section">
+                <p className="admin-msg-preview-label">When someone taps this alert</p>
+                <NotificationTapTargetFields
+                  idPrefix="admin-msg"
+                  guestPreset={tapTargets.guestPreset}
+                  guestCustom={tapTargets.guestCustom}
+                  authPreset={tapTargets.authPreset}
+                  authCustom={tapTargets.authCustom}
+                  onGuestPresetChange={tapTargets.setGuestPreset}
+                  onGuestCustomChange={tapTargets.setGuestCustom}
+                  onAuthPresetChange={tapTargets.setAuthPreset}
+                  onAuthCustomChange={tapTargets.setAuthCustom}
+                  disabled={busy}
+                />
+              </div>
 
               <button
                 type="button"
