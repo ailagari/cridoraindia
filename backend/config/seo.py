@@ -356,7 +356,8 @@ def _replace_meta_content(html_doc: str, attr: str, key: str, content: str) -> s
     safe = html.escape(content, quote=True)
     pattern = rf'(<meta\s+{attr}="{re.escape(key)}"\s+content=")[^"]*(")'
     if re.search(pattern, html_doc, flags=re.I):
-        return re.sub(pattern, rf"\1{safe}\2", html_doc, count=1, flags=re.I)
+        # Use \g<n> — plain \1{safe} breaks when safe starts with digits (e.g. 1200 → \11200).
+        return re.sub(pattern, lambda m: f"{m.group(1)}{safe}{m.group(2)}", html_doc, count=1, flags=re.I)
     tag = f'    <meta {attr}="{key}" content="{safe}" />\n'
     return html_doc.replace("<head>", f"<head>\n{tag}", 1)
 

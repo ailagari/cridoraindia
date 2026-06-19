@@ -27,7 +27,7 @@ const liveHost = liveUrl ? new URL(liveUrl).hostname : ''
 
 const config: CapacitorConfig = {
   appId: 'in.cridora.app',
-  appName: 'Cridora India',
+  appName: 'Cridora',
   webDir: 'dist',
   android: {
     allowMixedContent: false,

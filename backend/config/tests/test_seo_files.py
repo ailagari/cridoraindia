@@ -60,6 +60,8 @@ class AdSenseVerificationTests(SimpleTestCase):
         html = (
             '<html><head>'
             '<meta property="og:image" content="https://www.cridoraindia.com/icon-512.png" />'
+            '<meta property="og:image:width" content="1200" />'
+            '<meta property="og:image:height" content="630" />'
             "</head><body><div id=\"root\"></div></body></html>"
         )
         out = inject_route_seo(html, "/")
@@ -67,6 +69,8 @@ class AdSenseVerificationTests(SimpleTestCase):
         self.assertIn('name="twitter:image" content="https://www.cridoraindia.com/og-preview.png"', out)
         self.assertIn('property="og:image:width" content="1200"', out)
         self.assertIn('property="og:image:height" content="630"', out)
+        self.assertNotIn('J00" />', out)
+        self.assertNotIn('s0" />', out)
 
     def test_inject_adsense_verification_deduplicates_tags(self):
         html = (

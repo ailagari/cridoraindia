@@ -74,7 +74,7 @@ export default defineConfig(({ mode }) => {
         injectRegister: null,
         includeAssets: ['favicon.svg', 'icon-192.png', 'icon-512.png', 'og-preview.png', 'apple-touch-icon.png', 'icons/icon-192-mask.png', 'icons/icon-512-mask.png', 'offline.html'],
         manifest: {
-          name: 'Cridora India',
+          name: 'Cridora',
           short_name: 'Cridora',
           description: 'Digital gold portfolio, customer engagement & modernization platform for jewellers in India.',
           theme_color: '#07090f',
