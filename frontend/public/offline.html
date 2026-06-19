@@ -352,6 +352,7 @@
 
         var params = new URLSearchParams(window.location.search)
         var forcedMode = params.get('mode')
+        var bootFailure = params.get('boot') === '1'
         var factIndex = 0
         var factEl = document.getElementById('fact-text')
         var headline = document.getElementById('headline')
@@ -509,7 +510,9 @@
             forcedMode = null
             applyMode()
           }
-          startProbing()
+          if (!bootFailure) {
+            startProbing()
+          }
         }
 
         function onOffline() {
@@ -536,7 +539,10 @@
         window.addEventListener('online', onOnline)
         window.addEventListener('offline', onOffline)
 
-        startProbing()
+        // App shell failed after HTML/JS loaded — server may still return 200, so don't auto-reload loop.
+        if (!bootFailure) {
+          startProbing()
+        }
       })()
     </script>
   </body>

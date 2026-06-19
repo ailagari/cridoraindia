@@ -6,7 +6,7 @@ export const SITE_URL = 'https://www.cridoraindia.com'
 
 export const SITE_NAME = 'Cridora India'
 
-export const DEFAULT_OG_IMAGE = `${SITE_URL}/icon-512.png`
+export const DEFAULT_OG_IMAGE = `${SITE_URL}/og-preview.png`
 
 /** Dynamic OG image with live rates (SVG). Optional label query for city pages. */
 export function goldRatesOgImage(label?: string): string {

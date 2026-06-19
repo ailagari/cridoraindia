@@ -98,6 +98,10 @@ export function SeoHead({
     upsertMeta('property', 'og:description', description)
     upsertMeta('property', 'og:url', url)
     upsertMeta('property', 'og:image', ogImage)
+    upsertMeta('property', 'og:image:width', '1200')
+    upsertMeta('property', 'og:image:height', '630')
+    upsertMeta('property', 'og:image:type', 'image/png')
+    upsertMeta('property', 'og:image:alt', title)
     upsertMeta('property', 'og:locale', locale === 'ml' ? 'ml_IN' : 'en_IN')
     upsertMeta('property', 'og:locale:alternate', locale === 'ml' ? 'en_IN' : 'ml_IN')
 
@@ -105,6 +109,7 @@ export function SeoHead({
     upsertMeta('name', 'twitter:title', title)
     upsertMeta('name', 'twitter:description', description)
     upsertMeta('name', 'twitter:image', ogImage)
+    upsertMeta('name', 'twitter:image:alt', title)
 
     if (jsonLd) injectJsonLd(jsonLd)
     else removeJsonLdScripts()

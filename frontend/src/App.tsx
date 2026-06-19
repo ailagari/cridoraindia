@@ -60,11 +60,11 @@ export default function App() {
   return (
     <AppRouter>
       <ScrollToTop />
-      <NativeNotificationBridge />
-      <WebPushTapBridge />
       <ThemeProvider>
         <ToastProvider>
         <AuthProvider>
+          <NativeNotificationBridge />
+          <WebPushTapBridge />
           <PushActivationPrompt />
           <NativeAppSplash />
           <NativeAppEntryRoute />

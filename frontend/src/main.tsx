@@ -3,21 +3,25 @@ import { createRoot } from 'react-dom/client'
 import App from '@/App'
 import { PwaUpdateBar } from '@/components/PwaUpdateBar'
 import { applyDocumentLocale, readStoredPublicLocale } from '@/i18n/engine'
+import { OFFLINE_PAGE_URL } from '@/lib/offlineFallback'
 import '@/lib/pwaRegister'
 import { initPlatformShellClasses } from '@/lib/platformShell'
 
 initPlatformShellClasses()
 applyDocumentLocale(readStoredPublicLocale())
 
-function showBootError(message: string): void {
-  const root = document.getElementById('root')
-  if (!root) return
-  root.innerHTML = `
-    <div style="min-height:100vh;padding:1.25rem;font-family:Inter,system-ui,sans-serif;background:#000814;color:#e8e8e8;">
-      <h1 style="font-size:1.1rem;margin:0 0 0.75rem;color:#d4af37;">Cridora failed to start</h1>
-      <p style="margin:0;line-height:1.5;font-size:0.9rem;word-break:break-word;">${message}</p>
-    </div>
-  `
+/** Client-side bootstrap failures — use branded shell, not raw error text. */
+function showBootFailure(message: string): void {
+  console.error('[Cridora boot]', message)
+  try {
+    sessionStorage.setItem(
+      'cridora-offline-return',
+      window.location.pathname + window.location.search,
+    )
+  } catch {
+    /* private mode */
+  }
+  window.location.replace(`${OFFLINE_PAGE_URL}?mode=maintenance&boot=1`)
 }
 
 function rootStillEmpty(): boolean {
@@ -29,13 +33,13 @@ function rootStillEmpty(): boolean {
 
 window.addEventListener('error', (event) => {
   if (!rootStillEmpty()) return
-  showBootError(event.message || 'Unknown startup error')
+  showBootFailure(event.message || 'Unknown startup error')
 })
 
 window.addEventListener('unhandledrejection', (event) => {
   if (!rootStillEmpty()) return
   const reason = event.reason
-  showBootError(reason instanceof Error ? reason.message : String(reason))
+  showBootFailure(reason instanceof Error ? reason.message : String(reason))
 })
 
 function BootShell({ children }: { children: ReactNode }) {
@@ -58,5 +62,5 @@ try {
     </BootShell>,
   )
 } catch (error: unknown) {
-  showBootError(error instanceof Error ? error.message : String(error))
+  showBootFailure(error instanceof Error ? error.message : String(error))
 }
