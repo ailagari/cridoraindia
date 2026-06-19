@@ -45,13 +45,28 @@ Optional backup (external or Railway cron pinging the live app):
 python manage.py trigger_scheduled_broadcasts_http
 ```
 
-Or with curl after deploy:
+Or with curl **only if wrapped in a shell** (Railway cron does not expand `${CRON_SECRET}` otherwise — you get Django `403 Forbidden`):
 
 ```bash
-curl -fsS -X POST "https://www.cridoraindia.com/api/v1/internal/cron/process-festival-broadcasts/" -H "X-Cron-Secret: ${CRON_SECRET}"
+/bin/sh -c 'curl -fsS -X POST "https://www.cridoraindia.com/api/v1/internal/cron/process-festival-broadcasts/" -H "X-Cron-Secret: ${CRON_SECRET}"'
 ```
 
+**Prefer** `python manage.py trigger_scheduled_broadcasts_http` — it reads `CRON_SECRET` directly and does not depend on shell expansion.
+
 `GET /api/v1/health/` also runs a throttled processor (~every 4 minutes).
+
+#### Troubleshooting `curl: (22) ... 403` on `cron-festival-broadcasts`
+
+| Check | Command |
+|-------|---------|
+| Service status | `railway service status --all` |
+| Cron logs | `railway logs -s cron-festival-broadcasts -n 20 --latest` |
+| Main app 403 on hook | `railway logs -s cridoraindia --http --method POST --path "/api/v1/internal/cron/process-festival-broadcasts/" -n 10` |
+| Verify hook with Python (uses service env) | `cd backend && railway run -s cron-festival-broadcasts -- python manage.py trigger_scheduled_broadcasts_http` |
+
+If Python returns `Cron hook OK` but curl fails, the cron **start command** is wrong (missing header). Set start command to `python manage.py trigger_scheduled_broadcasts_http` in the Railway dashboard.
+
+If `INLINE_BROADCAST_SCHEDULER=true` is already on **`cridoraindia`**, the HTTP cron service is optional backup — you can pause or remove `cron-festival-broadcasts`.
 
 Use separate **cron** services with `python manage.py <command>` or the HTTP `curl` hook above (not the main Gunicorn service start command).
 

@@ -9,7 +9,8 @@ from urllib.parse import quote
 
 SITE_URL = "https://www.cridoraindia.com"
 SITE_NAME = "Cridora India"
-DEFAULT_OG_IMAGE = f"{SITE_URL}/icon-512.png"
+SITE_LOGO_URL = f"{SITE_URL}/icon-512.png"
+DEFAULT_OG_IMAGE = f"{SITE_URL}/og-preview.png"
 ADSENSE_PUBLISHER_ID = "ca-pub-1180208702657280"
 ADSENSE_HEAD_SNIPPET = (
     f'    <meta name="google-adsense-account" content="{ADSENSE_PUBLISHER_ID}">\n'
@@ -674,7 +675,7 @@ def _json_ld_for_path(path: str, meta: dict[str, str], rates: dict[str, Any] | N
             "@type": "Organization",
             "name": SITE_NAME,
             "url": SITE_URL,
-            "logo": {"@type": "ImageObject", "url": DEFAULT_OG_IMAGE, "width": 512, "height": 512},
+            "logo": {"@type": "ImageObject", "url": SITE_LOGO_URL, "width": 512, "height": 512},
             "description": "Live gold rates in India (22K, 24K, 18K per gram), free gold calculator with GST, digital gold portfolio tracking, and verified jeweller platform.",
             "areaServed": {"@type": "Country", "name": "India"},
             "sameAs": [
@@ -739,7 +740,7 @@ def _json_ld_for_path(path: str, meta: dict[str, str], rates: dict[str, Any] | N
                 "publisher": {
                     "@type": "Organization",
                     "name": SITE_NAME,
-                    "logo": {"@type": "ImageObject", "url": DEFAULT_OG_IMAGE},
+                    "logo": {"@type": "ImageObject", "url": SITE_LOGO_URL},
                 },
                 "about": {"@type": "Thing", "name": "Gold price India"},
                 "keywords": meta.get("keywords", ""),
@@ -943,6 +944,12 @@ def inject_route_seo(html_doc: str, request_path: str) -> str:
     out = _replace_meta_content(out, "property", "og:description", description)
     out = _replace_meta_content(out, "property", "og:url", canonical)
     out = _replace_meta_content(out, "property", "og:image", og_image)
+    if og_image == DEFAULT_OG_IMAGE:
+        out = _replace_meta_content(out, "property", "og:image:width", "1200")
+        out = _replace_meta_content(out, "property", "og:image:height", "630")
+        out = _replace_meta_content(out, "property", "og:image:type", "image/png")
+        out = _replace_meta_content(out, "property", "og:image:alt", title)
+    out = _replace_meta_content(out, "name", "twitter:image:alt", title)
 
     out = _replace_meta_content(out, "name", "twitter:title", title)
     out = _replace_meta_content(out, "name", "twitter:description", description)

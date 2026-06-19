@@ -56,6 +56,18 @@ class AdSenseVerificationTests(SimpleTestCase):
         self.assertIn('crossorigin="anonymous"', head)
         self.assertLess(head.index("google-adsense-account"), head.index("application/ld+json"))
 
+    def test_inject_route_seo_uses_og_preview_for_homepage(self):
+        html = (
+            '<html><head>'
+            '<meta property="og:image" content="https://www.cridoraindia.com/icon-512.png" />'
+            "</head><body><div id=\"root\"></div></body></html>"
+        )
+        out = inject_route_seo(html, "/")
+        self.assertIn('property="og:image" content="https://www.cridoraindia.com/og-preview.png"', out)
+        self.assertIn('name="twitter:image" content="https://www.cridoraindia.com/og-preview.png"', out)
+        self.assertIn('property="og:image:width" content="1200"', out)
+        self.assertIn('property="og:image:height" content="630"', out)
+
     def test_inject_adsense_verification_deduplicates_tags(self):
         html = (
             "<html><head>"
