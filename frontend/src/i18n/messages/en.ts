@@ -44,8 +44,8 @@ export const enMessages = {
   'footer.disclaimer': 'Disclaimer',
   'footer.grievance': 'Grievance',
   'footer.ratesNote': 'Gold rates are indicative. Not SEBI regulated investment advice.',
-  'footer.kycBadge': 'KYC Secured',
-  'footer.bisBadge': 'BIS 916',
+  'footer.kycBadge': 'KYC-ready',
+  'footer.bisBadge': 'Hallmark info',
 
   'mobile.home': 'Home',
   'mobile.discover': 'Discover',
@@ -202,6 +202,8 @@ export const enMessages = {
   'jewellers.heroTitle': 'Partner with Cridora',
   'jewellers.heroLead':
     'Bring your jewellery business into the digital gold economy while keeping trust, showroom relationships, and operational control.',
+  'jewellers.demoNotice':
+    'Some directory listings may be illustrative demos until verified partners go live. See our',
   'jewellers.whyJoinTitle': 'Built for jewellers, not against them.',
   'jewellers.whyJoinIntro': 'Cridora helps jewellers:',
   'jewellers.whyJoin1': 'Build recurring customer engagement',
@@ -248,6 +250,8 @@ export const enMessages = {
   'products.heroTitle': 'Gold products and showroom experiences from verified jewellers.',
   'products.heroLead':
     'Explore jewellery collections, gold savings, and showroom-linked purchases through partner jewellers.',
+  'products.demoNotice':
+    'Some product and jeweller listings may be illustrative demos for platform preview. See our',
   'products.whatYouCanDoTitle': 'What you can do',
   'products.card1Title': 'Save gold gradually',
   'products.card1Body': 'Buy fractional gold linked to partner jewellers.',

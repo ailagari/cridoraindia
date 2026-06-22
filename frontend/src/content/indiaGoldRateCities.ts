@@ -68,6 +68,7 @@ export function buildIndiaCityPageSeo(city: IndiaGoldRateCity): PageSeo {
       `gold calculator India`,
       ...(city.altName ? [`${city.altName} gold rate today`] : []),
     ].join(', '),
+    noindex: true,
   }
 }
 

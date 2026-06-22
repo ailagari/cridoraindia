@@ -90,6 +90,34 @@ export const PAGE_SEO: Record<string, PageSeo> = {
       'Explore Cridora features: portfolio tracking, live gold rates, digital bill vault, jeweller engagement, notifications, and marketplace integration.',
     path: '/features',
   },
+  '/privacy': {
+    title: 'Privacy Policy — Cridora India',
+    description:
+      'Privacy policy for Cridora India: data collection, cookies, Google AdSense advertising, and your choices on cridoraindia.com.',
+    path: '/privacy',
+  },
+  '/terms': {
+    title: 'Terms of Use — Cridora India',
+    description: 'Terms of use for the Cridora India website and digital gold portfolio platform.',
+    path: '/terms',
+  },
+  '/disclaimer': {
+    title: 'Disclaimer — Gold Rates & Financial Information | Cridora India',
+    description:
+      'Gold rates on Cridora India are indicative only. Not investment advice. Not SEBI regulated.',
+    path: '/disclaimer',
+  },
+  '/grievance': {
+    title: 'Grievance Redressal — Cridora India',
+    description: 'Contact the Cridora India grievance officer for formal complaints under IT rules.',
+    path: '/grievance',
+  },
+  '/contact': {
+    title: 'Contact & About — Cridora India',
+    description:
+      'Contact Cridora India for support, partnerships, and waitlist enquiries. Based in Kerala, India.',
+    path: '/contact',
+  },
   ...CITY_PAGE_SEO,
   ...INDIA_CITY_PAGE_SEO,
 }
@@ -162,6 +190,13 @@ export function organizationJsonLd(): Record<string, unknown> {
       'GST on gold India',
       'BIS hallmark gold',
     ],
+    contactPoint: {
+      '@type': 'ContactPoint',
+      contactType: 'customer support',
+      email: 'support@cridora.in',
+      areaServed: 'IN',
+      availableLanguage: ['English', 'Malayalam'],
+    },
     sameAs: [
       'https://www.instagram.com/cridoraindia',
       'https://www.facebook.com/cridoraindia',

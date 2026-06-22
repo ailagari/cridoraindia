@@ -216,7 +216,7 @@ function PublicLayoutInner() {
             <Link className="footer-link" to="/why-cridora">
               {t('footer.whyCridora')}
             </Link>
-            <Link className="footer-link" to="/waitlist">
+            <Link className="footer-link" to="/contact">
               {t('footer.contact')}
             </Link>
           </div>
@@ -225,18 +225,18 @@ function PublicLayoutInner() {
         <div className="footer-bottom">
           <span>{t('footer.copyright')}</span>
           <div className="fb-links">
-            <a className="fb-link" href="#">
+            <Link className="fb-link" to="/privacy">
               {t('footer.privacy')}
-            </a>
-            <a className="fb-link" href="#">
+            </Link>
+            <Link className="fb-link" to="/terms">
               {t('footer.terms')}
-            </a>
-            <a className="fb-link" href="#">
+            </Link>
+            <Link className="fb-link" to="/disclaimer">
               {t('footer.disclaimer')}
-            </a>
-            <a className="fb-link" href="#">
+            </Link>
+            <Link className="fb-link" to="/grievance">
               {t('footer.grievance')}
-            </a>
+            </Link>
           </div>
           <span style={{ color: 'var(--ink3)', fontSize: '0.68rem' }}>{t('footer.ratesNote')}</span>
         </div>

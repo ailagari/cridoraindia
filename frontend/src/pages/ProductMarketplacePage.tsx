@@ -954,6 +954,13 @@ export function ProductMarketplacePage() {
             </Link>
             .
           </p>
+          <p style={{ margin: '0.75rem 0 0', maxWidth: '46rem', color: 'var(--text-faint)', fontSize: '0.82rem', lineHeight: 1.5 }}>
+            {t('products.demoNotice')}{' '}
+            <Link to="/disclaimer" style={{ color: 'var(--gold-light)' }}>
+              {t('footer.disclaimer')}
+            </Link>
+            .
+          </p>
           {loadError ? (
             <p className="form-error" style={{ marginTop: '1rem' }}>
               {loadError}

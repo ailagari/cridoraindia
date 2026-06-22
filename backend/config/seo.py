@@ -199,6 +199,33 @@ ROUTE_SEO: dict[str, dict[str, str]] = {
         "description": "Portfolio tracking, live gold rates, digital bill vault, and jeweller tools.",
         "keywords": DEFAULT_KEYWORDS,
     },
+    "/privacy": {
+        "title": "Privacy Policy — Cridora India",
+        "description": (
+            "Privacy policy for Cridora India: data collection, cookies, Google AdSense, and user choices."
+        ),
+        "keywords": "Cridora privacy policy, cookies, AdSense",
+    },
+    "/terms": {
+        "title": "Terms of Use — Cridora India",
+        "description": "Terms of use for the Cridora India website and platform.",
+        "keywords": "Cridora terms of use",
+    },
+    "/disclaimer": {
+        "title": "Disclaimer — Gold Rates & Financial Information | Cridora India",
+        "description": "Gold rates are indicative only. Not investment advice. Not SEBI regulated.",
+        "keywords": "gold rate disclaimer, not investment advice",
+    },
+    "/grievance": {
+        "title": "Grievance Redressal — Cridora India",
+        "description": "Grievance officer contact for Cridora India under IT rules.",
+        "keywords": "grievance officer Cridora",
+    },
+    "/contact": {
+        "title": "Contact & About — Cridora India",
+        "description": "Contact Cridora India for support and partnerships. Based in Kerala, India.",
+        "keywords": "contact Cridora India",
+    },
 }
 
 for _city in GOLD_RATE_CITIES:
@@ -271,8 +298,7 @@ SITEMAP_PATHS: list[tuple[str, str, str]] = [
     # Kerala city pages (en + ml)
     *[(f"/gold-rates/{c['slug']}", "hourly", "0.92") for c in GOLD_RATE_CITIES],
     *[(f"/ml/gold-rates/{c['slug']}", "hourly", "0.90") for c in GOLD_RATE_CITIES],
-    # National India city pages
-    *[(f"/gold-rates/{c['slug']}", "hourly", "0.91") for c in INDIA_GOLD_RATE_CITIES],
+    # National India city pages are reachable but omitted from sitemap (reference-only, shared rates)
     ("/jewellers", "weekly", "0.8"),
     ("/marketplace", "daily", "0.85"),
     ("/how-it-works", "monthly", "0.7"),
@@ -280,6 +306,11 @@ SITEMAP_PATHS: list[tuple[str, str, str]] = [
     ("/why-cridora", "monthly", "0.6"),
     ("/discover", "monthly", "0.6"),
     ("/signup", "monthly", "0.5"),
+    ("/privacy", "monthly", "0.4"),
+    ("/terms", "monthly", "0.4"),
+    ("/disclaimer", "monthly", "0.4"),
+    ("/grievance", "monthly", "0.4"),
+    ("/contact", "monthly", "0.5"),
 ]
 
 GOLD_RATE_PATHS = frozenset(
@@ -679,6 +710,13 @@ def _json_ld_for_path(path: str, meta: dict[str, str], rates: dict[str, Any] | N
             "logo": {"@type": "ImageObject", "url": SITE_LOGO_URL, "width": 512, "height": 512},
             "description": "Live gold rates in India (22K, 24K, 18K per gram), free gold calculator with GST, digital gold portfolio tracking, and verified jeweller platform.",
             "areaServed": {"@type": "Country", "name": "India"},
+            "contactPoint": {
+                "@type": "ContactPoint",
+                "contactType": "customer support",
+                "email": "support@cridora.in",
+                "areaServed": "IN",
+                "availableLanguage": ["English", "Malayalam"],
+            },
             "sameAs": [
                 "https://www.instagram.com/cridoraindia",
                 "https://www.facebook.com/cridoraindia",
@@ -935,7 +973,13 @@ def inject_route_seo(html_doc: str, request_path: str) -> str:
     out = _replace_or_insert_title(html_doc, title)
     out = _replace_meta_content(out, "name", "description", description)
     out = _replace_meta_content(out, "name", "keywords", keywords)
-    out = _replace_meta_content(out, "name", "robots", "index, follow, max-image-preview:large")
+    slug = base.rsplit("/", 1)[-1] if base.startswith("/gold-rates/") else ""
+    robots = (
+        "noindex, follow"
+        if slug in INDIA_CITY_BY_SLUG
+        else "index, follow, max-image-preview:large"
+    )
+    out = _replace_meta_content(out, "name", "robots", robots)
 
     gsc = getattr(settings, "GOOGLE_SITE_VERIFICATION", "").strip()
     if gsc:

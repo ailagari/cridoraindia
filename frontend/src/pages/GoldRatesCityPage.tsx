@@ -333,6 +333,7 @@ function GoldRatesIndiaCityPageInner({ citySlug }: { citySlug: string }) {
         keywords={seoStatic.keywords}
         ogImage={goldRatesOgImage(`${city.nameEn} Gold Rate Today`)}
         jsonLd={jsonLd}
+        noindex={seoStatic.noindex}
       />
 
       <div className="container gr-page__hero">

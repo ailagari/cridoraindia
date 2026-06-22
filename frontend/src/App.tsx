@@ -37,6 +37,11 @@ import { PushActivationPrompt } from '@/components/PushActivationPrompt'
 import { NativeAppSplash } from '@/components/NativeAppSplash'
 import { NativeAppEntryRoute } from '@/components/NativeAppEntryRoute'
 import { NotificationTapRedirectPage } from '@/pages/NotificationTapRedirectPage'
+import { PrivacyPolicyPage } from '@/pages/PrivacyPolicyPage'
+import { TermsOfUsePage } from '@/pages/TermsOfUsePage'
+import { DisclaimerPage } from '@/pages/DisclaimerPage'
+import { GrievancePage } from '@/pages/GrievancePage'
+import { ContactPage } from '@/pages/ContactPage'
 import { PlatformBillingTaxBootstrap } from '@/components/PlatformBillingTaxBootstrap'
 import { isNativePlatform } from '@/lib/capacitorPlatform'
 import '@/styles/index.css'
@@ -96,6 +101,11 @@ export default function App() {
               <Route path="notification-tap" element={<NotificationTapRedirectPage />} />
               <Route path="signup" element={<SignupPage />} />
               <Route path="jeweller/apply" element={<JewellerApplyPage />} />
+              <Route path="privacy" element={<PrivacyPolicyPage />} />
+              <Route path="terms" element={<TermsOfUsePage />} />
+              <Route path="disclaimer" element={<DisclaimerPage />} />
+              <Route path="grievance" element={<GrievancePage />} />
+              <Route path="contact" element={<ContactPage />} />
             </Route>
 
             <Route path="dashboard" element={<DashboardIndexRedirect />} />

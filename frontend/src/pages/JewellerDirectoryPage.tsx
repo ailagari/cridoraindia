@@ -77,6 +77,10 @@ export function JewellerDirectoryPage() {
           <p style={{ margin: 0, maxWidth: '52ch', color: 'var(--text-muted)', lineHeight: 1.55 }}>
             {t('jewellers.heroLead')}
           </p>
+          <p style={{ margin: '0.75rem 0 0', maxWidth: '52ch', color: 'var(--text-faint)', fontSize: '0.82rem', lineHeight: 1.5 }}>
+            {t('jewellers.demoNotice')}{' '}
+            <Link to="/disclaimer">{t('footer.disclaimer')}</Link>.
+          </p>
           <Link to="/jeweller/apply" className="btn btn-primary" style={{ marginTop: '1.25rem' }}>
             {t('nav.applyJeweller')}
           </Link>

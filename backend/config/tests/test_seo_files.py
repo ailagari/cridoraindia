@@ -42,6 +42,14 @@ class SeoFilesMiddlewareTests(SimpleTestCase):
         self.assertIn("https://www.cridoraindia.com/gold-rates/kochi", xml)
         self.assertIn("https://www.cridoraindia.com/gold-calculator", xml)
         self.assertIn("https://www.cridoraindia.com/ml/gold-calculator", xml)
+        self.assertIn("https://www.cridoraindia.com/privacy", xml)
+        self.assertIn("https://www.cridoraindia.com/contact", xml)
+        self.assertNotIn("https://www.cridoraindia.com/gold-rates/mumbai", xml)
+
+    def test_inject_route_seo_noindex_for_india_city_pages(self):
+        html = '<html><head><meta name="robots" content="index, follow" /></head><body></body></html>'
+        out = inject_route_seo(html, "/gold-rates/mumbai")
+        self.assertIn('name="robots" content="noindex, follow"', out)
 
 
 class AdSenseVerificationTests(SimpleTestCase):

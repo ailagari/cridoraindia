@@ -12,11 +12,9 @@ export function InvestorRelationsPage() {
       <p style={{ marginTop: '2rem' }}>
         <a
           className="btn btn-primary"
-          href="https://forms.google.com/"
-          target="_blank"
-          rel="noopener noreferrer"
+          href="mailto:ops@cridora.in?subject=Cridora%20investor%20briefing%20request"
         >
-          Briefing request (Google Form)
+          Request briefing by email
         </a>
       </p>
     </div>
