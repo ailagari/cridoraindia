@@ -224,6 +224,25 @@ export function HomePage() {
                 {t('idx.hero.cta2')}
               </Link>
             </div>
+            <div className="hero-trust reveal reveal-delay-5" role="list" aria-label={t('idx.hero.trustTitle')}>
+              <div className="hero-trust-title">{t('idx.hero.trustTitle')}</div>
+              <div className="hero-trust-grid">
+                {(
+                  [
+                    { label: 'idx.hero.trust1', sub: 'idx.hero.trust1sub' },
+                    { label: 'idx.hero.trust2', sub: 'idx.hero.trust2sub' },
+                    { label: 'idx.hero.trust3', sub: 'idx.hero.trust3sub' },
+                    { label: 'idx.hero.trust4', sub: 'idx.hero.trust4sub' },
+                  ] as const
+                ).map((item) => (
+                  <div key={item.label} className="hero-trust-item" role="listitem">
+                    <div className="hero-trust-label">{t(item.label)}</div>
+                    <div className="hero-trust-sub">{t(item.sub)}</div>
+                  </div>
+                ))}
+              </div>
+              <p className="hero-trust-note">{t('idx.hero.trustNote')}</p>
+            </div>
           </div>
 
           <div className="hero-visual reveal reveal-delay-2">

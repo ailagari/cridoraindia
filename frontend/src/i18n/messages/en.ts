@@ -414,6 +414,16 @@ export const enMessages = {
   'idx.hero.redeemable': 'In-hand gold',
   'idx.hero.txn1': 'Purchase recorded',
   'idx.hero.txn2': 'Bill stored securely',
+  'idx.hero.trustTitle': 'Your data. Your privacy.',
+  'idx.hero.trust1': '🇸🇬 Singapore-hosted servers',
+  'idx.hero.trust1sub': 'Data stored outside India',
+  'idx.hero.trust2': '🔒 Fully encrypted',
+  'idx.hero.trust2sub': 'AES-256 at rest & in transit',
+  'idx.hero.trust3': '👁️ Zero admin visibility',
+  'idx.hero.trust3sub': 'Admins cannot read holding details',
+  'idx.hero.trust4': '🛡️ Privacy by design',
+  'idx.hero.trust4sub': 'You control your portfolio data',
+  'idx.hero.trustNote': 'SHA-256 integrity · End-to-end encryption · Data protection by default',
 
   // Feature strip
   'idx.fstrip.f1title': 'Gold Portfolio',
