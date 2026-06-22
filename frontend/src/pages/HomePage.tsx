@@ -185,12 +185,59 @@ export function HomePage() {
 
   const exploreHref = user ? dashboardLandingPath(user) : '/signup'
 
+  const HERO_TRUST = useMemo(
+    () =>
+      [
+        { icon: '🇸🇬', label: 'idx.hero.trust1' as MessageKey, sub: 'idx.hero.trust1sub' as MessageKey, tone: 'sg' },
+        { icon: '🔒', label: 'idx.hero.trust2' as MessageKey, sub: 'idx.hero.trust2sub' as MessageKey, tone: 'lock' },
+        { icon: '👁️', label: 'idx.hero.trust3' as MessageKey, sub: 'idx.hero.trust3sub' as MessageKey, tone: 'eye' },
+        { icon: '🛡️', label: 'idx.hero.trust4' as MessageKey, sub: 'idx.hero.trust4sub' as MessageKey, tone: 'shield' },
+      ] as const,
+    [],
+  )
+
   return (
     <div className="ref-landing">
       <SeoHead {...homeSeo} jsonLd={homeJsonLd} locale={locale} />
       {/* HERO */}
       <section className="hero" id="home">
         <div className="hero-inner">
+          <div className="hero-trust-banner reveal" role="region" aria-label={t('idx.hero.trustTitle')}>
+            <div className="hero-trust-banner__glow" aria-hidden />
+            <div className="hero-trust-banner__head">
+              <span className="hero-trust-banner__badge">{t('idx.hero.trustBadge')}</span>
+              <h2 className="hero-trust-banner__title">
+                <span className="hero-trust-banner__shield" aria-hidden>
+                  🛡️
+                </span>
+                {t('idx.hero.trustTitle')}
+              </h2>
+            </div>
+            <div className="hero-trust-banner__grid" role="list">
+              {HERO_TRUST.map((item, ix) => (
+                <div
+                  key={item.label}
+                  className={`hero-trust-banner__item hero-trust-banner__item--${item.tone} reveal reveal-delay-${Math.min(ix + 1, 4)}`}
+                  role="listitem"
+                >
+                  <div className="hero-trust-banner__ico" aria-hidden>
+                    {item.icon}
+                  </div>
+                  <div>
+                    <div className="hero-trust-banner__label">{t(item.label)}</div>
+                    <div className="hero-trust-banner__sub">{t(item.sub)}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p className="hero-trust-banner__note reveal reveal-delay-4">
+              <span className="hero-trust-banner__note-ico" aria-hidden>
+                🔐
+              </span>
+              {t('idx.hero.trustNote')}
+            </p>
+          </div>
+
           <div>
             <div className="eyebrow reveal">
               <div className="eyebrow-dot" aria-hidden />
@@ -223,25 +270,6 @@ export function HomePage() {
               <Link className="btn btn-ghost btn-lg" to="/jeweller/apply">
                 {t('idx.hero.cta2')}
               </Link>
-            </div>
-            <div className="hero-trust reveal reveal-delay-5" role="list" aria-label={t('idx.hero.trustTitle')}>
-              <div className="hero-trust-title">{t('idx.hero.trustTitle')}</div>
-              <div className="hero-trust-grid">
-                {(
-                  [
-                    { label: 'idx.hero.trust1', sub: 'idx.hero.trust1sub' },
-                    { label: 'idx.hero.trust2', sub: 'idx.hero.trust2sub' },
-                    { label: 'idx.hero.trust3', sub: 'idx.hero.trust3sub' },
-                    { label: 'idx.hero.trust4', sub: 'idx.hero.trust4sub' },
-                  ] as const
-                ).map((item) => (
-                  <div key={item.label} className="hero-trust-item" role="listitem">
-                    <div className="hero-trust-label">{t(item.label)}</div>
-                    <div className="hero-trust-sub">{t(item.sub)}</div>
-                  </div>
-                ))}
-              </div>
-              <p className="hero-trust-note">{t('idx.hero.trustNote')}</p>
             </div>
           </div>
 
