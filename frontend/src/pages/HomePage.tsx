@@ -188,10 +188,10 @@ export function HomePage() {
   const HERO_TRUST = useMemo(
     () =>
       [
-        { icon: '🇸🇬', label: 'idx.hero.trust1' as MessageKey, sub: 'idx.hero.trust1sub' as MessageKey, tone: 'sg' },
-        { icon: '🔒', label: 'idx.hero.trust2' as MessageKey, sub: 'idx.hero.trust2sub' as MessageKey, tone: 'lock' },
-        { icon: '👁️', label: 'idx.hero.trust3' as MessageKey, sub: 'idx.hero.trust3sub' as MessageKey, tone: 'eye' },
-        { icon: '🛡️', label: 'idx.hero.trust4' as MessageKey, sub: 'idx.hero.trust4sub' as MessageKey, tone: 'shield' },
+        { icon: '🇸🇬', label: 'idx.hero.trust1' as MessageKey, sub: 'idx.hero.trust1sub' as MessageKey },
+        { icon: '🔒', label: 'idx.hero.trust2' as MessageKey, sub: 'idx.hero.trust2sub' as MessageKey },
+        { icon: '👁️', label: 'idx.hero.trust3' as MessageKey, sub: 'idx.hero.trust3sub' as MessageKey },
+        { icon: '🛡️', label: 'idx.hero.trust4' as MessageKey, sub: 'idx.hero.trust4sub' as MessageKey },
       ] as const,
     [],
   )
@@ -202,40 +202,36 @@ export function HomePage() {
       {/* HERO */}
       <section className="hero" id="home">
         <div className="hero-inner">
-          <div className="hero-trust-banner reveal" role="region" aria-label={t('idx.hero.trustTitle')}>
-            <div className="hero-trust-banner__glow" aria-hidden />
-            <div className="hero-trust-banner__head">
-              <span className="hero-trust-banner__badge">{t('idx.hero.trustBadge')}</span>
-              <h2 className="hero-trust-banner__title">
-                <span className="hero-trust-banner__shield" aria-hidden>
-                  🛡️
-                </span>
-                {t('idx.hero.trustTitle')}
-              </h2>
+          <div className="hero-trust-ticker reveal" role="region" aria-label={t('idx.hero.trustTitle')}>
+            <div className="hero-trust-ticker__label">
+              <span aria-hidden>🛡️</span>
+              {t('idx.hero.trustTitle')}
             </div>
-            <div className="hero-trust-banner__grid" role="list">
-              {HERO_TRUST.map((item, ix) => (
-                <div
-                  key={item.label}
-                  className={`hero-trust-banner__item hero-trust-banner__item--${item.tone} reveal reveal-delay-${Math.min(ix + 1, 4)}`}
-                  role="listitem"
-                >
-                  <div className="hero-trust-banner__ico" aria-hidden>
-                    {item.icon}
+            <div className="hero-trust-ticker__viewport" aria-hidden>
+              <div className="hero-trust-ticker__track">
+                {[0, 1].map((copy) => (
+                  <div key={copy} className="hero-trust-ticker__row">
+                    {HERO_TRUST.map((item) => (
+                      <span key={`${copy}-${item.label}`} className="hero-trust-ticker__item">
+                        <span className="hero-trust-ticker__ico">{item.icon}</span>
+                        {t(item.label)}
+                        <span className="hero-trust-ticker__sep">·</span>
+                        <span className="hero-trust-ticker__sub">{t(item.sub)}</span>
+                        <span className="hero-trust-ticker__dot">◆</span>
+                      </span>
+                    ))}
+                    <span className="hero-trust-ticker__item">
+                      <span className="hero-trust-ticker__ico">🔐</span>
+                      {t('idx.hero.trustNote')}
+                      <span className="hero-trust-ticker__dot">◆</span>
+                    </span>
                   </div>
-                  <div>
-                    <div className="hero-trust-banner__label">{t(item.label)}</div>
-                    <div className="hero-trust-banner__sub">{t(item.sub)}</div>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-            <p className="hero-trust-banner__note reveal reveal-delay-4">
-              <span className="hero-trust-banner__note-ico" aria-hidden>
-                🔐
-              </span>
-              {t('idx.hero.trustNote')}
-            </p>
+            <span className="sr-only">
+              {HERO_TRUST.map((item) => `${t(item.label)}: ${t(item.sub)}`).join('. ')}. {t('idx.hero.trustNote')}
+            </span>
           </div>
 
           <div>
