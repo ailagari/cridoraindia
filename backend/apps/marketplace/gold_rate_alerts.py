@@ -7,6 +7,7 @@ from decimal import Decimal
 from django.db import transaction
 
 from apps.accounts.push_tap_links import build_tap_push_payload
+from apps.accounts.services.notification_locale import localized_broadcast_payloads
 from apps.accounts.services.notification_push_queue import enqueue_push_delivery
 from apps.accounts.webpush_service import push_delivery_configured, send_push_broadcast_localized
 
@@ -72,20 +73,27 @@ def evaluate_platform_threshold_broadcast(
         )
 
     rate_up = delta > 0
-    payloads = {}
-    for loc in ("en", "ml"):
-        title_loc = gold_rate_alert_title(loc, rate_increased=rate_up).strip()
-        if loc == "en" and title and title not in ("Gold rate alert", ""):
-            title_loc = title
-        payloads[loc] = build_tap_push_payload(
-            title=title_loc or gold_rate_alert_title(loc, rate_increased=rate_up),
-            body=format_gold_price_move_body(baseline=baseline, current=current, locale=loc),
-            fallback_url=fb,
-            url_guest=guest,
-            url_authenticated=auth,
-            tag="cridora-gold-rate",
-            image_url=image_url or None,
-        )
+    en_title = title if title and title not in ("Gold rate alert", "") else gold_rate_alert_title("en", rate_increased=rate_up)
+    ml_title = gold_rate_alert_title("ml", rate_increased=rate_up)
+    en_payload = build_tap_push_payload(
+        title=en_title.strip() or gold_rate_alert_title("en", rate_increased=rate_up),
+        body=format_gold_price_move_body(baseline=baseline, current=current, locale="en"),
+        fallback_url=fb,
+        url_guest=guest,
+        url_authenticated=auth,
+        tag="cridora-gold-rate",
+        image_url=image_url or None,
+    )
+    ml_payload = build_tap_push_payload(
+        title=ml_title,
+        body=format_gold_price_move_body(baseline=baseline, current=current, locale="ml"),
+        fallback_url=fb,
+        url_guest=guest,
+        url_authenticated=auth,
+        tag="cridora-gold-rate",
+        image_url=image_url or None,
+    )
+    payloads = localized_broadcast_payloads(en=en_payload, ml=ml_payload)
 
     def _broadcast() -> None:
         send_push_broadcast_localized(payloads)

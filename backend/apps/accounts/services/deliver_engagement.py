@@ -148,7 +148,12 @@ def deliver_engagement(
 ) -> PortfolioUserNotification | None:
     from apps.accounts.services.inbox_notify import notify_inbox
 
-    loc = normalize_preferred_locale(locale or DEFAULT_PUBLIC_LOCALE)
+    if locale is None:
+        from apps.accounts.services.notification_locale import resolve_user_notification_locale
+
+        loc = resolve_user_notification_locale(user)
+    else:
+        loc = normalize_preferred_locale(locale or DEFAULT_PUBLIC_LOCALE)
     ctx = context or resolve_engagement_context(user)
     facts = build_engagement_facts(
         user,

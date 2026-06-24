@@ -9,8 +9,10 @@ from django.contrib.auth import get_user_model
 from django.db.models import Exists, OuterRef, Q
 from django.utils import timezone
 
+from apps.accounts.locale_utils import DEFAULT_PUBLIC_LOCALE, normalize_preferred_locale
 from apps.accounts.models import GoldDepositIntake, PersonalGoldHolding, PortfolioUserNotification
 from apps.accounts.services.deliver_engagement import deliver_engagement
+from apps.accounts.services.notification_locale import resolve_user_notification_locale
 from apps.accounts.services.engagement_constants import (
     MOMENT_MARKET_RATE_DOWN,
     MOMENT_MARKET_RATE_UP,
@@ -81,13 +83,14 @@ def notify_customers_platform_gold_move(
         if not gold_alert_allowed(user.pk):
             continue
         ctx = resolve_engagement_context(user)
+        user_loc = resolve_user_notification_locale(user)
         row = deliver_engagement(
             user,
             moment=moment,
             context=ctx,
             previous_rate=baseline,
             new_rate=current,
-            title_override=title[:120] if title else None,
+            title_override=title[:120] if title and user_loc == DEFAULT_PUBLIC_LOCALE else None,
             link_path=link,
             category=PortfolioUserNotification.CATEGORY_PORTFOLIO,
             priority=PortfolioUserNotification.PRIORITY_MEDIUM,
@@ -97,7 +100,7 @@ def notify_customers_platform_gold_move(
             defer_push=defer_push,
             extra_facts={"rate_direction": "up" if delta_sign > 0 else "down"},
         )
-        if body and row:
+        if body and row and user_loc == DEFAULT_PUBLIC_LOCALE:
             row.body = body
             row.save(update_fields=["body"])
         if row:

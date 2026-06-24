@@ -9,6 +9,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.accounts.push_tap_links import build_tap_push_payload
+from apps.accounts.services.notification_locale import localized_broadcast_payloads
 from apps.accounts.webpush_service import push_delivery_configured, send_push_broadcast_localized
 
 from .gold_push_copy import (
@@ -90,8 +91,8 @@ def run_hourly_gold_price_push_digest(*, force: bool = False) -> dict:
             result["delta_inr"] = str(delta)
             return result
         n = send_push_broadcast_localized(
-            {
-                "en": build_tap_push_payload(
+            localized_broadcast_payloads(
+                en=build_tap_push_payload(
                     title=(
                         title
                         if title and title != "Gold price update"
@@ -104,7 +105,7 @@ def run_hourly_gold_price_push_digest(*, force: bool = False) -> dict:
                     tag="cridora-gold-hourly",
                     image_url=image_url or None,
                 ),
-                "ml": build_tap_push_payload(
+                ml=build_tap_push_payload(
                     title=gold_hourly_push_title("ml", rate_increased=delta > 0),
                     body=format_gold_price_move_body(baseline=baseline, current=current, locale="ml"),
                     fallback_url=fb,
@@ -113,7 +114,7 @@ def run_hourly_gold_price_push_digest(*, force: bool = False) -> dict:
                     tag="cridora-gold-hourly",
                     image_url=image_url or None,
                 ),
-            }
+            )
         )
         result["sent"] = True
         result["subscriptions_notified"] = n
@@ -182,8 +183,8 @@ def evaluate_hourly_digest_on_price_ingest(
             hourly_gold_push_baseline_recorded_at=now,
         )
 
-    payloads = {
-        "en": build_tap_push_payload(
+    payloads = localized_broadcast_payloads(
+        en=build_tap_push_payload(
             title=(
                 title
                 if title and title != "Gold price update"
@@ -196,7 +197,7 @@ def evaluate_hourly_digest_on_price_ingest(
             tag="cridora-gold-hourly",
             image_url=image_url or None,
         ),
-        "ml": build_tap_push_payload(
+        ml=build_tap_push_payload(
             title=gold_hourly_push_title("ml", rate_increased=delta > 0),
             body=format_gold_price_move_body(baseline=baseline, current=current, locale="ml"),
             fallback_url=fb,
@@ -205,7 +206,7 @@ def evaluate_hourly_digest_on_price_ingest(
             tag="cridora-gold-hourly",
             image_url=image_url or None,
         ),
-    }
+    )
 
     def _broadcast() -> None:
         send_push_broadcast_localized(payloads)

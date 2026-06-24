@@ -23,6 +23,7 @@ type GoldAlertSettings = {
   max_gold_alerts_per_day?: number
   portfolio_gain_threshold_inr?: string
   portfolio_gain_threshold_percent?: string
+  engagement_malayalam_enabled?: boolean
   last_platform_rate_change?: {
     previous_rate: string
     new_rate: string
@@ -49,6 +50,7 @@ export function AdminGoldAlertsPanel() {
   const [maxPerDay, setMaxPerDay] = useState('3')
   const [portfolioInr, setPortfolioInr] = useState('500')
   const [portfolioPct, setPortfolioPct] = useState('2')
+  const [malayalamOn, setMalayalamOn] = useState(false)
 
   const hourlyTap = useTapTargetState('/gold-rates/kerala', '/gold-rates/kerala')
   const thresholdTap = useTapTargetState('/gold-rates/kerala', '/userdashboard?section=portfolio_overview')
@@ -73,6 +75,7 @@ export function AdminGoldAlertsPanel() {
     setMaxPerDay(String(data.max_gold_alerts_per_day ?? 3))
     setPortfolioInr(data.portfolio_gain_threshold_inr ?? '500')
     setPortfolioPct(data.portfolio_gain_threshold_percent ?? '2')
+    setMalayalamOn(data.engagement_malayalam_enabled === true)
     const hourlyGuest =
       data.hourly_gold_push_link_guest?.trim() ||
       data.hourly_gold_push_link?.trim() ||
@@ -121,6 +124,7 @@ export function AdminGoldAlertsPanel() {
           max_gold_alerts_per_day: Number.parseInt(maxPerDay.trim(), 10) || 3,
           portfolio_gain_threshold_inr: portfolioInr.trim(),
           portfolio_gain_threshold_percent: portfolioPct.trim(),
+          engagement_malayalam_enabled: malayalamOn,
         },
       })
       const data = (await res.json().catch(() => ({}))) as { detail?: string }
@@ -244,6 +248,14 @@ export function AdminGoldAlertsPanel() {
         />
 
         <h4 style={{ marginTop: '1.25rem' }}>Customer holding alerts</h4>
+        <label style={{ display: 'flex', gap: '0.65rem', marginBottom: '1rem', cursor: 'pointer' }}>
+          <input type="checkbox" checked={malayalamOn} onChange={(e) => setMalayalamOn(e.target.checked)} />
+          <span>
+            <strong>Malayalam alerts</strong> — send portfolio and gold movement notifications in
+            Malayalam for users whose device language is Malayalam (tray + inbox). When off, all
+            users receive English.
+          </span>
+        </label>
         <div className="field">
           <label htmlFor="g-hold">Notify when one holding gains at least (₹)</label>
           <input id="g-hold" value={holdingGain} onChange={(e) => setHoldingGain(e.target.value)} />

@@ -146,6 +146,13 @@ class GoldTickerConfig(models.Model):
         default=False,
         help_text="When on, future monthly digest pushes may send (facts always computed in v1).",
     )
+    engagement_malayalam_enabled = models.BooleanField(
+        default=False,
+        help_text=(
+            "When on, portfolio and gold movement inbox alerts use Malayalam templates "
+            "for users whose device locale is Malayalam. Tray broadcasts include ML payloads."
+        ),
+    )
     active_engagement_context = models.CharField(
         max_length=32,
         blank=True,
