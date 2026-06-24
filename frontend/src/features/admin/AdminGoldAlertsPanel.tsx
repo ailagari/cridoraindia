@@ -4,17 +4,16 @@ import {
   NotificationTapTargetFields,
   useTapTargetState,
 } from '@/components/admin/NotificationTapTargetFields'
+import { AdminGoldAlertCopyPanel } from '@/features/admin/AdminGoldAlertCopyPanel'
 
 type GoldAlertSettings = {
   platform_base_inr_per_gram_22k: string
   rate_move_alert_threshold_inr: string
   rate_move_alerts_enabled: boolean
   hourly_gold_push_enabled: boolean
-  hourly_gold_push_title: string
   hourly_gold_push_link: string
   hourly_gold_push_link_guest: string
   hourly_gold_push_link_authenticated: string
-  rate_move_alert_title: string
   rate_move_alert_link: string
   rate_move_alert_link_guest: string
   rate_move_alert_link_authenticated: string
@@ -43,8 +42,6 @@ export function AdminGoldAlertsPanel() {
   const [hourlyOn, setHourlyOn] = useState(true)
   const [thresholdOn, setThresholdOn] = useState(true)
   const [thresholdInr, setThresholdInr] = useState('10')
-  const [hourlyTitle, setHourlyTitle] = useState('Gold price update')
-  const [thresholdTitle, setThresholdTitle] = useState('Gold rate alert')
   const [goldImage, setGoldImage] = useState('')
   const [holdingGain, setHoldingGain] = useState('500')
   const [maxPerDay, setMaxPerDay] = useState('3')
@@ -68,8 +65,6 @@ export function AdminGoldAlertsPanel() {
     setHourlyOn(data.hourly_gold_push_enabled !== false)
     setThresholdOn(data.rate_move_alerts_enabled !== false)
     setThresholdInr(data.rate_move_alert_threshold_inr ?? '10')
-    setHourlyTitle(data.hourly_gold_push_title?.trim() || 'Gold price update')
-    setThresholdTitle(data.rate_move_alert_title?.trim() || 'Gold rate alert')
     setGoldImage(data.gold_push_image_url ?? '')
     setHoldingGain(data.holding_gain_threshold_inr ?? '500')
     setMaxPerDay(String(data.max_gold_alerts_per_day ?? 3))
@@ -109,13 +104,11 @@ export function AdminGoldAlertsPanel() {
         method: 'PATCH',
         jsonBody: {
           hourly_gold_push_enabled: hourlyOn,
-          hourly_gold_push_title: hourlyTitle.trim() || 'Gold price update',
           hourly_gold_push_link: hourlyTap.guestPath,
           hourly_gold_push_link_guest: hourlyTap.guestPath,
           hourly_gold_push_link_authenticated: hourlyTap.authPath,
           rate_move_alerts_enabled: thresholdOn,
           rate_move_alert_threshold_inr: thresholdInr.trim(),
-          rate_move_alert_title: thresholdTitle.trim() || 'Gold rate alert',
           rate_move_alert_link: thresholdTap.guestPath,
           rate_move_alert_link_guest: thresholdTap.guestPath,
           rate_move_alert_link_authenticated: thresholdTap.authPath,
@@ -203,10 +196,9 @@ export function AdminGoldAlertsPanel() {
             /g vs last baseline
           </span>
         </label>
-        <div className="field">
-          <label htmlFor="g-th-title">Big move title</label>
-          <input id="g-th-title" value={thresholdTitle} onChange={(e) => setThresholdTitle(e.target.value)} />
-        </div>
+        <p className="dash-footnote" style={{ margin: '0 0 0.75rem 1.6rem' }}>
+          Tray title and body wording is edited below under &quot;Alert message wording&quot;.
+        </p>
         <NotificationTapTargetFields
           idPrefix="g-threshold"
           guestLabel="Big move alert — guests tap opens"
@@ -228,10 +220,9 @@ export function AdminGoldAlertsPanel() {
             <strong>Hourly summary</strong> — if price changed since the last hour, send one digest
           </span>
         </label>
-        <div className="field">
-          <label htmlFor="g-hr-title">Hourly title</label>
-          <input id="g-hr-title" value={hourlyTitle} onChange={(e) => setHourlyTitle(e.target.value)} />
-        </div>
+        <p className="dash-footnote" style={{ margin: '0 0 0.75rem 1.6rem' }}>
+          Hourly tray title and body are edited below under &quot;Alert message wording&quot;.
+        </p>
         <NotificationTapTargetFields
           idPrefix="g-hourly"
           guestLabel="Hourly alert — guests tap opens"
@@ -296,6 +287,7 @@ export function AdminGoldAlertsPanel() {
           </button>
         </div>
       </div>
+      <AdminGoldAlertCopyPanel />
     </div>
   )
 }

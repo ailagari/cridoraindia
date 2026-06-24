@@ -34,7 +34,6 @@ def evaluate_platform_threshold_broadcast(
     current = new_rate.quantize(Decimal("0.01"))
     ticker_pk = get_or_create_ticker().pk
 
-    title = "Gold rate alert"
     guest = "/marketplace"
     auth = "/marketplace"
     fb = "/marketplace"
@@ -52,7 +51,6 @@ def evaluate_platform_threshold_broadcast(
             result["skipped"] = "threshold_zero"
             return result
 
-        title = (t.rate_move_alert_title or "Gold rate alert").strip() or "Gold rate alert"
         guest, auth, fb = rate_move_tap_paths(t)
         image_url = (t.gold_push_image_url or "").strip()
 
@@ -73,10 +71,10 @@ def evaluate_platform_threshold_broadcast(
         )
 
     rate_up = delta > 0
-    en_title = title if title and title not in ("Gold rate alert", "") else gold_rate_alert_title("en", rate_increased=rate_up)
+    en_title = gold_rate_alert_title("en", rate_increased=rate_up)
     ml_title = gold_rate_alert_title("ml", rate_increased=rate_up)
     en_payload = build_tap_push_payload(
-        title=en_title.strip() or gold_rate_alert_title("en", rate_increased=rate_up),
+        title=en_title,
         body=format_gold_price_move_body(baseline=baseline, current=current, locale="en"),
         fallback_url=fb,
         url_guest=guest,

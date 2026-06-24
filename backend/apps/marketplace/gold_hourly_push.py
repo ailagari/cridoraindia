@@ -42,18 +42,18 @@ def run_hourly_gold_price_push_digest(*, force: bool = False) -> dict:
     ticker_pk = get_or_create_ticker().pk
 
     body: str | None = None
-    title = "Gold price update"
     guest = "/marketplace"
     auth = "/marketplace"
     fb = "/marketplace"
     image_url = ""
+    delta = Decimal("0")
+    baseline = current
     with transaction.atomic():
         t = GoldTickerConfig.objects.select_for_update().get(pk=ticker_pk)
         if not t.hourly_gold_push_enabled:
             result["skipped"] = "disabled"
             return result
 
-        title = (t.hourly_gold_push_title or "Gold price update").strip() or "Gold price update"
         guest, auth, fb = hourly_gold_tap_paths(t)
         image_url = (t.gold_push_image_url or "").strip()
 
@@ -93,11 +93,7 @@ def run_hourly_gold_price_push_digest(*, force: bool = False) -> dict:
         n = send_push_broadcast_localized(
             localized_broadcast_payloads(
                 en=build_tap_push_payload(
-                    title=(
-                        title
-                        if title and title != "Gold price update"
-                        else gold_hourly_push_title("en", rate_increased=delta > 0)
-                    ),
+                    title=gold_hourly_push_title("en", rate_increased=delta > 0),
                     body=format_gold_price_move_body(baseline=baseline, current=current, locale="en"),
                     fallback_url=fb,
                     url_guest=guest,
@@ -150,7 +146,6 @@ def evaluate_hourly_digest_on_price_ingest(
             result["skipped"] = "disabled"
             return result
 
-        title = (t.hourly_gold_push_title or "Gold price update").strip() or "Gold price update"
         guest, auth, fb = hourly_gold_tap_paths(t)
         image_url = (t.gold_push_image_url or "").strip()
 
@@ -185,11 +180,7 @@ def evaluate_hourly_digest_on_price_ingest(
 
     payloads = localized_broadcast_payloads(
         en=build_tap_push_payload(
-            title=(
-                title
-                if title and title != "Gold price update"
-                else gold_hourly_push_title("en", rate_increased=delta > 0)
-            ),
+            title=gold_hourly_push_title("en", rate_increased=delta > 0),
             body=format_gold_price_move_body(baseline=baseline, current=current, locale="en"),
             fallback_url=fb,
             url_guest=guest,

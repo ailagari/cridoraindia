@@ -85,6 +85,7 @@ export function AdminEngagementTemplatesPanel() {
   const [formLocale, setFormLocale] = useState('en')
   const [formTitle, setFormTitle] = useState('')
   const [formBody, setFormBody] = useState('')
+  const [editingId, setEditingId] = useState<number | null>(null)
 
   const titleRef = useRef<HTMLInputElement>(null)
   const bodyRef = useRef<HTMLTextAreaElement>(null)
@@ -156,6 +157,26 @@ export function AdminEngagementTemplatesPanel() {
     setOkMsg(`Loaded sample "${s.name}". Edit and save below.`)
   }
 
+  function loadTemplateIntoForm(row: TemplateRow) {
+    setEditingId(row.id)
+    setFormName(row.name)
+    setFormMoment(row.category)
+    setFormContext(row.context)
+    setFormLocale(row.locale)
+    setFormTitle(row.title_template)
+    setFormBody(row.body_template)
+    setOkMsg(`Editing "${row.name}". Save to update.`)
+    setErr('')
+    titleRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
+
+  function resetForm() {
+    setEditingId(null)
+    setFormName('')
+    setFormTitle('')
+    setFormBody('')
+  }
+
   async function createTemplate(e: FormEvent) {
     e.preventDefault()
     setErr('')
@@ -166,28 +187,36 @@ export function AdminEngagementTemplatesPanel() {
         (m) => m[1],
       )
       const uniqueVars = [...new Set(vars)]
-      const res = await authFetch('/api/v1/admin/notification-templates/', {
-        method: 'POST',
-        jsonBody: {
-          name: formName.trim(),
-          category: formMoment,
-          context: formContext,
-          locale: formLocale,
-          title_template: formTitle.trim(),
-          body_template: formBody.trim(),
-          variables: uniqueVars,
-          is_active: true,
-        },
-      })
+      const payload = {
+        name: formName.trim(),
+        category: formMoment,
+        context: formContext,
+        locale: formLocale,
+        title_template: formTitle.trim(),
+        body_template: formBody.trim(),
+        variables: uniqueVars,
+        is_active: true,
+      }
+      const res = editingId
+        ? await authFetch(`/api/v1/admin/notification-templates/${editingId}/`, {
+            method: 'PATCH',
+            jsonBody: payload,
+          })
+        : await authFetch('/api/v1/admin/notification-templates/', {
+            method: 'POST',
+            jsonBody: payload,
+          })
       const data = (await res.json().catch(() => ({}))) as { detail?: string }
       if (!res.ok) {
         setErr(typeof data.detail === 'string' ? data.detail : `Create failed (${res.status})`)
         return
       }
-      setOkMsg('Template saved. It applies to matching automatic alerts immediately.')
-      setFormName('')
-      setFormTitle('')
-      setFormBody('')
+      setOkMsg(
+        editingId
+          ? 'Template updated. It applies to matching automatic alerts immediately.'
+          : 'Template saved. It applies to matching automatic alerts immediately.',
+      )
+      resetForm()
       await load()
     } finally {
       setCreateBusy(false)
@@ -248,7 +277,7 @@ export function AdminEngagementTemplatesPanel() {
         ) : null}
 
         <form onSubmit={(e) => void createTemplate(e)} style={{ marginTop: '1.5rem' }}>
-          <h4 style={{ marginTop: 0 }}>Create or edit wording</h4>
+          <h4 style={{ marginTop: 0 }}>{editingId ? 'Edit template' : 'Create template'}</h4>
           <div className="field">
             <label htmlFor="tpl-name">Internal name</label>
             <input
@@ -346,8 +375,13 @@ export function AdminEngagementTemplatesPanel() {
             />
           </div>
           <button type="submit" className="btn btn-primary" disabled={createBusy}>
-            {createBusy ? 'Saving…' : 'Save template'}
+            {createBusy ? 'Saving…' : editingId ? 'Update template' : 'Save template'}
           </button>
+          {editingId ? (
+            <button type="button" className="btn btn-ghost" style={{ marginLeft: '0.5rem' }} onClick={resetForm}>
+              Cancel edit
+            </button>
+          ) : null}
         </form>
 
         {previewId != null ? (
@@ -375,9 +409,14 @@ export function AdminEngagementTemplatesPanel() {
                       {r.is_active ? '' : ' · inactive'}
                     </p>
                   </div>
-                  <button type="button" className="btn btn-ghost btn-sm" onClick={() => void runPreview(r.id)}>
-                    Preview
-                  </button>
+                  <div style={{ display: 'flex', gap: '0.35rem' }}>
+                    <button type="button" className="btn btn-ghost btn-sm" onClick={() => loadTemplateIntoForm(r)}>
+                      Edit
+                    </button>
+                    <button type="button" className="btn btn-ghost btn-sm" onClick={() => void runPreview(r.id)}>
+                      Preview
+                    </button>
+                  </div>
                 </div>
                 <p style={{ margin: '0.5rem 0 0', fontSize: '0.85rem' }}>
                   <strong>Title:</strong> {r.title_template}

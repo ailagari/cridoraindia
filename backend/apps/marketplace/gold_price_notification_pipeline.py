@@ -76,7 +76,6 @@ def _handle_platform(event: GoldPriceUpdated) -> dict:
         from apps.marketplace.models import get_or_create_ticker
 
         ticker = get_or_create_ticker()
-        title = (ticker.rate_move_alert_title or "Gold rate alert").strip() or "Gold rate alert"
         link = (ticker.rate_move_alert_link or "/marketplace").strip() or "/marketplace"
         image_url = (ticker.gold_push_image_url or "").strip()
         try:
@@ -86,7 +85,6 @@ def _handle_platform(event: GoldPriceUpdated) -> dict:
         result["customer_inbox_sent"] = notify_customers_platform_gold_move(
             baseline=baseline,
             current=current,
-            title=title,
             link=link,
             image_url=image_url,
             defer_push=True,
