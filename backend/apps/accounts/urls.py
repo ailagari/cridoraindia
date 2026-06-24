@@ -42,7 +42,13 @@ from .views_gold import (
     JewellerCustomerVaultLedgerView,
     JewellerPrimaryCustomersView,
 )
-from .platform_features_views import AdminFeatureRolloutView, PlatformFeaturesView
+from .views_google_auth import CompleteProfileView, GoogleAuthConfigView, GoogleAuthView
+from .views_client_telemetry import (
+    AdminClientSurfaceStatsView,
+    ClientHeartbeatView,
+    ClientPwaInstalledView,
+)
+from .platform_features_views import AdminFeatureRolloutView, PlatformFeaturesView, PlatformPublicConfigView
 from .platform_billing_tax_views import PlatformBillingTaxView
 from .views_admin_treasury import (
     AdminTreasuryLedgerView,
@@ -306,6 +312,9 @@ urlpatterns = [
     ),
     path("auth/login/", LoginView.as_view()),
     path("auth/register/", CustomerRegisterView.as_view()),
+    path("auth/google/config/", GoogleAuthConfigView.as_view()),
+    path("auth/google/", GoogleAuthView.as_view()),
+    path("auth/complete-profile/", CompleteProfileView.as_view()),
     path(
         "public/jeweller-referral/<str:code>/",
         JewellerReferralPreviewView.as_view(),
@@ -519,7 +528,11 @@ urlpatterns = [
         AdminFractionalCounterOtpPolicyView.as_view(),
     ),
     path("admin/feature-rollout/", AdminFeatureRolloutView.as_view()),
+    path("platform/public-config/", PlatformPublicConfigView.as_view()),
     path("platform/features/", PlatformFeaturesView.as_view()),
+    path("client/heartbeat/", ClientHeartbeatView.as_view()),
+    path("client/pwa-installed/", ClientPwaInstalledView.as_view()),
+    path("admin/client-surface-stats/", AdminClientSurfaceStatsView.as_view()),
     path("platform/billing-tax/", PlatformBillingTaxView.as_view()),
     path("admin/notifications/", AdminNotificationsListView.as_view()),
     path("admin/notifications/mark-read/", AdminNotificationsMarkReadView.as_view()),

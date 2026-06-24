@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from django.db.models import Count
 
+from apps.accounts.services.client_telemetry import client_surface_stats_payload
 from apps.accounts.models import (
     NativePushToken,
     NotificationEventLog,
@@ -150,7 +151,7 @@ def admin_notification_stats_payload() -> dict:
         WebPushSubscription.objects.count() + NativePushToken.objects.count()
     )
 
-    return {
+    payload = {
         "delivered_count": delivered,
         "clicked_count": clicked,
         "open_rate_percent": open_rate,
@@ -165,3 +166,5 @@ def admin_notification_stats_payload() -> dict:
         "by_user_type": by_user_type,
         "subscriptions": subs,
     }
+    payload["client_surface"] = client_surface_stats_payload()
+    return payload

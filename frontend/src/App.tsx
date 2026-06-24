@@ -15,6 +15,7 @@ import { ProductMarketplacePage } from '@/pages/ProductMarketplacePage'
 import { MarketplaceProductDetailPage } from '@/pages/MarketplaceProductDetailPage'
 import { JewellerDirectoryPage } from '@/pages/JewellerDirectoryPage'
 import { JewellerPublicPage } from '@/pages/JewellerPublicPage'
+import { CompleteProfilePage } from '@/pages/CompleteProfilePage'
 import { LoginPage } from '@/pages/LoginPage'
 import { SignupPage } from '@/pages/SignupPage'
 import { JewellerApplyPage } from '@/pages/JewellerApplyPage'
@@ -33,7 +34,8 @@ import { DashboardIndexRedirect } from '@/pages/dashboard/DashboardIndexRedirect
 import { RedirectPreserveSearch } from '@/pages/dashboard/RedirectPreserveSearch'
 import { NativeNotificationBridge } from '@/components/NativeNotificationBridge'
 import { WebPushTapBridge } from '@/components/WebPushTapBridge'
-import { PushActivationPrompt } from '@/components/PushActivationPrompt'
+import { ClientTelemetryBridge } from '@/components/ClientTelemetryBridge'
+import { PwaInstallPrompt } from '@/components/PwaInstallPrompt'
 import { NativeAppSplash } from '@/components/NativeAppSplash'
 import { NativeAppEntryRoute } from '@/components/NativeAppEntryRoute'
 import { NotificationTapRedirectPage } from '@/pages/NotificationTapRedirectPage'
@@ -70,7 +72,8 @@ export default function App() {
         <AuthProvider>
           <NativeNotificationBridge />
           <WebPushTapBridge />
-          <PushActivationPrompt />
+          <ClientTelemetryBridge />
+          <PwaInstallPrompt />
           <NativeAppSplash />
           <NativeAppEntryRoute />
           <PlatformBillingTaxBootstrap />
@@ -98,6 +101,7 @@ export default function App() {
               <Route path="gold-calculator" element={<GoldCalculatorPage />} />
               {goldRatesMalayalamRoutes}
               <Route path="login" element={<LoginPage />} />
+              <Route path="complete-profile" element={<CompleteProfilePage />} />
               <Route path="notification-tap" element={<NotificationTapRedirectPage />} />
               <Route path="signup" element={<SignupPage />} />
               <Route path="jeweller/apply" element={<JewellerApplyPage />} />

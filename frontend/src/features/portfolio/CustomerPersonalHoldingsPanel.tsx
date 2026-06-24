@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { FormSubmitFoot } from '@/components/ui/FormSubmitFoot'
 import { FileUploadTrigger, type FileUploadTriggerPhase } from '@/components/ui'
 import { fetchVerifiedJewellers, type JewellerStorefrontDTO } from '@/lib/marketplaceApi'
@@ -137,6 +138,7 @@ function PurchaseSourceJewellerField({
 }
 
 export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () => void }) {
+  const [searchParams, setSearchParams] = useSearchParams()
   const [rows, setRows] = useState<PersonalHoldingDTO[]>([])
   const [loadErr, setLoadErr] = useState('')
   const [addFormError, setAddFormError] = useState('')
@@ -149,6 +151,19 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
 
   const [formOpen, setFormOpen] = useState(false)
   const [invoiceImportOpen, setInvoiceImportOpen] = useState(false)
+
+  useEffect(() => {
+    if (searchParams.get('scan') !== '1') return
+    setInvoiceImportOpen(true)
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev)
+        next.delete('scan')
+        return next
+      },
+      { replace: true },
+    )
+  }, [searchParams, setSearchParams])
   const [title, setTitle] = useState('')
   const [category, setCategory] = useState('ornament')
   const [weight, setWeight] = useState('')

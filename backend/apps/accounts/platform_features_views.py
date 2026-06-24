@@ -1,6 +1,6 @@
 """Public and admin API for platform feature rollout."""
 
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -12,7 +12,23 @@ from .platform_features import (
     jeweller_section_enabled,
     set_feature_flags,
 )
+from .services.google_auth import google_auth_configured
+from .services.kyc_policy import customer_kyc_required
 from .views_admin import _require_admin
+
+
+class PlatformPublicConfigView(APIView):
+    """Unauthenticated bootstrap config for signup and UI gating."""
+
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        return Response(
+            {
+                "customer_kyc_required": customer_kyc_required(),
+                "google_auth_configured": google_auth_configured(),
+            }
+        )
 
 
 class PlatformFeaturesView(APIView):
@@ -25,6 +41,7 @@ class PlatformFeaturesView(APIView):
         return Response(
             {
                 "flags": flags,
+                "customer_kyc_required": customer_kyc_required(),
                 "customer_sections": {
                     section: customer_section_enabled(section, flags)
                     for section in _all_customer_sections()

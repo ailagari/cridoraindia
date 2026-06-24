@@ -25,26 +25,36 @@ import {
 
 export type UserType = 'customer' | 'jeweller' | 'admin'
 
+export type AuthProvider = 'email' | 'google'
+
 export type AuthUser = {
   id: number
   email: string
   first_name: string
   last_name: string
+  phone: string
   user_type: UserType
   kyc_status: string
   business_name: string
   profile_photo_url: string
   logo_url: string
+  auth_provider: AuthProvider
+  profile_complete: boolean
 }
 
 type AuthContextValue = {
   user: AuthUser | null
   loading: boolean
   login: (email: string, password: string, rememberMe?: boolean) => Promise<AuthUser>
+  loginWithGoogle: (
+    idToken: string,
+    extras?: Record<string, string>,
+  ) => Promise<{ user: AuthUser; referralWarning?: string }>
   registerCustomer: (
     payload: Record<string, string>,
   ) => Promise<{ user: AuthUser; referralWarning?: string }>
   registerJeweller: (payload: Record<string, string>) => Promise<AuthUser>
+  completeProfile: (payload: Record<string, string>) => Promise<AuthUser>
   logout: () => Promise<void>
   refreshProfile: () => Promise<void>
   changePassword: (currentPassword: string, newPassword: string) => Promise<void>
@@ -70,9 +80,12 @@ function readStoredUser(): AuthUser | null {
     const u = JSON.parse(raw) as AuthUser
     return {
       ...u,
+      phone: typeof u.phone === 'string' ? u.phone : '',
       business_name: typeof u.business_name === 'string' ? u.business_name : '',
       profile_photo_url: typeof u.profile_photo_url === 'string' ? u.profile_photo_url : '',
       logo_url: typeof u.logo_url === 'string' ? u.logo_url : '',
+      auth_provider: u.auth_provider === 'google' ? 'google' : 'email',
+      profile_complete: u.profile_complete === true,
     }
   } catch {
     return null
@@ -83,17 +96,49 @@ function saveUser(u: AuthUser) {
   storeUserJson(JSON.stringify(u))
 }
 
+function parseAuthFields(data: Record<string, unknown>) {
+  const authProviderRaw = String(data.auth_provider ?? 'email')
+  const auth_provider: AuthProvider = authProviderRaw === 'google' ? 'google' : 'email'
+  return {
+    phone: typeof data.phone === 'string' ? data.phone : '',
+    auth_provider,
+    profile_complete: data.profile_complete === true,
+  }
+}
+
 function parseMePayload(data: Record<string, unknown>): AuthUser {
+  const authFields = parseAuthFields(data)
   return {
     id: Number(data.id),
     email: String(data.email),
     first_name: String(data.first_name ?? ''),
     last_name: String(data.last_name ?? ''),
+    phone: authFields.phone,
     user_type: data.user_type as UserType,
     kyc_status: String(data.kyc_status ?? 'pending'),
     business_name: typeof data.business_name === 'string' ? data.business_name : '',
     profile_photo_url: typeof data.profile_photo_url === 'string' ? data.profile_photo_url : '',
     logo_url: typeof data.logo_url === 'string' ? data.logo_url : '',
+    auth_provider: authFields.auth_provider,
+    profile_complete: authFields.profile_complete,
+  }
+}
+
+function userFromSessionPayload(data: Record<string, unknown>): AuthUser {
+  const authFields = parseAuthFields(data)
+  return {
+    id: Number(data.user_id),
+    email: String(data.email),
+    first_name: String(data.first_name ?? ''),
+    last_name: String(data.last_name ?? ''),
+    phone: authFields.phone,
+    user_type: data.user_type as UserType,
+    kyc_status: String(data.kyc_status ?? 'pending'),
+    business_name: typeof data.business_name === 'string' ? data.business_name : '',
+    profile_photo_url: typeof data.profile_photo_url === 'string' ? data.profile_photo_url : '',
+    logo_url: typeof data.logo_url === 'string' ? data.logo_url : '',
+    auth_provider: authFields.auth_provider,
+    profile_complete: authFields.profile_complete,
   }
 }
 
@@ -158,7 +203,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (loading) return
     if (!user || !hasStoredSession()) return
-    void ensureBackgroundPushDelivery({ promptIfNeeded: false })
+    void ensureBackgroundPushDelivery({ promptIfNeeded: true })
   }, [loading, user])
 
   useEffect(() => {
@@ -166,7 +211,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const onVisible = () => {
       if (document.visibilityState !== 'visible') return
       if (user && hasStoredSession()) {
-        void ensureBackgroundPushDelivery({ promptIfNeeded: false })
+        void ensureBackgroundPushDelivery({ promptIfNeeded: true })
       }
       if (hasStoredSession()) {
         void refreshProfile()
@@ -184,17 +229,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const access = String(data.access ?? '')
     const refresh = String(data.refresh ?? '')
     storeTokens(access, refresh)
-    const u: AuthUser = {
-      id: Number(data.user_id),
-      email: String(data.email),
-      first_name: String(data.first_name ?? ''),
-      last_name: String(data.last_name ?? ''),
-      user_type: data.user_type as UserType,
-      kyc_status: String(data.kyc_status ?? 'pending'),
-      business_name: typeof data.business_name === 'string' ? data.business_name : '',
-      profile_photo_url: typeof data.profile_photo_url === 'string' ? data.profile_photo_url : '',
-      logo_url: typeof data.logo_url === 'string' ? data.logo_url : '',
-    }
+    const u = userFromSessionPayload(data)
     saveUser(u)
     setUser(u)
     void ensureBackgroundPushDelivery({ promptIfNeeded: true })
@@ -215,6 +250,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!res.ok) {
         const msg = extractApiMessage(data, 'Sign in failed')
         throw new Error(msg)
+      }
+      return persistSession(data)
+    },
+    [persistSession],
+  )
+
+  const loginWithGoogle = useCallback(
+    async (idToken: string, extras?: Record<string, string>) => {
+      setAuthPersistence('local')
+      const res = await apiFetch('/api/v1/auth/google/', {
+        method: 'POST',
+        jsonBody: { id_token: idToken, ...(extras ?? {}) },
+      })
+      const data = (await res.json().catch(() => ({}))) as Record<string, unknown>
+      if (!res.ok) {
+        throw new Error(extractApiMessage(data, 'Google sign-in failed'))
+      }
+      const u = persistSession(data)
+      const warn = data.referral_warning
+      return {
+        user: u,
+        referralWarning: typeof warn === 'string' && warn ? warn : undefined,
+      }
+    },
+    [persistSession],
+  )
+
+  const completeProfile = useCallback(
+    async (payload: Record<string, string>) => {
+      const res = await authFetch('/api/v1/auth/complete-profile/', {
+        method: 'PATCH',
+        jsonBody: payload,
+      })
+      const data = (await res.json().catch(() => ({}))) as Record<string, unknown>
+      if (!res.ok) {
+        throw new Error(extractApiMessage(data, 'Could not update profile.'))
       }
       return persistSession(data)
     },
@@ -303,8 +374,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       user,
       loading,
       login,
+      loginWithGoogle,
       registerCustomer,
       registerJeweller,
+      completeProfile,
       logout,
       refreshProfile,
       changePassword,
@@ -313,8 +386,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       user,
       loading,
       login,
+      loginWithGoogle,
       registerCustomer,
       registerJeweller,
+      completeProfile,
       logout,
       refreshProfile,
       changePassword,

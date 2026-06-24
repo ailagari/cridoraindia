@@ -16,6 +16,7 @@ from apps.accounts.jeweller_liability_service import (
     release_custodial_liability_for_redemption_purchase,
 )
 from apps.accounts.models import CrossRedemptionRequest, VaultHolding, VaultProductRedemption
+from apps.accounts.services.kyc_policy import customer_kyc_satisfied, require_customer_kyc
 from apps.accounts.vault_service import debit_customer_vault_for_transfer
 
 from .models import MarketplaceProduct
@@ -253,11 +254,11 @@ class VaultRedemptionConfirmView(APIView):
             return Response(
                 {"detail": "Customers only."}, status=status.HTTP_403_FORBIDDEN
             )
-        if request.user.kyc_status != User.KYC_VERIFIED:
-            return Response(
-                {"detail": "Complete KYC before redeeming with vault gold."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        blocked = require_customer_kyc(
+            request.user, "Complete KYC before redeeming with vault gold."
+        )
+        if blocked:
+            return blocked
         body = request.data if isinstance(request.data, dict) else {}
         raw = str(body.get("product_id") or "").strip()
         if not raw.isdigit():

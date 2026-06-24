@@ -29,6 +29,7 @@ DJANGO_PUBLIC_BASE_URL = (os.environ.get("DJANGO_PUBLIC_BASE_URL") or "").strip(
 
 # Optional: meta tag content for Google Search Console domain verification.
 GOOGLE_SITE_VERIFICATION = (os.environ.get("GOOGLE_SITE_VERIFICATION") or "").strip()
+GOOGLE_OAUTH_CLIENT_ID = (os.environ.get("GOOGLE_OAUTH_CLIENT_ID") or "").strip()
 
 INSTALLED_APPS = [
     "django.contrib.admin",

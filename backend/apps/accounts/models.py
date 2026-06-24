@@ -32,6 +32,27 @@ class User(AbstractUser):
         max_length=20, choices=USER_TYPE_CHOICES, default=CUSTOMER
     )
     phone = models.CharField(max_length=20, blank=True)
+
+    AUTH_EMAIL = "email"
+    AUTH_GOOGLE = "google"
+    AUTH_PROVIDER_CHOICES = [
+        (AUTH_EMAIL, "Email"),
+        (AUTH_GOOGLE, "Google"),
+    ]
+    auth_provider = models.CharField(
+        max_length=16,
+        choices=AUTH_PROVIDER_CHOICES,
+        default=AUTH_EMAIL,
+    )
+    google_sub = models.CharField(
+        max_length=128,
+        unique=True,
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text="Google account subject id (stable OAuth identifier).",
+    )
+
     profile_photo_url = models.URLField(
         max_length=512,
         blank=True,
@@ -2057,6 +2078,63 @@ class SettlementObligation(models.Model):
 
     def __str__(self):
         return f"SettlementObligation({self.from_jeweller_id}→{self.to_jeweller_id}, {self.status})"
+
+
+class ClientDeviceSession(models.Model):
+    """Anonymous or signed-in browser/PWA/native surface for activation analytics."""
+
+    SURFACE_BROWSER = "browser"
+    SURFACE_PWA = "pwa"
+    SURFACE_NATIVE_ANDROID = "native_android"
+    SURFACE_NATIVE_IOS = "native_ios"
+    SURFACE_CHOICES = [
+        (SURFACE_BROWSER, "Browser"),
+        (SURFACE_PWA, "PWA"),
+        (SURFACE_NATIVE_ANDROID, "Native Android"),
+        (SURFACE_NATIVE_IOS, "Native iOS"),
+    ]
+
+    PERM_DEFAULT = "default"
+    PERM_GRANTED = "granted"
+    PERM_DENIED = "denied"
+    PERM_UNSUPPORTED = "unsupported"
+    PUSH_PERMISSION_CHOICES = [
+        (PERM_DEFAULT, "Default"),
+        (PERM_GRANTED, "Granted"),
+        (PERM_DENIED, "Denied"),
+        (PERM_UNSUPPORTED, "Unsupported"),
+    ]
+
+    client_id = models.CharField(max_length=64, unique=True, db_index=True)
+    user = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="client_device_sessions",
+    )
+    surface = models.CharField(max_length=24, choices=SURFACE_CHOICES, default=SURFACE_BROWSER)
+    push_permission = models.CharField(
+        max_length=16,
+        choices=PUSH_PERMISSION_CHOICES,
+        default=PERM_DEFAULT,
+    )
+    push_registered = models.BooleanField(default=False)
+    pwa_installed_at = models.DateTimeField(null=True, blank=True)
+    user_agent = models.CharField(max_length=512, blank=True, default="")
+    preferred_locale = models.CharField(max_length=8, blank=True, default="en")
+    first_seen_at = models.DateTimeField(auto_now_add=True)
+    last_seen_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-last_seen_at"]
+        indexes = [
+            models.Index(fields=["surface", "last_seen_at"]),
+            models.Index(fields=["push_registered", "last_seen_at"]),
+        ]
+
+    def __str__(self):
+        return f"ClientDeviceSession({self.client_id}, {self.surface})"
 
 
 class WebPushSubscription(models.Model):

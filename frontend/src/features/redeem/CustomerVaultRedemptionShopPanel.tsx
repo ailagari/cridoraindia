@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ProductPhoto } from '@/components/ProductPhoto'
 import { useAuth } from '@/context/AuthContext'
+import { useCustomerKycOk } from '@/hooks/useCustomerKycOk'
 import {
   fetchMarketplaceProducts,
   fetchVerifiedJewellers,
@@ -25,8 +26,8 @@ function parseG(s: string): number {
 }
 
 export function CustomerVaultRedemptionShopPanel() {
-  const { user, refreshProfile } = useAuth()
-  const kycOk = user?.kyc_status === 'verified'
+  const { refreshProfile } = useAuth()
+  const kycOk = useCustomerKycOk()
 
   const [cities, setCities] = useState<string[]>(['All Cities'])
   const [city, setCity] = useState('All Cities')

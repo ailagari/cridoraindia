@@ -18,6 +18,7 @@ from .fractional_service import (
     validate_minimums,
 )
 from .models import FractionalCounterOtp, FractionalGoldPurchase
+from .services.kyc_policy import require_customer_kyc
 from .platform_features import require_feature_enabled
 from .services.fractional_upi import (
     default_payment_expires_at,
@@ -154,11 +155,9 @@ class FractionalOrdersView(APIView):
                 {"detail": "Only customers can purchase."},
                 status=status.HTTP_403_FORBIDDEN,
             )
-        if user.kyc_status != User.KYC_VERIFIED:
-            return Response(
-                {"detail": "Complete KYC before purchasing gold."},
-                status=status.HTTP_403_FORBIDDEN,
-            )
+        blocked = require_customer_kyc(user, "Complete KYC before purchasing gold.")
+        if blocked:
+            return blocked
         try:
             jid = int(request.data.get("jeweller_id"))
         except (TypeError, ValueError):

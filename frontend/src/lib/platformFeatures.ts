@@ -40,6 +40,7 @@ export function clearPlatformFeaturesCache(): void {
 const DEFAULT_FLAGS: Record<string, boolean> = {
   golden_scheme: false,
   sellback_upi: false,
+  customer_kyc_required: false,
 }
 
 export function isFeatureEnabled(flags: Record<string, boolean> | null | undefined, key: string): boolean {

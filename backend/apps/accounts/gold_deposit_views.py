@@ -19,6 +19,7 @@ from .gold_deposit_counter_otp import (
     verify_gold_deposit_counter_otp,
 )
 from .models import GoldDepositCounterOtp, GoldDepositIntake
+from .services.kyc_policy import require_customer_kyc
 from .services.platform_operational import fractional_counter_otp_ttl_seconds_int
 
 User = get_user_model()
@@ -214,11 +215,9 @@ class CustomerGoldDepositCounterOtpIssueView(APIView):
     def post(self, request, pk: int):
         if request.user.user_type != User.CUSTOMER:
             return Response({"detail": "Customers only."}, status=status.HTTP_403_FORBIDDEN)
-        if request.user.kyc_status != User.KYC_VERIFIED:
-            return Response(
-                {"detail": "Complete KYC before confirming a deposit."},
-                status=status.HTTP_403_FORBIDDEN,
-            )
+        blocked = require_customer_kyc(request.user, "Complete KYC before confirming a deposit.")
+        if blocked:
+            return blocked
         try:
             with transaction.atomic():
                 intake = GoldDepositIntake.objects.select_for_update().get(

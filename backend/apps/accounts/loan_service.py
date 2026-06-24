@@ -15,6 +15,7 @@ from apps.accounts.models import (
     GoldLoanRepaymentRequest,
     GoldLoanRequest,
 )
+from apps.accounts.services.kyc_policy import customer_kyc_satisfied
 from apps.accounts.loan_otp import issue_loan_otp, verify_loan_otp
 from apps.accounts.loan_repayment_otp import (
     issue_loan_repayment_otp,
@@ -157,7 +158,7 @@ def quote_customer_loan(
 ) -> tuple[dict | None, str | None]:
     if customer.user_type != User.CUSTOMER:
         return None, "Customers only."
-    if customer.kyc_status != User.KYC_VERIFIED:
+    if not customer_kyc_satisfied(customer):
         return None, "Complete verified KYC before requesting a gold loan."
     if jeweller.user_type != User.JEWELLER or jeweller.kyc_status != User.KYC_VERIFIED:
         return None, "Verified jeweller not found."

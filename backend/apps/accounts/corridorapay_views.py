@@ -18,6 +18,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.accounts.corridorapay_otp import issue_corridorapay_otp, verify_corridorapay_otp
+from apps.accounts.services.kyc_policy import customer_kyc_satisfied, require_customer_kyc
 from apps.accounts.fractional_service import MIN_GRAMS, jeweller_metal_rate_inr_per_gram
 from apps.accounts.models import CridoraPayBill, PersonalGoldHolding
 from apps.accounts.services.corridorapay.completion import (
@@ -155,10 +156,9 @@ class JewellerCridoraPayBillCreateView(APIView):
         customer = User.objects.filter(
             pk=customer_id,
             user_type=User.CUSTOMER,
-            kyc_status=User.KYC_VERIFIED,
         ).first()
-        if not customer:
-            return Response({"detail": "Verified customer not found."}, status=status.HTTP_400_BAD_REQUEST)
+        if not customer or not customer_kyc_satisfied(customer):
+            return Response({"detail": "Customer not found."}, status=status.HTTP_400_BAD_REQUEST)
 
         grams, err = _parse_decimal(request.data.get("weight_grams", "0"), "weight_grams")
         if err:
@@ -465,11 +465,11 @@ class CustomerCridoraPayAcceptView(APIView):
     def post(self, request, pk: int):
         if request.user.user_type != User.CUSTOMER:
             return Response({"detail": "Customers only."}, status=status.HTTP_403_FORBIDDEN)
-        if request.user.kyc_status != User.KYC_VERIFIED:
-            return Response(
-                {"detail": "Complete KYC before paying with CridoraPay."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        blocked = require_customer_kyc(
+            request.user, "Complete KYC before paying with CridoraPay."
+        )
+        if blocked:
+            return blocked
         body = request.data if isinstance(request.data, dict) else {}
         pay_method = str(body.get("payment_method") or "").strip().lower()
         if pay_method not in (CridoraPayBill.PAY_VAULT, CridoraPayBill.PAY_UPI):

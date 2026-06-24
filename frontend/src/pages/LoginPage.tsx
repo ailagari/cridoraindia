@@ -2,14 +2,15 @@ import { type FormEvent, useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
 import { usePublicLocale } from '@/i18n/PublicLocaleProvider'
-import { dashboardLandingPath } from '@/lib/routes'
+import { dashboardLandingPath, postAuthLandingPath } from '@/lib/routes'
 import { getApiBaseUrl, isNativeApiMisconfigured, nativeApiConfigError } from '@/lib/api'
 import { isNativePlatform } from '@/lib/capacitorPlatform'
 import { AuthShell } from '@/layouts/auth-shell'
 import { Button, Card, Feedback, Heading, Input, Text } from '@/components/ui'
+import { GoogleSignInButton } from '@/components/GoogleSignInButton'
 
 export function LoginPage() {
-  const { login, user, loading } = useAuth()
+  const { login, loginWithGoogle, user, loading } = useAuth()
   const { t } = usePublicLocale()
   const navigate = useNavigate()
   const location = useLocation()
@@ -28,6 +29,7 @@ export function LoginPage() {
   const [rememberMe, setRememberMe] = useState(true)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [googleBusy, setGoogleBusy] = useState(false)
 
   useEffect(() => {
     if (loading || !user) return
@@ -91,10 +93,26 @@ export function LoginPage() {
               API: {getApiBaseUrl()}
             </Text>
           ) : null}
-          <Button type="submit" variant="primary" block loading={busy} disabled={isNativeApiMisconfigured()}>
+          <Button type="submit" variant="primary" block loading={busy} disabled={isNativeApiMisconfigured() || googleBusy}>
             {t('auth.signIn')}
           </Button>
         </form>
+        <GoogleSignInButton
+          disabled={busy || googleBusy}
+          text="signin_with"
+          onCredential={async (token) => {
+            setError('')
+            setGoogleBusy(true)
+            try {
+              const { user: u } = await loginWithGoogle(token)
+              navigate(returnPath ?? postAuthLandingPath(u), { replace: true })
+            } catch (err) {
+              setError(err instanceof Error ? err.message : t('auth.signInFailed'))
+            } finally {
+              setGoogleBusy(false)
+            }
+          }}
+        />
         <p className="form-footnote" style={{ marginTop: 'var(--sp-4)' }}>
           {t('auth.newHere')}{' '}
           <Link to="/signup">{t('auth.createCustomer')}</Link> or{' '}

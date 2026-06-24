@@ -14,6 +14,7 @@ from apps.accounts.models import GoldSellbackRequest
 from apps.accounts.sellback_otp import issue_sellback_otp, verify_sellback_otp
 from apps.accounts.services.fractional_upi import default_payment_expires_at
 from apps.accounts.services.sellback_upi import normalize_upi_vpa, payout_note_for
+from apps.accounts.services.kyc_policy import customer_kyc_satisfied
 from apps.accounts.vault_service import customer_fractional_available, debit_customer_fractional
 from apps.marketplace.models import JewellerPricingProfile, jeweller_profile_for
 from apps.marketplace.pricing import (
@@ -35,7 +36,7 @@ def quote_customer_sellback(
     """Quote from grams or target cash (cash path derives grams from buyback ₹/g)."""
     if customer.user_type != User.CUSTOMER:
         return None, "Customers only."
-    if customer.kyc_status != User.KYC_VERIFIED:
+    if not customer_kyc_satisfied(customer):
         return None, "Complete verified KYC before sellback."
     if jeweller.user_type != User.JEWELLER or jeweller.kyc_status != User.KYC_VERIFIED:
         return None, "Verified jeweller not found."

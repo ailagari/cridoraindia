@@ -11,7 +11,7 @@ import {
   type GoldTickerHistoryPayload,
   type SpotPricesPayload,
 } from '@/lib/marketplaceApi'
-import { useAuth } from '@/context/AuthContext'
+import { useCustomerKycOk } from '@/hooks/useCustomerKycOk'
 import { useLivePoll } from '@/lib/useLivePoll'
 import { LIVE_BALANCE_POLL_MS } from '@/lib/liveDeskIntervals'
 import {
@@ -147,7 +147,7 @@ function parseInrNum(s: string): number {
 }
 
 export function CustomerPortfolioPanel() {
-  const { user } = useAuth()
+  const kycVerified = useCustomerKycOk()
   const [searchParams] = useSearchParams()
   const [wallet, setWallet] = useState<Awaited<ReturnType<typeof fetchGoldWallet>>>(null)
   const [spotPayload, setSpotPayload] = useState<SpotPricesPayload | null>(null)
@@ -472,7 +472,7 @@ export function CustomerPortfolioPanel() {
               portfolioHistoryRange={portfolioHistRange}
               portfolioHistoryLoading={portfolioHistLoading}
               onPortfolioHistoryRangeChange={setPortfolioHistRange}
-              kycVerified={user?.kyc_status === 'verified'}
+              kycVerified={kycVerified}
               onViewLedger={() => setPortfolioTab('transactions')}
               onTogglePrivacy={() => setPrivacyMasked((m) => !m)}
             />

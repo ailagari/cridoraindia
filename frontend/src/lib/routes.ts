@@ -1,6 +1,7 @@
 import type { AuthUser } from '@/context/AuthContext'
 import { CUSTOMER_DEFAULT_SECTION } from '@/lib/mobileNav/customerNav'
 import { JEWELLER_DEFAULT_SECTION } from '@/lib/mobileNav/jewellerNav'
+import { getCachedPlatformPublicConfig } from '@/lib/platformPublicConfig'
 
 /** In-app dashboards (SPA); marketing site uses PublicLayout. */
 export function isDashboardPath(pathname: string): boolean {
@@ -20,9 +21,19 @@ export function userDashboardPath(user: AuthUser): string {
   }
 }
 
+function customerNeedsKyc(user: AuthUser): boolean {
+  const required = getCachedPlatformPublicConfig().customer_kyc_required
+  return required && user.kyc_status !== 'verified'
+}
+
+/** First-time customer landing: personal gold tracking with bill scan open. */
+export function customerOnboardingLandingPath(): string {
+  return '/userdashboard?section=portfolio_overview&portfolio_tab=personal&scan=1'
+}
+
 function dashboardPortfolioSection(user: AuthUser): string | null {
   if (user.user_type === 'customer') {
-    if (user.kyc_status !== 'verified') return 'profile_kyc'
+    if (customerNeedsKyc(user)) return 'profile_kyc'
     return CUSTOMER_DEFAULT_SECTION
   }
   if (user.user_type === 'jeweller') {
@@ -44,6 +55,21 @@ export function dashboardLandingPath(user: AuthUser): string {
     return base
   }
   return `${base}?section=${section}`
+}
+
+/** Post sign-up / Google auth — complete profile first, then scan onboarding. */
+export function postAuthLandingPath(user: AuthUser, opts?: { onboarding?: boolean }): string {
+  if (
+    user.user_type === 'customer' &&
+    user.auth_provider === 'google' &&
+    user.profile_complete === false
+  ) {
+    return '/complete-profile'
+  }
+  if (opts?.onboarding && user.user_type === 'customer' && !customerNeedsKyc(user)) {
+    return customerOnboardingLandingPath()
+  }
+  return dashboardLandingPath(user)
 }
 
 /** Public bottom nav “Account” tab — profile/settings hub, distinct from main Dashboard landing. */

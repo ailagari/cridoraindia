@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import QRCode from 'qrcode'
-import { useAuth } from '@/context/AuthContext'
+import { useCustomerKycOk } from '@/hooks/useCustomerKycOk'
 import { usePublicLayoutMax767 } from '@/hooks/usePublicLayoutMax767'
 import {
   fetchGoldWallet,
@@ -111,7 +111,6 @@ function vaultRowSubtitle(v: VaultRowDTO): string {
 }
 
 export function CustomerVaultAddressesPanel() {
-  const { user } = useAuth()
   const navigate = useNavigate()
   const narrow = usePublicLayoutMax767()
   const [wallet, setWallet] = useState<GoldWalletDTO | null>(null)
@@ -132,7 +131,7 @@ export function CustomerVaultAddressesPanel() {
     void refresh()
   }, [refresh])
 
-  const kycOk = user?.kyc_status === 'verified'
+  const kycOk = useCustomerKycOk()
   const primaryGlobal = (wallet?.cridora_global_id ?? '').trim()
 
   return (

@@ -11,6 +11,7 @@ from .models import GoldSellbackRequest
 from .platform_features import FeatureGatedViewMixin
 from .sellback_service import customer_confirm_sellback_utr
 from .sellback_views import _serialize_customer_outstanding, _serialize_sellback_jeweller
+from .services.kyc_policy import require_customer_kyc
 from .services.sellback_upi import (
     cancel_upi_sellback,
     normalize_upi_vpa,
@@ -41,11 +42,11 @@ class CustomerPayoutUpiProfileView(FeatureGatedViewMixin, APIView):
     def patch(self, request):
         if request.user.user_type != User.CUSTOMER:
             return Response({"detail": "Customers only."}, status=status.HTTP_403_FORBIDDEN)
-        if request.user.kyc_status != User.KYC_VERIFIED:
-            return Response(
-                {"detail": "Complete verified KYC before configuring payout UPI."},
-                status=status.HTTP_403_FORBIDDEN,
-            )
+        blocked = require_customer_kyc(
+            request.user, "Complete verified KYC before configuring payout UPI."
+        )
+        if blocked:
+            return blocked
         data = request.data if isinstance(request.data, dict) else {}
         raw = str(data.get("payout_upi_vpa") or "").strip()
         if raw == "":

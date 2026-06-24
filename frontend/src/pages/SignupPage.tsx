@@ -2,10 +2,11 @@ import { type FormEvent, useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
 import { usePublicLocale } from '@/i18n/PublicLocaleProvider'
-import { dashboardLandingPath } from '@/lib/routes'
+import { postAuthLandingPath } from '@/lib/routes'
 import { fetchJewellerReferralPreview } from '@/lib/jewellerReferralApi'
 import { AuthShell } from '@/layouts/auth-shell'
 import { Button, Card, Feedback, Heading, Input, Spinner, Text } from '@/components/ui'
+import { GoogleSignInButton } from '@/components/GoogleSignInButton'
 
 function parseJewellerIdParam(raw: string | null): number | null {
   if (!raw) return null
@@ -14,7 +15,7 @@ function parseJewellerIdParam(raw: string | null): number | null {
 }
 
 export function SignupPage() {
-  const { user, loading, registerCustomer } = useAuth()
+  const { user, loading, registerCustomer, loginWithGoogle } = useAuth()
   const { t } = usePublicLocale()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -29,6 +30,7 @@ export function SignupPage() {
   const [error, setError] = useState('')
   const [referralWarning, setReferralWarning] = useState('')
   const [busy, setBusy] = useState(false)
+  const [googleBusy, setGoogleBusy] = useState(false)
 
   const jewellerIdFromUrl = useMemo(
     () => parseJewellerIdParam(searchParams.get('jeweller')),
@@ -94,7 +96,7 @@ export function SignupPage() {
       }
       const { user: u, referralWarning: warn } = await registerCustomer(payload)
       if (warn) setReferralWarning(warn)
-      navigate(dashboardLandingPath(u), { replace: true })
+      navigate(postAuthLandingPath(u, { onboarding: true }), { replace: true })
     } catch (err) {
       setError(err instanceof Error ? err.message : t('auth.registrationFailed'))
     } finally {
@@ -110,7 +112,7 @@ export function SignupPage() {
     )
   }
   if (user) {
-    return <Navigate to={dashboardLandingPath(user)} replace />
+    return <Navigate to={postAuthLandingPath(user)} replace />
   }
 
   return (
@@ -182,10 +184,35 @@ export function SignupPage() {
           />
           {error ? <Feedback>{error}</Feedback> : null}
           {referralWarning ? <Feedback>{referralWarning}</Feedback> : null}
-          <Button type="submit" variant="primary" block loading={busy}>
+          <Button type="submit" variant="primary" block loading={busy} disabled={googleBusy}>
             {t('auth.signUp')}
           </Button>
         </form>
+        <GoogleSignInButton
+          disabled={busy || googleBusy}
+          text="signup_with"
+          onCredential={async (token) => {
+            setError('')
+            setReferralWarning('')
+            setGoogleBusy(true)
+            try {
+              const extras: Record<string, string> = {}
+              const refDigits = referralCode.replace(/\D/g, '')
+              if (refDigits.length > 0) {
+                extras.referral_code = refDigits.padStart(6, '0')
+              } else if (jewellerIdFromUrl != null) {
+                extras.onboarding_jeweller_id = String(jewellerIdFromUrl)
+              }
+              const { user: u, referralWarning: warn } = await loginWithGoogle(token, extras)
+              if (warn) setReferralWarning(warn)
+              navigate(postAuthLandingPath(u, { onboarding: true }), { replace: true })
+            } catch (err) {
+              setError(err instanceof Error ? err.message : t('auth.registrationFailed'))
+            } finally {
+              setGoogleBusy(false)
+            }
+          }}
+        />
         <p className="form-footnote" style={{ marginTop: 'var(--sp-4)' }}>
           {t('auth.jewellerPrompt')} <Link to="/jeweller/apply">{t('auth.applyKyb')}</Link> ·{' '}
           <Link to="/login">{t('nav.login')}</Link>

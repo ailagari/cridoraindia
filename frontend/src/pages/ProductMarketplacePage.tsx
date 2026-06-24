@@ -30,7 +30,7 @@ import {
   useMarketplaceOrderConfirm,
   type MarketplaceCheckoutReceipt,
 } from '@/features/marketplace/MarketplaceCheckoutFlow'
-import { useAuth } from '@/context/AuthContext'
+import { useCustomerKycOk } from '@/hooks/useCustomerKycOk'
 import { fetchGoldWallet, holdingsJewellerIdsFromWallet, vaultCheckoutEligibleGramsAtJeweller, walletBalanceGrams, type GoldWalletDTO } from '@/lib/goldTransferApi'
 import { mergeJewellerListWithDemos } from '@/lib/jewellerMarketplaceDemos'
 import { LIVE_BALANCE_POLL_MS, LIVE_CATALOG_POLL_MS, LIVE_DIRECTORY_POLL_MS } from '@/lib/liveDeskIntervals'
@@ -96,7 +96,6 @@ function CheckoutView({
   product: MarketplaceProductDTO
   onBack: () => void
 }) {
-  const { user } = useAuth()
   const [payMode, setPayMode] = useState<'cash' | 'vault'>('cash')
   const [vaultGrams, setVaultGrams] = useState(0)
   const [pricingCtx, setPricingCtx] = useState<CheckoutPricingContext | undefined>(undefined)
@@ -160,7 +159,7 @@ function CheckoutView({
 
   const payDisplay = Math.max(0, p.payableAmount)
   const vaultActive = payMode === 'vault'
-  const kycOk = user?.kyc_status === 'verified'
+  const kycOk = useCustomerKycOk()
   const metalRateOk = Number.isFinite(metalRate) && metalRate > 0
 
   useEffect(() => {

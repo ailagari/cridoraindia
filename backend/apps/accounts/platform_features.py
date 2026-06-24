@@ -145,6 +145,15 @@ FEATURE_DEFINITIONS: tuple[dict[str, Any], ...] = (
         "jeweller_sections": (),
         "admin_sections": (),
     },
+    {
+        "key": "customer_kyc_required",
+        "label": "Require customer KYC",
+        "description": "When off, customers can use vault and marketplace without verified KYC (growth mode).",
+        "default": False,
+        "customer_sections": (),
+        "jeweller_sections": (),
+        "admin_sections": ("plat_features",),
+    },
 )
 
 FEATURE_KEYS: frozenset[str] = frozenset(d["key"] for d in FEATURE_DEFINITIONS)

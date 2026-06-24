@@ -639,6 +639,9 @@ class FestivalBroadcastNotificationCreateSerializer(serializers.Serializer):
         )
 
 
+from .services.google_auth import user_profile_complete
+
+
 def user_auth_payload(user):
     tokens = issue_tokens(user)
     logo_url = ""
@@ -658,6 +661,8 @@ def user_auth_payload(user):
             "business_name": user.business_name,
             "profile_photo_url": (user.profile_photo_url or "").strip(),
             "logo_url": logo_url,
+            "auth_provider": getattr(user, "auth_provider", User.AUTH_EMAIL),
+            "profile_complete": user_profile_complete(user),
         }
     )
     return tokens

@@ -26,6 +26,7 @@ from .gold_identity import (
 from .models import GoldBalance, GoldTransfer, GoldVault
 from .serializers import GoldTransferNotifySerializer, GoldWalletSerializer
 from .services.personal_holdings import customer_portfolio_totals_payload
+from .services.kyc_policy import customer_kyc_satisfied, require_customer_kyc
 from .services.jeweller_customer_vault_ledger import (
     jeweller_can_access_customer_vault_ledger,
     jeweller_customer_vault_ledger_payload,
@@ -272,7 +273,7 @@ class GoldUPIResolveView(APIView):
                 {"found": False, "detail": "You cannot transfer to your own account."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        if to_user.kyc_status != User.KYC_VERIFIED:
+        if not customer_kyc_satisfied(to_user):
             return Response(
                 {"found": False, "detail": "Recipient is not verified yet."},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -300,11 +301,9 @@ class GoldTransferCreateView(APIView):
                 {"detail": "Transfers are for customers and jewellers."},
                 status=status.HTTP_403_FORBIDDEN,
             )
-        if user.kyc_status != User.KYC_VERIFIED:
-            return Response(
-                {"detail": "Verify your account before sending gold."},
-                status=status.HTTP_403_FORBIDDEN,
-            )
+        blocked = require_customer_kyc(user, "Verify your account before sending gold.")
+        if blocked:
+            return blocked
         raw_upi = (request.data.get("gold_upi") or "").strip()
         inbound = resolve_inbound_transfer_target(raw_upi)
         if not inbound:
@@ -377,7 +376,7 @@ class GoldTransferCreateView(APIView):
                 {"detail": "Cannot send gold to yourself."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        if to_user.kyc_status != User.KYC_VERIFIED:
+        if not customer_kyc_satisfied(to_user):
             return Response(
                 {"detail": "Recipient is not verified."},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -616,7 +615,7 @@ class GoldTransferPublicMetaView(APIView):
     def get(self, request, gold_upi: str):
         raw = gold_upi.replace("-", "@") if "@" not in gold_upi else gold_upi
         inbound = resolve_inbound_transfer_target(raw)
-        if not inbound or inbound.recipient.kyc_status != User.KYC_VERIFIED:
+        if not inbound or not customer_kyc_satisfied(inbound.recipient):
             return Response({"found": False}, status=status.HTTP_404_NOT_FOUND)
         return Response(
             {

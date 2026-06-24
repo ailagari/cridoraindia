@@ -7,6 +7,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.accounts.services.jeweller_referral import customer_secondary_jeweller_ids
+from apps.accounts.services.kyc_policy import customer_kyc_satisfied
 from apps.accounts.services.personal_holdings import normalize_phone_digits
 from apps.schemes.models import (
     CustomerSchemeEnrollment,
@@ -195,7 +196,7 @@ def jeweller_admit_customer(
         raise ValueError("Offering does not belong to this jeweller.")
     if offering.status != JewellerSchemeOffering.STATUS_ACTIVE:
         raise ValueError("Offering is not active.")
-    if customer.user_type != User.CUSTOMER or customer.kyc_status != User.KYC_VERIFIED:
+    if customer.user_type != User.CUSTOMER or not customer_kyc_satisfied(customer):
         raise ValueError("Customer must be KYC verified.")
 
     pending = CustomerSchemeEnrollment.objects.filter(
