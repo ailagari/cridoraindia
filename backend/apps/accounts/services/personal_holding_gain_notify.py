@@ -15,7 +15,10 @@ from apps.accounts.models import (
     PortfolioUserNotification,
 )
 from apps.accounts.services.deliver_engagement import deliver_engagement
-from apps.accounts.services.engagement_constants import MOMENT_HOLDING_APPRECIATION
+from apps.accounts.services.engagement_constants import (
+    MOMENT_HOLDING_APPRECIATION,
+    MOMENT_HOLDING_VALUE_DOWN,
+)
 from apps.accounts.services.engagement_context import resolve_engagement_context
 from apps.accounts.services.notification_copy import resolve_jeweller_push_branding
 from apps.accounts.services.notification_rate_limits import gold_alert_allowed, record_gold_alert
@@ -78,29 +81,42 @@ def notify_personal_holdings_after_rate_change(
         state = _get_or_init_state(holding, new_value)
         baseline = state.last_notified_value_inr.quantize(Decimal("0.01"))
         gain = (new_value - baseline).quantize(Decimal("0.01"))
-        if gain < threshold:
+        if gain >= threshold:
+            moment = MOMENT_HOLDING_APPRECIATION
+            notification_type = "holding_gain"
+            tag = f"hold-gain-{holding.pk}"
+        elif gain <= -threshold:
+            moment = MOMENT_HOLDING_VALUE_DOWN
+            notification_type = "holding_value_down"
+            tag = f"hold-down-{holding.pk}"
+        else:
             continue
         if state.last_notified_at and state.last_notified_at > cooldown_before:
             continue
 
         branding = resolve_jeweller_push_branding(holding.jeweller_id) if holding.jeweller_id else {}
         ctx = resolve_engagement_context(user)
+        loss_abs = abs(gain) if gain < 0 else Decimal("0")
         row = deliver_engagement(
             user,
-            moment=MOMENT_HOLDING_APPRECIATION,
+            moment=moment,
             context=ctx,
             holding=holding,
-            gain_inr=gain,
+            gain_inr=gain if gain > 0 else None,
             value_inr=new_value,
             link_path="/userdashboard?section=portfolio_holdings",
             category=PortfolioUserNotification.CATEGORY_PORTFOLIO,
             priority=PortfolioUserNotification.PRIORITY_LOW,
-            notification_type="holding_gain",
+            notification_type=notification_type,
             jeweller_id=holding.jeweller_id,
             logo_url=branding.get("logo_url") or None,
             image_url=branding.get("logo_url") or None,
-            tag=f"hold-gain-{holding.pk}",
+            tag=tag,
             defer_push=defer_push,
+            extra_facts={
+                "holding_loss_amount": f"₹{loss_abs:,.0f}" if loss_abs else "₹0",
+                "value_change_amount": f"₹{abs(gain):,.0f}",
+            },
         )
         if not row:
             continue

@@ -15,7 +15,10 @@ from apps.accounts.services.engagement_template_render import render_template
 from apps.accounts.services.notification_copy import (
     format_gold_rate_standard,
     format_holding_gain,
+    format_holding_value_down,
+    format_personal_collection_change,
     format_portfolio_gain,
+    format_portfolio_value_change,
 )
 
 logger = logging.getLogger(__name__)
@@ -54,6 +57,66 @@ def _fallback_copy(
             previous_rate=previous_rate, new_rate=new_rate, locale=loc
         )
         return "Gold rate alert", body
+    if moment == "market_rate_increase" and previous_rate is not None and new_rate is not None:
+        body = format_gold_rate_standard(
+            previous_rate=previous_rate, new_rate=new_rate, locale=loc
+        )
+        return "Gold rate rose", body
+    if moment == "market_rate_decrease" and previous_rate is not None and new_rate is not None:
+        body = format_gold_rate_standard(
+            previous_rate=previous_rate, new_rate=new_rate, locale=loc
+        )
+        return "Gold rate eased", body
+    if moment == "portfolio_value_up":
+        try:
+            change = Decimal((facts.get("value_change_amount") or "0").replace(",", ""))
+            total = Decimal((facts.get("portfolio_value") or "0").replace("₹", "").replace(",", ""))
+        except Exception:
+            change, total = Decimal("0"), Decimal("0")
+        body = format_portfolio_value_change(
+            change_inr=change, total_inr=total, direction="up", locale=loc, first_name=facts.get("first_name", "")
+        )
+        return "Your gold grew today", body
+    if moment == "portfolio_value_down":
+        try:
+            change = Decimal((facts.get("value_change_amount") or "0").replace(",", ""))
+            weight = facts.get("portfolio_weight", "")
+        except Exception:
+            change, weight = Decimal("0"), ""
+        body = format_portfolio_value_change(
+            change_inr=change, total_inr=Decimal("0"), direction="down", locale=loc, weight=weight
+        )
+        return "Gold market moved", body
+    if moment == "personal_collection_growth":
+        try:
+            change = Decimal((facts.get("personal_collection_gain") or "0").replace(",", ""))
+            total = Decimal((facts.get("personal_collection_value") or "0").replace(",", ""))
+        except Exception:
+            change, total = Decimal("0"), Decimal("0")
+        body = format_personal_collection_change(
+            change_inr=change, total_inr=total, direction="up", locale=loc
+        )
+        return "Your collection gained", body
+    if moment == "personal_collection_down":
+        try:
+            change = Decimal((facts.get("personal_collection_loss") or "0").replace(",", ""))
+        except Exception:
+            change = Decimal("0")
+        body = format_personal_collection_change(
+            change_inr=change, total_inr=Decimal("0"), direction="down", locale=loc
+        )
+        return "Collection estimate shifted", body
+    if moment == "holding_value_down":
+        name = facts.get("holding_name", "Your item")
+        try:
+            loss = Decimal(
+                (facts.get("holding_loss_amount") or "0").replace("₹", "").replace(",", "")
+            )
+            val = Decimal((facts.get("holding_value") or "0").replace("₹", "").replace(",", ""))
+        except Exception:
+            loss, val = Decimal("0"), Decimal("0")
+        body = format_holding_value_down(title=name, loss_inr=loss, new_value_inr=val, locale=loc)
+        return "Market moved — holding update", body
     return None
 
 

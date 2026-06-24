@@ -2733,6 +2733,18 @@ class UserPortfolioNotificationState(models.Model):
         default=Decimal("0"),
         help_text="Portfolio value INR when portfolio_milestone last fired.",
     )
+    last_notified_total_value_inr = models.DecimalField(
+        max_digits=18,
+        decimal_places=2,
+        default=Decimal("0"),
+        help_text="Total estimated portfolio INR at last portfolio_value_up/down alert.",
+    )
+    last_notified_personal_value_inr = models.DecimalField(
+        max_digits=18,
+        decimal_places=2,
+        default=Decimal("0"),
+        help_text="Personal holdings aggregate INR at last personal_collection alert.",
+    )
 
     def __str__(self):
         return f"PortfolioNotifyState(u={self.user_id})"

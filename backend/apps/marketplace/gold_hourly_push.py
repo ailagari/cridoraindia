@@ -92,7 +92,11 @@ def run_hourly_gold_price_push_digest(*, force: bool = False) -> dict:
         n = send_push_broadcast_localized(
             {
                 "en": build_tap_push_payload(
-                    title=(title if title else gold_hourly_push_title("en")),
+                    title=(
+                        title
+                        if title and title != "Gold price update"
+                        else gold_hourly_push_title("en", rate_increased=delta > 0)
+                    ),
                     body=format_gold_price_move_body(baseline=baseline, current=current, locale="en"),
                     fallback_url=fb,
                     url_guest=guest,
@@ -101,7 +105,7 @@ def run_hourly_gold_price_push_digest(*, force: bool = False) -> dict:
                     image_url=image_url or None,
                 ),
                 "ml": build_tap_push_payload(
-                    title=gold_hourly_push_title("ml"),
+                    title=gold_hourly_push_title("ml", rate_increased=delta > 0),
                     body=format_gold_price_move_body(baseline=baseline, current=current, locale="ml"),
                     fallback_url=fb,
                     url_guest=guest,
@@ -180,7 +184,11 @@ def evaluate_hourly_digest_on_price_ingest(
 
     payloads = {
         "en": build_tap_push_payload(
-            title=title,
+            title=(
+                title
+                if title and title != "Gold price update"
+                else gold_hourly_push_title("en", rate_increased=delta > 0)
+            ),
             body=format_gold_price_move_body(baseline=baseline, current=current, locale="en"),
             fallback_url=fb,
             url_guest=guest,
@@ -189,7 +197,7 @@ def evaluate_hourly_digest_on_price_ingest(
             image_url=image_url or None,
         ),
         "ml": build_tap_push_payload(
-            title=gold_hourly_push_title("ml"),
+            title=gold_hourly_push_title("ml", rate_increased=delta > 0),
             body=format_gold_price_move_body(baseline=baseline, current=current, locale="ml"),
             fallback_url=fb,
             url_guest=guest,

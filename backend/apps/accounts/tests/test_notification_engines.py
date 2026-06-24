@@ -131,9 +131,10 @@ class HoldingGainOnlyTests(TestCase):
         "apps.accounts.services.personal_holding_gain_notify._rate_for_holding",
         return_value=Decimal("9000"),
     )
-    def test_skips_when_value_drops(self, _rate, mock_notify):
+    def test_notifies_on_decrease(self, _rate, mock_notify):
         notify_personal_holdings_after_rate_change(jeweller_id=None)
-        mock_notify.assert_not_called()
+        mock_notify.assert_called_once()
+        self.assertEqual(mock_notify.call_args.kwargs.get("moment"), "holding_value_down")
 
     @patch("apps.accounts.services.personal_holding_gain_notify.deliver_engagement")
     @patch(

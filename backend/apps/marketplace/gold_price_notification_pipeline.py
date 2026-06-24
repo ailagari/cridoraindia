@@ -103,6 +103,19 @@ def _handle_platform(event: GoldPriceUpdated) -> dict:
         defer_push=True,
     )
     result["portfolio_alerts_sent"] = evaluate_portfolio_gains_after_rate_change(defer_push=True)
+    from apps.accounts.services.portfolio_value_change_notify import (
+        evaluate_portfolio_value_change_after_rate_change,
+    )
+    from apps.accounts.services.personal_collection_growth_notify import (
+        evaluate_personal_collection_change_after_rate_change,
+    )
+
+    result["portfolio_value_change"] = evaluate_portfolio_value_change_after_rate_change(
+        defer_push=True
+    )
+    result["personal_collection_change"] = evaluate_personal_collection_change_after_rate_change(
+        defer_push=True
+    )
     from apps.accounts.services.engagement_milestones import (
         evaluate_holding_milestones_after_rate_change,
         evaluate_portfolio_milestones_after_rate_change,

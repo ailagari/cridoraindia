@@ -118,6 +118,7 @@ def facts_for_holding(
         "holding_value": _fmt_inr(rate_val, locale=locale),
         "holding_gain_amount": _fmt_inr(max(gain, Decimal("0")), locale=locale),
         "holding_gain_percent": _fmt_pct(gain_pct, locale=locale),
+        "holding_loss_amount": _fmt_inr(abs(min(gain, Decimal("0"))), locale=locale),
         "purchase_date": purchase_fmt,
         "holding_age_days": age_days,
         "years_held": years_held,

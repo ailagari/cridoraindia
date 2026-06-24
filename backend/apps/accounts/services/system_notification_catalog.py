@@ -368,6 +368,118 @@ SYSTEM_NOTIFICATION_CATALOG: list[SystemNotificationDef] = [
         "variables": ["direction_verb", "swing", "baseline", "current"],
         "description": "Malayalam body for gold price movement notifications.",
     },
+    {
+        "key": "gold_rate_alert_title_up",
+        "name": "Gold rate increase — alert title",
+        "group": GROUP_GOLD,
+        "locale": "en",
+        "title_template": "Gold rate rose",
+        "body_template": "",
+        "variables": [],
+        "description": "Tray title when reference gold rate increases past threshold.",
+    },
+    {
+        "key": "gold_rate_alert_title_down",
+        "name": "Gold rate decrease — alert title",
+        "group": GROUP_GOLD,
+        "locale": "en",
+        "title_template": "Gold rate eased",
+        "body_template": "",
+        "variables": [],
+        "description": "Tray title when reference gold rate decreases past threshold.",
+    },
+    {
+        "key": "gold_rate_alert_title_up",
+        "name": "Gold rate increase — title (Malayalam)",
+        "group": GROUP_GOLD,
+        "locale": "ml",
+        "title_template": "ഗോൾഡ് നിരക്ക് കൂടി",
+        "body_template": "",
+        "variables": [],
+        "description": "Malayalam title for gold rate increase alerts.",
+    },
+    {
+        "key": "gold_rate_alert_title_down",
+        "name": "Gold rate decrease — title (Malayalam)",
+        "group": GROUP_GOLD,
+        "locale": "ml",
+        "title_template": "ഗോൾഡ് നിരക്ക് കുറഞ്ഞു",
+        "body_template": "",
+        "variables": [],
+        "description": "Malayalam title for gold rate decrease alerts.",
+    },
+    {
+        "key": "gold_hourly_push_title_up",
+        "name": "Hourly digest — rate up title",
+        "group": GROUP_GOLD,
+        "locale": "en",
+        "title_template": "Gold moved up",
+        "body_template": "",
+        "variables": [],
+        "description": "Hourly digest title when price increased since last snapshot.",
+    },
+    {
+        "key": "gold_hourly_push_title_down",
+        "name": "Hourly digest — rate down title",
+        "group": GROUP_GOLD,
+        "locale": "en",
+        "title_template": "Gold moved down",
+        "body_template": "",
+        "variables": [],
+        "description": "Hourly digest title when price decreased since last snapshot.",
+    },
+    {
+        "key": "gold_price_move_body_up",
+        "name": "Gold price increase — body",
+        "group": GROUP_GOLD,
+        "locale": "en",
+        "title_template": "",
+        "body_template": (
+            "22K reference rose ₹{{swing}} — now ₹{{current}}/g (was ₹{{baseline}}). "
+            "Holdings like yours often reflect this over time."
+        ),
+        "variables": ["swing", "baseline", "current", "direction_verb"],
+        "description": "Psychologically positive framing for gold rate increases.",
+    },
+    {
+        "key": "gold_price_move_body_down",
+        "name": "Gold price decrease — body",
+        "group": GROUP_GOLD,
+        "locale": "en",
+        "title_template": "",
+        "body_template": (
+            "22K reference eased ₹{{swing}} — now ₹{{current}}/g (was ₹{{baseline}}). "
+            "Daily moves are normal; your gold weight is unchanged."
+        ),
+        "variables": ["swing", "baseline", "current", "direction_verb"],
+        "description": "Calm, non-alarmist framing for gold rate decreases.",
+    },
+    {
+        "key": "gold_price_move_body_up",
+        "name": "Gold price increase — body (Malayalam)",
+        "group": GROUP_GOLD,
+        "locale": "ml",
+        "title_template": "",
+        "body_template": (
+            "22K നിരക്ക് ₹{{swing}} കൂടി — ഇപ്പോൾ ₹{{current}}/g (മുമ്പ് ₹{{baseline}}). "
+            "നിങ്ങളുടെ holdings-നും സമയത്തിനൊപ്പം മൂല്യം മാറാം."
+        ),
+        "variables": ["swing", "baseline", "current", "direction_verb"],
+        "description": "Malayalam body for gold rate increase.",
+    },
+    {
+        "key": "gold_price_move_body_down",
+        "name": "Gold price decrease — body (Malayalam)",
+        "group": GROUP_GOLD,
+        "locale": "ml",
+        "title_template": "",
+        "body_template": (
+            "22K നിരക്ക് ₹{{swing}} കുറഞ്ഞു — ഇപ്പോൾ ₹{{current}}/g (മുമ്പ് ₹{{baseline}}). "
+            "ദൈനംദിന മാറ്റങ്ങൾ സാധാരണമാണ്; നിങ്ങളുടെ ഗ്രാം അതേപടി."
+        ),
+        "variables": ["swing", "baseline", "current", "direction_verb"],
+        "description": "Malayalam body for gold rate decrease.",
+    },
 ]
 
 

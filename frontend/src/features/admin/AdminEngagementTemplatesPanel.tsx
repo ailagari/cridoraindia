@@ -39,11 +39,18 @@ type GuidePayload = {
 }
 
 const MOMENT_LABELS: Record<string, string> = {
-  portfolio_growth: 'Portfolio gained value',
+  portfolio_growth: 'Portfolio gain vs cost',
   portfolio_milestone: 'Portfolio milestone',
+  portfolio_value_up: 'Total portfolio value up',
+  portfolio_value_down: 'Total portfolio value down',
+  personal_collection_growth: 'Personal holdings — collective up',
+  personal_collection_down: 'Personal holdings — collective down',
   holding_appreciation: 'One holding gained value',
+  holding_value_down: 'One holding value down',
   holding_milestone: 'Holding milestone',
-  market_awareness: 'Gold rate moved',
+  market_awareness: 'Gold rate moved (legacy)',
+  market_rate_increase: 'Gold rate increased',
+  market_rate_decrease: 'Gold rate decreased',
 }
 
 const CONTEXT_LABELS: Record<string, string> = {

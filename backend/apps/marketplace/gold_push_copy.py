@@ -22,6 +22,20 @@ def format_gold_price_move_body(*, baseline: Decimal, current: Decimal, locale: 
         verb = "കൂടി" if delta > 0 else "കുറഞ്ഞു"
     else:
         verb = "increased" if delta > 0 else "decreased"
+    copy_key = "gold_price_move_body_up" if delta > 0 else "gold_price_move_body_down"
+    resolved = resolve_system_notification(
+        copy_key,
+        locale=loc,
+        facts={
+            "direction_verb": verb,
+            "swing": f"{swing:,.2f}",
+            "baseline": f"{baseline_q:,.2f}",
+            "current": f"{current_q:,.2f}",
+        },
+    )
+    if resolved.body:
+        return resolved.body
+    # Legacy single-key fallback
     resolved = resolve_system_notification(
         "gold_price_move_body",
         locale=loc,
@@ -35,11 +49,19 @@ def format_gold_price_move_body(*, baseline: Decimal, current: Decimal, locale: 
     return resolved.body
 
 
-def gold_rate_alert_title(locale: str = DEFAULT_PUBLIC_LOCALE) -> str:
+def gold_rate_alert_title(locale: str = DEFAULT_PUBLIC_LOCALE, *, rate_increased: bool = True) -> str:
     loc = normalize_preferred_locale(locale)
+    key = "gold_rate_alert_title_up" if rate_increased else "gold_rate_alert_title_down"
+    title = resolve_system_notification(key, locale=loc).title
+    if title:
+        return title
     return resolve_system_notification("gold_rate_alert_title", locale=loc).title
 
 
-def gold_hourly_push_title(locale: str = DEFAULT_PUBLIC_LOCALE) -> str:
+def gold_hourly_push_title(locale: str = DEFAULT_PUBLIC_LOCALE, *, rate_increased: bool = True) -> str:
     loc = normalize_preferred_locale(locale)
+    key = "gold_hourly_push_title_up" if rate_increased else "gold_hourly_push_title_down"
+    title = resolve_system_notification(key, locale=loc).title
+    if title:
+        return title
     return resolve_system_notification("gold_hourly_push_title", locale=loc).title

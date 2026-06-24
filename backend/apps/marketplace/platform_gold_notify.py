@@ -11,7 +11,10 @@ from django.utils import timezone
 
 from apps.accounts.models import GoldDepositIntake, PersonalGoldHolding, PortfolioUserNotification
 from apps.accounts.services.deliver_engagement import deliver_engagement
-from apps.accounts.services.engagement_constants import MOMENT_MARKET_AWARENESS
+from apps.accounts.services.engagement_constants import (
+    MOMENT_MARKET_RATE_DOWN,
+    MOMENT_MARKET_RATE_UP,
+)
 from apps.accounts.services.engagement_context import resolve_engagement_context
 from apps.accounts.services.notification_rate_limits import gold_alert_allowed, record_gold_alert
 from apps.marketplace.models import GoldRateHistory
@@ -72,13 +75,15 @@ def notify_customers_platform_gold_move(
 ) -> int:
     """Inbox + tray for customers with holdings (preferences + daily cap)."""
     sent = 0
+    delta_sign = (current - baseline).quantize(Decimal("0.01"))
+    moment = MOMENT_MARKET_RATE_UP if delta_sign > 0 else MOMENT_MARKET_RATE_DOWN
     for user in _customers_with_holdings_qs().iterator(chunk_size=100):
         if not gold_alert_allowed(user.pk):
             continue
         ctx = resolve_engagement_context(user)
         row = deliver_engagement(
             user,
-            moment=MOMENT_MARKET_AWARENESS,
+            moment=moment,
             context=ctx,
             previous_rate=baseline,
             new_rate=current,
@@ -86,10 +91,11 @@ def notify_customers_platform_gold_move(
             link_path=link,
             category=PortfolioUserNotification.CATEGORY_PORTFOLIO,
             priority=PortfolioUserNotification.PRIORITY_MEDIUM,
-            notification_type="gold_rate",
+            notification_type="gold_rate_up" if delta_sign > 0 else "gold_rate_down",
             image_url=image_url or None,
             tag="cridora-gold-rate-inbox",
             defer_push=defer_push,
+            extra_facts={"rate_direction": "up" if delta_sign > 0 else "down"},
         )
         if body and row:
             row.body = body

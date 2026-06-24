@@ -71,11 +71,14 @@ def evaluate_platform_threshold_broadcast(
             rate_alert_baseline_inr_per_gram_22k=current
         )
 
+    rate_up = delta > 0
     payloads = {}
     for loc in ("en", "ml"):
-        title_loc = (title if loc == "en" else gold_rate_alert_title(loc)).strip() or gold_rate_alert_title(loc)
+        title_loc = gold_rate_alert_title(loc, rate_increased=rate_up).strip()
+        if loc == "en" and title and title not in ("Gold rate alert", ""):
+            title_loc = title
         payloads[loc] = build_tap_push_payload(
-            title=title_loc,
+            title=title_loc or gold_rate_alert_title(loc, rate_increased=rate_up),
             body=format_gold_price_move_body(baseline=baseline, current=current, locale=loc),
             fallback_url=fb,
             url_guest=guest,

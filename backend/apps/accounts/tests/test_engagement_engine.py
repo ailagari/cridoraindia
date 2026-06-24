@@ -24,15 +24,17 @@ User = get_user_model()
 
 class EngagementTemplateRenderTests(TestCase):
     def setUp(self):
-        NotificationTemplate.objects.create(
-            name="Test growth",
+        NotificationTemplate.objects.update_or_create(
             category=MOMENT_PORTFOLIO_GROWTH,
             context=CONTEXT_DEFAULT,
             locale="en",
-            title_template="Hi {{first_name}}",
-            body_template="Gain {{portfolio_gain_amount}}",
-            variables=["first_name", "portfolio_gain_amount"],
-            is_active=True,
+            defaults={
+                "name": "Test growth",
+                "title_template": "Hi {{first_name}}",
+                "body_template": "Gain {{portfolio_gain_amount}}",
+                "variables": ["first_name", "portfolio_gain_amount"],
+                "is_active": True,
+            },
         )
 
     def test_render_substitutes_variables(self):

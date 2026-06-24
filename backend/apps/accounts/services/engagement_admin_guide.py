@@ -70,12 +70,88 @@ MOMENT_GUIDES: dict[str, dict] = {
         "body_example": "Your {{holding_name}} is now valued at {{holding_value}}.",
     },
     "market_awareness": {
-        "label": "Market awareness",
-        "when_fires": "Platform or jeweller gold rate move past threshold; also educational variant on ingest.",
-        "audience": "Customers with holdings (platform) or jeweller customers (jeweller rate).",
-        "suggested_variables": ["gold_price", "gold_change_percent", "monthly_change"],
+        "label": "Market awareness (legacy)",
+        "when_fires": "Legacy combined rate alert; prefer market_rate_increase / market_rate_decrease.",
+        "audience": "Customers with holdings.",
+        "suggested_variables": ["gold_price", "gold_change_percent"],
         "title_example": "Gold rate alert",
         "body_example": "Gold rate moved {{gold_change_percent}} — reference is now {{gold_price}}.",
+    },
+    "market_rate_increase": {
+        "label": "Gold rate increased",
+        "when_fires": "Platform gold rate ingest when reference moves up past threshold (inbox).",
+        "audience": "Customers with vault, deposit, fractional, or personal holdings.",
+        "suggested_variables": ["gold_price", "gold_change_percent", "first_name"],
+        "title_example": "Gold rate rose",
+        "body_example": (
+            "22K reference is up {{gold_change_percent}} — now {{gold_price}}."
+        ),
+    },
+    "market_rate_decrease": {
+        "label": "Gold rate decreased",
+        "when_fires": "Platform gold rate ingest when reference moves down past threshold (inbox).",
+        "audience": "Customers with holdings; calm, non-alarmist tone.",
+        "suggested_variables": ["gold_price", "gold_change_percent"],
+        "title_example": "Gold rate eased",
+        "body_example": (
+            "22K reference is down {{gold_change_percent}} — now {{gold_price}}."
+        ),
+    },
+    "portfolio_value_up": {
+        "label": "Total portfolio value up",
+        "when_fires": "After rate ingest when total estimated portfolio (vault + personal) rises vs last notified baseline.",
+        "audience": "Active customers; 24h cooldown; portfolio daily cap.",
+        "suggested_variables": [
+            "first_name",
+            "portfolio_value",
+            "value_change_amount",
+            "portfolio_weight",
+        ],
+        "title_example": "Your gold grew today",
+        "body_example": (
+            "{{first_name}}, your full portfolio is about {{portfolio_value}} — "
+            "up {{value_change_amount}} as gold moved."
+        ),
+    },
+    "portfolio_value_down": {
+        "label": "Total portfolio value down",
+        "when_fires": "When total estimated portfolio falls vs last notified baseline by ≥ holding_gain_threshold_inr.",
+        "audience": "Same as portfolio value up; reassuring tone.",
+        "suggested_variables": ["value_change_amount", "portfolio_weight"],
+        "title_example": "Gold market moved",
+        "body_example": (
+            "Today's rate shift trimmed about {{value_change_amount}} from your estimated total."
+        ),
+    },
+    "personal_collection_growth": {
+        "label": "Personal holdings collective — up",
+        "when_fires": "Sum of all personal gold record values rises vs last baseline after rate ingest.",
+        "audience": "Customers with personal holdings only.",
+        "suggested_variables": ["personal_collection_gain", "personal_collection_value"],
+        "title_example": "Your collection gained",
+        "body_example": (
+            "Your personal gold pieces are up {{personal_collection_gain}} together."
+        ),
+    },
+    "personal_collection_down": {
+        "label": "Personal holdings collective — down",
+        "when_fires": "Collective personal record value falls vs baseline.",
+        "audience": "Personal holdings owners.",
+        "suggested_variables": ["personal_collection_loss", "personal_collection_value"],
+        "title_example": "Collection estimate shifted",
+        "body_example": (
+            "Your recorded pieces are about {{personal_collection_loss}} lower in today's estimate."
+        ),
+    },
+    "holding_value_down": {
+        "label": "Individual holding — value down",
+        "when_fires": "Per personal holding when estimate falls vs last notified baseline (mirror of holding_appreciation).",
+        "audience": "Holding owner; 24h cooldown per item.",
+        "suggested_variables": ["holding_name", "holding_loss_amount", "holding_value"],
+        "title_example": "Market moved — {{holding_name}}",
+        "body_example": (
+            "{{holding_name}} is about {{holding_loss_amount}} lower in estimate (~{{holding_value}} now)."
+        ),
     },
 }
 
