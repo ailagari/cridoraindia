@@ -2770,6 +2770,36 @@ class NotificationTemplate(models.Model):
         return self.name or f"{self.category}/{self.context}/{self.locale}"
 
 
+class SystemNotificationMessage(models.Model):
+    """Admin-editable copy for automated system push/inbox notifications."""
+
+    key = models.CharField(max_length=64, db_index=True)
+    name = models.CharField(max_length=160, help_text="Admin display label.")
+    group = models.CharField(max_length=32, default="transaction", db_index=True)
+    locale = models.CharField(max_length=8, default="en", db_index=True)
+    description = models.TextField(blank=True, default="")
+    title_template = models.CharField(max_length=180, blank=True, default="")
+    body_template = models.TextField(blank=True, default="")
+    alternative_titles = models.JSONField(default=list, blank=True)
+    alternative_bodies = models.JSONField(default=list, blank=True)
+    variables = models.JSONField(default=list, blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["group", "key", "locale"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["key", "locale"],
+                name="uniq_system_notification_key_locale",
+            ),
+        ]
+
+    def __str__(self):
+        return self.name or f"{self.key}/{self.locale}"
+
+
 class NotificationEventLog(models.Model):
     """Append-only delivery/click analytics (survives inbox delete-on-read)."""
 

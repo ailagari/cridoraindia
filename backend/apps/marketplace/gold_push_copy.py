@@ -5,6 +5,7 @@ from __future__ import annotations
 from decimal import Decimal
 
 from apps.accounts.locale_utils import DEFAULT_PUBLIC_LOCALE, normalize_preferred_locale
+from apps.accounts.services.system_notification_render import resolve_system_notification
 
 
 def format_gold_price_move_body(*, baseline: Decimal, current: Decimal, locale: str = DEFAULT_PUBLIC_LOCALE) -> str:
@@ -19,24 +20,26 @@ def format_gold_price_move_body(*, baseline: Decimal, current: Decimal, locale: 
     loc = normalize_preferred_locale(locale)
     if loc == "ml":
         verb = "കൂടി" if delta > 0 else "കുറഞ്ഞു"
-        return (
-            f"ഗോൾഡ് നിരക്ക് ₹{swing:,.2f} {verb} — "
-            f"₹{baseline_q:,.2f} ൽ നിന്ന് ₹{current_q:,.2f} വരെ."
-        )
-    verb = "increased" if delta > 0 else "decreased"
-    return (
-        f"Gold price has {verb} by ₹{swing:,.2f} "
-        f"from {baseline_q:,.2f} to {current_q:,.2f}."
+    else:
+        verb = "increased" if delta > 0 else "decreased"
+    resolved = resolve_system_notification(
+        "gold_price_move_body",
+        locale=loc,
+        facts={
+            "direction_verb": verb,
+            "swing": f"{swing:,.2f}",
+            "baseline": f"{baseline_q:,.2f}",
+            "current": f"{current_q:,.2f}",
+        },
     )
+    return resolved.body
 
 
 def gold_rate_alert_title(locale: str = DEFAULT_PUBLIC_LOCALE) -> str:
-    if normalize_preferred_locale(locale) == "ml":
-        return "ഗോൾഡ് നിരക്ക് അലർട്ട്"
-    return "Gold rate alert"
+    loc = normalize_preferred_locale(locale)
+    return resolve_system_notification("gold_rate_alert_title", locale=loc).title
 
 
 def gold_hourly_push_title(locale: str = DEFAULT_PUBLIC_LOCALE) -> str:
-    if normalize_preferred_locale(locale) == "ml":
-        return "ഗോൾഡ് നിരക്ക് അപ്‌ഡേറ്റ്"
-    return "Gold price update"
+    loc = normalize_preferred_locale(locale)
+    return resolve_system_notification("gold_hourly_push_title", locale=loc).title

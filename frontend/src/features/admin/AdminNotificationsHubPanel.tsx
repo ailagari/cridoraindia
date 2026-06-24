@@ -3,13 +3,15 @@ import { AdminEngagementTemplatesPanel } from '@/features/admin/AdminEngagementT
 import { AdminGoldAlertsPanel } from '@/features/admin/AdminGoldAlertsPanel'
 import { AdminNotificationStatsPanel } from '@/features/admin/AdminNotificationStatsPanel'
 import { AdminSendMessagePanel } from '@/features/admin/AdminSendMessagePanel'
+import { AdminSystemMessagesPanel } from '@/features/admin/AdminSystemMessagesPanel'
 import { NotificationSettingsPanel } from '@/features/settings/NotificationSettingsPanel'
 
-type Tab = 'send' | 'templates' | 'gold' | 'stats' | 'prefs'
+type Tab = 'send' | 'templates' | 'system' | 'gold' | 'stats' | 'prefs'
 
 const TABS: { id: Tab; label: string; hint: string }[] = [
   { id: 'send', label: 'Send message', hint: 'Schedule phone alerts' },
-  { id: 'templates', label: 'Message templates', hint: 'Reusable wording' },
+  { id: 'templates', label: 'Engagement templates', hint: 'Portfolio & festival copy' },
+  { id: 'system', label: 'System messages', hint: 'Automated OTP, gold, pay alerts' },
   { id: 'gold', label: 'Gold auto-alerts', hint: 'Automatic rate alerts' },
   { id: 'stats', label: 'Stats', hint: 'Delivery overview' },
   { id: 'prefs', label: 'My alerts', hint: 'This device' },
@@ -26,7 +28,7 @@ export function AdminNotificationsHubPanel() {
         </h2>
         <p className="dash-coming__text" style={{ marginBottom: '0.75rem', maxWidth: 720 }}>
           Send calm, factual alerts to customers. Schedule campaigns, edit automatic message
-          templates, and manage gold rate notifications.
+          templates, system notification copy, and manage gold rate notifications.
         </p>
         <div className="admin-msg-hub-tabs" role="tablist">
           {TABS.map((t) => (
@@ -47,6 +49,7 @@ export function AdminNotificationsHubPanel() {
 
       {tab === 'send' ? <AdminSendMessagePanel /> : null}
       {tab === 'templates' ? <AdminEngagementTemplatesPanel /> : null}
+      {tab === 'system' ? <AdminSystemMessagesPanel /> : null}
       {tab === 'gold' ? <AdminGoldAlertsPanel /> : null}
       {tab === 'stats' ? <AdminNotificationStatsPanel /> : null}
       {tab === 'prefs' ? (

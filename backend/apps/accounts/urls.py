@@ -169,6 +169,10 @@ from .views_notification_admin import (
     AdminNotificationTemplatePreviewView,
     AdminNotificationTemplatesView,
     AdminNotificationVariablesView,
+    AdminSystemNotificationCatalogView,
+    AdminSystemNotificationMessageDetailView,
+    AdminSystemNotificationMessagePreviewView,
+    AdminSystemNotificationMessagesView,
 )
 from .views_inbox import (
     InboxAckView,
@@ -285,6 +289,19 @@ urlpatterns = [
     ),
     path("admin/notification-variables/", AdminNotificationVariablesView.as_view()),
     path("admin/notification-stats/", AdminNotificationStatsView.as_view()),
+    path("admin/system-notification-messages/", AdminSystemNotificationMessagesView.as_view()),
+    path(
+        "admin/system-notification-messages/preview/",
+        AdminSystemNotificationMessagePreviewView.as_view(),
+    ),
+    path(
+        "admin/system-notification-messages/catalog/",
+        AdminSystemNotificationCatalogView.as_view(),
+    ),
+    path(
+        "admin/system-notification-messages/<int:pk>/",
+        AdminSystemNotificationMessageDetailView.as_view(),
+    ),
     path("admin/festival-broadcasts/", AdminFestivalBroadcastListCreateView.as_view()),
     path(
         "admin/festival-broadcasts/<int:pk>/cancel/",
