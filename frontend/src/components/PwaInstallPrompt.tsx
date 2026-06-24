@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { usePublicLocale } from '@/i18n/PublicLocaleProvider'
+import { useOptionalPublicLocale } from '@/i18n/PublicLocaleProvider'
 import { displayModeStandalone } from '@/lib/webPushApi'
 import { isNativePlatform } from '@/lib/capacitorPlatform'
 import { isAppleMobileOrTablet } from '@/lib/platformDetect'
@@ -19,7 +19,7 @@ function isMobileWeb(): boolean {
 }
 
 export function PwaInstallPrompt() {
-  const { t } = usePublicLocale()
+  const { t } = useOptionalPublicLocale()
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null)
   const [dismissed, setDismissed] = useState(() => {
     try {

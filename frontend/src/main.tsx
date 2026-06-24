@@ -1,7 +1,6 @@
 import { StrictMode, useEffect, type ReactNode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from '@/App'
-import { PwaUpdateBar } from '@/components/PwaUpdateBar'
 import { applyDocumentLocale, readStoredPublicLocale } from '@/i18n/engine'
 import { OFFLINE_PAGE_URL } from '@/lib/offlineFallback'
 import '@/lib/pwaRegister'
@@ -69,12 +68,7 @@ function BootShell({ children }: { children: ReactNode }) {
       /* private mode */
     }
   }, [])
-  return (
-    <StrictMode>
-      {children}
-      <PwaUpdateBar />
-    </StrictMode>
-  )
+  return <StrictMode>{children}</StrictMode>
 }
 
 try {

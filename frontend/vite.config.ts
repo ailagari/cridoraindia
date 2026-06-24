@@ -70,7 +70,7 @@ export default defineConfig(({ mode }) => {
         strategies: 'injectManifest',
         srcDir: 'src',
         filename: 'sw.ts',
-        registerType: 'prompt',
+        registerType: 'autoUpdate',
         injectRegister: null,
         includeAssets: ['favicon.svg', 'icon-192.png', 'icon-512.png', 'og-preview.png', 'apple-touch-icon.png', 'icons/icon-192-mask.png', 'icons/icon-512-mask.png', 'offline.html'],
         manifest: {

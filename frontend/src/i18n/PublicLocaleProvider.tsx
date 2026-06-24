@@ -53,18 +53,18 @@ export function usePublicLocale(): PublicLocaleContextValue {
   return ctx
 }
 
-/** Safe outside public layout — returns English no-op setter. */
+/** Safe outside public layout — uses stored locale with a no-op setter. */
 export function useOptionalPublicLocale(): PublicLocaleContextValue {
   const ctx = useContext(PublicLocaleContext)
-  return useMemo(
-    () =>
-      ctx ?? {
-        locale: 'en' as const,
-        setLocale: () => {},
-        t: (key, vars) => translate('en', key, vars),
-      },
-    [ctx],
-  )
+  return useMemo(() => {
+    if (ctx) return ctx
+    const locale = readStoredPublicLocale()
+    return {
+      locale,
+      setLocale: () => {},
+      t: (key, vars) => translate(locale, key, vars),
+    }
+  }, [ctx])
 }
 
 export function LanguageSwitcher({ className }: { className?: string }) {

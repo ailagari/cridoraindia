@@ -2,12 +2,12 @@ import { Capacitor } from '@capacitor/core'
 
 const isNative = Capacitor.isNativePlatform() || import.meta.env.VITE_CAPACITOR_BUILD === 'true'
 
-const listeners = new Set<() => void>()
+let reloadScheduled = false
 
-export function onPwaNeedRefresh(cb: () => void): () => void {
-  if (isNative) return () => {}
-  listeners.add(cb)
-  return () => listeners.delete(cb)
+function scheduleSilentReload(): void {
+  if (reloadScheduled) return
+  reloadScheduled = true
+  window.location.reload()
 }
 
 async function noopPwaUpdate(_reloadPage?: boolean): Promise<void> {}
@@ -18,11 +18,19 @@ let pwaInitStarted = false
 function ensurePwaRegistered(): void {
   if (isNative || pwaInitStarted) return
   pwaInitStarted = true
+
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      scheduleSilentReload()
+    })
+  }
+
   void import('virtual:pwa-register')
     .then(({ registerSW }) => {
       applyPwaUpdateImpl = registerSW({
+        immediate: true,
         onNeedRefresh() {
-          listeners.forEach((fn) => fn())
+          void applyPwaUpdateImpl(true)
         },
         onOfflineReady() {},
       })
@@ -34,11 +42,4 @@ function ensurePwaRegistered(): void {
 
 if (!isNative) {
   ensurePwaRegistered()
-}
-
-/** Call after a new service worker is ready; pass `true` to reload clients. */
-export async function applyPwaUpdate(reloadPage?: boolean): Promise<void> {
-  if (isNative) return
-  ensurePwaRegistered()
-  await applyPwaUpdateImpl(reloadPage)
 }

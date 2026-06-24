@@ -56,7 +56,11 @@ setCatchHandler(async ({ request }) => {
   return Response.error()
 })
 
-/** Required for vite-plugin-pwa / workbox-window “Refresh” (prompt mode). */
+self.addEventListener('install', (event: ExtendableEvent) => {
+  event.waitUntil(self.skipWaiting())
+})
+
+/** Required for vite-plugin-pwa / workbox-window update flow. */
 self.addEventListener('message', (event: ExtendableMessageEvent) => {
   const data = event.data && typeof event.data === 'object' ? (event.data as Record<string, unknown>) : null
   const t = data?.type
