@@ -4,14 +4,18 @@ import type { JewellerStorefrontDTO } from '@/lib/marketplaceApi'
 import {
   analyzeInvoice,
   buildPersonalVaultPurchasePayload,
+  computeInvoiceItemMissingFields,
   createPersonalHolding,
   describePersonalVaultCostSummary,
+  INVOICE_MISSING_FIELD_LABELS,
   uploadPersonalDocument,
   type InvoiceExtractDTO,
+  type InvoiceExtractItemDTO,
+  type InvoiceMissingField,
   type PersonalHoldingDTO,
 } from '@/lib/personalHoldingsApi'
 import { fetchPlatformBillingTax, resolveGstOnGoldPercent, resolveGstOnMakingPercent } from '@/lib/platformBillingTax'
-import { DEFAULT_PERSONAL_VAULT_PURITY, normalizePersonalVaultPurity } from '@/lib/personalVaultPurity'
+import { normalizePersonalVaultPurity } from '@/lib/personalVaultPurity'
 import {
   PersonalVaultPricingFields,
   type PersonalVaultPriceAnchor,
@@ -27,6 +31,21 @@ const CATS = [
 const ACCEPT = 'image/*,application/pdf'
 
 type FlowPhase = 'picking' | 'analyzing' | 'review' | 'creating' | 'done'
+
+type ReviewItem = {
+  key: string
+  include: boolean
+  title: string
+  category: string
+  weight: string
+  purity: string
+  purchasePricePerGram: string
+  purchaseValue: string
+  makingChargePercent: string
+  priceAnchor: PersonalVaultPriceAnchor
+  confidence: 'high' | 'medium' | 'low'
+  missingFields: InvoiceMissingField[]
+}
 
 function useIsMobile(): boolean {
   const [mobile, setMobile] = useState(
@@ -51,10 +70,61 @@ function jewellerSuggestLabel(j: JewellerStorefrontDTO): string {
   return name
 }
 
+function reviewItemFromExtract(it: InvoiceExtractItemDTO, index: number): ReviewItem {
+  const priceAnchor: PersonalVaultPriceAnchor =
+    it.price_mode === 'total' || (it.purchase_total_inr && !it.purchase_price_inr_per_gram)
+      ? 'total'
+      : 'rate'
+  return {
+    key: `item-${index}-${it.title.slice(0, 24) || index}`,
+    include: true,
+    title: it.title,
+    category: CATS.some((c) => c.v === it.category) ? it.category : 'other',
+    weight: it.weight_grams,
+    purity: normalizePersonalVaultPurity(it.purity),
+    purchasePricePerGram: it.purchase_price_inr_per_gram ?? '',
+    purchaseValue: it.purchase_total_inr ?? '',
+    makingChargePercent: it.making_charge_percent ?? '',
+    priceAnchor,
+    confidence: it.confidence,
+    missingFields: it.missing_fields.length
+      ? it.missing_fields
+      : computeInvoiceItemMissingFields(it),
+  }
+}
+
+function refreshMissingFields(item: ReviewItem): ReviewItem {
+  return {
+    ...item,
+    missingFields: computeInvoiceItemMissingFields({
+      title: item.title,
+      weight_grams: item.weight,
+      purchase_price_inr_per_gram: item.purchasePricePerGram || null,
+      purchase_total_inr: item.purchaseValue || null,
+    }),
+  }
+}
+
+function buildInvoiceDocumentForm(file: File, invoiceNum: string): FormData {
+  const fd = new FormData()
+  fd.set('file', file)
+  fd.set('document_type', 'purchase_invoice')
+  if (invoiceNum.trim()) {
+    fd.set('invoice_number', invoiceNum.trim())
+  }
+  return fd
+}
+
+function missingFieldsMessage(fields: InvoiceMissingField[]): string {
+  if (fields.length === 0) return ''
+  const labels = fields.map((f) => INVOICE_MISSING_FIELD_LABELS[f])
+  return `Please fill in: ${labels.join(', ')}.`
+}
+
 type InvoiceImportFlowProps = {
   open: boolean
   onClose: () => void
-  onCreated: (holding: PersonalHoldingDTO) => void
+  onCreated: (holdings: PersonalHoldingDTO[]) => void
   jewellers?: JewellerStorefrontDTO[]
 }
 
@@ -68,54 +138,74 @@ export function InvoiceImportFlow({
   const fileInputId = useId()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const captureRef = useRef<'environment' | undefined>(undefined)
+  const itemKeyRef = useRef(0)
 
   const [phase, setPhase] = useState<FlowPhase>('picking')
   const [error, setError] = useState('')
   const [notLegibleReason, setNotLegibleReason] = useState('')
   const [sourceFile, setSourceFile] = useState<File | null>(null)
 
-  const [title, setTitle] = useState('')
-  const [category, setCategory] = useState('ornament')
-  const [weight, setWeight] = useState('')
-  const [purity, setPurity] = useState(DEFAULT_PERSONAL_VAULT_PURITY)
-  const [purchasePricePerGram, setPurchasePricePerGram] = useState('')
-  const [purchaseValue, setPurchaseValue] = useState('')
-  const [makingChargePercent, setMakingChargePercent] = useState('')
-  const [priceAnchor, setPriceAnchor] = useState<PersonalVaultPriceAnchor>('rate')
+  const [reviewItems, setReviewItems] = useState<ReviewItem[]>([])
+  const [activeItemIndex, setActiveItemIndex] = useState(0)
   const [purchaseSource, setPurchaseSource] = useState('')
   const [purchaseDate, setPurchaseDate] = useState('')
   const [invoiceNumber, setInvoiceNumber] = useState('')
   const [confidence, setConfidence] = useState<'high' | 'medium' | 'low'>('medium')
   const [billingTaxReady, setBillingTaxReady] = useState(false)
+  const [savedCount, setSavedCount] = useState(0)
+
+  const activeItem = reviewItems[activeItemIndex] ?? null
+  const includedItems = useMemo(
+    () => reviewItems.filter((it) => it.include),
+    [reviewItems],
+  )
 
   const costSummaryHint = useMemo(
     () =>
-      describePersonalVaultCostSummary(
-        weight,
-        purchasePricePerGram,
-        purchaseValue,
-        makingChargePercent,
-      ),
-    [weight, purchasePricePerGram, purchaseValue, makingChargePercent, billingTaxReady],
+      activeItem
+        ? describePersonalVaultCostSummary(
+            activeItem.weight,
+            activeItem.purchasePricePerGram,
+            activeItem.purchaseValue,
+            activeItem.makingChargePercent,
+          )
+        : '',
+    [activeItem, billingTaxReady],
   )
+
+  const allMissingSummary = useMemo(() => {
+    const lines: string[] = []
+    includedItems.forEach((it, idx) => {
+      if (it.missingFields.length > 0) {
+        const label = it.title.trim() || `Item ${idx + 1}`
+        lines.push(`${label}: ${missingFieldsMessage(it.missingFields)}`)
+      }
+    })
+    return lines
+  }, [includedItems])
+
+  const canSave =
+    includedItems.length > 0 &&
+    includedItems.every(
+      (it) =>
+        it.title.trim() &&
+        it.weight.trim() &&
+        Number.parseFloat(it.weight) > 0,
+    )
 
   const resetFlow = useCallback(() => {
     setPhase('picking')
     setError('')
     setNotLegibleReason('')
     setSourceFile(null)
-    setTitle('')
-    setCategory('ornament')
-    setWeight('')
-    setPurity(DEFAULT_PERSONAL_VAULT_PURITY)
-    setPurchasePricePerGram('')
-    setPurchaseValue('')
-    setMakingChargePercent('')
-    setPriceAnchor('rate')
+    setReviewItems([])
+    setActiveItemIndex(0)
     setPurchaseSource('')
     setPurchaseDate('')
     setInvoiceNumber('')
     setConfidence('medium')
+    setSavedCount(0)
+    itemKeyRef.current = 0
   }, [])
 
   useEffect(() => {
@@ -129,18 +219,23 @@ export function InvoiceImportFlow({
   }, [])
 
   const applyExtract = (data: InvoiceExtractDTO) => {
-    setTitle(data.title)
-    setCategory(CATS.some((c) => c.v === data.category) ? data.category : 'other')
-    setWeight(data.weight_grams)
-    setPurity(normalizePersonalVaultPurity(data.purity))
+    itemKeyRef.current += 1
+    const items = data.items.map((it, i) => reviewItemFromExtract(it, i))
+    setReviewItems(items)
+    setActiveItemIndex(0)
     setPurchaseSource(data.purchase_source)
     setPurchaseDate(data.purchase_date ?? '')
-    setPurchasePricePerGram(data.purchase_price_inr_per_gram ?? '')
-    setPurchaseValue('')
-    setMakingChargePercent('')
-    setPriceAnchor(data.purchase_price_inr_per_gram ? 'rate' : 'total')
     setInvoiceNumber(data.invoice_number ?? '')
     setConfidence(data.confidence)
+  }
+
+  const updateActiveItem = (patch: Partial<ReviewItem>) => {
+    setReviewItems((prev) =>
+      prev.map((it, i) => {
+        if (i !== activeItemIndex) return it
+        return refreshMissingFields({ ...it, ...patch })
+      }),
+    )
   }
 
   const triggerFilePick = (capture?: 'environment') => {
@@ -182,66 +277,86 @@ export function InvoiceImportFlow({
   }
 
   const confirmCreate = async () => {
-    const t = title.trim()
-    const w = weight.trim()
-    if (!t) {
-      setError('Title is required.')
+    const toSave = reviewItems.filter((it) => it.include)
+    if (toSave.length === 0) {
+      setError('Select at least one item to save.')
       return
     }
-    if (!w || Number.parseFloat(w) <= 0) {
-      setError('Weight must be greater than zero.')
-      return
-    }
-    setError('')
-    setPhase('creating')
-    try {
-      const purchase = buildPersonalVaultPurchasePayload(
-        priceAnchor,
-        weight,
-        purchasePricePerGram,
-        purchaseValue,
-        makingChargePercent,
-      )
-      const created = await createPersonalHolding({
-        title: t,
-        category,
-        weight_grams: w,
-        purity: normalizePersonalVaultPurity(purity),
-        purchase_source: purchaseSource.trim() || undefined,
-        purchase_date: purchaseDate.trim() || undefined,
-        purchase_price_inr_per_gram: purchase.purchase_price_inr_per_gram,
-        purchase_total_inr: purchase.purchase_total_inr ?? undefined,
-        making_charge_percent: purchase.making_charge_percent ?? undefined,
-      })
-      if (!created.ok) {
-        setError(created.detail)
-        setPhase('review')
+
+    for (let i = 0; i < toSave.length; i += 1) {
+      const it = toSave[i]
+      if (!it.title.trim()) {
+        setError(`Item ${i + 1}: title is required.`)
+        setActiveItemIndex(reviewItems.indexOf(it))
         return
       }
-      const holdingId = created.data?.id
-      if (holdingId != null && sourceFile) {
-        const fd = new FormData()
-        fd.set('file', sourceFile)
-        fd.set('document_type', 'purchase_invoice')
-        if (invoiceNumber.trim()) {
-          fd.set('invoice_number', invoiceNumber.trim())
-        }
-        const up = await uploadPersonalDocument(holdingId, fd)
-        if (!up.ok) {
-          setError(
-            `Holding saved, but invoice file could not be attached: ${up.detail}`,
-          )
+      if (!it.weight.trim() || Number.parseFloat(it.weight) <= 0) {
+        setError(`Item ${i + 1}: weight must be greater than zero.`)
+        setActiveItemIndex(reviewItems.indexOf(it))
+        return
+      }
+    }
+
+    setError('')
+    setPhase('creating')
+    const createdHoldings: PersonalHoldingDTO[] = []
+
+    try {
+      for (let i = 0; i < toSave.length; i += 1) {
+        const it = toSave[i]
+        const purchase = buildPersonalVaultPurchasePayload(
+          it.priceAnchor,
+          it.weight,
+          it.purchasePricePerGram,
+          it.purchaseValue,
+          it.makingChargePercent,
+        )
+        const created = await createPersonalHolding({
+          title: it.title.trim(),
+          category: it.category,
+          weight_grams: it.weight.trim(),
+          purity: normalizePersonalVaultPurity(it.purity),
+          purchase_source: purchaseSource.trim() || undefined,
+          purchase_date: purchaseDate.trim() || undefined,
+          purchase_price_inr_per_gram: purchase.purchase_price_inr_per_gram,
+          purchase_total_inr: purchase.purchase_total_inr ?? undefined,
+          making_charge_percent: purchase.making_charge_percent ?? undefined,
+        })
+        if (!created.ok) {
+          setError(`${it.title.trim() || `Item ${i + 1}`}: ${created.detail}`)
+          setActiveItemIndex(reviewItems.indexOf(it))
           setPhase('review')
           return
         }
+        if (created.data) {
+          createdHoldings.push(created.data)
+        }
       }
-      if (created.data) {
-        setPhase('done')
-        onCreated(created.data)
-      } else {
-        setPhase('done')
-        onClose()
+
+      if (sourceFile && createdHoldings.length > 0) {
+        const attachFailures: string[] = []
+        for (const holding of createdHoldings) {
+          const up = await uploadPersonalDocument(
+            holding.id,
+            buildInvoiceDocumentForm(sourceFile, invoiceNumber),
+          )
+          if (!up.ok) {
+            attachFailures.push(holding.title.trim() || `Item #${holding.id}`)
+          }
+        }
+        if (attachFailures.length > 0) {
+          setError(
+            `${createdHoldings.length} item(s) saved, but invoice file could not be attached for: ${attachFailures.join(', ')}.`,
+          )
+          setPhase('review')
+          onCreated(createdHoldings)
+          return
+        }
       }
+
+      setSavedCount(createdHoldings.length)
+      setPhase('done')
+      onCreated(createdHoldings)
     } catch {
       setError('Could not reach the server.')
       setPhase('review')
@@ -259,6 +374,7 @@ export function InvoiceImportFlow({
 
   const listId = `cridora-invoice-jeweller-${fileInputId.replace(/:/g, '')}`
   const busy = phase === 'analyzing' || phase === 'creating'
+  const multiItem = reviewItems.length > 1
 
   return (
     <section
@@ -273,7 +389,7 @@ export function InvoiceImportFlow({
           Import from invoice
         </h4>
         <p className="pf-vault-form__lede">
-          Upload a purchase bill photo, PDF, or screenshot. We read the details — you confirm before saving.
+          Upload a purchase bill photo, PDF, or screenshot. We read item tables and line details — you confirm before saving.
         </p>
         <button type="button" className="btn btn-ghost btn-sm pf-vault-form__close" onClick={onClose} disabled={busy}>
           Close
@@ -345,57 +461,29 @@ export function InvoiceImportFlow({
             void confirmCreate()
           }}
         >
+          {multiItem ? (
+            <p className="pf-vault-form__section-hint" role="status">
+              Found {reviewItems.length} items on this bill. Review each one below before saving.
+            </p>
+          ) : null}
           {confidence === 'low' ? (
             <p className="pf-vault-form__section-hint" role="status">
               Low confidence read — please check all fields before saving.
             </p>
           ) : null}
-          <section className="pf-vault-form__section">
-            <label className="pf-vault-field">
-              <span>Display title</span>
-              <input
-                className="input pf-vault-form__input"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                disabled={busy}
-              />
-            </label>
-            <div className="pf-vault-field">
-              <span>Category</span>
-              <div className="pf-vault-form__chips" role="group">
-                {CATS.map((c) => (
-                  <button
-                    key={c.v}
-                    type="button"
-                    className={`pf-vault-form__chip${category === c.v ? ' pf-vault-form__chip--active' : ''}`}
-                    aria-pressed={category === c.v}
-                    onClick={() => setCategory(c.v)}
-                    disabled={busy}
-                  >
-                    {c.l}
-                  </button>
+          {allMissingSummary.length > 0 ? (
+            <div className="pf-vault-import-missing" role="alert">
+              <strong>Some details could not be read from the bill.</strong>
+              <ul className="pf-vault-import-missing__list">
+                {allMissingSummary.map((line) => (
+                  <li key={line}>{line}</li>
                 ))}
-              </div>
+              </ul>
             </div>
-            <PersonalVaultPricingFields
-              anchor={priceAnchor}
-              onAnchorChange={setPriceAnchor}
-              weight={weight}
-              onWeightChange={setWeight}
-              purity={purity}
-              onPurityChange={setPurity}
-              purchaseValue={purchaseValue}
-              onPurchaseValueChange={setPurchaseValue}
-              makingChargePercent={makingChargePercent}
-              onMakingChargePercentChange={setMakingChargePercent}
-              purchasePricePerGram={purchasePricePerGram}
-              onPurchasePricePerGramChange={setPurchasePricePerGram}
-              gstGoldPct={resolveGstOnGoldPercent()}
-              gstMakingPct={resolveGstOnMakingPercent()}
-              costSummaryHint={costSummaryHint}
-              billingTaxReady={billingTaxReady}
-              disabled={busy}
-            />
+          ) : null}
+
+          <section className="pf-vault-form__section">
+            <h5 className="pf-vault-form__section-title">Bill details</h5>
             <label className="pf-vault-field">
               <span>Purchase source</span>
               <input
@@ -404,6 +492,7 @@ export function InvoiceImportFlow({
                 value={purchaseSource}
                 onChange={(e) => setPurchaseSource(e.target.value)}
                 disabled={busy}
+                placeholder="Shop or jeweller name"
               />
               {jewellerOptions.length > 0 ? (
                 <datalist id={listId}>
@@ -434,6 +523,131 @@ export function InvoiceImportFlow({
             </label>
           </section>
 
+          {multiItem ? (
+            <div className="pf-vault-import-items" role="tablist" aria-label="Invoice items">
+              {reviewItems.map((it, idx) => {
+                const label = it.title.trim() || `Item ${idx + 1}`
+                const needsInput = it.include && it.missingFields.length > 0
+                return (
+                  <button
+                    key={it.key}
+                    type="button"
+                    role="tab"
+                    aria-selected={activeItemIndex === idx}
+                    className={`pf-vault-form__chip pf-vault-import-items__tab${
+                      activeItemIndex === idx ? ' pf-vault-form__chip--active' : ''
+                    }${needsInput ? ' pf-vault-import-items__tab--needs-input' : ''}${
+                      !it.include ? ' pf-vault-import-items__tab--excluded' : ''
+                    }`}
+                    onClick={() => setActiveItemIndex(idx)}
+                    disabled={busy}
+                  >
+                    {label}
+                    {needsInput ? ' *' : ''}
+                  </button>
+                )
+              })}
+            </div>
+          ) : null}
+
+          {activeItem ? (
+            <section className="pf-vault-form__section">
+              {multiItem ? (
+                <div className="pf-vault-import-item-toolbar">
+                  <h5 className="pf-vault-form__section-title">
+                    {activeItem.title.trim() || `Item ${activeItemIndex + 1}`}
+                  </h5>
+                  <label className="pf-vault-import-item-toolbar__include">
+                    <input
+                      type="checkbox"
+                      checked={activeItem.include}
+                      disabled={busy}
+                      onChange={(e) =>
+                        updateActiveItem({ include: e.target.checked })
+                      }
+                    />
+                    Include in import
+                  </label>
+                </div>
+              ) : null}
+              {activeItem.include && activeItem.missingFields.length > 0 ? (
+                <p className="pf-vault-import-missing pf-vault-import-missing--inline" role="status">
+                  {missingFieldsMessage(activeItem.missingFields)}
+                </p>
+              ) : null}
+              {!activeItem.include ? (
+                <p className="pf-vault-form__section-hint">
+                  This row is excluded and will not be saved.
+                </p>
+              ) : (
+                <>
+                  <label
+                    className={`pf-vault-field${
+                      activeItem.missingFields.includes('title')
+                        ? ' pf-vault-field--needs-input'
+                        : ''
+                    }`}
+                  >
+                    <span>Display title</span>
+                    <input
+                      className="input pf-vault-form__input"
+                      value={activeItem.title}
+                      onChange={(e) => updateActiveItem({ title: e.target.value })}
+                      disabled={busy}
+                      placeholder="e.g. Gold chain, 22K ring"
+                    />
+                  </label>
+                  <div className="pf-vault-field">
+                    <span>Category</span>
+                    <div className="pf-vault-form__chips" role="group">
+                      {CATS.map((c) => (
+                        <button
+                          key={c.v}
+                          type="button"
+                          className={`pf-vault-form__chip${
+                            activeItem.category === c.v ? ' pf-vault-form__chip--active' : ''
+                          }`}
+                          aria-pressed={activeItem.category === c.v}
+                          onClick={() => updateActiveItem({ category: c.v })}
+                          disabled={busy}
+                        >
+                          {c.l}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <PersonalVaultPricingFields
+                    anchor={activeItem.priceAnchor}
+                    onAnchorChange={(anchor) => updateActiveItem({ priceAnchor: anchor })}
+                    weight={activeItem.weight}
+                    onWeightChange={(weight) => updateActiveItem({ weight })}
+                    purity={activeItem.purity}
+                    onPurityChange={(purity) => updateActiveItem({ purity })}
+                    purchaseValue={activeItem.purchaseValue}
+                    onPurchaseValueChange={(purchaseValue) =>
+                      updateActiveItem({ purchaseValue })
+                    }
+                    makingChargePercent={activeItem.makingChargePercent}
+                    onMakingChargePercentChange={(makingChargePercent) =>
+                      updateActiveItem({ makingChargePercent })
+                    }
+                    purchasePricePerGram={activeItem.purchasePricePerGram}
+                    onPurchasePricePerGramChange={(purchasePricePerGram) =>
+                      updateActiveItem({ purchasePricePerGram })
+                    }
+                    gstGoldPct={resolveGstOnGoldPercent()}
+                    gstMakingPct={resolveGstOnMakingPercent()}
+                    costSummaryHint={costSummaryHint}
+                    billingTaxReady={billingTaxReady}
+                    disabled={busy}
+                    weightNeedsInput={activeItem.missingFields.includes('weight_grams')}
+                    priceNeedsInput={activeItem.missingFields.includes('purchase_price')}
+                  />
+                </>
+              )}
+            </section>
+          ) : null}
+
           <footer className="pf-vault-form__footer">
             <FormSubmitFoot error={error} className="pf-vault-form__actions">
               <button
@@ -447,9 +661,13 @@ export function InvoiceImportFlow({
               <button
                 type="submit"
                 className="btn btn-primary pf-vault-form__submit"
-                disabled={busy || !title.trim() || !weight.trim()}
+                disabled={busy || !canSave}
               >
-                {phase === 'creating' ? 'Saving…' : 'Save to vault'}
+                {phase === 'creating'
+                  ? 'Saving…'
+                  : includedItems.length > 1
+                    ? `Save ${includedItems.length} items to vault`
+                    : 'Save to vault'}
               </button>
             </FormSubmitFoot>
           </footer>
@@ -458,7 +676,9 @@ export function InvoiceImportFlow({
 
       {phase === 'done' ? (
         <p className="pf-vault-form__lede" role="status">
-          Saved to your vault.
+          {savedCount > 1
+            ? `${savedCount} items saved to your vault.`
+            : 'Saved to your vault.'}
         </p>
       ) : null}
     </section>

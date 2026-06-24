@@ -458,17 +458,95 @@ export async function fetchPortfolioLedger(filter: string): Promise<{ entries: P
   return (await res.json()) as { entries: PortfolioLedgerEntryDTO[] }
 }
 
-export type InvoiceExtractDTO = {
-  is_legible: true
+export type InvoiceMissingField = 'title' | 'weight_grams' | 'purchase_price'
+
+export type InvoiceExtractItemDTO = {
   title: string
   category: string
   weight_grams: string
   purity: string
+  price_mode: 'rate' | 'total'
+  purchase_price_inr_per_gram: string | null
+  purchase_total_inr: string | null
+  making_charge_percent: string | null
+  confidence: 'high' | 'medium' | 'low'
+  missing_fields: InvoiceMissingField[]
+}
+
+export type InvoiceExtractDTO = {
+  is_legible: true
   purchase_date: string | null
   purchase_source: string
-  purchase_price_inr_per_gram: string | null
   invoice_number: string | null
   confidence: 'high' | 'medium' | 'low'
+  item_count: number
+  items: InvoiceExtractItemDTO[]
+}
+
+const INVOICE_MISSING_FIELDS = new Set<InvoiceMissingField>([
+  'title',
+  'weight_grams',
+  'purchase_price',
+])
+
+function normalizeInvoiceMissingFields(raw: unknown): InvoiceMissingField[] {
+  if (!Array.isArray(raw)) return []
+  return raw.filter(
+    (f): f is InvoiceMissingField =>
+      typeof f === 'string' && INVOICE_MISSING_FIELDS.has(f as InvoiceMissingField),
+  )
+}
+
+function normalizeInvoiceExtractItem(raw: Record<string, unknown>): InvoiceExtractItemDTO {
+  const priceMode = raw.price_mode === 'total' ? 'total' : 'rate'
+  const rate =
+    raw.purchase_price_inr_per_gram != null
+      ? String(raw.purchase_price_inr_per_gram).trim()
+      : ''
+  const total =
+    raw.purchase_total_inr != null ? String(raw.purchase_total_inr).trim() : ''
+  const mc =
+    raw.making_charge_percent != null ? String(raw.making_charge_percent).trim() : ''
+  const item: InvoiceExtractItemDTO = {
+    title: String(raw.title ?? '').trim(),
+    category: String(raw.category ?? 'ornament').trim(),
+    weight_grams: String(raw.weight_grams ?? '').trim(),
+    purity: normalizePersonalVaultPurity(String(raw.purity ?? DEFAULT_PERSONAL_VAULT_PURITY)),
+    price_mode: total && !rate ? 'total' : priceMode,
+    purchase_price_inr_per_gram: rate || null,
+    purchase_total_inr: total || null,
+    making_charge_percent: mc || null,
+    confidence:
+      raw.confidence === 'high' || raw.confidence === 'low' ? raw.confidence : 'medium',
+    missing_fields: normalizeInvoiceMissingFields(raw.missing_fields),
+  }
+  if (item.missing_fields.length === 0) {
+    item.missing_fields = computeInvoiceItemMissingFields(item)
+  }
+  return item
+}
+
+export function computeInvoiceItemMissingFields(
+  item: Pick<
+    InvoiceExtractItemDTO,
+    'title' | 'weight_grams' | 'purchase_price_inr_per_gram' | 'purchase_total_inr'
+  >,
+): InvoiceMissingField[] {
+  const missing: InvoiceMissingField[] = []
+  if (!item.title.trim()) missing.push('title')
+  if (!item.weight_grams.trim() || Number.parseFloat(item.weight_grams) <= 0) {
+    missing.push('weight_grams')
+  }
+  if (!item.purchase_price_inr_per_gram?.trim() && !item.purchase_total_inr?.trim()) {
+    missing.push('purchase_price')
+  }
+  return missing
+}
+
+export const INVOICE_MISSING_FIELD_LABELS: Record<InvoiceMissingField, string> = {
+  title: 'Display title',
+  weight_grams: 'Weight (grams)',
+  purchase_price: 'Purchase price (rate or bill total)',
 }
 
 export async function analyzeInvoice(
@@ -481,7 +559,12 @@ export async function analyzeInvoice(
   fd.set('file', file)
   const res = await authUpload('/api/v1/portfolio/invoice-import/analyze/', fd)
   const parsed = await readResponseJson<
-    InvoiceExtractDTO & { detail?: string; reason?: string; is_legible?: boolean }
+    InvoiceExtractDTO & {
+      detail?: string
+      reason?: string
+      is_legible?: boolean
+      items?: Record<string, unknown>[]
+    }
   >(res)
   if (res.status === 422) {
     const reason =
@@ -501,26 +584,41 @@ export async function analyzeInvoice(
       detail: 'Could not read invoice details.',
     }
   }
+
+  let items: InvoiceExtractItemDTO[] = []
+  if (Array.isArray(parsed.items) && parsed.items.length > 0) {
+    items = parsed.items.map((it) => normalizeInvoiceExtractItem(it))
+  } else {
+    items = [
+      normalizeInvoiceExtractItem({
+        title: (parsed as { title?: string }).title,
+        category: (parsed as { category?: string }).category,
+        weight_grams: (parsed as { weight_grams?: string }).weight_grams,
+        purity: (parsed as { purity?: string }).purity,
+        price_mode: 'rate',
+        purchase_price_inr_per_gram: (parsed as { purchase_price_inr_per_gram?: string })
+          .purchase_price_inr_per_gram,
+        purchase_total_inr: null,
+        making_charge_percent: null,
+        confidence: parsed.confidence,
+      }),
+    ]
+  }
+
   return {
     ok: true,
     data: {
       is_legible: true,
-      title: String(parsed.title ?? '').trim(),
-      category: String(parsed.category ?? 'ornament').trim(),
-      weight_grams: String(parsed.weight_grams ?? '').trim(),
-      purity: normalizePersonalVaultPurity(String(parsed.purity ?? DEFAULT_PERSONAL_VAULT_PURITY)),
       purchase_date: parsed.purchase_date ?? null,
       purchase_source: String(parsed.purchase_source ?? '').trim(),
-      purchase_price_inr_per_gram:
-        parsed.purchase_price_inr_per_gram != null
-          ? String(parsed.purchase_price_inr_per_gram).trim()
-          : null,
       invoice_number:
         parsed.invoice_number != null ? String(parsed.invoice_number).trim() : null,
       confidence:
         parsed.confidence === 'high' || parsed.confidence === 'low'
           ? parsed.confidence
           : 'medium',
+      item_count: items.length,
+      items,
     },
   }
 }

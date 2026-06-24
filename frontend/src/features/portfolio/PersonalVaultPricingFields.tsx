@@ -39,6 +39,8 @@ type PersonalVaultPricingFieldsProps = {
   billingTaxReady?: boolean
   disabled?: boolean
   gridClassName?: string
+  weightNeedsInput?: boolean
+  priceNeedsInput?: boolean
 }
 
 export function PersonalVaultPricingFields({
@@ -60,6 +62,8 @@ export function PersonalVaultPricingFields({
   billingTaxReady = true,
   disabled,
   gridClassName = 'pf-vault-form__metal-grid',
+  weightNeedsInput = false,
+  priceNeedsInput = false,
 }: PersonalVaultPricingFieldsProps) {
   const totalMode = anchor === 'total'
 
@@ -151,8 +155,10 @@ export function PersonalVaultPricingFields({
       </p>
 
       <div className={gridClassName}>
-        <label className="pf-vault-field">
-          <span>Weight</span>
+        <label
+          className={`pf-vault-field${weightNeedsInput ? ' pf-vault-field--needs-input' : ''}`}
+        >
+          <span>Weight{weightNeedsInput ? ' (required)' : ''}</span>
           <div className="pf-vault-form__suffix-wrap">
             <input
               className="input pf-vault-form__input tabular pf-vault-form__input--with-suffix"
@@ -175,8 +181,10 @@ export function PersonalVaultPricingFields({
 
         {totalMode ? (
           <>
-            <label className="pf-vault-field">
-              <span>Total purchase value (₹)</span>
+            <label
+              className={`pf-vault-field${priceNeedsInput ? ' pf-vault-field--needs-input' : ''}`}
+            >
+              <span>Total purchase value (₹){priceNeedsInput ? ' (required)' : ''}</span>
               <input
                 className="input pf-vault-form__input tabular"
                 value={purchaseValue}
@@ -218,8 +226,10 @@ export function PersonalVaultPricingFields({
           </>
         ) : (
           <>
-            <label className="pf-vault-field">
-              <span>Gold rate (₹/g)</span>
+            <label
+              className={`pf-vault-field${priceNeedsInput ? ' pf-vault-field--needs-input' : ''}`}
+            >
+              <span>Gold rate (₹/g){priceNeedsInput ? ' (required)' : ''}</span>
               <input
                 className="input pf-vault-form__input tabular"
                 value={purchasePricePerGram}

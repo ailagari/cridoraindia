@@ -8464,6 +8464,58 @@ select.input {
   flex-wrap: wrap;
   gap: 0.5rem;
 }
+.pf-scope .pf-vault-import-missing {
+  margin: 0 0 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.65rem;
+  border: 1px solid color-mix(in srgb, var(--gold-500, #c9a227) 45%, transparent);
+  background: color-mix(in srgb, var(--gold-500, #c9a227) 8%, transparent);
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+.pf-scope .pf-vault-import-missing--inline {
+  margin: 0 0 0.85rem;
+  padding: 0.55rem 0.75rem;
+}
+.pf-scope .pf-vault-import-missing__list {
+  margin: 0.45rem 0 0;
+  padding-left: 1.15rem;
+}
+.pf-scope .pf-vault-import-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin: 0 0 1rem;
+}
+.pf-scope .pf-vault-import-items__tab--needs-input {
+  border-color: color-mix(in srgb, var(--gold-500, #c9a227) 55%, transparent);
+}
+.pf-scope .pf-vault-import-items__tab--excluded {
+  opacity: 0.55;
+  text-decoration: line-through;
+}
+.pf-scope .pf-vault-import-item-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  margin-bottom: 0.75rem;
+}
+.pf-scope .pf-vault-import-item-toolbar__include {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+.pf-scope .pf-vault-field--needs-input > span {
+  color: var(--gold-600, #a8841a);
+}
+.pf-scope .pf-vault-field--needs-input .input {
+  border-color: color-mix(in srgb, var(--gold-500, #c9a227) 55%, var(--border, #ddd));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--gold-500, #c9a227) 20%, transparent);
+}
 .pf-scope .pf-vault-hero__cta {
   display: inline-flex;
   align-items: center;

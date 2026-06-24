@@ -582,9 +582,28 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
         open={invoiceImportOpen}
         onClose={() => setInvoiceImportOpen(false)}
         jewellers={approvedJewellers}
-        onCreated={async (holding) => {
+        onCreated={async (holdings) => {
           setInvoiceImportOpen(false)
-          await finishAddSuccess(holding.title, holding.id)
+          if (holdings.length === 1) {
+            await finishAddSuccess(holdings[0].title, holdings[0].id)
+            return
+          }
+          resetAddFormFields()
+          setFormOpen(false)
+          setVaultOpenIds(new Set())
+          setAddFormError('')
+          setAddFormSuccess(
+            `${holdings.length} items from your bill were saved to your vault.`,
+          )
+          const firstId = holdings[0]?.id
+          const list = await refresh()
+          if (firstId != null) {
+            const refreshedIdx = list.findIndex((r) => r.id === firstId)
+            if (refreshedIdx >= 0) {
+              setVaultPage(Math.floor(refreshedIdx / VAULT_PAGE_SIZE) + 1)
+            }
+          }
+          onChanged?.()
         }}
       />
       {formOpen ? (
