@@ -63,8 +63,8 @@ class Command(BaseCommand):
                 MOMENT_PORTFOLIO_GROWTH,
                 CONTEXT_DEFAULT,
                 "en",
-                "Portfolio value update",
-                "Your gold portfolio gained an estimated {{portfolio_gain_amount}} in value.",
+                "Your gold moved today",
+                "Your gold portfolio gained an estimated {{portfolio_gain_amount}} in value. Your grams haven't changed — the market did.",
                 ["portfolio_gain_amount", "portfolio_value", "first_name"],
             ),
             (
@@ -137,8 +137,8 @@ class Command(BaseCommand):
                 MOMENT_PORTFOLIO_MILESTONE,
                 CONTEXT_DEFAULT,
                 "en",
-                "Portfolio milestone",
-                "Your portfolio crossed {{portfolio_value}} in estimated value.",
+                "A milestone in your gold record",
+                "{{portfolio_value}} worth of gold — and it's all yours, all accounted for.",
                 ["portfolio_value", "first_name"],
             ),
             (
@@ -146,8 +146,8 @@ class Command(BaseCommand):
                 MOMENT_HOLDING_MILESTONE,
                 CONTEXT_DEFAULT,
                 "en",
-                "Holding milestone",
-                "Your {{holding_name}} is now valued at {{holding_value}}.",
+                "A piece worth noting",
+                "Your {{holding_name}} is now valued at {{holding_value}} — counted, and cared for.",
                 ["holding_name", "holding_value", "purchase_date", "years_held"],
             ),
         ]

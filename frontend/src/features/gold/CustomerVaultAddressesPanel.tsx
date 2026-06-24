@@ -9,6 +9,7 @@ import {
   type GoldWalletDTO,
   type VaultRowDTO,
 } from '@/lib/goldTransferApi'
+import { dashboardCopy } from '@/content/dashboardCopy'
 import { formatVaultCardDisplay, vaultCardCopyValue } from '@/lib/vaultRoutingDisplay'
 
 function QrBlock({ value, label }: { value: string; label: string }) {
@@ -222,7 +223,9 @@ export function CustomerVaultAddressesPanel() {
           </ul>
         </div>
       ) : wallet ? (
-        <p style={{ color: 'var(--text-muted)' }}>No vault rows yet — buy gold or receive a transfer to open a vault.</p>
+        <p style={{ color: 'var(--text-muted)', lineHeight: 1.55 }}>
+          {dashboardCopy.customer.empty.vaultAddresses.description}
+        </p>
       ) : null}
 
       <button type="button" className="btn btn-ghost" style={{ marginTop: '1rem' }} onClick={() => void refresh()}>

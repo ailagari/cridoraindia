@@ -5442,6 +5442,48 @@ select.input {
   color: rgba(148, 163, 184, 0.85);
 }
 
+.pf-daily-greeting {
+  margin: 0 0 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  border: 1px solid rgba(201, 168, 64, 0.18);
+  background: rgba(201, 168, 64, 0.06);
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: var(--text-muted, rgba(148, 163, 184, 0.95));
+  font-weight: 500;
+}
+
+.jeweller-desk-welcome {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  margin-bottom: 1.25rem;
+  padding: 1rem 1.1rem;
+  border-radius: 14px;
+  border: 1px solid rgba(201, 168, 64, 0.22);
+  background: linear-gradient(135deg, rgba(201, 168, 64, 0.1) 0%, rgba(15, 23, 42, 0.35) 100%);
+}
+
+.jeweller-desk-welcome__eyebrow {
+  margin: 0 0 0.35rem;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gold-lo, #c9a840);
+}
+
+.jeweller-desk-welcome__lead {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: var(--text-muted);
+  max-width: 42rem;
+}
+
 .pf-live-gold {
   border-radius: 16px;
   padding: 1rem 1.05rem 0.95rem;
@@ -5662,6 +5704,14 @@ select.input {
 .pf-live-gold__change--flat {
   color: var(--text-muted);
   font-weight: 600;
+}
+
+.pf-live-gold__context {
+  margin: 0.35rem 0 0;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--text-muted);
+  font-weight: 500;
 }
 
 .pf-live-gold__chart {

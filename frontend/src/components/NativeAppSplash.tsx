@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { CridoraLogo } from '@/components/CridoraLogo'
 import { useAuth } from '@/context/AuthContext'
+import { dashboardCopy } from '@/content/dashboardCopy'
 import { isNativeAndroid } from '@/lib/capacitorPlatform'
 import '@/styles/native-app-splash.css'
 
@@ -75,6 +76,7 @@ export function NativeAppSplash() {
         <p className="native-app-splash__wordmark">
           Cridora <span>India</span>
         </p>
+        <p className="native-app-splash__tagline">{dashboardCopy.customer.greeting.splashTagline}</p>
       </div>
     </div>
   )

@@ -7,6 +7,7 @@ import { useLivePoll } from '@/lib/useLivePoll'
 import { PortfolioBarChart, PortfolioDonut, PortfolioSparkRow } from './PortfolioCharts'
 import { JewellerPortfolioPanel } from './JewellerPortfolioPanel'
 import { JewellerReferralPanel } from '@/features/jeweller/JewellerReferralPanel'
+import { JewellerDeskWelcome } from '@/features/jeweller/JewellerDeskWelcome'
 import { TablePagination } from '@/components/ui'
 import { useTablePagination } from '@/hooks/useTablePagination'
 
@@ -115,6 +116,7 @@ export function JewellerPortfolioOverviewPanel({ onNavigate }: Props) {
 
   return (
     <div className="dash-panel-max">
+      <JewellerDeskWelcome />
       <div className="ph">
         <h1>{me?.business_name ?? 'Your showroom'}</h1>
         <p>

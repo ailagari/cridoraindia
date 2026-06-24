@@ -184,6 +184,15 @@ export function GoldRatesPage() {
     return v != null ? Number(v) : null
   }, [rates])
 
+  const rate22ContextLine = useMemo(() => {
+    const raw = rates?.daily_change?.['22K']?.change_pct
+    if (raw == null) return t('goldRates.rateContextFallback')
+    const pct = Number.parseFloat(raw)
+    if (!Number.isFinite(pct)) return t('goldRates.rateContextFallback')
+    if (Math.abs(pct) < 0.05) return t('goldRates.rateContextSteady')
+    return pct > 0 ? t('goldRates.rateContextUp') : t('goldRates.rateContextDown')
+  }, [rates, t])
+
   const jsonLd = useMemo(
     () => [
       organizationJsonLd(),
@@ -343,6 +352,7 @@ export function GoldRatesPage() {
                 accent="silver"
               />
             </div>
+            <p className="gr-rate-context">{rate22ContextLine}</p>
             <p className="gr-disclaimer">{t('goldRates.disclaimer')}</p>
           </section>
 

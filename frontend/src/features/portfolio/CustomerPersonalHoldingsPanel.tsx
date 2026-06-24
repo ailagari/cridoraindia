@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { dashboardCopy } from '@/content/dashboardCopy'
+import {
+  firstHoldingCelebration,
+  holdingSavedWarmTail,
+  holdingUpdatedWarmTail,
+} from '@/content/cridoraVoice'
 import { FormSubmitFoot } from '@/components/ui/FormSubmitFoot'
 import { FileUploadTrigger, type FileUploadTriggerPhase } from '@/components/ui'
 import { fetchVerifiedJewellers, type JewellerStorefrontDTO } from '@/lib/marketplaceApi'
@@ -343,13 +349,16 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
     setPriceAnchor('total')
   }
 
-  const finishAddSuccess = async (label: string, newId?: number) => {
+  const finishAddSuccess = async (label: string, newId?: number, grams?: number) => {
+    const isFirst = rows.length === 0
     resetAddFormFields()
     setFormOpen(false)
     setVaultOpenIds(new Set())
     setAddFormError('')
     setAddFormSuccess(
-      `“${label}” was saved to your vault. Open a card below to attach invoices or photos.`,
+      isFirst
+        ? firstHoldingCelebration(grams)
+        : `${holdingSavedWarmTail(label)} Open a card below to attach invoices or photos.`,
     )
     const list = await refresh()
     if (newId != null) {
@@ -392,7 +401,7 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
       const savedId = editingId
       const label = res.data?.title?.trim() || eTitle.trim() || 'Record'
       setEditFormError('')
-      setEditFormSuccess(`“${label}” was updated.`)
+      setEditFormSuccess(holdingUpdatedWarmTail(label))
       await refresh()
       onChanged?.()
       window.setTimeout(() => {
@@ -448,7 +457,12 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
         )
         if (recovered && snapshot) {
           setRows(snapshot.results ?? [])
-          await finishAddSuccess(recovered.title, recovered.id)
+          const gramsNum = Number.parseFloat(payload.weight_grams)
+          await finishAddSuccess(
+            recovered.title,
+            recovered.id,
+            Number.isFinite(gramsNum) ? gramsNum : undefined,
+          )
           return
         }
         setAddFormError(res.detail)
@@ -456,7 +470,12 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
       }
       const label = res.data?.title?.trim() || payload.title || 'Record'
       const newId = res.data?.id
-      await finishAddSuccess(label, newId)
+      const gramsNum = Number.parseFloat(payload.weight_grams)
+      await finishAddSuccess(
+        label,
+        newId,
+        Number.isFinite(gramsNum) ? gramsNum : undefined,
+      )
     } catch {
       setAddFormError('Could not reach the server. Check your connection and try again.')
     } finally {
@@ -510,7 +529,9 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
               {rows.length === 1 ? 'piece' : 'pieces'} in this vault
             </p>
           ) : (
-            <p className="pf-vault-hero__stat pf-vault-hero__stat--empty">Start by adding your first piece.</p>
+            <p className="pf-vault-hero__stat pf-vault-hero__stat--empty">
+              {dashboardCopy.customer.empty.personalHoldingsHero}
+            </p>
           )}
         </div>
         <div className="pf-vault-hero__actions">
@@ -773,7 +794,9 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
       ) : null}
 
       {rows.length === 0 ? (
-        <p style={{ color: 'var(--text-muted)' }}>No personal holdings yet. Add your first piece to see live reference value.</p>
+        <p style={{ color: 'var(--text-muted)', lineHeight: 1.55 }}>
+          {dashboardCopy.customer.empty.personalHoldings.description}
+        </p>
       ) : (
         <div className="pf-vault-holdings">
           <div className="pf-vault-acc-list" role="list">

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { dashboardCopy } from '@/content/dashboardCopy'
 import { UserAvatar } from '@/components/UserAvatar'
 import { mergeJewellerListWithDemos } from '@/lib/jewellerMarketplaceDemos'
 import { jewellerStorefrontFeatureChips } from '@/features/marketplace/jewellerMarketplaceShared'
@@ -335,7 +336,7 @@ export function JewellerMarketplaceGrid({ intro, variant = 'public', wallet: wal
         }
         setWalletLocal(out.wallet)
         onWalletChange?.(out.wallet)
-        setSetDefaultMsg('Primary jeweller updated.')
+        setSetDefaultMsg(dashboardCopy.customer.success.primaryJewellerSet)
       } finally {
         setDefaultBusyId(null)
       }

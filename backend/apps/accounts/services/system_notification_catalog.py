@@ -43,7 +43,8 @@ SYSTEM_NOTIFICATION_CATALOG: list[SystemNotificationDef] = [
         "locale": "en",
         "title_template": "OTP generated",
         "body_template": (
-            "Show your code to {{jeweller_name}} after paying {{grams}} g at the counter."
+            "Show your code to {{jeweller_name}} after paying {{grams}} g at the counter. "
+            "We will keep the record once it is confirmed."
         ),
         "variables": ["jeweller_name", "grams"],
         "description": "Customer inbox when they generate a fractional purchase OTP.",
@@ -55,7 +56,8 @@ SYSTEM_NOTIFICATION_CATALOG: list[SystemNotificationDef] = [
         "locale": "en",
         "title_template": "Deposit recorded — OTP needed",
         "body_template": (
-            "{{jeweller_name}} logged {{grams}} g. Generate your OTP in the app to complete the deposit."
+            "{{jeweller_name}} logged {{grams}} g. Generate your OTP in the app to complete the deposit — "
+            "almost there."
         ),
         "variables": ["jeweller_name", "grams"],
         "description": "Customer alert when jeweller logs a physical gold deposit intake.",
@@ -190,7 +192,7 @@ SYSTEM_NOTIFICATION_CATALOG: list[SystemNotificationDef] = [
         "group": GROUP_PORTFOLIO,
         "locale": "en",
         "title_template": "Fractional gold credited",
-        "body_template": "{{grams}} g added to your vault at {{jeweller_name}}.",
+        "body_template": "{{grams}} g added to your vault at {{jeweller_name}}. Well saved.",
         "variables": ["grams", "jeweller_name"],
         "description": "Customer inbox when fractional purchase completes.",
     },
@@ -200,7 +202,7 @@ SYSTEM_NOTIFICATION_CATALOG: list[SystemNotificationDef] = [
         "group": GROUP_PORTFOLIO,
         "locale": "en",
         "title_template": "Gold deposit credited",
-        "body_template": "{{grams}} g deposit vault credit is complete.",
+        "body_template": "{{grams}} g deposit is complete — your gold is now on Cridora.",
         "variables": ["grams"],
         "description": "Customer inbox when physical deposit is credited.",
     },
@@ -300,7 +302,9 @@ SYSTEM_NOTIFICATION_CATALOG: list[SystemNotificationDef] = [
         "group": GROUP_CORRIDORAPAY,
         "locale": "en",
         "title_template": "Purchase complete",
-        "body_template": "{{title}} ({{grams}} g) is recorded in your Gold Records.",
+        "body_template": (
+            "{{title}} ({{grams}} g) is recorded in your Gold Records — safe and counted."
+        ),
         "variables": ["title", "grams"],
         "description": "Customer confirmation when CridoraPay bill completes.",
     },
@@ -413,7 +417,7 @@ SYSTEM_NOTIFICATION_CATALOG: list[SystemNotificationDef] = [
         "name": "Hourly digest — rate up title",
         "group": GROUP_GOLD,
         "locale": "en",
-        "title_template": "Gold moved up",
+        "title_template": "Morning — gold moved up",
         "body_template": "",
         "variables": [],
         "description": "Hourly digest title when price increased since last snapshot.",
@@ -423,7 +427,7 @@ SYSTEM_NOTIFICATION_CATALOG: list[SystemNotificationDef] = [
         "name": "Hourly digest — rate down title",
         "group": GROUP_GOLD,
         "locale": "en",
-        "title_template": "Gold moved down",
+        "title_template": "Morning — gold eased today",
         "body_template": "",
         "variables": [],
         "description": "Hourly digest title when price decreased since last snapshot.",
@@ -469,7 +473,7 @@ SYSTEM_NOTIFICATION_CATALOG: list[SystemNotificationDef] = [
         "title_template": "",
         "body_template": (
             "22K reference eased ₹{{swing}} — now ₹{{current}}/g (was ₹{{baseline}}). "
-            "Daily moves are normal; your gold weight is unchanged."
+            "Daily moves are normal; your gold weight is unchanged. Some families see this as a buying moment."
         ),
         "variables": ["swing", "baseline", "current", "direction_verb"],
         "description": "Calm, non-alarmist framing for gold rate decreases.",

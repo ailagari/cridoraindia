@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { goldRateContextLine } from '@/content/cridoraVoice'
 import {
   fetchGoldTickerHistory,
   type GoldTickerHistoryPayload,
@@ -131,6 +132,18 @@ export function PortfolioLiveGoldPriceCard({
   const changeUp = changePct != null && changePct >= 0
   const dailyUp = todayChange != null && todayChange >= 0
 
+  const rateContextLine = useMemo(() => {
+    if (todayChange != null && Number.isFinite(todayChange)) {
+      const dir = Math.abs(todayChange) < 0.05 ? 'steady' : todayChange > 0 ? 'up' : 'down'
+      return goldRateContextLine({ deltaPct: todayChange, direction: dir })
+    }
+    if (changePct != null && Number.isFinite(changePct)) {
+      const dir = Math.abs(changePct) < 0.05 ? 'steady' : changePct > 0 ? 'up' : 'down'
+      return goldRateContextLine({ deltaPct: changePct, direction: dir })
+    }
+    return goldRateContextLine({ direction: 'unknown' })
+  }, [todayChange, changePct])
+
   return (
     <section className="pf-live-gold" aria-label="Live gold price">
       <header className="pf-live-gold__head">
@@ -179,6 +192,7 @@ export function PortfolioLiveGoldPriceCard({
           ) : null}
         </div>
       </div>
+      <p className="pf-live-gold__context">{rateContextLine}</p>
 
       <div className="pf-live-gold__rule" aria-hidden />
 

@@ -28,7 +28,7 @@ def format_gold_rate_standard(
     verb = "increased" if delta > 0 else "decreased"
     return (
         f"Gold rate {verb} ₹{swing:,.2f}/g today — "
-        f"₹{prev:,.2f}/g → ₹{new:,.2f}/g."
+        f"₹{prev:,.2f}/g → ₹{new:,.2f}/g. We checked it for you."
     )
 
 
@@ -64,7 +64,10 @@ def format_portfolio_gain(
     loc = normalize_preferred_locale(locale)
     if loc == "ml":
         return f"നിങ്ങളുടെ പോർട്ട്ഫോളിയോയുടെ ഏകദേശ മൂല്യം ₹{gain:,.0f} കൂടി."
-    return f"Your gold portfolio gained an estimated ₹{gain:,.0f} in value."
+    return (
+        f"Your gold portfolio gained an estimated ₹{gain:,.0f} in value. "
+        f"Your grams haven't changed — the market moved."
+    )
 
 
 def format_portfolio_value_change(

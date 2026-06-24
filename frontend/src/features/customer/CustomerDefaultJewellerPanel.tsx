@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { dashboardCopy } from '@/content/dashboardCopy'
 import { fetchVerifiedJewellers, type JewellerStorefrontDTO } from '@/lib/marketplaceApi'
 import {
   canPromoteJewellerToPrimary,
@@ -107,7 +108,7 @@ export function CustomerDefaultJewellerPanel({
         }
         setWallet(out.wallet)
         onWalletChange?.(out.wallet)
-        setActionMsg('Primary jeweller updated. New transfers and routing use this partner by default.')
+        setActionMsg(dashboardCopy.customer.success.primaryJewellerUpdated)
       } finally {
         setBusyId(null)
       }
@@ -133,9 +134,7 @@ export function CustomerDefaultJewellerPanel({
         Primary jeweller
       </h3>
       <p style={{ margin: '0 0 1rem', fontSize: '0.88rem', color: 'var(--text-muted)', lineHeight: 1.55 }}>
-        Your <strong>primary</strong> jeweller is set at signup when you enter a referral code. Fractional buys, gold
-        transfers, and marketplace benefits default to this partner. Jewellers where you hold vault balances appear as{' '}
-        <strong>secondary</strong> until you promote one to primary.
+        {dashboardCopy.customer.empty.primaryJewellerPanelLead}
       </p>
 
       {primaryId == null ? (
@@ -148,9 +147,9 @@ export function CustomerDefaultJewellerPanel({
             marginBottom: '1rem',
           }}
         >
-          <p style={{ margin: 0, fontWeight: 600 }}>No primary jeweller yet</p>
-          <p style={{ margin: '0.35rem 0 0', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-            Search below and tap <strong>Set as primary</strong> on any verified jeweller to choose your default partner.
+          <p style={{ margin: 0, fontWeight: 600 }}>{dashboardCopy.customer.empty.primaryJeweller.title}</p>
+          <p style={{ margin: '0.35rem 0 0', fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
+            {dashboardCopy.customer.empty.primaryJeweller.description}
           </p>
         </div>
       ) : (

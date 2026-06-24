@@ -759,6 +759,10 @@ export const mlMessages: Record<MessageKey, string> = {
   'goldRates.updatedUnknown': 'ഫീഡ് കാത്തിരിക്കുന്നു',
   'goldRates.source': 'Rate',
   'goldRates.todayRates': 'ഇന്നത്തെ നിരക്ക് (₹/ഗ്രാം)',
+  'goldRates.rateContextUp': 'Up from yesterday — one of the better days this month.',
+  'goldRates.rateContextDown': 'Down from yesterday — some families see this as a buying moment.',
+  'goldRates.rateContextSteady': 'Steady today — a good day to think about adding a little.',
+  'goldRates.rateContextFallback': "We checked the rate for you — here's today's number.",
   'goldRates.disclaimer':
     'Cridora live Kerala gold rate — indicative only. Jewellers may use this or set their own rates. Showroom prices may differ.',
   'goldRates.priceChart': 'കേരളത്തിലെ സ്വർണ്ണ വില — ആഴ്ച/മാസ ഗ്രാഫ്',

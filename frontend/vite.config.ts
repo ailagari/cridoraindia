@@ -76,7 +76,7 @@ export default defineConfig(({ mode }) => {
         manifest: {
           name: 'Cridora',
           short_name: 'Cridora',
-          description: 'Digital gold portfolio, customer engagement & modernization platform for jewellers in India.',
+          description: 'Your gold rate and record on your home screen — Kerala-first gold passbook for families and jewellers.',
           theme_color: '#07090f',
           background_color: '#07090f',
           display: 'standalone',

@@ -22,6 +22,8 @@ import {
   buildPortfolioHoldingsValueSeries,
   type PortfolioHistoryRangeKey,
 } from './PortfolioCharts'
+import { DailyGoldGreeting } from '@/components/DailyGoldGreeting'
+import { dashboardCopy } from '@/content/dashboardCopy'
 import { PortfolioLiveGoldPriceCard } from './PortfolioLiveGoldPriceCard'
 import { CustomerVaultsPanel } from './CustomerVaultsPanel'
 import { CustomerPersonalHoldingsPanel } from './CustomerPersonalHoldingsPanel'
@@ -281,7 +283,7 @@ export function CustomerPortfolioPanel() {
 
   const donutSegs = useMemo(() => {
     if (vaults.length === 0) {
-      return [{ pct: 1, color: '#475569', label: 'No vault holdings yet' }]
+      return [{ pct: 1, color: '#475569', label: dashboardCopy.customer.empty.vaultDonutLabel }]
     }
     const grams = vaults.map((v) => Math.max(0, vaultRowTotalGrams(v)))
     const sum = grams.reduce((a, b) => a + b, 0) || 1
@@ -448,6 +450,11 @@ export function CustomerPortfolioPanel() {
 
         {portfolioTab === 'overview' ? (
           <>
+            <DailyGoldGreeting
+              spot={spotPayload}
+              tickerFallback={goldTickerFallback}
+              hasHoldings={displayPortfolioGrams > 1e-9}
+            />
             <CustomerPortfolioOverviewDash
               wallet={wallet}
               spotPayload={spotPayload}
@@ -557,8 +564,8 @@ export function CustomerPortfolioPanel() {
                     ariaLabel="Bar chart of total vaulted grams per jeweller"
                   />
                 ) : (
-                  <p style={{ color: 'var(--text-muted)', margin: 0 }}>
-                    No vaulted grams yet — buy fractional gold or complete a gold deposit with a verified jeweller.
+                  <p style={{ color: 'var(--text-muted)', margin: 0, lineHeight: 1.55 }}>
+                    {dashboardCopy.customer.empty.vaultGrams}
                   </p>
                 )}
               </div>

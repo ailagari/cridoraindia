@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { dashboardCopy } from '@/content/dashboardCopy'
 import { Button, Card, CardHeader, EmptyState, Input } from '@/components/ui'
 import { CustomerActiveUpiPayment } from '@/features/invest/CustomerActiveUpiPayment'
 import { CustomerCounterPaymentFlow } from '@/features/invest/CustomerCounterPaymentFlow'
@@ -401,8 +402,8 @@ export function CustomerSchemeHubPanel() {
     return (
       <div className="dash-panel-max fractional-buy-panel">
         <EmptyState
-          title="Investment schemes unavailable"
-          description="This feature is not enabled on the platform yet."
+          title={dashboardCopy.customer.empty.schemesUnavailable.title}
+          description={dashboardCopy.customer.empty.schemesUnavailable.description}
         />
       </div>
     )
@@ -643,8 +644,8 @@ export function CustomerSchemeHubPanel() {
         {joinOpen ? (
           <div className="scheme-join-body">
             {sortedNetwork.length === 0 ? (
-              <p className="dash-muted" style={{ margin: '0 0 var(--sp-4)' }}>
-                Set a primary jeweller or buy fractional gold to see partner schemes here.
+              <p className="dash-muted" style={{ margin: '0 0 var(--sp-4)', lineHeight: 1.55 }}>
+                {dashboardCopy.customer.empty.schemes.description}
               </p>
             ) : (
               sortedNetwork.map((j) => {

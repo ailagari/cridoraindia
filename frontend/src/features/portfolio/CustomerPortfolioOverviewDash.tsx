@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
+import { dashboardCopy } from '@/content/dashboardCopy'
 import { TablePagination } from '@/components/ui'
 import type { FractionalLedgerRowDTO, GoldWalletDTO, PortfolioTotalsDTO } from '@/lib/goldTransferApi'
 import { vaultRowTotalGrams, type VaultRowDTO } from '@/lib/goldTransferApi'
@@ -110,7 +111,7 @@ export function CustomerPortfolioOverviewDash(props: {
 
   const donutSegs = useMemo(() => {
     if (vaults.length === 0) {
-      return [{ pct: 1, color: '#475569', label: 'No vault holdings yet' }]
+      return [{ pct: 1, color: '#475569', label: dashboardCopy.customer.empty.vaultDonutLabel }]
     }
     const sumVaultGrams = vaults.reduce((acc, v) => acc + Math.max(0, vaultRowTotalGrams(v)), 0)
     const denom = sumVaultGrams > 1e-9 ? sumVaultGrams : 1

@@ -4,6 +4,7 @@ import { useAuth } from '@/context/AuthContext'
 import { usePublicLocale } from '@/i18n/PublicLocaleProvider'
 import { postAuthLandingPath } from '@/lib/routes'
 import { fetchJewellerReferralPreview } from '@/lib/jewellerReferralApi'
+import { dashboardCopy } from '@/content/dashboardCopy'
 import { AuthShell } from '@/layouts/auth-shell'
 import { Button, Card, Feedback, Heading, Input, Spinner, Text } from '@/components/ui'
 import { GoogleSignInButton } from '@/components/GoogleSignInButton'
@@ -163,14 +164,19 @@ export function SignupPage() {
             }}
           />
           {referralPreview ? (
-            <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--success)' }}>{referralPreview}</p>
+            <>
+              <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--success)' }}>{referralPreview}</p>
+              <p style={{ margin: '0.35rem 0 0', fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
+                {dashboardCopy.customer.success.referralSignupWarm}
+              </p>
+            </>
           ) : null}
           {referralPreviewErr ? (
             <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)' }}>{referralPreviewErr}</p>
           ) : null}
           {jewellerIdFromUrl != null && referralCode.replace(/\D/g, '').length === 0 ? (
-            <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-              You are joining via a jeweller invite link.
+            <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
+              {dashboardCopy.customer.success.referralSignupWarm}
             </p>
           ) : null}
           <Input
