@@ -253,6 +253,29 @@ function LocaleFields({
   )
 }
 
+function buildSystemByKey(rows: SystemMessageRow[]) {
+  const map = new Map<string, { en?: SystemMessageRow; ml?: SystemMessageRow }>()
+  for (const row of rows) {
+    const cur = map.get(row.key) || {}
+    if (row.locale === 'ml') cur.ml = row
+    else cur.en = row
+    map.set(row.key, cur)
+  }
+  return map
+}
+
+function buildTemplatesByMoment(rows: TemplateRow[]) {
+  const map = new Map<string, { en?: TemplateRow; ml?: TemplateRow }>()
+  for (const row of rows) {
+    if (row.context !== 'default') continue
+    const cur = map.get(row.category) || {}
+    if (row.locale === 'ml') cur.ml = row
+    else cur.en = row
+    map.set(row.category, cur)
+  }
+  return map
+}
+
 export function AdminGoldAlertCopyPanel() {
   const [systemRows, setSystemRows] = useState<SystemMessageRow[]>([])
   const [templates, setTemplates] = useState<TemplateRow[]>([])
@@ -284,69 +307,65 @@ export function AdminGoldAlertCopyPanel() {
     }
     if (!sysRes.ok) {
       setErr(sysData.detail || 'Could not load tray message copy.')
-      return
+      return null
     }
     if (!tplRes.ok) {
       setErr(tplData.detail || 'Could not load inbox templates.')
-      return
+      return null
     }
-    setSystemRows(sysData.results || [])
+    const nextSystemRows = sysData.results || []
     const goldTemplates = (tplData.results || []).filter((t) =>
       (INBOX_MOMENTS as readonly string[]).includes(t.category),
     )
+    setSystemRows(nextSystemRows)
     setTemplates(goldTemplates)
+    return { systemRows: nextSystemRows, templates: goldTemplates }
   }, [])
 
   useEffect(() => {
     void load()
   }, [load])
 
-  const systemByKey = useMemo(() => {
-    const map = new Map<string, { en?: SystemMessageRow; ml?: SystemMessageRow }>()
-    for (const row of systemRows) {
-      const cur = map.get(row.key) || {}
-      if (row.locale === 'ml') cur.ml = row
-      else cur.en = row
-      map.set(row.key, cur)
-    }
-    return map
-  }, [systemRows])
+  const systemByKey = useMemo(() => buildSystemByKey(systemRows), [systemRows])
 
-  const templatesByMoment = useMemo(() => {
-    const map = new Map<string, { en?: TemplateRow; ml?: TemplateRow }>()
-    for (const row of templates) {
-      if (row.context !== 'default') continue
-      const cur = map.get(row.category) || {}
-      if (row.locale === 'ml') cur.ml = row
-      else cur.en = row
-      map.set(row.category, cur)
-    }
-    return map
-  }, [templates])
+  const templatesByMoment = useMemo(() => buildTemplatesByMoment(templates), [templates])
 
-  function openTray(key: string) {
-    const pair = systemByKey.get(key)
+  function applyTrayEditor(key: string, rows: SystemMessageRow[]) {
+    const pair = buildSystemByKey(rows).get(key)
     setTrayOpen(key)
     setTrayMeta(pair || {})
     setTrayDrafts({
       en: pair?.en ? draftFromSystem(pair.en) : emptyDraft(),
       ml: pair?.ml ? draftFromSystem(pair.ml) : emptyDraft(),
     })
-    setOkMsg('')
   }
 
-  function openInbox(moment: string) {
-    const pair = templatesByMoment.get(moment)
+  function applyInboxEditor(moment: string, rows: TemplateRow[]) {
+    const pair = buildTemplatesByMoment(rows).get(moment)
     setInboxOpen(moment)
     setInboxMeta(pair || {})
     setInboxDrafts({
       en: pair?.en ? draftFromTemplate(pair.en) : emptyDraft(),
       ml: pair?.ml ? draftFromTemplate(pair.ml) : emptyDraft(),
     })
-    setOkMsg('')
   }
 
-  async function saveSystemRow(id: number | undefined, draft: LocaleDraft, createKey: string, locale: string) {
+  function openTray(key: string) {
+    setOkMsg('')
+    applyTrayEditor(key, systemRows)
+  }
+
+  function openInbox(moment: string) {
+    setOkMsg('')
+    applyInboxEditor(moment, templates)
+  }
+
+  async function saveSystemRow(
+    id: number | undefined,
+    draft: LocaleDraft,
+    createKey: string,
+    locale: string,
+  ): Promise<SystemMessageRow | void> {
     const payload = {
       title_template: draft.title_template.trim(),
       body_template: draft.body_template.trim(),
@@ -359,16 +378,15 @@ export function AdminGoldAlertCopyPanel() {
         method: 'PATCH',
         jsonBody: payload,
       })
+      const data = (await res.json().catch(() => ({}))) as SystemMessageRow & { detail?: string }
       if (!res.ok) {
-        const data = (await res.json().catch(() => ({}))) as { detail?: string }
         throw new Error(data.detail || 'Save failed.')
       }
-      return
+      return data
     }
     const existing = systemRows.find((r) => r.key === createKey && r.locale === locale)
     if (existing) {
-      await saveSystemRow(existing.id, draft, createKey, locale)
-      return
+      return saveSystemRow(existing.id, draft, createKey, locale)
     }
     throw new Error(`No ${locale.toUpperCase()} row for ${createKey}. Run migrations to seed defaults.`)
   }
@@ -379,11 +397,19 @@ export function AdminGoldAlertCopyPanel() {
     setErr('')
     setOkMsg('')
     try {
-      await saveSystemRow(trayMeta.en?.id, trayDrafts.en, key, 'en')
-      await saveSystemRow(trayMeta.ml?.id, trayDrafts.ml, key, 'ml')
+      let nextRows = [...systemRows]
+      const mergeSaved = (saved: SystemMessageRow | void) => {
+        if (!saved) return
+        const idx = nextRows.findIndex((r) => r.id === saved.id)
+        if (idx >= 0) nextRows[idx] = saved
+        else nextRows.push(saved)
+      }
+      mergeSaved(await saveSystemRow(trayMeta.en?.id, trayDrafts.en, key, 'en'))
+      mergeSaved(await saveSystemRow(trayMeta.ml?.id, trayDrafts.ml, key, 'ml'))
+      const fresh = await load()
+      nextRows = fresh?.systemRows ?? nextRows
+      applyTrayEditor(key, nextRows)
       setOkMsg('Tray wording saved. Next alerts will use this copy.')
-      await load()
-      openTray(key)
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Save failed.')
     } finally {
@@ -397,7 +423,7 @@ export function AdminGoldAlertCopyPanel() {
     moment: string,
     locale: string,
     existing?: TemplateRow,
-  ) {
+  ): Promise<TemplateRow | void> {
     const title = draft.title_template.trim()
     const body = draft.body_template.trim()
     if (!title || !body) {
@@ -416,11 +442,11 @@ export function AdminGoldAlertCopyPanel() {
         method: 'PATCH',
         jsonBody: payload,
       })
+      const data = (await res.json().catch(() => ({}))) as TemplateRow & { detail?: string }
       if (!res.ok) {
-        const data = (await res.json().catch(() => ({}))) as { detail?: string }
         throw new Error(data.detail || 'Save failed.')
       }
-      return
+      return data
     }
     const res = await authFetch('/api/v1/admin/notification-templates/', {
       method: 'POST',
@@ -432,10 +458,11 @@ export function AdminGoldAlertCopyPanel() {
         ...payload,
       },
     })
+    const data = (await res.json().catch(() => ({}))) as TemplateRow & { detail?: string }
     if (!res.ok) {
-      const data = (await res.json().catch(() => ({}))) as { detail?: string }
       throw new Error(data.detail || 'Create failed.')
     }
+    return data
   }
 
   async function saveInbox(moment: string) {
@@ -444,15 +471,29 @@ export function AdminGoldAlertCopyPanel() {
     setErr('')
     setOkMsg('')
     try {
+      let nextTemplates = [...templates]
+      const mergeSaved = (saved: TemplateRow | void) => {
+        if (!saved) return
+        const idx = nextTemplates.findIndex((r) => r.id === saved.id)
+        if (idx >= 0) nextTemplates[idx] = saved
+        else nextTemplates.push(saved)
+      }
       if (inboxDrafts.en.title_template.trim() && inboxDrafts.en.body_template.trim()) {
-        await saveTemplateRow(inboxMeta.en?.id, inboxDrafts.en, moment, 'en', inboxMeta.en)
+        mergeSaved(
+          await saveTemplateRow(inboxMeta.en?.id, inboxDrafts.en, moment, 'en', inboxMeta.en),
+        )
       }
       if (inboxDrafts.ml.title_template.trim() && inboxDrafts.ml.body_template.trim()) {
-        await saveTemplateRow(inboxMeta.ml?.id, inboxDrafts.ml, moment, 'ml', inboxMeta.ml)
+        mergeSaved(
+          await saveTemplateRow(inboxMeta.ml?.id, inboxDrafts.ml, moment, 'ml', inboxMeta.ml),
+        )
       }
+      const fresh = await load()
+      nextTemplates =
+        fresh?.templates ??
+        nextTemplates.filter((t) => (INBOX_MOMENTS as readonly string[]).includes(t.category))
+      applyInboxEditor(moment, nextTemplates)
       setOkMsg('Inbox wording saved. Matching customers will see this on the next alert.')
-      await load()
-      openInbox(moment)
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Save failed.')
     } finally {
@@ -504,7 +545,7 @@ export function AdminGoldAlertCopyPanel() {
                   {open ? 'Close' : 'Edit EN & ML'}
                 </button>
               </div>
-              {open && trayDrafts ? (
+              {open && trayOpen === key && trayDrafts ? (
                 <div style={{ marginTop: '1rem' }}>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem' }}>
                     <LocaleFields
@@ -569,7 +610,7 @@ export function AdminGoldAlertCopyPanel() {
                   {open ? 'Close' : 'Edit EN & ML'}
                 </button>
               </div>
-              {open && inboxDrafts ? (
+              {open && inboxOpen === moment && inboxDrafts ? (
                 <div style={{ marginTop: '1rem' }}>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem' }}>
                     <LocaleFields

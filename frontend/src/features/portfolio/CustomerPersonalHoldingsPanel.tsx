@@ -143,7 +143,15 @@ function PurchaseSourceJewellerField({
   )
 }
 
-export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () => void }) {
+export function CustomerPersonalHoldingsPanel({
+  onChanged,
+  initialAction,
+  onInitialActionConsumed,
+}: {
+  onChanged?: () => void
+  initialAction?: 'add' | 'scan' | null
+  onInitialActionConsumed?: () => void
+}) {
   const [searchParams, setSearchParams] = useSearchParams()
   const [rows, setRows] = useState<PersonalHoldingDTO[]>([])
   const [loadErr, setLoadErr] = useState('')
@@ -161,6 +169,7 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
   useEffect(() => {
     if (searchParams.get('scan') !== '1') return
     setInvoiceImportOpen(true)
+    setFormOpen(false)
     setSearchParams(
       (prev) => {
         const next = new URLSearchParams(prev)
@@ -170,6 +179,23 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
       { replace: true },
     )
   }, [searchParams, setSearchParams])
+
+  useEffect(() => {
+    if (!initialAction) return
+    if (initialAction === 'scan') {
+      setInvoiceImportOpen(true)
+      setFormOpen(false)
+      setAddFormSuccess('')
+      setAddFormError('')
+    } else {
+      setFormOpen(true)
+      setInvoiceImportOpen(false)
+      setAddFormSuccess('')
+      setAddFormError('')
+    }
+    setLoadErr('')
+    onInitialActionConsumed?.()
+  }, [initialAction, onInitialActionConsumed])
   const [title, setTitle] = useState('')
   const [category, setCategory] = useState('ornament')
   const [weight, setWeight] = useState('')
@@ -538,7 +564,7 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
           <button
             type="button"
             className={
-              invoiceImportOpen ? 'pf-vault-hero__cta pf-vault-hero__cta--muted' : 'pf-vault-hero__cta pf-vault-hero__cta--muted'
+              invoiceImportOpen ? 'pf-vault-hero__cta pf-vault-hero__cta--muted' : 'pf-vault-hero__cta'
             }
             aria-expanded={invoiceImportOpen}
             aria-controls="pf-vault-invoice-import"
@@ -555,11 +581,11 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
               })
             }}
           >
-            {invoiceImportOpen ? 'Close import' : 'Import from invoice'}
+            {invoiceImportOpen ? 'Close import' : 'Scan invoice'}
           </button>
           <button
             type="button"
-            className={formOpen ? 'pf-vault-hero__cta pf-vault-hero__cta--muted' : 'pf-vault-hero__cta'}
+            className={formOpen ? 'pf-vault-hero__cta pf-vault-hero__cta--muted' : 'pf-vault-hero__cta pf-vault-hero__cta--secondary'}
             aria-expanded={formOpen}
             aria-controls="pf-vault-add-form"
             onClick={() =>
@@ -587,7 +613,7 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
                 <span className="pf-vault-hero__cta-icon" aria-hidden>
                   +
                 </span>
-                Add personal holding
+                Add manually
               </>
             )}
           </button>
@@ -1019,6 +1045,23 @@ export function CustomerPersonalHoldingsPanel({ onChanged }: { onChanged?: () =>
           ) : null}
         </div>
       )}
+
+      {!formOpen && !invoiceImportOpen ? (
+        <button
+          type="button"
+          className="pf-vault-mobile-fab"
+          aria-label="Add personal gold holding"
+          onClick={() => {
+            setFormOpen(true)
+            setInvoiceImportOpen(false)
+            setAddFormSuccess('')
+            setAddFormError('')
+            setLoadErr('')
+          }}
+        >
+          +
+        </button>
+      ) : null}
 
     </div>
 

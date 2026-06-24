@@ -124,7 +124,9 @@ export function CustomerDashboardPage() {
       onSectionChange={setSection}
       title={head}
     >
-      {active === 'portfolio_overview' ? <CustomerPortfolioPanel /> : null}
+      {active === 'portfolio_overview' || active === 'portfolio_personal' ? (
+        <CustomerPortfolioPanel defaultPortfolioTab={active === 'portfolio_personal' ? 'personal' : undefined} />
+      ) : null}
       {active === 'portfolio_holdings' ? <CustomerVaultsPanel /> : null}
       {active === 'portfolio_vault_ids' ? <CustomerVaultAddressesPanel /> : null}
       {active === 'shop_jewellers' ? <CustomerJewellersBrowsePanel /> : null}

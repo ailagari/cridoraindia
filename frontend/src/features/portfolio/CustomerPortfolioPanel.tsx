@@ -1,7 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { fetchGoldWallet, vaultRowEstimatedInr, vaultRowTotalGrams, type VaultRowDTO } from '@/lib/goldTransferApi'
-import { fetchPortfolioLedger, type PortfolioLedgerEntryDTO } from '@/lib/personalHoldingsApi'
+import {
+  fetchPersonalHoldings,
+  fetchPortfolioLedger,
+  type PersonalHoldingDTO,
+  type PortfolioLedgerEntryDTO,
+} from '@/lib/personalHoldingsApi'
+import { loadHoldingsScopePref, persistHoldingsScope, type HoldingsScope } from './holdingsScope'
 import { CustomerPortfolioOverviewDash } from './CustomerPortfolioOverviewDash'
 import {
   fetchSpotPrices,
@@ -32,19 +38,9 @@ import { useTablePagination } from '@/hooks/useTablePagination'
 
 const LEDGER_PAGE_SZ = 10
 const DONUT_COLORS = ['#fbbf24', '#d4a85c', '#67e8f9', '#a78bfa', '#34d399', '#f472b6', '#38bdf8']
-const PF_HOLDINGS_JEWELLERY_ONLY_KEY = 'cridora_pf_holdings_jewellery_only'
-
 function safeMoneyStr(s?: string | null): number {
   const n = Number.parseFloat(String(s ?? '').trim())
   return Number.isFinite(n) ? n : 0
-}
-
-function loadJewelleryOnlyPref(): boolean {
-  try {
-    return typeof window !== 'undefined' && localStorage.getItem(PF_HOLDINGS_JEWELLERY_ONLY_KEY) === '1'
-  } catch {
-    return false
-  }
 }
 
 function resolveLive22kPerGram(spot: SpotPricesPayload | null, tickerFallback: GoldTickerPayload | null): number | null {
@@ -148,9 +144,9 @@ function parseInrNum(s: string): number {
   return Number.isFinite(n) ? n : 0
 }
 
-export function CustomerPortfolioPanel() {
+export function CustomerPortfolioPanel({ defaultPortfolioTab }: { defaultPortfolioTab?: PortfolioTabId }) {
   const kycVerified = useCustomerKycOk()
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [wallet, setWallet] = useState<Awaited<ReturnType<typeof fetchGoldWallet>>>(null)
   const [spotPayload, setSpotPayload] = useState<SpotPricesPayload | null>(null)
   const [goldTickerFallback, setGoldTickerFallback] = useState<GoldTickerPayload | null>(null)
@@ -163,21 +159,62 @@ export function CustomerPortfolioPanel() {
   const [portfolioHistRange, setPortfolioHistRange] = useState<PortfolioHistoryRangeKey>('1w')
   const [portfolioHistPayload, setPortfolioHistPayload] = useState<GoldTickerHistoryPayload | null>(null)
   const [portfolioHistLoading, setPortfolioHistLoading] = useState(false)
-  /** When true: summary shows jewellery vault only; when false (default): vault + personal. */
-  const [jewelleryVaultOnlyView, setJewelleryVaultOnlyView] = useState(loadJewelleryOnlyPref)
+  const [holdingsScope, setHoldingsScope] = useState<HoldingsScope>(loadHoldingsScopePref)
+  const [personalPreview, setPersonalPreview] = useState<PersonalHoldingDTO[]>([])
+  const [personalHoldingsCount, setPersonalHoldingsCount] = useState(0)
+  const [personalInitialAction, setPersonalInitialAction] = useState<'add' | 'scan' | null>(null)
   const portfolioTabsRef = useRef<HTMLElement | null>(null)
 
   useEffect(() => {
-    try {
-      localStorage.setItem(PF_HOLDINGS_JEWELLERY_ONLY_KEY, jewelleryVaultOnlyView ? '1' : '0')
-    } catch {
-      /* private mode */
+    persistHoldingsScope(holdingsScope)
+  }, [holdingsScope])
+
+  const refreshPersonalPreview = useCallback(async () => {
+    const r = await fetchPersonalHoldings()
+    if (!r) {
+      setPersonalPreview([])
+      setPersonalHoldingsCount(0)
+      return
     }
-  }, [jewelleryVaultOnlyView])
+    const list = r.results ?? []
+    setPersonalHoldingsCount(list.length)
+    setPersonalPreview(list.slice(0, 3))
+  }, [])
+
+  const navigatePersonalAction = useCallback(
+    (action: 'add' | 'scan') => {
+      setPersonalInitialAction(action)
+      setPortfolioTab('personal')
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev)
+          next.set('portfolio_tab', 'personal')
+          next.set('portfolio_action', action)
+          if (action === 'scan') next.delete('scan')
+          return next
+        },
+        { replace: true },
+      )
+    },
+    [setSearchParams],
+  )
+
+  const clearPersonalInitialAction = useCallback(() => {
+    setPersonalInitialAction(null)
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev)
+        next.delete('portfolio_action')
+        return next
+      },
+      { replace: true },
+    )
+  }, [setSearchParams])
 
   const refresh = useCallback(async () => {
     setLoadErr('')
     const [w, sp] = await Promise.all([fetchGoldWallet(), fetchSpotPrices()])
+    void refreshPersonalPreview()
     if (!w) {
       setLoadErr('Could not load wallet.')
       setWallet(null)
@@ -198,7 +235,7 @@ export function CustomerPortfolioPanel() {
     } else {
       setGoldTickerFallback(null)
     }
-  }, [])
+  }, [refreshPersonalPreview])
 
   useEffect(() => {
     const raw = (searchParams.get('portfolio_tab') || '').trim().toLowerCase()
@@ -209,8 +246,18 @@ export function CustomerPortfolioPanel() {
     const allowed = new Set(['overview', 'active', 'personal', 'transactions', 'charts'])
     if (raw && allowed.has(raw)) {
       setPortfolioTab(raw as PortfolioTabId)
+      return
     }
-  }, [searchParams])
+    if (defaultPortfolioTab) {
+      setPortfolioTab(defaultPortfolioTab)
+    }
+    const actionRaw = (searchParams.get('portfolio_action') || '').trim().toLowerCase()
+    if (actionRaw === 'add' || actionRaw === 'scan') {
+      setPersonalInitialAction(actionRaw)
+    } else if (searchParams.get('scan') === '1') {
+      setPersonalInitialAction('scan')
+    }
+  }, [searchParams, defaultPortfolioTab])
 
   useEffect(() => {
     const nav = portfolioTabsRef.current
@@ -310,8 +357,6 @@ export function CustomerPortfolioPanel() {
   const allocatedTotalPaid = unrealized
     ? parseInrNum(unrealized.allocated_total_paid_inr ?? '')
     : 0
-  const pnlPctStr = unrealized?.unrealized_pnl_percent?.trim() ?? ''
-  const pnlPct = pnlPctStr !== '' ? Number.parseFloat(pnlPctStr) : NaN
 
   const marketValueInr = useMemo(() => {
     const raw = unrealized?.market_value_inr?.trim()
@@ -369,27 +414,32 @@ export function CustomerPortfolioPanel() {
     return (fullPnLPortfolio / fullAllocatedPortfolio) * 100
   }, [fullAllocatedPortfolio, fullPnLPortfolio])
 
-  const showCombinedHoldingsToggle =
-    pt != null &&
-    (personalGramsPortfolio > 0.000001 || personalValueInrPortfolio > 0.51 || personalRecordedBasisInr > 0.51)
+  const personalPnLPctPortfolio = useMemo(() => {
+    if (personalRecordedBasisInr <= 0) return NaN
+    return (personalPnLInrPortfolio / personalRecordedBasisInr) * 100
+  }, [personalRecordedBasisInr, personalPnLInrPortfolio])
 
-  const displayPortfolioGrams = jewelleryVaultOnlyView ? vaultGramsPortfolio : fullGramsPortfolio
+  const isPersonalScope = holdingsScope === 'personal'
 
-  const displayPortfolioMarketInr = jewelleryVaultOnlyView ? marketValueInr : fullMarketValuePortfolio
+  const displayPortfolioGrams = isPersonalScope ? personalGramsPortfolio : fullGramsPortfolio
 
-  const displayPortfolioAllocated = jewelleryVaultOnlyView ? allocatedCost : fullAllocatedPortfolio
+  const displayPortfolioMarketInr = isPersonalScope ? personalValueInrPortfolio : fullMarketValuePortfolio
 
-  const displayPortfolioTotalPaid = jewelleryVaultOnlyView ? allocatedTotalPaid : fullTotalPaidPortfolio
+  const displayPortfolioAllocated = isPersonalScope ? personalRecordedBasisInr : fullAllocatedPortfolio
 
-  const displayPortfolioPnlInr = jewelleryVaultOnlyView ? pnlInr : fullPnLPortfolio
+  const displayPortfolioTotalPaid = isPersonalScope ? personalPurchaseTotalInr : fullTotalPaidPortfolio
 
-  const displayPortfolioPnlPct = jewelleryVaultOnlyView
-    ? Number.isFinite(pnlPct)
-      ? pnlPct
+  const displayPortfolioPnlInr = isPersonalScope ? personalPnLInrPortfolio : fullPnLPortfolio
+
+  const displayPortfolioPnlPct = isPersonalScope
+    ? Number.isFinite(personalPnLPctPortfolio)
+      ? personalPnLPctPortfolio
       : null
     : Number.isFinite(fullPnLPctPortfolio)
       ? fullPnLPctPortfolio
       : null
+
+  const showHoldingsScopeToggle = wallet != null
 
   const live22PerGramPortfolio = useMemo(
     () => resolveLive22kPerGram(spotPayload, goldTickerFallback),
@@ -403,12 +453,6 @@ export function CustomerPortfolioPanel() {
 
   const portfolioHistGranularity: 'intraday' | 'daily' =
     portfolioHistPayload?.granularity === 'intraday' ? 'intraday' : 'daily'
-
-  useEffect(() => {
-    if (!showCombinedHoldingsToggle && jewelleryVaultOnlyView) {
-      setJewelleryVaultOnlyView(false)
-    }
-  }, [showCombinedHoldingsToggle, jewelleryVaultOnlyView])
 
   const cumulativeMetalCostSteps = useMemo(() => {
     const sorted = [...ledger].sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at))
@@ -432,7 +476,10 @@ export function CustomerPortfolioPanel() {
             [
               ['overview', 'Overview'],
               ['active', 'Active'],
-              ['personal', 'Personal'],
+              [
+                'personal',
+                personalHoldingsCount > 0 ? `My gold · ${personalHoldingsCount}` : 'My gold',
+              ],
               ['transactions', 'Transactions'],
               ['charts', 'Charts'],
             ] as const
@@ -470,9 +517,14 @@ export function CustomerPortfolioPanel() {
               summaryPnlPct={displayPortfolioPnlPct}
               vaultGramsPortfolio={vaultGramsPortfolio}
               personalGramsPortfolio={personalGramsPortfolio}
-              holdingsJewelleryVaultOnly={jewelleryVaultOnlyView}
-              onHoldingsJewelleryVaultOnlyChange={setJewelleryVaultOnlyView}
-              showHoldingsScopeToggle={showCombinedHoldingsToggle}
+              personalValueInrPortfolio={personalValueInrPortfolio}
+              personalHoldingsCount={personalHoldingsCount}
+              personalPreview={personalPreview}
+              holdingsScope={holdingsScope}
+              onHoldingsScopeChange={setHoldingsScope}
+              showHoldingsScopeToggle={showHoldingsScopeToggle}
+              onNavigatePersonalAction={navigatePersonalAction}
+              onViewPersonal={() => setPortfolioTab('personal')}
               masked={privacyMasked}
               portfolioHistoryPoints={portfolioHistPoints}
               portfolioHistoryGranularity={portfolioHistGranularity}
@@ -541,11 +593,11 @@ export function CustomerPortfolioPanel() {
               </header>
               <div className="pf-card__viz pf-card__viz--mkt-board">
                 <PortfolioCostVsMarketBoard
-                  allocatedCost={allocatedCost}
-                  marketValue={marketValueInr}
-                  pnlInr={pnlInr}
-                  pnlPct={Number.isFinite(pnlPct) ? pnlPct : null}
-                  cumulativeMetalCostSteps={cumulativeMetalCostSteps}
+                  allocatedCost={displayPortfolioAllocated}
+                  marketValue={displayPortfolioMarketInr}
+                  pnlInr={displayPortfolioPnlInr}
+                  pnlPct={displayPortfolioPnlPct}
+                  cumulativeMetalCostSteps={isPersonalScope ? [] : cumulativeMetalCostSteps}
                 />
               </div>
             </article>
@@ -598,7 +650,13 @@ export function CustomerPortfolioPanel() {
           </div>
         ) : null}
 
-        {portfolioTab === 'personal' ? <CustomerPersonalHoldingsPanel onChanged={refresh} /> : null}
+        {portfolioTab === 'personal' ? (
+          <CustomerPersonalHoldingsPanel
+            onChanged={refresh}
+            initialAction={personalInitialAction}
+            onInitialActionConsumed={clearPersonalInitialAction}
+          />
+        ) : null}
 
         {portfolioTab === 'transactions' ? (
           <article className="pf-card pf-card--lift pf-card--wide pf-card--ledger-table-wrap">

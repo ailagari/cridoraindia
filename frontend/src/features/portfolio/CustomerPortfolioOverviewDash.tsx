@@ -1,10 +1,12 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { dashboardCopy } from '@/content/dashboardCopy'
 import { TablePagination } from '@/components/ui'
 import type { FractionalLedgerRowDTO, GoldWalletDTO, PortfolioTotalsDTO } from '@/lib/goldTransferApi'
 import { vaultRowTotalGrams, type VaultRowDTO } from '@/lib/goldTransferApi'
+import type { PersonalHoldingDTO } from '@/lib/personalHoldingsApi'
 import type { SpotPricesPayload } from '@/lib/marketplaceApi'
+import type { HoldingsScope } from './holdingsScope'
 import {
   PortfolioDonut,
   PortfolioHistoryValuationChart,
@@ -16,9 +18,15 @@ import { useTablePagination } from '@/hooks/useTablePagination'
 const DONUT_COLORS = ['#c9a840', '#3b9eff', '#67e8f9', '#a78bfa', '#34d399', '#f472b6', '#38bdf8']
 
 const OV_RECENT_TX_PAGE = 5
+const copy = dashboardCopy.customer
 
 function parseG(s: string | undefined): number {
   const n = Number.parseFloat(String(s ?? '0'))
+  return Number.isFinite(n) ? n : 0
+}
+
+function parseN(s: string): number {
+  const n = Number.parseFloat(s)
   return Number.isFinite(n) ? n : 0
 }
 
@@ -58,7 +66,6 @@ export function CustomerPortfolioOverviewDash(props: {
   vaults: VaultRowDTO[]
   fractionalLedger: FractionalLedgerRowDTO[]
   heldGramsSum: number
-  /** Combined or jewellery-only totals (matches holdings scope toggle). */
   summaryGrams: number
   summaryMarketValueInr: number
   summaryAllocatedCost: number
@@ -67,9 +74,14 @@ export function CustomerPortfolioOverviewDash(props: {
   summaryPnlPct: number | null
   vaultGramsPortfolio: number
   personalGramsPortfolio: number
-  holdingsJewelleryVaultOnly: boolean
-  onHoldingsJewelleryVaultOnlyChange: (jewelleryVaultOnly: boolean) => void
+  personalValueInrPortfolio: number
+  personalHoldingsCount: number
+  personalPreview: PersonalHoldingDTO[]
+  holdingsScope: HoldingsScope
+  onHoldingsScopeChange: (scope: HoldingsScope) => void
   showHoldingsScopeToggle: boolean
+  onNavigatePersonalAction: (action: 'add' | 'scan') => void
+  onViewPersonal: () => void
   masked: boolean
   portfolioHistoryPoints: PortfolioHistoryValuePoint[]
   portfolioHistoryGranularity: 'intraday' | 'daily'
@@ -95,9 +107,14 @@ export function CustomerPortfolioOverviewDash(props: {
     summaryPnlPct,
     vaultGramsPortfolio,
     personalGramsPortfolio,
-    holdingsJewelleryVaultOnly,
-    onHoldingsJewelleryVaultOnlyChange,
+    personalValueInrPortfolio,
+    personalHoldingsCount,
+    personalPreview,
+    holdingsScope,
+    onHoldingsScopeChange,
     showHoldingsScopeToggle,
+    onNavigatePersonalAction,
+    onViewPersonal,
     masked,
     portfolioHistoryPoints,
     portfolioHistoryGranularity,
@@ -108,6 +125,9 @@ export function CustomerPortfolioOverviewDash(props: {
     onViewLedger,
     onTogglePrivacy,
   } = props
+
+  const [trackMenuOpen, setTrackMenuOpen] = useState(false)
+  const isPersonalScope = holdingsScope === 'personal'
 
   const donutSegs = useMemo(() => {
     if (vaults.length === 0) {
@@ -139,19 +159,22 @@ export function CustomerPortfolioOverviewDash(props: {
     ? recentTxSorted.slice(recentPg.sliceStart, recentPg.sliceEnd)
     : recentTxSorted
 
+  const showPersonalPreview =
+    isPersonalScope || personalGramsPortfolio > 1e-6 || personalHoldingsCount === 0
+
+  const heroEyebrow = isPersonalScope ? 'Personal gold holdings' : 'Total gold holdings'
+
   return (
     <>
       <div className="ph">
         <h1>Portfolio Overview</h1>
-        <p>Live valuation, P&amp;L, and transaction history across all partner jewellers.</p>
+        <p>Live valuation, P&amp;L, and your gold across home records and partner jewellers.</p>
       </div>
 
       <div className="hero mb20">
         <div className="row row-b wrap" style={{ justifyContent: 'space-between', alignItems: 'flex-start', gap: 16 }}>
           <div>
-            <div className="hero-eyebrow">
-              {holdingsJewelleryVaultOnly ? 'Jewellery vault gold' : 'Total gold holdings'}
-            </div>
+            <div className="hero-eyebrow">{heroEyebrow}</div>
             <div className="hero-grams pf-portfolio-grams--gold-glow">
               {fmtGramsMasked(summaryGrams, masked, 3)}
               <span className="unit">g</span>
@@ -159,7 +182,7 @@ export function CustomerPortfolioOverviewDash(props: {
             <div className="hero-inr" style={{ marginTop: 6 }}>
               ≈ ₹{fmtInr(summaryMarketValueInr, masked)} at today&apos;s board rate
             </div>
-            {showHoldingsScopeToggle && !holdingsJewelleryVaultOnly && personalGramsPortfolio > 1e-6 ? (
+            {!isPersonalScope && personalGramsPortfolio > 1e-6 ? (
               <div className="t-fa fs11" style={{ marginTop: 8, color: 'var(--ink3)' }}>
                 Vault &amp; jewellers{' '}
                 <strong className="tn" style={{ color: 'var(--gold-hi)' }}>
@@ -169,32 +192,98 @@ export function CustomerPortfolioOverviewDash(props: {
                 <strong className="tn">{fmtGramsMasked(personalGramsPortfolio, masked, 3)} g</strong>
               </div>
             ) : null}
-          </div>
-          <div className="row wrap pf-portfolio-hero-actions" style={{ alignSelf: 'flex-start', gap: 8, alignItems: 'center' }}>
-            {showHoldingsScopeToggle ? (
-              <div
-                className="pf-holdings-scope-toggle"
-                role="group"
-                aria-label="Holdings to include in totals"
-              >
+            {isPersonalScope && vaultGramsPortfolio > 1e-6 ? (
+              <div className="t-fa fs11 pf-holdings-scope-hint" style={{ marginTop: 8, color: 'var(--ink3)' }}>
+                {copy.holdingsScope.vaultContext}:{' '}
+                <strong className="tn">{fmtGramsMasked(vaultGramsPortfolio, masked, 3)} g</strong>
+                {' · '}
                 <button
                   type="button"
-                  className={`pf-holdings-scope-toggle__btn${!holdingsJewelleryVaultOnly ? ' is-active' : ''}`}
-                  onClick={() => onHoldingsJewelleryVaultOnlyChange(false)}
-                  aria-pressed={!holdingsJewelleryVaultOnly}
+                  className="pf-holdings-scope-hint__link"
+                  onClick={() => onHoldingsScopeChange('all')}
                 >
-                  All holdings
-                </button>
-                <button
-                  type="button"
-                  className={`pf-holdings-scope-toggle__btn${holdingsJewelleryVaultOnly ? ' is-active' : ''}`}
-                  onClick={() => onHoldingsJewelleryVaultOnlyChange(true)}
-                  aria-pressed={holdingsJewelleryVaultOnly}
-                >
-                  Jewellery only
+                  {copy.holdingsScope.switchToAll}
                 </button>
               </div>
             ) : null}
+          </div>
+          <div className="row wrap pf-portfolio-hero-actions" style={{ alignSelf: 'flex-start', gap: 8, alignItems: 'center' }}>
+            {showHoldingsScopeToggle ? (
+              <div className="pf-holdings-scope-wrap">
+                <div
+                  className="pf-holdings-scope-toggle"
+                  role="group"
+                  aria-label="Holdings to include in totals"
+                >
+                  <button
+                    type="button"
+                    className={`pf-holdings-scope-toggle__btn${isPersonalScope ? ' is-active' : ''}`}
+                    onClick={() => onHoldingsScopeChange('personal')}
+                    aria-pressed={isPersonalScope}
+                    title={copy.holdingsScope.personalHint}
+                  >
+                    {copy.holdingsScope.personal}
+                  </button>
+                  <button
+                    type="button"
+                    className={`pf-holdings-scope-toggle__btn${!isPersonalScope ? ' is-active' : ''}`}
+                    onClick={() => onHoldingsScopeChange('all')}
+                    aria-pressed={!isPersonalScope}
+                    title={copy.holdingsScope.allHint}
+                  >
+                    {copy.holdingsScope.all}
+                  </button>
+                </div>
+                <p className="pf-holdings-scope-toggle__sub t-fa fs11">
+                  {isPersonalScope ? copy.holdingsScope.personalHint : copy.holdingsScope.allHint}
+                </p>
+              </div>
+            ) : null}
+            <div className="pf-track-gold-split">
+              <button
+                type="button"
+                className="btn btn-outline btn-sm pf-track-gold-split__main"
+                onClick={() => onNavigatePersonalAction('add')}
+              >
+                {copy.personalOverview.trackGold}
+              </button>
+              <div className={`pf-track-gold-split__menu${trackMenuOpen ? ' is-open' : ''}`}>
+                <button
+                  type="button"
+                  className="btn btn-outline btn-sm pf-track-gold-split__chev"
+                  aria-expanded={trackMenuOpen}
+                  aria-haspopup="menu"
+                  aria-label="More track gold options"
+                  onClick={() => setTrackMenuOpen((o) => !o)}
+                >
+                  ▾
+                </button>
+                {trackMenuOpen ? (
+                  <div className="pf-track-gold-split__dropdown" role="menu">
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setTrackMenuOpen(false)
+                        onNavigatePersonalAction('scan')
+                      }}
+                    >
+                      {copy.personalOverview.scanInvoice}
+                    </button>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setTrackMenuOpen(false)
+                        onNavigatePersonalAction('add')
+                      }}
+                    >
+                      {copy.personalOverview.enterManually}
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+            </div>
             {kycVerified ? (
               <span className="bdg bdg-ok" style={{ padding: '4px 10px', fontSize: '0.64rem' }}>
                 KYC verified
@@ -262,14 +351,32 @@ export function CustomerPortfolioOverviewDash(props: {
               ) : null}
             </div>
           </div>
-          <div className="hero-stat">
-            <div className="hs-lbl">Redeemable</div>
-            <div className="hs-val c-gold tn">{fmtGramsMasked(redeemG, masked, 3)} g</div>
-          </div>
-          <div className="hero-stat">
-            <div className="hs-lbl">Locked in loan</div>
-            <div className="hs-val c-warn tn">{fmtGramsMasked(lockedLoanG, masked, 3)} g</div>
-          </div>
+          {isPersonalScope ? (
+            <>
+              <div className="hero-stat">
+                <div className="hs-lbl">Pieces tracked</div>
+                <div className="hs-val tn" style={{ color: '#a78bfa' }}>
+                  {personalHoldingsCount}
+                </div>
+              </div>
+              <div className="hero-stat">
+                <div className="hs-lbl">{copy.holdingsScope.vaultContext}</div>
+                <div className="hs-val c-gold tn">{fmtGramsMasked(vaultGramsPortfolio, masked, 3)} g</div>
+                <div className="hs-hint">Not in personal scope</div>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="hero-stat">
+                <div className="hs-lbl">Redeemable</div>
+                <div className="hs-val c-gold tn">{fmtGramsMasked(redeemG, masked, 3)} g</div>
+              </div>
+              <div className="hero-stat">
+                <div className="hs-lbl">Locked in loan</div>
+                <div className="hs-val c-warn tn">{fmtGramsMasked(lockedLoanG, masked, 3)} g</div>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -298,14 +405,45 @@ export function CustomerPortfolioOverviewDash(props: {
           </div>
           <div className="stat-sub">Recurring plan</div>
         </div>
-        <div className="stat e">
+        <button
+          type="button"
+          className="stat e pf-personal-stat-card"
+          onClick={onViewPersonal}
+          aria-label="View personal gold holdings"
+        >
           <div className="stat-lbl">Personal gold</div>
           <div className="stat-val tn" style={{ color: '#a78bfa' }}>
             {fmtGramsMasked(personalGramsPortfolio, masked, 3)}
             <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--ink2)' }}> g</span>
           </div>
-          <div className="stat-sub">Jewellery you recorded</div>
-        </div>
+          <div className="stat-sub">
+            {personalHoldingsCount > 0
+              ? `${personalHoldingsCount} piece${personalHoldingsCount === 1 ? '' : 's'} · ≈ ₹${fmtInr(personalValueInrPortfolio, masked)}`
+              : 'Jewellery you recorded'}
+          </div>
+          <div className="pf-personal-stat-card__actions">
+            <span
+              className="pf-personal-stat-card__chip"
+              role="presentation"
+              onClick={(e) => {
+                e.stopPropagation()
+                onNavigatePersonalAction('add')
+              }}
+            >
+              {copy.personalOverview.addShort}
+            </span>
+            <span
+              className="pf-personal-stat-card__chip pf-personal-stat-card__chip--muted"
+              role="presentation"
+              onClick={(e) => {
+                e.stopPropagation()
+                onNavigatePersonalAction('scan')
+              }}
+            >
+              {copy.personalOverview.scanBill}
+            </span>
+          </div>
+        </button>
         <div className="stat d">
           <div className="stat-lbl">Live 22K rate</div>
           <div className="stat-val c-gold tn">
@@ -314,6 +452,65 @@ export function CustomerPortfolioOverviewDash(props: {
           <div className="stat-sub">Updates every ~30s</div>
         </div>
       </div>
+
+      {showPersonalPreview ? (
+        <article className="card card-p pf-personal-preview mb20">
+          <div className="row-b mb12">
+            <div>
+              <div className="sec-title">{copy.personalOverview.previewTitle}</div>
+              <div className="sec-sub t-fa fs11">{copy.personalOverview.previewLiveHint}</div>
+            </div>
+            {personalHoldingsCount > 0 ? (
+              <button type="button" className="btn btn-ghost btn-sm" onClick={onViewPersonal}>
+                {copy.personalOverview.viewAll}
+              </button>
+            ) : null}
+          </div>
+          {personalHoldingsCount === 0 ? (
+            <div className="pf-personal-preview__empty">
+              <div className="pf-personal-preview__empty-ico" aria-hidden>
+                ✨
+              </div>
+              <p className="pf-personal-preview__empty-lead">{copy.personalOverview.previewEmptyLead}</p>
+              <p className="t-fa fs11" style={{ color: 'var(--ink3)', margin: '0 0 16px' }}>
+                {dashboardCopy.customer.empty.personalHoldingsHero}
+              </p>
+              <div className="pf-personal-preview__empty-actions">
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm"
+                  onClick={() => onNavigatePersonalAction('scan')}
+                >
+                  {copy.personalOverview.scanInvoice}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-sm"
+                  onClick={() => onNavigatePersonalAction('add')}
+                >
+                  {copy.personalOverview.enterManually}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <ul className="pf-personal-preview__list">
+              {personalPreview.map((h) => (
+                <li key={h.id} className="pf-personal-preview__row">
+                  <div>
+                    <strong className="pf-personal-preview__title">{h.title}</strong>
+                    <span className="pf-personal-preview__meta tabular">
+                      {h.weight_grams} g · {h.purity}
+                    </span>
+                  </div>
+                  <span className="pf-personal-preview__val tabular">
+                    {masked ? '••••' : `₹${parseN(h.estimated_current_value_inr).toLocaleString('en-IN')}`}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </article>
+      ) : null}
 
       <div className="g2 mb20">
         <div className="card card-p">

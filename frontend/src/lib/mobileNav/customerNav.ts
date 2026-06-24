@@ -31,6 +31,7 @@ export const CUSTOMER_NAV_GROUPS: DashboardNavGroup[] = [
     icon: 'portfolio',
     items: [
       { sectionKey: 'portfolio_overview', label: 'Overview' },
+      { sectionKey: 'portfolio_personal', label: 'My gold' },
       { sectionKey: 'portfolio_holdings', label: 'Vault' },
       { sectionKey: 'portfolio_vault_ids', label: 'Vault ID' },
     ],

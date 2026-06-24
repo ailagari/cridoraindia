@@ -120,13 +120,20 @@ export function AdminSystemMessagesPanel() {
           is_active: edit.is_active,
         },
       })
-      const data = (await res.json().catch(() => ({}))) as { detail?: string }
+      const data = (await res.json().catch(() => ({}))) as SystemMessageRow & { detail?: string }
       if (!res.ok) {
         setErr(typeof data.detail === 'string' ? data.detail : 'Save failed.')
         return
       }
+      setRows((prev) => prev.map((row) => (row.id === id ? { ...row, ...data } : row)))
+      setEdit({
+        title_template: data.title_template,
+        body_template: data.body_template,
+        alternative_titles: [...(data.alternative_titles || [])],
+        alternative_bodies: [...(data.alternative_bodies || [])],
+        is_active: data.is_active,
+      })
       setOkMsg('Saved. The system will use this wording (and rotate alternatives) on the next send.')
-      await load()
     } finally {
       setSaveBusy(false)
     }

@@ -2,6 +2,27 @@
 
 export const dashboardCopy = {
   customer: {
+    holdingsScope: {
+      personal: 'Personal holdings',
+      personalHint: 'Gold you recorded at home',
+      all: 'All holdings',
+      allHint: 'Personal + jeweller vault',
+      vaultContext: 'Jeweller vault',
+      switchToAll: 'switch to All holdings to include',
+      allIncludesVault: 'Includes gold at verified jewellers on Cridora',
+    },
+    personalOverview: {
+      previewTitle: 'Your personal gold',
+      previewEmptyLead: 'Track wedding chains, family heirlooms, and shop purchases — live value from today’s board rate.',
+      previewLiveHint: 'Updates with board rate every ~30s',
+      trackGold: 'Track gold',
+      scanInvoice: 'Scan invoice',
+      enterManually: 'Enter manually',
+      addFirstPiece: 'Add your first piece',
+      viewAll: 'View all',
+      addShort: '+ Add',
+      scanBill: 'Scan bill',
+    },
     greeting: {
       splashTagline: 'Your gold has a home here.',
     },
