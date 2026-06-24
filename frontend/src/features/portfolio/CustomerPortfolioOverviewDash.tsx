@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { dashboardCopy } from '@/content/dashboardCopy'
 import { TablePagination } from '@/components/ui'
@@ -127,7 +127,27 @@ export function CustomerPortfolioOverviewDash(props: {
   } = props
 
   const [trackMenuOpen, setTrackMenuOpen] = useState(false)
+  const trackMenuRef = useRef<HTMLDivElement>(null)
   const isPersonalScope = holdingsScope === 'personal'
+
+  useEffect(() => {
+    if (!trackMenuOpen) return
+    const onPointerDown = (e: MouseEvent | TouchEvent) => {
+      const el = trackMenuRef.current
+      if (el && !el.contains(e.target as Node)) setTrackMenuOpen(false)
+    }
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setTrackMenuOpen(false)
+    }
+    document.addEventListener('mousedown', onPointerDown)
+    document.addEventListener('touchstart', onPointerDown)
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown)
+      document.removeEventListener('touchstart', onPointerDown)
+      document.removeEventListener('keydown', onKeyDown)
+    }
+  }, [trackMenuOpen])
 
   const donutSegs = useMemo(() => {
     if (vaults.length === 0) {
@@ -239,49 +259,87 @@ export function CustomerPortfolioOverviewDash(props: {
                 </p>
               </div>
             ) : null}
-            <div className="pf-track-gold-split">
+            <div className="pf-track-gold-split" ref={trackMenuRef}>
               <button
                 type="button"
-                className="btn btn-outline btn-sm pf-track-gold-split__main"
+                className="pf-track-gold-split__main"
                 onClick={() => onNavigatePersonalAction('add')}
               >
+                <span className="pf-track-gold-split__icon" aria-hidden>
+                  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6">
+                    <path d="M10 3v14M3 10h14" strokeLinecap="round" />
+                  </svg>
+                </span>
                 {copy.personalOverview.trackGold}
               </button>
               <div className={`pf-track-gold-split__menu${trackMenuOpen ? ' is-open' : ''}`}>
                 <button
                   type="button"
-                  className="btn btn-outline btn-sm pf-track-gold-split__chev"
+                  className="pf-track-gold-split__chev"
                   aria-expanded={trackMenuOpen}
                   aria-haspopup="menu"
-                  aria-label="More track gold options"
+                  aria-label="More ways to track gold"
                   onClick={() => setTrackMenuOpen((o) => !o)}
                 >
-                  ▾
+                  <svg
+                    className="pf-track-gold-split__chev-icon"
+                    viewBox="0 0 12 12"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    aria-hidden
+                  >
+                    <path d="M3 4.5L6 7.5L9 4.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
                 </button>
-                {trackMenuOpen ? (
-                  <div className="pf-track-gold-split__dropdown" role="menu">
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={() => {
-                        setTrackMenuOpen(false)
-                        onNavigatePersonalAction('scan')
-                      }}
-                    >
-                      {copy.personalOverview.scanInvoice}
-                    </button>
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={() => {
-                        setTrackMenuOpen(false)
-                        onNavigatePersonalAction('add')
-                      }}
-                    >
-                      {copy.personalOverview.enterManually}
-                    </button>
-                  </div>
-                ) : null}
+                <div
+                  className="pf-track-gold-split__dropdown"
+                  role="menu"
+                  hidden={!trackMenuOpen}
+                >
+                  <p className="pf-track-gold-split__dropdown-label t-fa">Add personal gold</p>
+                  <button
+                    type="button"
+                    className="pf-track-gold-split__item pf-track-gold-split__item--featured"
+                    role="menuitem"
+                    onClick={() => {
+                      setTrackMenuOpen(false)
+                      onNavigatePersonalAction('scan')
+                    }}
+                  >
+                    <span className="pf-track-gold-split__item-icon pf-track-gold-split__item-icon--scan" aria-hidden>
+                      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
+                        <rect x="3" y="5" width="14" height="11" rx="1.5" />
+                        <path d="M7 3h6M10 3v2" strokeLinecap="round" />
+                        <circle cx="10" cy="10.5" r="2.25" />
+                      </svg>
+                    </span>
+                    <span className="pf-track-gold-split__item-text">
+                      <strong>{copy.personalOverview.scanInvoice}</strong>
+                      <span>{copy.personalOverview.scanInvoiceHint}</span>
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    className="pf-track-gold-split__item"
+                    role="menuitem"
+                    onClick={() => {
+                      setTrackMenuOpen(false)
+                      onNavigatePersonalAction('add')
+                    }}
+                  >
+                    <span className="pf-track-gold-split__item-icon" aria-hidden>
+                      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
+                        <path d="M4 6h12M4 10h8M4 14h10" strokeLinecap="round" />
+                        <rect x="3" y="4" width="14" height="12" rx="1.5" />
+                      </svg>
+                    </span>
+                    <span className="pf-track-gold-split__item-text">
+                      <strong>{copy.personalOverview.enterManually}</strong>
+                      <span>{copy.personalOverview.enterManuallyHint}</span>
+                    </span>
+                  </button>
+                </div>
               </div>
             </div>
             {kycVerified ? (
