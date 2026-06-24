@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
 from decimal import Decimal, InvalidOperation
 
@@ -17,6 +18,7 @@ from apps.accounts.models import PersonalGoldHolding
 from apps.accounts.services.personal_holdings import validate_document_upload
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 _EXTRACT_PROMPT = """You extract gold jewellery purchase details from Indian jeweller invoices (photos, PDF scans, screenshots).
 Text may be English, Malayalam (മലയാളം), Tamil, Hindi, or mixed.
@@ -69,14 +71,23 @@ _MIME_BY_EXT = {
     ".webp": "image/webp",
 }
 _PDF_MAX_PAGES = 3
+# gemini-2.0-flash was shut down 2026-06-01; try current vision-capable models in order.
+_GEMINI_MODEL_FALLBACKS = (
+    "gemini-2.5-flash",
+    "gemini-3.5-flash",
+    "gemini-1.5-flash",
+)
 
 
 def _max_upload_bytes() -> int:
     return int(getattr(settings, "PERSONAL_HOLDING_MAX_UPLOAD_BYTES", 8 * 1024 * 1024))
 
 
-def _gemini_model_name() -> str:
-    return (getattr(settings, "GEMINI_INVOICE_MODEL", None) or "gemini-2.0-flash").strip()
+def _gemini_model_candidates() -> list[str]:
+    configured = (getattr(settings, "GEMINI_INVOICE_MODEL", None) or "").strip()
+    if configured:
+        return [configured, *[m for m in _GEMINI_MODEL_FALLBACKS if m != configured]]
+    return list(_GEMINI_MODEL_FALLBACKS)
 
 
 def _file_ext(name: str) -> str:
@@ -257,6 +268,42 @@ def _normalize_extracted(data: dict) -> dict:
     return out
 
 
+def _response_text(response) -> str:
+    text = getattr(response, "text", None) or ""
+    if text:
+        return text
+    candidates = getattr(response, "candidates", None) or []
+    if not candidates:
+        return ""
+    content = getattr(candidates[0], "content", None)
+    if not content:
+        return ""
+    parts = getattr(content, "parts", None) or []
+    return "".join(getattr(p, "text", "") or "" for p in parts)
+
+
+def _response_block_reason(response) -> str | None:
+    feedback = getattr(response, "prompt_feedback", None)
+    if feedback:
+        block = getattr(feedback, "block_reason", None)
+        if block:
+            return str(block)
+    candidates = getattr(response, "candidates", None) or []
+    if candidates:
+        finish = getattr(candidates[0], "finish_reason", None)
+        if finish and str(finish) not in ("STOP", "FinishReason.STOP", "1"):
+            return str(finish)
+    return None
+
+
+def _generate_with_model(genai, model_name: str, parts: list):
+    model = genai.GenerativeModel(model_name)
+    return model.generate_content(
+        parts,
+        generation_config={"temperature": 0.1, "response_mime_type": "application/json"},
+    )
+
+
 def _call_gemini_vision(images: list[tuple[str, bytes]]) -> dict:
     import google.generativeai as genai
 
@@ -265,7 +312,6 @@ def _call_gemini_vision(images: list[tuple[str, bytes]]) -> dict:
         raise RuntimeError("not_configured")
 
     genai.configure(api_key=api_key)
-    model = genai.GenerativeModel(_gemini_model_name())
     parts: list = [_EXTRACT_PROMPT]
     for mime_type, image_bytes in images:
         parts.append({"mime_type": mime_type, "data": image_bytes})
@@ -274,18 +320,27 @@ def _call_gemini_vision(images: list[tuple[str, bytes]]) -> dict:
             f"This invoice has {len(images)} page(s). Combine information from all pages into one response."
         )
 
-    response = model.generate_content(
-        parts,
-        generation_config={"temperature": 0.1, "response_mime_type": "application/json"},
-    )
-    text = getattr(response, "text", None) or ""
-    if not text and response.candidates:
-        content_parts = response.candidates[0].content.parts
-        text = "".join(getattr(p, "text", "") or "" for p in content_parts)
-    parsed = _parse_json_from_model_text(text)
-    if not parsed:
-        raise ValueError("Could not parse model response.")
-    return _normalize_extracted(parsed)
+    last_error: Exception | None = None
+    for model_name in _gemini_model_candidates():
+        try:
+            response = _generate_with_model(genai, model_name, parts)
+            block_reason = _response_block_reason(response)
+            text = _response_text(response)
+            if block_reason and not text:
+                raise ValueError(f"Model blocked response: {block_reason}")
+            parsed = _parse_json_from_model_text(text)
+            if not parsed:
+                raise ValueError("Could not parse model response.")
+            logger.info("Invoice import succeeded with model %s", model_name)
+            return _normalize_extracted(parsed)
+        except Exception as exc:
+            last_error = exc
+            logger.warning("Invoice import failed with model %s: %s", model_name, exc)
+            continue
+
+    if last_error:
+        raise last_error
+    raise ValueError("No Gemini model available for invoice import.")
 
 
 class InvoiceImportAnalyzeView(APIView):
@@ -333,11 +388,16 @@ class InvoiceImportAnalyzeView(APIView):
                 {"detail": "Invoice import not configured."},
                 status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
-        except Exception:
-            return Response(
-                {"detail": "Could not analyze invoice. Try again or enter details manually."},
-                status=status.HTTP_502_BAD_GATEWAY,
-            )
+        except Exception as exc:
+            logger.exception("Invoice import analyze failed")
+            detail = "Could not analyze invoice. Try again or enter details manually."
+            msg = str(exc).strip()
+            if msg and msg not in ("Could not parse model response.", "No Gemini model available for invoice import."):
+                if "block" in msg.lower() or "safety" in msg.lower():
+                    detail = "Could not read this bill (content blocked). Try a clearer photo or enter details manually."
+                elif "404" in msg or "not found" in msg.lower() or "model" in msg.lower():
+                    detail = "Invoice AI model unavailable. Please try again shortly or enter details manually."
+            return Response({"detail": detail}, status=status.HTTP_502_BAD_GATEWAY)
 
         if not extracted.get("is_legible"):
             return Response(
