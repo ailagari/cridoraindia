@@ -92,7 +92,9 @@ export default defineConfig(({ mode }) => {
           ],
         },
         injectManifest: {
-          globPatterns: ['**/*.{js,css,html,ico,svg,png}'],
+          /** Do not precache index.html — stale shell after deploy references deleted hashed JS. */
+          globPatterns: ['**/*.{js,css,ico,svg,png}'],
+          globIgnores: ['**/index.html'],
         },
         devOptions: {
           enabled: true,

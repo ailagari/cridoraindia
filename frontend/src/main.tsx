@@ -1,4 +1,4 @@
-import { StrictMode, type ReactNode } from 'react'
+import { StrictMode, useEffect, type ReactNode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from '@/App'
 import { PwaUpdateBar } from '@/components/PwaUpdateBar'
@@ -10,9 +10,28 @@ import { initPlatformShellClasses } from '@/lib/platformShell'
 initPlatformShellClasses()
 applyDocumentLocale(readStoredPublicLocale())
 
+const STALE_CHUNK_RELOAD_KEY = 'cridora-stale-chunk-reload'
+
+function isStaleAssetBootError(message: string): boolean {
+  return /Failed to fetch dynamically imported module|Loading chunk \d+ failed|Importing a module script failed|error loading dynamically imported module|404.*\.js/i.test(
+    message,
+  )
+}
+
 /** Client-side bootstrap failures — use branded shell, not raw error text. */
 function showBootFailure(message: string): void {
   console.error('[Cridora boot]', message)
+  if (isStaleAssetBootError(message)) {
+    try {
+      if (!sessionStorage.getItem(STALE_CHUNK_RELOAD_KEY)) {
+        sessionStorage.setItem(STALE_CHUNK_RELOAD_KEY, '1')
+        window.location.reload()
+        return
+      }
+    } catch {
+      /* private mode */
+    }
+  }
   try {
     sessionStorage.setItem(
       'cridora-offline-return',
@@ -43,6 +62,13 @@ window.addEventListener('unhandledrejection', (event) => {
 })
 
 function BootShell({ children }: { children: ReactNode }) {
+  useEffect(() => {
+    try {
+      sessionStorage.removeItem(STALE_CHUNK_RELOAD_KEY)
+    } catch {
+      /* private mode */
+    }
+  }, [])
   return (
     <StrictMode>
       {children}

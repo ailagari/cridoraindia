@@ -397,8 +397,9 @@
 
           if (maintenance) {
             headline.textContent = 'Polishing the vault…'
-            subtitle.textContent =
-              'Cridora is temporarily down for maintenance or experiencing an issue. Your data is safe — we\'ll reload automatically when service is restored.'
+            subtitle.textContent = bootFailure
+              ? 'The app was updated — tap Try again to load the latest version. Your data is safe.'
+              : 'Cridora is temporarily down for maintenance or experiencing an issue. Your data is safe — we\'ll reload automatically when service is restored.'
             mlLine.textContent = 'സേവനം താൽക്കാലികമായി ലഭ്യമല്ല — ഞങ്ങൾ ഉടൻ തിരിച്ചെത്തും.'
             statusLabel.textContent = 'Maintenance'
             footNote.textContent = 'Service interruption · Cridora India'
@@ -449,6 +450,21 @@
             })
         }
 
+        function clearPwaCachesForRecovery() {
+          return Promise.all([
+            typeof caches !== 'undefined'
+              ? caches.keys().then(function (keys) {
+                  return Promise.all(keys.map(function (k) { return caches.delete(k) }))
+                })
+              : Promise.resolve(),
+            typeof navigator !== 'undefined' && navigator.serviceWorker
+              ? navigator.serviceWorker.getRegistrations().then(function (regs) {
+                  return Promise.all(regs.map(function (r) { return r.unregister() }))
+                })
+              : Promise.resolve(),
+          ]).catch(function () { /* best effort */ })
+        }
+
         function scheduleReload() {
           if (reloading) return
           reloading = true
@@ -463,8 +479,17 @@
           statusLabel.textContent = 'Back online'
           retryBtn.disabled = true
           retryBtn.textContent = 'Reloading…'
+          var target = returnTarget()
+          var bust = bootFailure ? (target.indexOf('?') >= 0 ? '&' : '?') + '_fresh=' + Date.now() : ''
           window.setTimeout(function () {
-            window.location.replace(returnTarget())
+            var done = function () {
+              window.location.replace(target + bust)
+            }
+            if (bootFailure) {
+              clearPwaCachesForRecovery().then(done)
+            } else {
+              done()
+            }
           }, RELOAD_DELAY_MS)
         }
 
@@ -490,7 +515,13 @@
         function tryReload() {
           if (reloading) return
           retryBtn.disabled = true
-          retryBtn.textContent = 'Checking…'
+          retryBtn.textContent = bootFailure ? 'Refreshing app…' : 'Checking…'
+          if (bootFailure) {
+            clearPwaCachesForRecovery().then(function () {
+              scheduleReload()
+            })
+            return
+          }
           probeLive().then(function (live) {
             if (live) {
               scheduleReload()
