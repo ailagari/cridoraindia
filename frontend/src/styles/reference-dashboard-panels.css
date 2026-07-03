@@ -666,37 +666,6 @@ html[data-theme='dark'] .ref-dash-shell .dash-content .pf-holdings-scope-toggle_
     max-width: none;
   }
 
-  .ref-dash-shell .dash-content .pf-portfolio-hero__toolbar {
-    flex-direction: column;
-    align-items: stretch;
-    justify-content: flex-start;
-    flex: 0 0 auto;
-    padding: 10px 12px;
-    gap: 10px;
-  }
-
-  .ref-dash-shell .dash-content .pf-portfolio-hero__actions-primary {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    width: 100%;
-    flex: 0 0 auto;
-    min-height: 0;
-  }
-
-  .ref-dash-shell .dash-content .pf-portfolio-hero__actions-primary .pf-track-gold-split {
-    width: 100%;
-    flex: 0 0 auto;
-  }
-
-  .ref-dash-shell .dash-content .pf-portfolio-hero__actions-meta {
-    flex: 0 0 auto;
-    justify-content: space-between;
-    width: 100%;
-    padding-top: 2px;
-    border-top: 1px solid rgba(201, 168, 64, 0.12);
-  }
-
   .ref-dash-shell .dash-content .stat-row--holdings {
     grid-template-columns: 1fr 1fr;
   }
@@ -806,8 +775,17 @@ html[data-theme='dark'] .ref-dash-shell .dash-content .pf-holdings-scope-toggle_
   flex-wrap: wrap;
   align-items: stretch;
   gap: 8px;
-  flex: 1 1 220px;
+  flex: 0 0 auto;
   min-width: 0;
+  width: 100%;
+}
+
+@media (min-width: 768px) {
+  .ref-dash-shell .dash-content .pf-portfolio-hero__actions-primary {
+    flex: 1 1 auto;
+    min-width: 220px;
+    width: auto;
+  }
 }
 
 .ref-dash-shell .dash-content .pf-portfolio-hero__actions-meta {
@@ -821,6 +799,69 @@ html[data-theme='dark'] .ref-dash-shell .dash-content .pf-holdings-scope-toggle_
 .ref-dash-shell .dash-content .pf-portfolio-hero__badge {
   padding: 4px 10px;
   font-size: 0.64rem;
+}
+
+.ref-dash-shell .dash-content .pf-privacy-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid rgba(71, 85, 105, 0.45);
+  background: rgba(30, 41, 59, 0.55);
+  color: rgba(203, 213, 225, 0.92);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s ease, transform 0.15s ease, color 0.15s ease;
+}
+
+.ref-dash-shell .dash-content .pf-privacy-toggle:hover {
+  background: rgba(51, 65, 85, 0.72);
+  color: var(--text);
+}
+
+.ref-dash-shell .dash-content .pf-privacy-toggle:active {
+  transform: scale(0.94);
+}
+
+.ref-dash-shell .dash-content .pf-privacy-toggle[aria-pressed='true'] {
+  color: rgba(251, 191, 36, 0.92);
+  border-color: rgba(251, 191, 36, 0.35);
+}
+
+@media (max-width: 767px) {
+  .ref-dash-shell .dash-content .pf-portfolio-hero__toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    flex: 0 0 auto;
+    padding: 10px 12px;
+    gap: 6px;
+  }
+
+  .ref-dash-shell .dash-content .pf-portfolio-hero__actions-primary {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 0 0 auto;
+    width: 100%;
+    min-height: 0;
+  }
+
+  .ref-dash-shell .dash-content .pf-portfolio-hero__actions-primary .pf-track-gold-split {
+    width: 100%;
+    flex: 0 0 auto;
+  }
+
+  .ref-dash-shell .dash-content .pf-portfolio-hero__actions-meta {
+    flex: 0 0 auto;
+    justify-content: space-between;
+    width: 100%;
+    padding-top: 6px;
+    border-top: 1px solid rgba(201, 168, 64, 0.12);
+  }
 }
 
 .ref-dash-shell .dash-content .pf-hero-chart-note {

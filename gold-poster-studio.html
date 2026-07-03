@@ -6,7 +6,7 @@
   <title>Cridora Gold Poster Studio — Kerala Live Rates</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Anek+Malayalam:wght@500;600;700;800&family=Fraunces:opsz,wght@9..144,600;9..144,700;9..144,800&family=Noto+Sans+Malayalam:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <style>
     :root {
       --ui-bg: #0c0f18;
@@ -24,7 +24,7 @@
     *, *::before, *::after { box-sizing: border-box; }
     html, body { margin: 0; min-height: 100%; }
     body {
-      font-family: "DM Sans", system-ui, sans-serif;
+      font-family: "Plus Jakarta Sans", system-ui, sans-serif;
       background: var(--ui-bg);
       color: var(--ui-text);
       line-height: 1.45;
@@ -142,7 +142,17 @@
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: 0.45rem;
+      margin-bottom: 0.55rem;
     }
+    .bg-mode-row { margin-bottom: 0.55rem; }
+    .range-row {
+      display: flex;
+      align-items: center;
+      gap: 0.55rem;
+      font-size: 0.74rem;
+      color: var(--ui-muted);
+    }
+    .range-row input[type="range"] { flex: 1; accent-color: var(--ui-gold); }
     .tpl-btn {
       appearance: none;
       border: 2px solid var(--ui-border);
@@ -292,7 +302,7 @@
     .poster {
       position: relative;
       overflow: hidden;
-      font-family: "DM Sans", system-ui, sans-serif;
+      font-family: "Plus Jakarta Sans", system-ui, sans-serif;
       color: #fff;
       --poster-accent: #d4a84b;
       --poster-accent-hi: #f5e6b8;
@@ -313,13 +323,42 @@
       --poster-bg-b: #5c1020;
       color: #fff8f0;
     }
+    .poster[data-bg-mode="custom-image"] .poster__bg-image {
+      display: block;
+    }
+    .poster__bg-image {
+      display: none;
+      position: absolute;
+      inset: 0;
+      background-size: cover;
+      background-position: center;
+      z-index: 0;
+    }
+    .poster__bg-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      background: linear-gradient(155deg, var(--poster-bg-a), var(--poster-bg-b));
+      opacity: var(--poster-bg-overlay, 0.72);
+    }
+    .poster[data-bg-mode="template"] .poster__bg-overlay {
+      opacity: 0.55;
+    }
+    .poster[data-bg-mode="custom-colors"] .poster__bg-overlay {
+      opacity: 0.88;
+    }
     .poster__bg {
       position: absolute;
       inset: 0;
+      z-index: 0;
       background:
         radial-gradient(ellipse 80% 60% at 85% 10%, rgba(212, 168, 75, 0.18), transparent 55%),
         radial-gradient(ellipse 70% 50% at 10% 90%, rgba(212, 168, 75, 0.1), transparent 50%),
         linear-gradient(155deg, var(--poster-bg-a), var(--poster-bg-b));
+    }
+    .poster[data-bg-mode="custom-colors"] .poster__bg,
+    .poster[data-bg-mode="custom-image"] .poster__bg {
+      background: linear-gradient(155deg, var(--poster-bg-a), var(--poster-bg-b));
     }
     .poster[data-template="royal-cream"] .poster__bg {
       background:
@@ -361,17 +400,80 @@
       height: 100%;
       display: flex;
       flex-direction: column;
-      padding: 52px 56px 48px;
+      padding: 44px 52px 40px;
     }
-    .poster--landscape .poster__inner { padding: 36px 48px; }
-    .poster--story .poster__inner { padding: 72px 56px 64px; }
-    .poster__top {
+    .poster--landscape .poster__inner { padding: 28px 40px; }
+    .poster--story .poster__inner { padding: 64px 52px 56px; }
+
+    /* Cridora brand ribbon — always visible */
+    .poster__cridora-bar {
       display: flex;
       align-items: center;
-      gap: 20px;
-      margin-bottom: 28px;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 14px 18px;
+      margin-bottom: 22px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, rgba(212,168,75,0.16), rgba(212,168,75,0.04));
+      border: 1px solid rgba(212,168,75,0.32);
+      backdrop-filter: blur(6px);
     }
-    .poster--landscape .poster__top { margin-bottom: 16px; }
+    .poster[data-template="royal-cream"] .poster__cridora-bar {
+      background: linear-gradient(135deg, rgba(255,255,255,0.88), rgba(250,246,238,0.72));
+      border-color: rgba(139,105,20,0.28);
+    }
+    .poster--landscape .poster__cridora-bar { margin-bottom: 14px; padding: 10px 14px; }
+    .poster__cridora-brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-width: 0;
+    }
+    .poster__cridora-mark {
+      flex-shrink: 0;
+      filter: drop-shadow(0 2px 8px rgba(212,168,75,0.35));
+    }
+    .poster__cridora-wordmark {
+      font-family: "Plus Jakarta Sans", sans-serif;
+      font-weight: 800;
+      font-size: 1.55rem;
+      letter-spacing: -0.03em;
+      line-height: 1;
+      color: #fff;
+    }
+    .poster[data-template="royal-cream"] .poster__cridora-wordmark { color: #3d2a08; }
+    .poster__cridora-wordmark span {
+      font-weight: 700;
+      color: var(--poster-accent-hi);
+    }
+    .poster[data-template="royal-cream"] .poster__cridora-wordmark span { color: #9a7228; }
+    .poster__cridora-tag {
+      font-size: 0.72rem;
+      font-weight: 600;
+      opacity: 0.72;
+      margin-top: 4px;
+      letter-spacing: 0.02em;
+    }
+    .poster__cridora-url {
+      text-align: right;
+      font-size: 0.82rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      color: var(--poster-accent-hi);
+      white-space: nowrap;
+    }
+    .poster--landscape .poster__cridora-wordmark { font-size: 1.2rem; }
+    .poster--landscape .poster__cridora-url { font-size: 0.72rem; }
+
+    .poster__jeweller {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      margin-bottom: 22px;
+      padding-bottom: 18px;
+      border-bottom: 1px solid rgba(212,168,75,0.18);
+    }
+    .poster--landscape .poster__jeweller { margin-bottom: 12px; padding-bottom: 10px; }
     .poster__logo-wrap {
       width: 88px;
       height: 88px;
@@ -397,11 +499,11 @@
       opacity: 0.5;
     }
     .poster__shop-name {
-      font-family: "Cormorant Garamond", Georgia, serif;
-      font-size: 2.4rem;
+      font-family: "Fraunces", Georgia, serif;
+      font-size: 2rem;
       font-weight: 700;
-      line-height: 1.1;
-      letter-spacing: -0.01em;
+      line-height: 1.12;
+      letter-spacing: -0.02em;
       color: var(--poster-accent-hi);
       margin: 0;
     }
@@ -431,9 +533,9 @@
       margin-bottom: 8px;
     }
     .poster__headline {
-      font-family: "Cormorant Garamond", Georgia, serif;
-      font-size: 3.2rem;
-      font-weight: 700;
+      font-family: "Fraunces", Georgia, serif;
+      font-size: 3rem;
+      font-weight: 800;
       line-height: 1.05;
       margin: 0;
       background: linear-gradient(135deg, var(--poster-accent-hi), var(--poster-accent));
@@ -449,10 +551,46 @@
     .poster--landscape .poster__headline { font-size: 2.2rem; }
     .poster--story .poster__headline { font-size: 3.6rem; }
     .poster__date-line {
-      margin-top: 10px;
-      font-size: 0.88rem;
-      opacity: 0.65;
+      margin-top: 8px;
+      font-size: 0.92rem;
+      opacity: 0.78;
       font-weight: 600;
+    }
+    .poster__rate-ref {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 12px;
+      padding: 8px 14px;
+      border-radius: 999px;
+      background: rgba(0,0,0,0.28);
+      border: 1px solid rgba(212,168,75,0.28);
+      font-size: 0.76rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      font-variant-numeric: tabular-nums;
+    }
+    .poster[data-template="royal-cream"] .poster__rate-ref {
+      background: rgba(255,255,255,0.72);
+      border-color: rgba(139,105,20,0.22);
+      color: #3d2a08;
+    }
+    .poster__rate-ref-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #34d399;
+      box-shadow: 0 0 8px rgba(52,211,153,0.65);
+      flex-shrink: 0;
+    }
+    .poster__rate-ref-dot.is-stale { background: #fbbf24; box-shadow: none; }
+    .poster__source-line {
+      margin-top: 6px;
+      font-size: 0.68rem;
+      font-weight: 600;
+      opacity: 0.55;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
     }
     .poster__body {
       flex: 1;
@@ -507,11 +645,12 @@
       margin-bottom: 6px;
     }
     .rate-card__price {
-      font-size: 2rem;
+      font-family: "Plus Jakarta Sans", sans-serif;
+      font-size: 2.1rem;
       font-weight: 800;
       font-variant-numeric: tabular-nums;
       line-height: 1;
-      letter-spacing: -0.02em;
+      letter-spacing: -0.03em;
     }
     .poster--landscape .rate-card__price { font-size: 1.45rem; }
     .poster--story .rate-card__price { font-size: 2.35rem; }
@@ -584,16 +723,37 @@
       text-transform: uppercase;
     }
     .poster__watermark {
-      position: absolute;
-      bottom: 28px;
-      right: 36px;
-      z-index: 3;
-      font-size: 0.62rem;
-      font-weight: 700;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      opacity: 0.45;
+      display: none;
     }
+    .poster__cridora-foot {
+      margin-top: auto;
+      padding-top: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      border-top: 1px solid rgba(212,168,75,0.22);
+    }
+    .poster--landscape .poster__cridora-foot { padding-top: 10px; }
+    .poster__cridora-foot-mark {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      opacity: 0.92;
+    }
+    .poster__cridora-foot-text {
+      font-size: 0.72rem;
+      font-weight: 700;
+      line-height: 1.35;
+      opacity: 0.75;
+    }
+    .poster__cridora-foot-url {
+      font-size: 0.88rem;
+      font-weight: 800;
+      color: var(--poster-accent-hi);
+      letter-spacing: 0.03em;
+    }
+    .poster[data-template="royal-cream"] .poster__cridora-foot-url { color: #8b6914; }
     .poster__ornament {
       position: absolute;
       top: 50%;
@@ -612,6 +772,63 @@
       border-radius: 50%;
       border: 1px solid rgba(212,168,75,0.04);
     }
+
+    /* Malayalam typography */
+    .poster--ml {
+      font-family: "Noto Sans Malayalam", "Plus Jakarta Sans", system-ui, sans-serif;
+    }
+    .poster--ml .poster__headline,
+    .poster--ml .poster__shop-name {
+      font-family: "Anek Malayalam", "Noto Sans Malayalam", sans-serif;
+      font-weight: 800;
+      line-height: 1.18;
+      letter-spacing: 0;
+    }
+    .poster--ml .poster__headline {
+      font-size: 2.65rem;
+    }
+    .poster--ml.poster--story .poster__headline {
+      font-size: 3rem;
+    }
+    .poster--ml.poster--landscape .poster__headline {
+      font-size: 1.95rem;
+    }
+    .poster--ml .poster__shop-name {
+      font-size: 1.85rem;
+    }
+    .poster--ml .poster__eyebrow {
+      letter-spacing: 0.04em;
+      font-family: "Noto Sans Malayalam", sans-serif;
+    }
+    .poster--ml .poster__date-line,
+    .poster--ml .poster__rate-ref,
+    .poster--ml .poster__source-line,
+    .poster--ml .poster__tagline,
+    .poster--ml .poster__contact,
+    .poster--ml .poster__cridora-tag,
+    .poster--ml .rate-card__karat,
+    .poster--ml .rate-card__unit,
+    .poster--ml .rate-card__change,
+    .poster--ml .poster__cridora-foot-text {
+      font-family: "Noto Sans Malayalam", sans-serif;
+    }
+    .poster--ml .rate-card__price {
+      font-family: "Plus Jakarta Sans", "Noto Sans Malayalam", sans-serif;
+    }
+    .poster--ml .poster__cta {
+      text-transform: none;
+      letter-spacing: 0;
+      font-family: "Noto Sans Malayalam", sans-serif;
+      font-weight: 700;
+    }
+    .poster--ml .rate-card__karat {
+      letter-spacing: 0.06em;
+    }
+    .lang-chip-row .chip[data-lang="ml"] {
+      font-family: "Noto Sans Malayalam", sans-serif;
+      font-size: 0.82rem;
+    }
+
     .hidden { display: none !important; }
   </style>
 </head>
@@ -619,10 +836,10 @@
   <div class="app">
     <aside class="sidebar">
       <div class="brand-head">
-        <div class="brand-head__mark">Au</div>
+        <div class="brand-head__mark">C</div>
         <div>
-          <h1>Gold Poster Studio</h1>
-          <p>Kerala live rates · social export</p>
+          <h1>CridoraIndia Poster Studio</h1>
+          <p>Live Kerala gold rates · daily social export</p>
         </div>
       </div>
 
@@ -632,6 +849,17 @@
           <strong id="rateStatusTitle">Loading rates…</strong>
           <div id="rateStatusSub" style="margin-top:2px;opacity:0.85"></div>
         </div>
+      </div>
+
+      <div class="panel-block">
+        <h2>Poster language</h2>
+        <div class="chip-row lang-chip-row" id="langChips">
+          <button type="button" class="chip is-active" data-lang="en">English</button>
+          <button type="button" class="chip" data-lang="ml">മലയാളം</button>
+        </div>
+        <p style="font-size:0.68rem;color:var(--ui-muted);margin:0.45rem 0 0;line-height:1.4">
+          Each language keeps its own shop name, tagline &amp; CTA. Poster labels use proper Malayalam fonts.
+        </p>
       </div>
 
       <div class="panel-block">
@@ -658,10 +886,58 @@
       <div class="panel-block">
         <h2>Poster template</h2>
         <div class="tpl-grid" id="templateGrid"></div>
+        <div class="bg-mode-row">
+          <label class="field" style="margin-bottom:0.45rem">
+            <span>Background</span>
+            <select id="bgMode">
+              <option value="template">Preset template</option>
+              <option value="custom-colors">Custom gradient colours</option>
+              <option value="custom-image">Custom photo / image</option>
+            </select>
+          </label>
+          <div id="bgCustomColors" class="hidden">
+            <label class="field">
+              <span>Gradient top colour</span>
+              <input type="color" id="bgColor1" value="#0a0e1a" />
+            </label>
+            <label class="field">
+              <span>Gradient bottom colour</span>
+              <input type="color" id="bgColor2" value="#141c2e" />
+            </label>
+          </div>
+          <div id="bgCustomImage" class="hidden">
+            <div class="file-row">
+              <img id="bgThumb" class="file-thumb hidden" alt="" />
+              <label class="field" style="flex:1;margin:0">
+                <span>Background image</span>
+                <input type="file" id="bgFile" accept="image/*" />
+              </label>
+            </div>
+            <label class="range-row">
+              <span>Overlay</span>
+              <input type="range" id="bgOverlay" min="20" max="95" value="72" />
+              <span id="bgOverlayVal">72%</span>
+            </label>
+          </div>
+        </div>
       </div>
 
       <div class="panel-block">
-        <h2>Jewellery branding</h2>
+        <h2>Cridora branding</h2>
+        <label class="field">
+          <span>Website on poster</span>
+          <input type="text" id="cridoraWebsite" value="www.cridoraindia.com" />
+        </label>
+        <label class="field">
+          <span>Cridora tagline</span>
+          <input type="text" id="cridoraTagline" value="Live Kerala gold rates · digital gold passbook" maxlength="80" />
+        </label>
+        <label class="toggle-row"><span>Emphasise CridoraIndia header</span><input type="checkbox" id="showCridoraBar" checked /></label>
+      </div>
+
+      <div class="panel-block">
+        <h2>Jewellery branding <span style="font-weight:500;text-transform:none;letter-spacing:0;color:var(--ui-muted)">(optional)</span></h2>
+        <label class="toggle-row"><span>Show jeweller / shop details</span><input type="checkbox" id="showJeweller" checked /></label>
         <label class="field">
           <span>Shop / jeweller name</span>
           <input type="text" id="shopName" value="Your Jewellery Showroom" maxlength="80" />
@@ -680,7 +956,7 @@
         </label>
         <label class="field">
           <span>Website / handle</span>
-          <input type="text" id="website" value="www.cridoraindia.com" />
+          <input type="text" id="website" value="" placeholder="Optional — shop website" />
         </label>
         <label class="field">
           <span>CTA button text</span>
@@ -717,7 +993,6 @@
         <label class="toggle-row"><span>Show silver 999</span><input type="checkbox" id="showSilver" checked /></label>
         <label class="toggle-row"><span>Show hero image</span><input type="checkbox" id="showHero" checked /></label>
         <label class="toggle-row"><span>Show CTA button</span><input type="checkbox" id="showCta" checked /></label>
-        <label class="toggle-row"><span>Cridora rates watermark</span><input type="checkbox" id="showWatermark" checked /></label>
         <label class="toggle-row"><span>Auto-refresh rates (2 min)</span><input type="checkbox" id="autoRefresh" checked /></label>
       </div>
 
@@ -726,8 +1001,8 @@
         <button type="button" class="btn btn-ghost" id="btnDownloadAll">All formats (ZIP)</button>
       </div>
       <p style="font-size:0.68rem;color:var(--ui-muted);margin:0.65rem 0 0;line-height:1.45">
-        Open this file in Chrome/Edge. Rates refresh automatically when they change on Cridora.
-        Settings are saved in your browser.
+        Open in Chrome/Edge. Rates auto-refresh every 2 min — poster shows <strong>rates as of</strong> date &amp; time from Cridora.
+        Uncheck “Show jeweller details” for a Cridora-only premium poster. Settings save in your browser.
       </p>
     </aside>
 
@@ -760,14 +1035,99 @@
   ];
 
   var TEMPLATES = [
-    { id: "luxury-dark", label: "Luxury Dark", swatch: "linear-gradient(135deg,#0a0e1a,#1a2540)" },
-    { id: "royal-cream", label: "Royal Cream", swatch: "linear-gradient(135deg,#faf6ee,#e8dcc8)" },
-    { id: "festive-ruby", label: "Festive Ruby", swatch: "linear-gradient(135deg,#2a0810,#5c1020)" },
+    { id: "luxury-dark", label: "Luxury Dark", swatch: "linear-gradient(135deg,#0a0e1a,#1a2540)", bgA: "#0a0e1a", bgB: "#141c2e" },
+    { id: "royal-cream", label: "Royal Cream", swatch: "linear-gradient(135deg,#faf6ee,#e8dcc8)", bgA: "#faf6ee", bgB: "#f0e8d8" },
+    { id: "festive-ruby", label: "Festive Ruby", swatch: "linear-gradient(135deg,#2a0810,#5c1020)", bgA: "#2a0810", bgB: "#5c1020" },
   ];
 
+  var TEXT_PRESETS = {
+    en: {
+      shopName: "Your Jewellery Showroom",
+      tagline: "Trusted gold & diamond jewellery",
+      address: "MG Road, Kochi, Kerala 682016",
+      ctaText: "Visit showroom today",
+      cridoraTagline: "Live Kerala gold rates · digital gold passbook",
+    },
+    ml: {
+      shopName: "പവിത്രം ജ്വെല്ലേഴ്സ്",
+      tagline: "വിശ്വസ്ത സ്വർണ്ണ & ഡയമണ്ട് ആഭരണങ്ങൾ",
+      address: "എം.ജി. റോഡ്, Kochi, Kerala 682016",
+      ctaText: "ഇന്ന് തന്നെ സന്ദർശിക്കൂ",
+      cridoraTagline: "കേരളത്തിന്റെ ലൈവ് സ്വർണ്ണവില · ഡിജിറ്റൽ ഗോൾഡ് പാസ്‌ബുക്ക്",
+    },
+  };
+
+  var COPY = {
+    en: {
+      posterEyebrow: "Kerala · Live gold rates",
+      posterHeadline: "Gold Rate Today",
+      ratesAsOf: "Rates as of",
+      ist: "IST",
+      sourcePrefix: "Source",
+      perGramKerala: "per gram · Kerala",
+      vsYesterday: "vs yesterday",
+      gold22K: "22K GOLD",
+      gold24K: "24K GOLD",
+      gold18K: "18K GOLD",
+      silver999: "SILVER 999",
+      cridoraFootLine1: "Powered by CridoraIndia",
+      cridoraFootLine2: "Track gold · store bills · live rates",
+      perGramInr: "per gram · INR",
+      liveRatesOk: "Live Kerala rates",
+      ratesLoadFail: "Could not load rates",
+      demoSource: "Demo (offline)",
+      defaultSource: "Kerala board",
+      pulled: "pulled",
+      preview: "Preview",
+      loadingRates: "Loading rates…",
+    },
+    ml: {
+      posterEyebrow: "കേരളം · ഇന്നത്തെ ലൈവ് സ്വർണ്ണവില",
+      posterHeadline: "ഇന്നത്തെ സ്വർണ്ണവില",
+      ratesAsOf: "അവസാനം അപ്ഡേറ്റ്",
+      ist: "IST",
+      sourcePrefix: "ഉറവിടം",
+      perGramKerala: "ഗ്രാമത്തിന് · കേരളം",
+      vsYesterday: "ഇന്നലേക്കാൾ",
+      gold22K: "22K സ്വർണ്ണം",
+      gold24K: "24K സ്വർണ്ണം",
+      gold18K: "18K സ്വർണ്ണം",
+      silver999: "വെള്ളി 999",
+      cridoraFootLine1: "CridoraIndia-ൽ നിന്ന്",
+      cridoraFootLine2: "സ്വർണ്ണം ട്രാക്ക് ചെയ്യൂ · ബില്ലുകൾ · ലൈവ് നിരക്ക്",
+      perGramInr: "ഗ്രാമം · രൂപ",
+      liveRatesOk: "കേരള ലൈവ് നിരക്ക്",
+      ratesLoadFail: "നിരക്ക് ലോഡ് ചെയ്യാനായില്ല",
+      demoSource: "ഡെമോ (ഓഫ്‌ലൈൻ)",
+      defaultSource: "കേരള ബോർഡ്",
+      pulled: "ഇപ്പോൾ എടുത്തത്",
+      preview: "പ്രിവ്യൂ",
+      loadingRates: "നിരക്ക് ലോഡ് ചെയ്യുന്നു…",
+    },
+  };
+
   var REFRESH_MS = 120000;
+  var CRIDORA_LOGO_SVG =
+    '<svg class="poster__cridora-mark" width="52" height="52" viewBox="0 0 40 40" fill="none" aria-hidden="true">' +
+    '<circle cx="20" cy="20" r="18" stroke="url(#cridoraGoldLine)" stroke-width="2.5"/>' +
+    '<path d="M14 20C14 16.6863 16.6863 14 20 14" stroke="#d4a85c" stroke-width="3" stroke-linecap="round"/>' +
+    '<path d="M26 20C26 23.3137 23.3137 26 20 26" stroke="#a67a28" stroke-width="3" stroke-linecap="round"/>' +
+    '<defs><linearGradient id="cridoraGoldLine" x1="2" y1="2" x2="38" y2="38" gradientUnits="userSpaceOnUse">' +
+    '<stop offset="0%" stop-color="#e0bc78"/><stop offset="55%" stop-color="#a67a28"/><stop offset="100%" stop-color="#5c2f0a"/>' +
+    '</linearGradient></defs></svg>';
+
+  var CRIDORA_LOGO_SVG_SM =
+    '<svg width="32" height="32" viewBox="0 0 40 40" fill="none" aria-hidden="true">' +
+    '<circle cx="20" cy="20" r="18" stroke="url(#cridoraGoldLineSm)" stroke-width="2.5"/>' +
+    '<path d="M14 20C14 16.6863 16.6863 14 20 14" stroke="#d4a85c" stroke-width="3" stroke-linecap="round"/>' +
+    '<path d="M26 20C26 23.3137 23.3137 26 20 26" stroke="#a67a28" stroke-width="3" stroke-linecap="round"/>' +
+    '<defs><linearGradient id="cridoraGoldLineSm" x1="2" y1="2" x2="38" y2="38" gradientUnits="userSpaceOnUse">' +
+    '<stop offset="0%" stop-color="#e0bc78"/><stop offset="55%" stop-color="#a67a28"/><stop offset="100%" stop-color="#5c2f0a"/>' +
+    '</linearGradient></defs></svg>';
+
   var state = loadState();
   var rates = null;
+  var ratesFetchedAt = null;
   var refreshTimer = null;
   var lastRateHash = "";
 
@@ -789,6 +1149,19 @@
     website: document.getElementById("website"),
     ctaText: document.getElementById("ctaText"),
     accentColor: document.getElementById("accentColor"),
+    bgMode: document.getElementById("bgMode"),
+    bgColor1: document.getElementById("bgColor1"),
+    bgColor2: document.getElementById("bgColor2"),
+    bgFile: document.getElementById("bgFile"),
+    bgThumb: document.getElementById("bgThumb"),
+    bgOverlay: document.getElementById("bgOverlay"),
+    bgOverlayVal: document.getElementById("bgOverlayVal"),
+    bgCustomColors: document.getElementById("bgCustomColors"),
+    bgCustomImage: document.getElementById("bgCustomImage"),
+    cridoraWebsite: document.getElementById("cridoraWebsite"),
+    cridoraTagline: document.getElementById("cridoraTagline"),
+    showCridoraBar: document.getElementById("showCridoraBar"),
+    showJeweller: document.getElementById("showJeweller"),
     logoFile: document.getElementById("logoFile"),
     heroFile: document.getElementById("heroFile"),
     logoThumb: document.getElementById("logoThumb"),
@@ -797,58 +1170,146 @@
     showSilver: document.getElementById("showSilver"),
     showHero: document.getElementById("showHero"),
     showCta: document.getElementById("showCta"),
-    showWatermark: document.getElementById("showWatermark"),
     autoRefresh: document.getElementById("autoRefresh"),
     btnRefresh: document.getElementById("btnRefresh"),
     btnDownload: document.getElementById("btnDownload"),
     btnDownloadAll: document.getElementById("btnDownloadAll"),
     btnClearImages: document.getElementById("btnClearImages"),
     btnFitPreview: document.getElementById("btnFitPreview"),
+    langChips: document.getElementById("langChips"),
   };
+
+  function getLang() {
+    return state.lang === "ml" ? "ml" : "en";
+  }
+
+  function t(key) {
+    var lang = getLang();
+    return (COPY[lang] && COPY[lang][key]) || COPY.en[key] || key;
+  }
+
+  function defaultTexts() {
+    return {
+      en: Object.assign({}, TEXT_PRESETS.en),
+      ml: Object.assign({}, TEXT_PRESETS.ml),
+    };
+  }
+
+  function syncTextsFromForm() {
+    if (!state.texts) state.texts = defaultTexts();
+    var lang = getLang();
+    state.texts[lang] = {
+      shopName: el.shopName.value,
+      tagline: el.tagline.value,
+      address: el.address.value,
+      ctaText: el.ctaText.value,
+      cridoraTagline: el.cridoraTagline.value,
+    };
+  }
+
+  function loadTextsToForm() {
+    if (!state.texts) state.texts = defaultTexts();
+    var lang = getLang();
+    var tx = state.texts[lang] || TEXT_PRESETS[lang];
+    el.shopName.value = tx.shopName || "";
+    el.tagline.value = tx.tagline || "";
+    el.address.value = tx.address || "";
+    el.ctaText.value = tx.ctaText || "";
+    el.cridoraTagline.value = tx.cridoraTagline || TEXT_PRESETS[lang].cridoraTagline;
+  }
+
+  function setLang(lang) {
+    syncTextsFromForm();
+    state.lang = lang === "ml" ? "ml" : "en";
+    document.documentElement.lang = state.lang === "ml" ? "ml" : "en";
+    loadTextsToForm();
+    if (el.langChips) {
+      el.langChips.querySelectorAll(".chip").forEach(function (btn) {
+        btn.classList.toggle("is-active", btn.dataset.lang === state.lang);
+      });
+    }
+    if (rates) {
+      setRateStatus(true, t("liveRatesOk") + " · " + fmtInr(rates.gold && rates.gold["22K"]), formatStatusTimestamp());
+    }
+    renderPoster();
+  }
+
+  function buildLangChips() {
+    if (!el.langChips) return;
+    el.langChips.querySelectorAll(".chip").forEach(function (btn) {
+      btn.classList.toggle("is-active", btn.dataset.lang === getLang());
+      btn.addEventListener("click", function () {
+        setLang(btn.dataset.lang);
+      });
+    });
+  }
 
   function loadState() {
     try {
       var raw = localStorage.getItem("cridoraPosterStudio");
-      if (raw) return JSON.parse(raw);
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        if (!parsed.texts) {
+          parsed.texts = defaultTexts();
+          parsed.texts.en.shopName = parsed.shopName || parsed.texts.en.shopName;
+          parsed.texts.en.tagline = parsed.tagline || parsed.texts.en.tagline;
+          parsed.texts.en.address = parsed.address || parsed.texts.en.address;
+          parsed.texts.en.ctaText = parsed.ctaText || parsed.texts.en.ctaText;
+          parsed.texts.en.cridoraTagline = parsed.cridoraTagline || parsed.texts.en.cridoraTagline;
+        }
+        if (!parsed.lang) parsed.lang = "en";
+        if (!parsed.texts.ml) parsed.texts.ml = Object.assign({}, TEXT_PRESETS.ml);
+        return parsed;
+      }
     } catch (e) { /* ignore */ }
     return {
+      lang: "en",
+      texts: defaultTexts(),
       formatId: "ig-square",
       templateId: "luxury-dark",
       apiBase: "https://cridoraindia-production-e162.up.railway.app",
-      shopName: "Your Jewellery Showroom",
-      tagline: "Trusted gold & diamond jewellery",
       phone: "+91 98765 43210",
-      address: "MG Road, Kochi, Kerala 682016",
-      website: "www.cridoraindia.com",
-      ctaText: "Visit showroom today",
+      website: "",
       accentColor: "#d4a84b",
+      bgMode: "template",
+      bgColor1: "#0a0e1a",
+      bgColor2: "#141c2e",
+      bgImageData: "",
+      bgOverlay: 72,
+      cridoraWebsite: "www.cridoraindia.com",
+      showCridoraBar: true,
+      showJeweller: true,
       logoData: "",
       heroData: "",
       showChange: true,
       showSilver: true,
       showHero: true,
       showCta: true,
-      showWatermark: true,
       autoRefresh: true,
     };
   }
 
   function saveState() {
+    syncTextsFromForm();
     state.formatId = getSelectedFormat().id;
     state.templateId = el.poster.dataset.template || "luxury-dark";
+    state.lang = getLang();
     state.apiBase = el.apiBase.value.trim().replace(/\/$/, "");
-    state.shopName = el.shopName.value;
-    state.tagline = el.tagline.value;
     state.phone = el.phone.value;
-    state.address = el.address.value;
     state.website = el.website.value;
-    state.ctaText = el.ctaText.value;
     state.accentColor = el.accentColor.value;
+    state.bgMode = el.bgMode.value;
+    state.bgColor1 = el.bgColor1.value;
+    state.bgColor2 = el.bgColor2.value;
+    state.bgOverlay = parseInt(el.bgOverlay.value, 10) || 72;
+    state.cridoraWebsite = el.cridoraWebsite.value;
+    state.showCridoraBar = el.showCridoraBar.checked;
+    state.showJeweller = el.showJeweller.checked;
+    /* logoData, heroData, bgImageData preserved from uploads */
     state.showChange = el.showChange.checked;
     state.showSilver = el.showSilver.checked;
     state.showHero = el.showHero.checked;
     state.showCta = el.showCta.checked;
-    state.showWatermark = el.showWatermark.checked;
     state.autoRefresh = el.autoRefresh.checked;
     try {
       localStorage.setItem("cridoraPosterStudio", JSON.stringify(state));
@@ -857,19 +1318,28 @@
 
   function applyStateToForm() {
     el.apiBase.value = state.apiBase;
-    el.shopName.value = state.shopName;
-    el.tagline.value = state.tagline;
-    el.phone.value = state.phone;
-    el.address.value = state.address;
-    el.website.value = state.website;
-    el.ctaText.value = state.ctaText;
-    el.accentColor.value = state.accentColor;
+    loadTextsToForm();
+    el.phone.value = state.phone || "";
+    el.website.value = state.website || "";
+    el.accentColor.value = state.accentColor || "#d4a84b";
+    el.bgMode.value = state.bgMode || "template";
+    el.bgColor1.value = state.bgColor1 || "#0a0e1a";
+    el.bgColor2.value = state.bgColor2 || "#141c2e";
+    el.bgOverlay.value = state.bgOverlay != null ? state.bgOverlay : 72;
+    el.bgOverlayVal.textContent = (state.bgOverlay != null ? state.bgOverlay : 72) + "%";
+    el.cridoraWebsite.value = state.cridoraWebsite || "www.cridoraindia.com";
+    el.showCridoraBar.checked = state.showCridoraBar !== false;
+    el.showJeweller.checked = state.showJeweller !== false;
     el.showChange.checked = state.showChange;
     el.showSilver.checked = state.showSilver;
     el.showHero.checked = state.showHero;
     el.showCta.checked = state.showCta;
-    el.showWatermark.checked = state.showWatermark;
     el.autoRefresh.checked = state.autoRefresh;
+    syncBgModePanels();
+    if (state.bgImageData) {
+      el.bgThumb.src = state.bgImageData;
+      el.bgThumb.classList.remove("hidden");
+    }
     if (state.logoData) {
       el.logoThumb.src = state.logoData;
       el.logoThumb.classList.remove("hidden");
@@ -878,6 +1348,7 @@
       el.heroThumb.src = state.heroData;
       el.heroThumb.classList.remove("hidden");
     }
+    document.documentElement.lang = getLang() === "ml" ? "ml" : "en";
   }
 
   function getSelectedFormat() {
@@ -898,16 +1369,57 @@
     var cls = inr >= 0 ? "is-up" : "is-down";
     var txt = sign + (isFinite(inr) ? inr.toFixed(0) : "0");
     if (isFinite(pct)) txt += " (" + sign + pct.toFixed(2) + "%)";
-    return '<div class="rate-card__change ' + cls + '">' + txt + " vs yesterday</div>";
+    return '<div class="rate-card__change ' + cls + '">' + txt + " " + t("vsYesterday") + "</div>";
+  }
+
+  function getLocale() {
+    return getLang() === "ml" ? "ml-IN" : "en-IN";
+  }
+
+  function formatInKolkata(d, opts) {
+    return d.toLocaleString(getLocale(), Object.assign({ timeZone: "Asia/Kolkata" }, opts || {}));
+  }
+
+  function parseApiTimestamp(raw) {
+    if (!raw) return null;
+    var d = new Date(raw);
+    if (!isNaN(d.getTime())) return d;
+    var s = String(raw).trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+      d = new Date(s + "T12:00:00");
+      if (!isNaN(d.getTime())) return d;
+    }
+    return null;
   }
 
   function formatDateLine() {
-    var d = new Date();
-    if (rates && rates.rate_date) {
-      var p = rates.rate_date.split("-");
-      if (p.length === 3) d = new Date(+p[0], +p[1] - 1, +p[2]);
+    var d = parseApiTimestamp(rates && rates.rate_date) || new Date();
+    return formatInKolkata(d, { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  }
+
+  function formatRateReferenceLine() {
+    var updated = parseApiTimestamp(rates && rates.source_updated_at);
+    var fetched = ratesFetchedAt ? new Date(ratesFetchedAt) : null;
+    var ref = updated || fetched || new Date();
+    var datePart = formatInKolkata(ref, { day: "numeric", month: "short", year: "numeric" });
+    var timePart = formatInKolkata(ref, { hour: "2-digit", minute: "2-digit", hour12: true });
+    var stale = false;
+    if (fetched && updated) {
+      stale = fetched.getTime() - updated.getTime() > 3600000;
     }
-    return d.toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+    return {
+      text: t("ratesAsOf") + " " + datePart + " · " + timePart + " " + t("ist"),
+      stale: stale,
+      source: (rates && (rates.source_label || rates.source)) || t("defaultSource"),
+    };
+  }
+
+  function formatStatusTimestamp() {
+    var ref = formatRateReferenceLine();
+    var fetched = ratesFetchedAt
+      ? formatInKolkata(new Date(ratesFetchedAt), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hour12: true })
+      : "";
+    return ref.text + (fetched ? " · " + t("pulled") + " " + fetched + " " + t("ist") : "") + " · " + ref.source;
   }
 
   function rateHash(r) {
@@ -932,27 +1444,36 @@
       var changed = hash !== lastRateHash;
       lastRateHash = hash;
       rates = data;
-      var sub = (data.source_label || data.source || "Kerala board") +
-        (data.source_updated_at ? " · updated " + new Date(data.source_updated_at).toLocaleString("en-IN") : "");
-      setRateStatus(true, "Live Kerala rates loaded", sub);
+      ratesFetchedAt = Date.now();
+      setRateStatus(true, t("liveRatesOk") + " · " + fmtInr(data.gold && data.gold["22K"]), formatStatusTimestamp());
       renderPoster();
-      if (changed && lastRateHash) scheduleRefresh();
+      if (changed) scheduleRefresh();
       return data;
     } catch (err) {
-      setRateStatus(false, "Could not load rates", (err.message || "Check API URL / CORS") + ". Using last known or demo values.");
+      setRateStatus(false, t("ratesLoadFail"), (err.message || "Check API URL / CORS") + ". Using last known or demo values.");
       if (!rates) {
         rates = {
           region: "Kerala",
-          gold: { "24K": 7865, "22K": 7205, "18K": 5400 },
+          gold: { "24K": 14710, "22K": 13475, "18K": 11130 },
           silver: { "999": 92.5 },
-          source_label: "Demo (offline)",
+          source_label: t("demoSource"),
+          source: "demo",
           rate_date: new Date().toISOString().slice(0, 10),
+          source_updated_at: new Date().toISOString(),
           daily_change: {},
         };
+        ratesFetchedAt = Date.now();
         renderPoster();
       }
       return null;
     }
+  }
+
+  function syncBgModePanels() {
+    var mode = el.bgMode.value;
+    el.bgCustomColors.classList.toggle("hidden", mode !== "custom-colors");
+    el.bgCustomImage.classList.toggle("hidden", mode !== "custom-image");
+    el.templateGrid.style.opacity = mode === "template" ? "1" : "0.55";
   }
 
   function scheduleRefresh() {
@@ -961,13 +1482,13 @@
     refreshTimer = setInterval(fetchRates, REFRESH_MS);
   }
 
-  function buildRateCard(karat, price, changeKey, hero) {
+  function buildRateCard(label, price, changeKey, hero) {
     var change = el.showChange.checked && rates && rates.daily_change ? rates.daily_change[changeKey] : null;
     return (
       '<div class="rate-card' + (hero ? " rate-card--hero" : "") + '">' +
-        '<div class="rate-card__karat">' + karat + " Gold</div>" +
+        '<div class="rate-card__karat">' + label + "</div>" +
         '<div class="rate-card__price">' + fmtInr(price) + "</div>" +
-        '<div class="rate-card__unit">per gram · Kerala</div>' +
+        '<div class="rate-card__unit">' + t("perGramKerala") + "</div>" +
         (change ? fmtChange(change) : "") +
       "</div>"
     );
@@ -978,15 +1499,37 @@
     var g = (rates && rates.gold) || {};
     var s = (rates && rates.silver) || {};
     var accent = el.accentColor.value || "#d4a84b";
+    var bgMode = el.bgMode.value || "template";
+    var rateRef = formatRateReferenceLine();
+    var cridoraUrl = (el.cridoraWebsite.value || "www.cridoraindia.com").trim();
+    var showJeweller = el.showJeweller.checked;
+    var showCridoraBar = el.showCridoraBar.checked;
 
     el.poster.dataset.template = state.templateId;
-    el.poster.className = "poster " + (fmt.cls || "");
+    el.poster.dataset.bgMode = bgMode;
+    el.poster.className = "poster " + (fmt.cls || "") + (getLang() === "ml" ? " poster--ml" : "");
     el.poster.style.width = fmt.w + "px";
     el.poster.style.height = fmt.h + "px";
     el.poster.style.setProperty("--poster-accent", accent);
     el.poster.style.setProperty("--poster-accent-hi", accent);
+    el.poster.style.setProperty("--poster-bg-overlay", (parseInt(el.bgOverlay.value, 10) || 72) / 100);
 
-    var logoHtml = state.logoData
+    if (bgMode === "custom-colors") {
+      el.poster.style.setProperty("--poster-bg-a", el.bgColor1.value);
+      el.poster.style.setProperty("--poster-bg-b", el.bgColor2.value);
+    } else if (bgMode === "template") {
+      var tpl = TEMPLATES.find(function (t) { return t.id === state.templateId; });
+      if (tpl && tpl.bgA) {
+        el.poster.style.setProperty("--poster-bg-a", tpl.bgA);
+        el.poster.style.setProperty("--poster-bg-b", tpl.bgB);
+      }
+    }
+
+    var bgImageStyle = state.bgImageData && bgMode === "custom-image"
+      ? ' style="background-image:url(\'' + state.bgImageData + '\')"'
+      : "";
+
+    var jewellerLogoHtml = state.logoData
       ? '<img src="' + state.logoData + '" alt="Logo" crossorigin="anonymous" />'
       : '<span class="poster__logo-placeholder">✦</span>';
 
@@ -995,22 +1538,55 @@
       : "";
 
     var ratesHtml =
-      buildRateCard("22K", g["22K"], "22K", true) +
-      buildRateCard("24K", g["24K"], "24K", false) +
-      buildRateCard("18K", g["18K"], "18K", false);
+      buildRateCard(t("gold22K"), g["22K"], "22K", true) +
+      buildRateCard(t("gold24K"), g["24K"], "24K", false) +
+      buildRateCard(t("gold18K"), g["18K"], "18K", false);
     if (el.showSilver.checked && s["999"] != null) {
-      ratesHtml += buildRateCard("Silver 999", s["999"], "silver999", false);
+      ratesHtml += buildRateCard(t("silver999"), s["999"], "silver999", false);
     }
 
-    var ctaHtml = el.showCta.checked
+    var ctaHtml = el.showCta.checked && showJeweller
       ? '<div class="poster__cta">' + escapeHtml(el.ctaText.value) + "</div>"
       : "";
 
-    var wmHtml = el.showWatermark.checked
-      ? '<div class="poster__watermark">Rates via Cridora · Kerala</div>'
+    var cridoraBarHtml = showCridoraBar
+      ? '<div class="poster__cridora-bar">' +
+          '<div class="poster__cridora-brand">' +
+            CRIDORA_LOGO_SVG +
+            '<div>' +
+              '<div class="poster__cridora-wordmark">Cridora<span>India</span></div>' +
+              '<div class="poster__cridora-tag">' + escapeHtml(el.cridoraTagline.value) + "</div>" +
+            "</div>" +
+          "</div>" +
+          '<div class="poster__cridora-url">' + escapeHtml(cridoraUrl) + "</div>" +
+        "</div>"
       : "";
 
+    var jewellerHtml = showJeweller
+      ? '<div class="poster__jeweller">' +
+          '<div class="poster__logo-wrap">' + jewellerLogoHtml + "</div>" +
+          '<div>' +
+            '<h2 class="poster__shop-name">' + escapeHtml(el.shopName.value) + "</h2>" +
+            '<p class="poster__tagline">' + escapeHtml(el.tagline.value) + "</p>" +
+          "</div>" +
+        "</div>"
+      : "";
+
+    var footerContactHtml = showJeweller
+      ? '<div class="poster__contact">' +
+          "<strong>" + escapeHtml(el.phone.value) + "</strong>" +
+          escapeHtml(el.address.value).replace(/\n/g, "<br>") +
+          (el.website.value ? "<br>" + escapeHtml(el.website.value) : "") +
+        "</div>" + ctaHtml
+      : '<div class="poster__contact">' +
+          "<strong>CridoraIndia</strong>" +
+          escapeHtml(el.cridoraTagline.value) +
+          "<br>" + escapeHtml(cridoraUrl) +
+        "</div>";
+
     el.poster.innerHTML =
+      '<div class="poster__bg-image"' + bgImageStyle + "></div>" +
+      '<div class="poster__bg-overlay"></div>' +
       '<div class="poster__bg"></div>' +
       '<div class="poster__ornament"></div>' +
       '<div class="poster__frame"></div>' +
@@ -1019,35 +1595,34 @@
       '<div class="poster__corner poster__corner--bl"></div>' +
       '<div class="poster__corner poster__corner--br"></div>' +
       '<div class="poster__inner">' +
-        '<div class="poster__top">' +
-          '<div class="poster__logo-wrap">' + logoHtml + "</div>" +
-          '<div>' +
-            '<h2 class="poster__shop-name">' + escapeHtml(el.shopName.value) + "</h2>" +
-            '<p class="poster__tagline">' + escapeHtml(el.tagline.value) + "</p>" +
-          "</div>" +
-        "</div>" +
+        cridoraBarHtml +
+        jewellerHtml +
         '<div class="poster__headline-block">' +
-          '<div class="poster__eyebrow">Kerala · Live today</div>' +
-          '<h1 class="poster__headline">Gold Rate Today</h1>' +
+          '<div class="poster__eyebrow">' + escapeHtml(t("posterEyebrow")) + "</div>" +
+          '<h1 class="poster__headline">' + escapeHtml(t("posterHeadline")) + "</h1>" +
           '<div class="poster__date-line">' + escapeHtml(formatDateLine()) + "</div>" +
+          '<div class="poster__rate-ref">' +
+            '<span class="poster__rate-ref-dot' + (rateRef.stale ? " is-stale" : "") + '"></span>' +
+            escapeHtml(rateRef.text) +
+          "</div>" +
+          '<div class="poster__source-line">' + escapeHtml(t("sourcePrefix")) + ": " + escapeHtml(rateRef.source) + " · " + escapeHtml(t("perGramInr")) + "</div>" +
         "</div>" +
         '<div class="poster__body">' +
           (fmt.cls === "poster--landscape" ? heroHtml : "") +
           '<div class="poster__rates">' + ratesHtml + "</div>" +
           (fmt.cls !== "poster--landscape" ? heroHtml : "") +
         "</div>" +
-        '<div class="poster__footer">' +
-          '<div class="poster__contact">' +
-            "<strong>" + escapeHtml(el.phone.value) + "</strong>" +
-            escapeHtml(el.address.value).replace(/\n/g, "<br>") +
-            (el.website.value ? "<br>" + escapeHtml(el.website.value) : "") +
+        '<div class="poster__footer">' + footerContactHtml + "</div>" +
+        '<div class="poster__cridora-foot">' +
+          '<div class="poster__cridora-foot-mark">' +
+            CRIDORA_LOGO_SVG_SM +
+            '<div class="poster__cridora-foot-text">' + escapeHtml(t("cridoraFootLine1")) + "<br>" + escapeHtml(t("cridoraFootLine2")) + "</div>" +
           "</div>" +
-          ctaHtml +
+          '<div class="poster__cridora-foot-url">' + escapeHtml(cridoraUrl) + "</div>" +
         "</div>" +
-      "</div>" +
-      wmHtml;
+      "</div>";
 
-    el.previewMeta.textContent = fmt.label + " · " + fmt.w + "×" + fmt.h + "px preview";
+    el.previewMeta.textContent = fmt.label + " · " + fmt.w + "×" + fmt.h + "px · " + rateRef.text;
     fitPreview();
     saveState();
   }
@@ -1098,6 +1673,11 @@
       btn.addEventListener("click", function () {
         state.templateId = btn.dataset.template;
         el.templateGrid.querySelectorAll(".tpl-btn").forEach(function (c) { c.classList.toggle("is-active", c === btn); });
+        var tpl = TEMPLATES.find(function (t) { return t.id === state.templateId; });
+        if (tpl && el.bgMode.value === "template") {
+          el.bgColor1.value = tpl.bgA;
+          el.bgColor2.value = tpl.bgB;
+        }
         renderPoster();
       });
     });
@@ -1112,13 +1692,34 @@
   function bindForm() {
     var inputs = [
       el.apiBase, el.shopName, el.tagline, el.phone, el.address, el.website,
-      el.ctaText, el.accentColor, el.showChange, el.showSilver, el.showHero,
-      el.showCta, el.showWatermark, el.autoRefresh,
+      el.ctaText, el.accentColor, el.bgMode, el.bgColor1, el.bgColor2,
+      el.cridoraWebsite, el.cridoraTagline,
+      el.showChange, el.showSilver, el.showHero, el.showCta,
+      el.showCridoraBar, el.showJeweller, el.autoRefresh,
     ];
     inputs.forEach(function (input) {
       input.addEventListener("input", renderPoster);
       input.addEventListener("change", function () {
         if (input === el.autoRefresh) scheduleRefresh();
+        if (input === el.bgMode) syncBgModePanels();
+        renderPoster();
+      });
+    });
+
+    el.bgOverlay.addEventListener("input", function () {
+      el.bgOverlayVal.textContent = el.bgOverlay.value + "%";
+      renderPoster();
+    });
+
+    el.bgFile.addEventListener("change", function () {
+      var f = el.bgFile.files && el.bgFile.files[0];
+      if (!f) return;
+      readFileAsDataURL(f, function (data) {
+        state.bgImageData = data;
+        el.bgThumb.src = data;
+        el.bgThumb.classList.remove("hidden");
+        el.bgMode.value = "custom-image";
+        syncBgModePanels();
         renderPoster();
       });
     });
@@ -1148,10 +1749,13 @@
     el.btnClearImages.addEventListener("click", function () {
       state.logoData = "";
       state.heroData = "";
+      state.bgImageData = "";
       el.logoThumb.classList.add("hidden");
       el.heroThumb.classList.add("hidden");
+      el.bgThumb.classList.add("hidden");
       el.logoFile.value = "";
       el.heroFile.value = "";
+      el.bgFile.value = "";
       renderPoster();
     });
 
@@ -1252,9 +1856,11 @@
   el.btnDownloadAll.addEventListener("click", exportAllFormats);
 
   applyStateToForm();
+  buildLangChips();
   buildFormatChips();
   buildTemplateGrid();
   bindForm();
+  el.rateStatusTitle.textContent = t("loadingRates");
   fetchRates().then(scheduleRefresh);
 })();
   </script>

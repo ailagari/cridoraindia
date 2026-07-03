@@ -61,6 +61,26 @@ function fmtGramsMasked(n: number, masked: boolean, digits = 3): string {
   return `${n.toFixed(digits)}`
 }
 
+function SvgIconEye({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+      <path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  )
+}
+
+function SvgIconEyeOff({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-10-8-10-8a18.45 18.45 0 0 1 5.06-5.94" />
+      <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 10 8 10 8a18.5 18.5 0 0 1-2.16 3.19" />
+      <path d="M14.12 14.12a3 3 0 1 1-4.24-4.24" />
+      <path d="M1 1l22 22" />
+    </svg>
+  )
+}
+
 function fmtWhenLedger(iso: string): string {
   const t = Date.parse(iso)
   if (Number.isNaN(t)) return iso.slice(0, 10)
@@ -379,8 +399,15 @@ export function CustomerPortfolioOverviewDash(props: {
             ) : (
               <span className="bdg bdg-warn pf-portfolio-hero__badge">KYC pending</span>
             )}
-            <button type="button" className="btn btn-ghost btn-sm" onClick={onTogglePrivacy}>
-              {masked ? 'Show' : 'Hide'} balances
+            <button
+              type="button"
+              className="pf-privacy-toggle"
+              aria-pressed={masked}
+              aria-label={masked ? 'Show balances' : 'Hide balances'}
+              title={masked ? 'Show balances' : 'Hide balances'}
+              onClick={onTogglePrivacy}
+            >
+              {masked ? <SvgIconEyeOff /> : <SvgIconEye />}
             </button>
           </div>
         </div>

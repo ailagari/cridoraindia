@@ -238,22 +238,36 @@ export function CustomerPortfolioPanel({ defaultPortfolioTab }: { defaultPortfol
 
   useEffect(() => {
     const raw = (searchParams.get('portfolio_tab') || '').trim().toLowerCase()
+    const actionRaw = (searchParams.get('portfolio_action') || '').trim().toLowerCase()
+    const hasScan = searchParams.get('scan') === '1'
+    const hasHolding = Boolean((searchParams.get('holding') || '').trim())
+    const openPersonalVault =
+      defaultPortfolioTab === 'personal' ||
+      actionRaw === 'add' ||
+      actionRaw === 'scan' ||
+      hasScan ||
+      hasHolding
+
     if (raw === 'documents') {
       setPortfolioTab('personal')
-      return
-    }
-    const allowed = new Set(['overview', 'active', 'personal', 'transactions', 'charts'])
-    if (raw && allowed.has(raw)) {
-      setPortfolioTab(raw as PortfolioTabId)
-      return
-    }
-    if (defaultPortfolioTab) {
+    } else if (raw === 'personal' && !openPersonalVault) {
+      // Push/deep links use portfolio_tab=personal for overview + personal scope, not the vault tab.
+      setPortfolioTab('overview')
+      setHoldingsScope('personal')
+    } else if (raw) {
+      const allowed = new Set(['overview', 'active', 'personal', 'transactions', 'charts'])
+      if (allowed.has(raw)) {
+        setPortfolioTab(raw as PortfolioTabId)
+      } else if (defaultPortfolioTab) {
+        setPortfolioTab(defaultPortfolioTab)
+      }
+    } else if (defaultPortfolioTab) {
       setPortfolioTab(defaultPortfolioTab)
     }
-    const actionRaw = (searchParams.get('portfolio_action') || '').trim().toLowerCase()
+
     if (actionRaw === 'add' || actionRaw === 'scan') {
       setPersonalInitialAction(actionRaw)
-    } else if (searchParams.get('scan') === '1') {
+    } else if (hasScan) {
       setPersonalInitialAction('scan')
     }
   }, [searchParams, defaultPortfolioTab])
