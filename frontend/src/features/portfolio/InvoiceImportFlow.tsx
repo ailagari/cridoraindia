@@ -20,6 +20,7 @@ import {
   PersonalVaultPricingFields,
   type PersonalVaultPriceAnchor,
 } from '@/features/portfolio/PersonalVaultPricingFields'
+import { usePublicLayoutMax767 } from '@/hooks/usePublicLayoutMax767'
 
 const CATS = [
   { v: 'ornament', l: 'Ornament' },
@@ -45,18 +46,6 @@ type ReviewItem = {
   priceAnchor: PersonalVaultPriceAnchor
   confidence: 'high' | 'medium' | 'low'
   missingFields: InvoiceMissingField[]
-}
-
-function useIsMobile(): boolean {
-  const [mobile, setMobile] = useState(
-    () => typeof window !== 'undefined' && window.innerWidth < 768,
-  )
-  useEffect(() => {
-    const onResize = () => setMobile(window.innerWidth < 768)
-    window.addEventListener('resize', onResize)
-    return () => window.removeEventListener('resize', onResize)
-  }, [])
-  return mobile
 }
 
 function jewellerSuggestLabel(j: JewellerStorefrontDTO): string {
@@ -134,7 +123,7 @@ export function InvoiceImportFlow({
   onCreated,
   jewellers = [],
 }: InvoiceImportFlowProps) {
-  const isMobile = useIsMobile()
+  const isMobileLayout = usePublicLayoutMax767()
   const fileInputId = useId()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const captureRef = useRef<'environment' | undefined>(undefined)
@@ -423,22 +412,57 @@ export function InvoiceImportFlow({
               {error}
             </p>
           ) : null}
-          {isMobile ? (
+          {isMobileLayout ? (
             <div className="pf-vault-import-pick__actions">
               <button
                 type="button"
-                className="btn btn-primary"
+                className="pf-vault-import-pick__btn pf-vault-import-pick__btn--primary"
                 onClick={() => triggerFilePick('environment')}
               >
-                Take photo
+                <span className="pf-vault-import-pick__btn-icon" aria-hidden>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+                    <path d="M4 7h3l2-3h6l2 3h3a2 2 0 012 2v9a2 2 0 01-2 2H4a2 2 0 01-2-2V9a2 2 0 012-2z" />
+                    <circle cx="12" cy="13" r="3.5" />
+                  </svg>
+                </span>
+                <span className="pf-vault-import-pick__btn-text">
+                  <strong>Take photo</strong>
+                  <span>Use your camera to capture the bill</span>
+                </span>
               </button>
-              <button type="button" className="btn btn-ghost" onClick={() => triggerFilePick()}>
-                Upload file
+              <button
+                type="button"
+                className="pf-vault-import-pick__btn"
+                onClick={() => triggerFilePick()}
+              >
+                <span className="pf-vault-import-pick__btn-icon" aria-hidden>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+                    <path d="M12 3v12M7 8l5 5 5-5" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M4 19h16" strokeLinecap="round" />
+                  </svg>
+                </span>
+                <span className="pf-vault-import-pick__btn-text">
+                  <strong>Upload file</strong>
+                  <span>Photo or PDF from your gallery</span>
+                </span>
               </button>
             </div>
           ) : (
-            <button type="button" className="btn btn-primary" onClick={() => triggerFilePick()}>
-              Choose invoice (photo or PDF)
+            <button
+              type="button"
+              className="pf-vault-import-pick__btn pf-vault-import-pick__btn--primary pf-vault-import-pick__btn--wide"
+              onClick={() => triggerFilePick()}
+            >
+              <span className="pf-vault-import-pick__btn-icon" aria-hidden>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+                  <path d="M12 3v12M7 8l5 5 5-5" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M4 19h16" strokeLinecap="round" />
+                </svg>
+              </span>
+              <span className="pf-vault-import-pick__btn-text">
+                <strong>Choose invoice</strong>
+                <span>Photo or PDF from your device</span>
+              </span>
             </button>
           )}
           {sourceFile ? (

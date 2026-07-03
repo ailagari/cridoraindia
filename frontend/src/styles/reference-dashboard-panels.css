@@ -44,6 +44,10 @@
   overflow: hidden;
   margin-bottom: 20px;
 }
+
+.ref-dash-shell .dash-content .hero.pf-portfolio-hero {
+  overflow: visible;
+}
 .ref-dash-shell .dash-content .hero::after {
   content: '';
   position: absolute;
@@ -637,6 +641,78 @@ html[data-theme='dark'] .ref-dash-shell .dash-content .pf-holdings-scope-toggle_
     justify-content: flex-end;
     flex-wrap: wrap;
   }
+
+  .ref-dash-shell .pf-scope .tabs {
+    position: sticky;
+    top: 0;
+    z-index: 12;
+    margin-bottom: 14px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  }
+
+  .ref-dash-shell .dash-content .pf-portfolio-page-head {
+    margin-bottom: 10px;
+  }
+
+  .ref-dash-shell .dash-content .pf-portfolio-page-head h1 {
+    font-size: 1.35rem;
+  }
+
+  .ref-dash-shell .dash-content .pf-portfolio-page-head__sub {
+    font-size: 0.76rem;
+  }
+
+  .ref-dash-shell .dash-content .pf-portfolio-hero {
+    gap: 12px;
+  }
+
+  .ref-dash-shell .dash-content .pf-portfolio-hero__scope {
+    max-width: none;
+  }
+
+  .ref-dash-shell .dash-content .pf-portfolio-hero__toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 10px 12px;
+    gap: 10px;
+  }
+
+  .ref-dash-shell .dash-content .pf-portfolio-hero__actions-primary {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .ref-dash-shell .dash-content .pf-portfolio-hero__actions-primary .pf-track-gold-split {
+    width: 100%;
+  }
+
+  .ref-dash-shell .dash-content .pf-portfolio-buy-btn {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  .ref-dash-shell .dash-content .pf-portfolio-hero__actions-meta {
+    justify-content: space-between;
+    width: 100%;
+    padding-top: 2px;
+    border-top: 1px solid rgba(201, 168, 64, 0.12);
+  }
+
+  .ref-dash-shell .dash-content .stat-row--holdings {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .ref-dash-shell .dash-content .stat-row--holdings .pf-personal-stat-card {
+    order: -1;
+    grid-column: 1 / -1;
+  }
+
+  .ref-dash-shell .dash-content .stat-row--holdings .stat.d {
+    grid-column: 1 / -1;
+  }
+
   .ref-dash-shell .dash-content .pf-holdings-scope-wrap {
     width: 100%;
     order: -1;
@@ -658,6 +734,152 @@ html[data-theme='dark'] .ref-dash-shell .dash-content .pf-holdings-scope-toggle_
   flex-direction: column;
   gap: 4px;
   flex-shrink: 0;
+}
+
+/* Portfolio overview — hero layout */
+.ref-dash-shell .dash-content .pf-portfolio-page-head {
+  margin-bottom: 14px;
+}
+
+.ref-dash-shell .dash-content .pf-portfolio-page-head h1 {
+  margin-bottom: 4px;
+}
+
+.ref-dash-shell .dash-content .pf-portfolio-page-head__sub {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--ink3);
+  line-height: 1.45;
+  max-width: 36rem;
+}
+
+.ref-dash-shell .dash-content .pf-portfolio-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ref-dash-shell .dash-content .pf-portfolio-hero__summary {
+  min-width: 0;
+}
+
+.ref-dash-shell .dash-content .pf-portfolio-hero__inr {
+  margin-top: 6px;
+}
+
+.ref-dash-shell .dash-content .pf-portfolio-hero__hint {
+  margin-top: 8px;
+  color: var(--ink3);
+  line-height: 1.4;
+}
+
+.ref-dash-shell .dash-content .pf-portfolio-hero__scope {
+  width: 100%;
+  max-width: 420px;
+}
+
+.ref-dash-shell .dash-content .pf-portfolio-hero__scope .pf-holdings-scope-toggle {
+  width: 100%;
+  justify-content: stretch;
+}
+
+.ref-dash-shell .dash-content .pf-portfolio-hero__scope .pf-holdings-scope-toggle__btn {
+  flex: 1;
+  text-align: center;
+}
+
+.ref-dash-shell .dash-content .pf-portfolio-hero__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 12px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: rgba(201, 168, 64, 0.06);
+  border: 1px solid rgba(201, 168, 64, 0.16);
+  position: relative;
+  z-index: 6;
+  overflow: visible;
+}
+
+.ref-dash-shell .dash-content .pf-portfolio-hero__actions-primary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 8px;
+  flex: 1 1 220px;
+  min-width: 0;
+}
+
+.ref-dash-shell .dash-content .pf-portfolio-buy-btn {
+  flex: 1 1 120px;
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+.ref-dash-shell .dash-content .pf-portfolio-hero__actions-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.ref-dash-shell .dash-content .pf-portfolio-hero__badge {
+  padding: 4px 10px;
+  font-size: 0.64rem;
+}
+
+.ref-dash-shell .dash-content .pf-hero-chart-note {
+  margin: 0 0 10px;
+}
+
+.ref-dash-shell .dash-content .pf-hero-chart-note__toggle {
+  cursor: pointer;
+  color: var(--ink3);
+  list-style: none;
+  user-select: none;
+}
+
+.ref-dash-shell .dash-content .pf-hero-chart-note__toggle::-webkit-details-marker {
+  display: none;
+}
+
+.ref-dash-shell .dash-content .pf-hero-chart-note__toggle::before {
+  content: '▸ ';
+  display: inline-block;
+  transition: transform 0.15s ease;
+}
+
+.ref-dash-shell .dash-content .pf-hero-chart-note[open] .pf-hero-chart-note__toggle::before {
+  transform: rotate(90deg);
+}
+
+.ref-dash-shell .dash-content .pf-hero-chart-note__body {
+  margin: 8px 0 0;
+  color: var(--ink3);
+  line-height: 1.45;
+}
+
+.ref-dash-shell .dash-content .stat-row--holdings .pf-personal-stat-card {
+  z-index: 1;
+}
+
+.ref-dash-shell .dash-content .pf-portfolio-personal-preview {
+  border-color: rgba(167, 139, 250, 0.28);
+  background: linear-gradient(180deg, rgba(167, 139, 250, 0.07), transparent 48%);
+}
+
+.ref-dash-shell .pf-scope .tabs {
+  scroll-snap-type: x mandatory;
+}
+
+.ref-dash-shell .pf-scope .tab-btn {
+  scroll-snap-align: start;
 }
 
 .ref-dash-shell .dash-content .pf-holdings-scope-toggle__sub {
@@ -922,6 +1144,118 @@ html[data-theme='dark'] .ref-dash-shell .dash-content .pf-track-gold-split__drop
     left: 0;
     right: 0;
     min-width: 0;
+  }
+}
+
+.ref-dash-shell .dash-content .pf-track-gold-mobile {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.ref-dash-shell .dash-content .pf-track-gold-mobile__label {
+  margin: 0;
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink3);
+}
+
+.ref-dash-shell .dash-content .pf-track-gold-mobile__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.ref-dash-shell .dash-content .pf-track-gold-mobile__btn {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  min-height: 52px;
+  padding: 12px 14px;
+  text-align: left;
+  appearance: none;
+  border-radius: 10px;
+  border: 1px solid rgba(167, 139, 250, 0.28);
+  background: rgba(167, 139, 250, 0.06);
+  color: inherit;
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.12s ease;
+}
+
+.ref-dash-shell .dash-content .pf-track-gold-mobile__btn:active {
+  transform: scale(0.99);
+}
+
+.ref-dash-shell .dash-content .pf-track-gold-mobile__btn--scan {
+  border-color: rgba(167, 139, 250, 0.45);
+  background: linear-gradient(180deg, rgba(167, 139, 250, 0.14), rgba(167, 139, 250, 0.06));
+}
+
+.ref-dash-shell .dash-content .pf-track-gold-mobile__btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  background: rgba(148, 163, 184, 0.12);
+  color: var(--ink2);
+  flex-shrink: 0;
+}
+
+.ref-dash-shell .dash-content .pf-track-gold-mobile__btn-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.ref-dash-shell .dash-content .pf-track-gold-mobile__btn-icon--scan {
+  background: rgba(124, 58, 237, 0.14);
+  color: #7c3aed;
+}
+
+.ref-dash-shell .dash-content .pf-track-gold-mobile__btn-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ref-dash-shell .dash-content .pf-track-gold-mobile__btn-text strong {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.25;
+}
+
+.ref-dash-shell .dash-content .pf-track-gold-mobile__btn-text span {
+  font-size: 0.72rem;
+  color: var(--ink3);
+  line-height: 1.35;
+}
+
+html[data-theme='dark'] .ref-dash-shell .dash-content .pf-track-gold-mobile__btn-text strong {
+  color: var(--ink);
+}
+
+@media (max-width: 767px) {
+  .ref-dash-shell .dash-content .pf-personal-preview__empty-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .ref-dash-shell .dash-content .pf-personal-preview__empty-actions .btn {
+    width: 100%;
+    min-height: 44px;
+    justify-content: center;
   }
 }
 

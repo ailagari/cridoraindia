@@ -13,6 +13,7 @@ import {
   type PortfolioHistoryRangeKey,
   type PortfolioHistoryValuePoint,
 } from './PortfolioCharts'
+import { usePublicLayoutMax767 } from '@/hooks/usePublicLayoutMax767'
 import { useTablePagination } from '@/hooks/useTablePagination'
 
 const DONUT_COLORS = ['#c9a840', '#3b9eff', '#67e8f9', '#a78bfa', '#34d399', '#f472b6', '#38bdf8']
@@ -128,6 +129,7 @@ export function CustomerPortfolioOverviewDash(props: {
 
   const [trackMenuOpen, setTrackMenuOpen] = useState(false)
   const trackMenuRef = useRef<HTMLDivElement>(null)
+  const isMobileLayout = usePublicLayoutMax767()
   const isPersonalScope = holdingsScope === 'personal'
 
   useEffect(() => {
@@ -186,186 +188,230 @@ export function CustomerPortfolioOverviewDash(props: {
 
   return (
     <>
-      <div className="ph">
-        <h1>Portfolio Overview</h1>
-        <p>Live valuation, P&amp;L, and your gold across home records and partner jewellers.</p>
+      <div className="ph pf-portfolio-page-head">
+        <h1>Portfolio</h1>
+        <p className="pf-portfolio-page-head__sub">Live value, P&amp;L, and your gold at home and with jewellers.</p>
       </div>
 
-      <div className="hero mb20">
-        <div className="row row-b wrap" style={{ justifyContent: 'space-between', alignItems: 'flex-start', gap: 16 }}>
-          <div>
-            <div className="hero-eyebrow">{heroEyebrow}</div>
-            <div className="hero-grams pf-portfolio-grams--gold-glow">
-              {fmtGramsMasked(summaryGrams, masked, 3)}
-              <span className="unit">g</span>
-            </div>
-            <div className="hero-inr" style={{ marginTop: 6 }}>
-              ≈ ₹{fmtInr(summaryMarketValueInr, masked)} at today&apos;s board rate
-            </div>
-            {!isPersonalScope && personalGramsPortfolio > 1e-6 ? (
-              <div className="t-fa fs11" style={{ marginTop: 8, color: 'var(--ink3)' }}>
-                Vault &amp; jewellers{' '}
-                <strong className="tn" style={{ color: 'var(--gold-hi)' }}>
-                  {fmtGramsMasked(vaultGramsPortfolio, masked, 3)} g
-                </strong>
-                {' · '}Personal{' '}
-                <strong className="tn">{fmtGramsMasked(personalGramsPortfolio, masked, 3)} g</strong>
-              </div>
-            ) : null}
-            {isPersonalScope && vaultGramsPortfolio > 1e-6 ? (
-              <div className="t-fa fs11 pf-holdings-scope-hint" style={{ marginTop: 8, color: 'var(--ink3)' }}>
-                {copy.holdingsScope.vaultContext}:{' '}
-                <strong className="tn">{fmtGramsMasked(vaultGramsPortfolio, masked, 3)} g</strong>
-                {' · '}
-                <button
-                  type="button"
-                  className="pf-holdings-scope-hint__link"
-                  onClick={() => onHoldingsScopeChange('all')}
-                >
-                  {copy.holdingsScope.switchToAll}
-                </button>
-              </div>
-            ) : null}
+      <div className="hero mb20 pf-portfolio-hero">
+        <div className="pf-portfolio-hero__summary">
+          <div className="hero-eyebrow">{heroEyebrow}</div>
+          <div className="hero-grams pf-portfolio-grams--gold-glow">
+            {fmtGramsMasked(summaryGrams, masked, 3)}
+            <span className="unit">g</span>
           </div>
-          <div className="row wrap pf-portfolio-hero-actions" style={{ alignSelf: 'flex-start', gap: 8, alignItems: 'center' }}>
-            {showHoldingsScopeToggle ? (
-              <div className="pf-holdings-scope-wrap">
-                <div
-                  className="pf-holdings-scope-toggle"
-                  role="group"
-                  aria-label="Holdings to include in totals"
-                >
-                  <button
-                    type="button"
-                    className={`pf-holdings-scope-toggle__btn${isPersonalScope ? ' is-active' : ''}`}
-                    onClick={() => onHoldingsScopeChange('personal')}
-                    aria-pressed={isPersonalScope}
-                    title={copy.holdingsScope.personalHint}
-                  >
-                    {copy.holdingsScope.personal}
-                  </button>
-                  <button
-                    type="button"
-                    className={`pf-holdings-scope-toggle__btn${!isPersonalScope ? ' is-active' : ''}`}
-                    onClick={() => onHoldingsScopeChange('all')}
-                    aria-pressed={!isPersonalScope}
-                    title={copy.holdingsScope.allHint}
-                  >
-                    {copy.holdingsScope.all}
-                  </button>
-                </div>
-                <p className="pf-holdings-scope-toggle__sub t-fa fs11">
-                  {isPersonalScope ? copy.holdingsScope.personalHint : copy.holdingsScope.allHint}
-                </p>
-              </div>
-            ) : null}
-            <div className="pf-track-gold-split" ref={trackMenuRef}>
+          <div className="hero-inr pf-portfolio-hero__inr">
+            ≈ ₹{fmtInr(summaryMarketValueInr, masked)} at today&apos;s board rate
+          </div>
+          {!isPersonalScope && personalGramsPortfolio > 1e-6 ? (
+            <div className="pf-portfolio-hero__hint t-fa fs11">
+              Vault &amp; jewellers{' '}
+              <strong className="tn" style={{ color: 'var(--gold-hi)' }}>
+                {fmtGramsMasked(vaultGramsPortfolio, masked, 3)} g
+              </strong>
+              {' · '}Personal{' '}
+              <strong className="tn">{fmtGramsMasked(personalGramsPortfolio, masked, 3)} g</strong>
+            </div>
+          ) : null}
+          {isPersonalScope && vaultGramsPortfolio > 1e-6 ? (
+            <div className="pf-portfolio-hero__hint t-fa fs11 pf-holdings-scope-hint">
+              {copy.holdingsScope.vaultContext}:{' '}
+              <strong className="tn">{fmtGramsMasked(vaultGramsPortfolio, masked, 3)} g</strong>
+              {' · '}
               <button
                 type="button"
-                className="pf-track-gold-split__main"
-                onClick={() => onNavigatePersonalAction('add')}
+                className="pf-holdings-scope-hint__link"
+                onClick={() => onHoldingsScopeChange('all')}
               >
-                <span className="pf-track-gold-split__icon" aria-hidden>
-                  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6">
-                    <path d="M10 3v14M3 10h14" strokeLinecap="round" />
-                  </svg>
-                </span>
-                {copy.personalOverview.trackGold}
+                {copy.holdingsScope.switchToAll}
               </button>
-              <div className={`pf-track-gold-split__menu${trackMenuOpen ? ' is-open' : ''}`}>
-                <button
-                  type="button"
-                  className="pf-track-gold-split__chev"
-                  aria-expanded={trackMenuOpen}
-                  aria-haspopup="menu"
-                  aria-label="More ways to track gold"
-                  onClick={() => setTrackMenuOpen((o) => !o)}
-                >
-                  <svg
-                    className="pf-track-gold-split__chev-icon"
-                    viewBox="0 0 12 12"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                    aria-hidden
-                  >
-                    <path d="M3 4.5L6 7.5L9 4.5" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </button>
-                <div
-                  className="pf-track-gold-split__dropdown"
-                  role="menu"
-                  hidden={!trackMenuOpen}
-                >
-                  <p className="pf-track-gold-split__dropdown-label t-fa">Add personal gold</p>
+            </div>
+          ) : null}
+        </div>
+
+        {showHoldingsScopeToggle ? (
+          <div className="pf-portfolio-hero__scope pf-holdings-scope-wrap">
+            <div
+              className="pf-holdings-scope-toggle"
+              role="group"
+              aria-label="Holdings to include in totals"
+            >
+              <button
+                type="button"
+                className={`pf-holdings-scope-toggle__btn${isPersonalScope ? ' is-active' : ''}`}
+                onClick={() => onHoldingsScopeChange('personal')}
+                aria-pressed={isPersonalScope}
+                title={copy.holdingsScope.personalHint}
+              >
+                {copy.holdingsScope.personal}
+              </button>
+              <button
+                type="button"
+                className={`pf-holdings-scope-toggle__btn${!isPersonalScope ? ' is-active' : ''}`}
+                onClick={() => onHoldingsScopeChange('all')}
+                aria-pressed={!isPersonalScope}
+                title={copy.holdingsScope.allHint}
+              >
+                {copy.holdingsScope.all}
+              </button>
+            </div>
+            <p className="pf-holdings-scope-toggle__sub t-fa fs11">
+              {isPersonalScope ? copy.holdingsScope.personalHint : copy.holdingsScope.allHint}
+            </p>
+          </div>
+        ) : null}
+
+        <div className="pf-portfolio-hero__toolbar">
+          <div className="pf-portfolio-hero__actions-primary">
+            {isMobileLayout ? (
+              <div className="pf-track-gold-mobile">
+                <p className="pf-track-gold-mobile__label t-fa">{copy.personalOverview.trackGold}</p>
+                <div className="pf-track-gold-mobile__actions">
                   <button
                     type="button"
-                    className="pf-track-gold-split__item pf-track-gold-split__item--featured"
-                    role="menuitem"
-                    onClick={() => {
-                      setTrackMenuOpen(false)
-                      onNavigatePersonalAction('scan')
-                    }}
+                    className="pf-track-gold-mobile__btn pf-track-gold-mobile__btn--scan"
+                    onClick={() => onNavigatePersonalAction('scan')}
                   >
-                    <span className="pf-track-gold-split__item-icon pf-track-gold-split__item-icon--scan" aria-hidden>
+                    <span className="pf-track-gold-mobile__btn-icon pf-track-gold-mobile__btn-icon--scan" aria-hidden>
                       <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
                         <rect x="3" y="5" width="14" height="11" rx="1.5" />
                         <path d="M7 3h6M10 3v2" strokeLinecap="round" />
                         <circle cx="10" cy="10.5" r="2.25" />
                       </svg>
                     </span>
-                    <span className="pf-track-gold-split__item-text">
+                    <span className="pf-track-gold-mobile__btn-text">
                       <strong>{copy.personalOverview.scanInvoice}</strong>
                       <span>{copy.personalOverview.scanInvoiceHint}</span>
                     </span>
                   </button>
                   <button
                     type="button"
-                    className="pf-track-gold-split__item"
-                    role="menuitem"
-                    onClick={() => {
-                      setTrackMenuOpen(false)
-                      onNavigatePersonalAction('add')
-                    }}
+                    className="pf-track-gold-mobile__btn"
+                    onClick={() => onNavigatePersonalAction('add')}
                   >
-                    <span className="pf-track-gold-split__item-icon" aria-hidden>
+                    <span className="pf-track-gold-mobile__btn-icon" aria-hidden>
                       <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
                         <path d="M4 6h12M4 10h8M4 14h10" strokeLinecap="round" />
                         <rect x="3" y="4" width="14" height="12" rx="1.5" />
                       </svg>
                     </span>
-                    <span className="pf-track-gold-split__item-text">
+                    <span className="pf-track-gold-mobile__btn-text">
                       <strong>{copy.personalOverview.enterManually}</strong>
                       <span>{copy.personalOverview.enterManuallyHint}</span>
                     </span>
                   </button>
                 </div>
               </div>
-            </div>
-            {kycVerified ? (
-              <span className="bdg bdg-ok" style={{ padding: '4px 10px', fontSize: '0.64rem' }}>
-                KYC verified
-              </span>
             ) : (
-              <span className="bdg bdg-warn" style={{ padding: '4px 10px', fontSize: '0.64rem' }}>
-                KYC pending
-              </span>
+              <div className="pf-track-gold-split" ref={trackMenuRef}>
+                <button
+                  type="button"
+                  className="pf-track-gold-split__main"
+                  onClick={() => onNavigatePersonalAction('add')}
+                >
+                  <span className="pf-track-gold-split__icon" aria-hidden>
+                    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6">
+                      <path d="M10 3v14M3 10h14" strokeLinecap="round" />
+                    </svg>
+                  </span>
+                  {copy.personalOverview.trackGold}
+                </button>
+                <div className={`pf-track-gold-split__menu${trackMenuOpen ? ' is-open' : ''}`}>
+                  <button
+                    type="button"
+                    className="pf-track-gold-split__chev"
+                    aria-expanded={trackMenuOpen}
+                    aria-haspopup="menu"
+                    aria-label="More ways to track gold"
+                    onClick={() => setTrackMenuOpen((o) => !o)}
+                  >
+                    <svg
+                      className="pf-track-gold-split__chev-icon"
+                      viewBox="0 0 12 12"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      aria-hidden
+                    >
+                      <path d="M3 4.5L6 7.5L9 4.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </button>
+                  <div
+                    className="pf-track-gold-split__dropdown"
+                    role="menu"
+                    hidden={!trackMenuOpen}
+                  >
+                    <p className="pf-track-gold-split__dropdown-label t-fa">Add personal gold</p>
+                    <button
+                      type="button"
+                      className="pf-track-gold-split__item pf-track-gold-split__item--featured"
+                      role="menuitem"
+                      onClick={() => {
+                        setTrackMenuOpen(false)
+                        onNavigatePersonalAction('scan')
+                      }}
+                    >
+                      <span className="pf-track-gold-split__item-icon pf-track-gold-split__item-icon--scan" aria-hidden>
+                        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
+                          <rect x="3" y="5" width="14" height="11" rx="1.5" />
+                          <path d="M7 3h6M10 3v2" strokeLinecap="round" />
+                          <circle cx="10" cy="10.5" r="2.25" />
+                        </svg>
+                      </span>
+                      <span className="pf-track-gold-split__item-text">
+                        <strong>{copy.personalOverview.scanInvoice}</strong>
+                        <span>{copy.personalOverview.scanInvoiceHint}</span>
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      className="pf-track-gold-split__item"
+                      role="menuitem"
+                      onClick={() => {
+                        setTrackMenuOpen(false)
+                        onNavigatePersonalAction('add')
+                      }}
+                    >
+                      <span className="pf-track-gold-split__item-icon" aria-hidden>
+                        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
+                          <path d="M4 6h12M4 10h8M4 14h10" strokeLinecap="round" />
+                          <rect x="3" y="4" width="14" height="12" rx="1.5" />
+                        </svg>
+                      </span>
+                      <span className="pf-track-gold-split__item-text">
+                        <strong>{copy.personalOverview.enterManually}</strong>
+                        <span>{copy.personalOverview.enterManuallyHint}</span>
+                      </span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+            <Link to="/userdashboard?section=invest_fractional" className="btn btn-primary btn-sm pf-portfolio-buy-btn">
+              + Buy gold
+            </Link>
+          </div>
+          <div className="pf-portfolio-hero__actions-meta">
+            {kycVerified ? (
+              <span className="bdg bdg-ok pf-portfolio-hero__badge">KYC verified</span>
+            ) : (
+              <span className="bdg bdg-warn pf-portfolio-hero__badge">KYC pending</span>
             )}
             <button type="button" className="btn btn-ghost btn-sm" onClick={onTogglePrivacy}>
               {masked ? 'Show' : 'Hide'} balances
             </button>
-            <Link to="/userdashboard?section=invest_fractional" className="btn btn-primary btn-sm">
-              + Buy gold
-            </Link>
           </div>
         </div>
 
         <div className="pf-hero-trend-wrap pf-hero-history-block">
-          <p className="t-fa fs11" style={{ margin: '0 0 10px', color: 'var(--ink3)', lineHeight: 1.45 }}>
-            Board-rate snapshots × {fmtGramsMasked(summaryGrams, masked, 3)} g (selected scope). Dashed line: invested metal
-            cost. Tint above → unrealised gain at that sample; tint below → unrealised loss versus cost. Past holdings
-            changes aren&apos;t rolled back along the curve — use Charts or Ledger for full history context.
-          </p>
+          <details className="pf-hero-chart-note">
+            <summary className="pf-hero-chart-note__toggle t-fa fs11">How this chart works</summary>
+            <p className="t-fa fs11 pf-hero-chart-note__body">
+              Board-rate snapshots × {fmtGramsMasked(summaryGrams, masked, 3)} g (selected scope). Dashed line: invested metal
+              cost. Tint above → unrealised gain; below → unrealised loss. Past holdings changes aren&apos;t stepped in —
+              use Charts or Ledger for full history.
+            </p>
+          </details>
           <PortfolioHistoryValuationChart
             points={portfolioHistoryPoints}
             investedInr={summaryAllocatedCost}
@@ -437,6 +483,65 @@ export function CustomerPortfolioOverviewDash(props: {
           )}
         </div>
       </div>
+
+      {showPersonalPreview ? (
+        <article className="card card-p pf-personal-preview mb20 pf-portfolio-personal-preview">
+          <div className="row-b mb12">
+            <div>
+              <div className="sec-title">{copy.personalOverview.previewTitle}</div>
+              <div className="sec-sub t-fa fs11">{copy.personalOverview.previewLiveHint}</div>
+            </div>
+            {personalHoldingsCount > 0 ? (
+              <button type="button" className="btn btn-ghost btn-sm" onClick={onViewPersonal}>
+                {copy.personalOverview.viewAll}
+              </button>
+            ) : null}
+          </div>
+          {personalHoldingsCount === 0 ? (
+            <div className="pf-personal-preview__empty">
+              <div className="pf-personal-preview__empty-ico" aria-hidden>
+                ✨
+              </div>
+              <p className="pf-personal-preview__empty-lead">{copy.personalOverview.previewEmptyLead}</p>
+              <p className="t-fa fs11" style={{ color: 'var(--ink3)', margin: '0 0 16px' }}>
+                {dashboardCopy.customer.empty.personalHoldingsHero}
+              </p>
+              <div className="pf-personal-preview__empty-actions">
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm"
+                  onClick={() => onNavigatePersonalAction('scan')}
+                >
+                  {copy.personalOverview.scanInvoice}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-sm"
+                  onClick={() => onNavigatePersonalAction('add')}
+                >
+                  {copy.personalOverview.enterManually}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <ul className="pf-personal-preview__list">
+              {personalPreview.map((h) => (
+                <li key={h.id} className="pf-personal-preview__row">
+                  <div>
+                    <strong className="pf-personal-preview__title">{h.title}</strong>
+                    <span className="pf-personal-preview__meta tabular">
+                      {h.weight_grams} g · {h.purity}
+                    </span>
+                  </div>
+                  <span className="pf-personal-preview__val tabular">
+                    {masked ? '••••' : `₹${parseN(h.estimated_current_value_inr).toLocaleString('en-IN')}`}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </article>
+      ) : null}
 
       <div className="stat-row stat-row--holdings mb20">
         <div className="stat a">
@@ -510,65 +615,6 @@ export function CustomerPortfolioOverviewDash(props: {
           <div className="stat-sub">Updates every ~30s</div>
         </div>
       </div>
-
-      {showPersonalPreview ? (
-        <article className="card card-p pf-personal-preview mb20">
-          <div className="row-b mb12">
-            <div>
-              <div className="sec-title">{copy.personalOverview.previewTitle}</div>
-              <div className="sec-sub t-fa fs11">{copy.personalOverview.previewLiveHint}</div>
-            </div>
-            {personalHoldingsCount > 0 ? (
-              <button type="button" className="btn btn-ghost btn-sm" onClick={onViewPersonal}>
-                {copy.personalOverview.viewAll}
-              </button>
-            ) : null}
-          </div>
-          {personalHoldingsCount === 0 ? (
-            <div className="pf-personal-preview__empty">
-              <div className="pf-personal-preview__empty-ico" aria-hidden>
-                ✨
-              </div>
-              <p className="pf-personal-preview__empty-lead">{copy.personalOverview.previewEmptyLead}</p>
-              <p className="t-fa fs11" style={{ color: 'var(--ink3)', margin: '0 0 16px' }}>
-                {dashboardCopy.customer.empty.personalHoldingsHero}
-              </p>
-              <div className="pf-personal-preview__empty-actions">
-                <button
-                  type="button"
-                  className="btn btn-primary btn-sm"
-                  onClick={() => onNavigatePersonalAction('scan')}
-                >
-                  {copy.personalOverview.scanInvoice}
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-ghost btn-sm"
-                  onClick={() => onNavigatePersonalAction('add')}
-                >
-                  {copy.personalOverview.enterManually}
-                </button>
-              </div>
-            </div>
-          ) : (
-            <ul className="pf-personal-preview__list">
-              {personalPreview.map((h) => (
-                <li key={h.id} className="pf-personal-preview__row">
-                  <div>
-                    <strong className="pf-personal-preview__title">{h.title}</strong>
-                    <span className="pf-personal-preview__meta tabular">
-                      {h.weight_grams} g · {h.purity}
-                    </span>
-                  </div>
-                  <span className="pf-personal-preview__val tabular">
-                    {masked ? '••••' : `₹${parseN(h.estimated_current_value_inr).toLocaleString('en-IN')}`}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </article>
-      ) : null}
 
       <div className="g2 mb20">
         <div className="card card-p">

@@ -28,7 +28,6 @@ import {
   buildPortfolioHoldingsValueSeries,
   type PortfolioHistoryRangeKey,
 } from './PortfolioCharts'
-import { DailyGoldGreeting } from '@/components/DailyGoldGreeting'
 import { dashboardCopy } from '@/content/dashboardCopy'
 import { PortfolioLiveGoldPriceCard } from './PortfolioLiveGoldPriceCard'
 import { CustomerVaultsPanel } from './CustomerVaultsPanel'
@@ -497,11 +496,6 @@ export function CustomerPortfolioPanel({ defaultPortfolioTab }: { defaultPortfol
 
         {portfolioTab === 'overview' ? (
           <>
-            <DailyGoldGreeting
-              spot={spotPayload}
-              tickerFallback={goldTickerFallback}
-              hasHoldings={displayPortfolioGrams > 1e-9}
-            />
             <CustomerPortfolioOverviewDash
               wallet={wallet}
               spotPayload={spotPayload}
