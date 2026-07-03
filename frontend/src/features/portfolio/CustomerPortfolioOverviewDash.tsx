@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { createPortal } from 'react-dom'
 import { dashboardCopy } from '@/content/dashboardCopy'
 import { TablePagination } from '@/components/ui'
 import type { FractionalLedgerRowDTO, GoldWalletDTO, PortfolioTotalsDTO } from '@/lib/goldTransferApi'
@@ -13,13 +13,26 @@ import {
   type PortfolioHistoryRangeKey,
   type PortfolioHistoryValuePoint,
 } from './PortfolioCharts'
-import { usePublicLayoutMax767 } from '@/hooks/usePublicLayoutMax767'
 import { useTablePagination } from '@/hooks/useTablePagination'
 
 const DONUT_COLORS = ['#c9a840', '#3b9eff', '#67e8f9', '#a78bfa', '#34d399', '#f472b6', '#38bdf8']
 
 const OV_RECENT_TX_PAGE = 5
 const copy = dashboardCopy.customer
+
+function useIsMobileViewport(): boolean {
+  const [mobile, setMobile] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches,
+  )
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)')
+    const onChange = () => setMobile(mq.matches)
+    onChange()
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [])
+  return mobile
+}
 
 function parseG(s: string | undefined): number {
   const n = Number.parseFloat(String(s ?? '0'))
@@ -129,27 +142,44 @@ export function CustomerPortfolioOverviewDash(props: {
 
   const [trackMenuOpen, setTrackMenuOpen] = useState(false)
   const trackMenuRef = useRef<HTMLDivElement>(null)
-  const isMobileLayout = usePublicLayoutMax767()
+  const isMobileViewport = useIsMobileViewport()
   const isPersonalScope = holdingsScope === 'personal'
+
+  const closeTrackMenu = () => setTrackMenuOpen(false)
+
+  const openTrackMenu = () => setTrackMenuOpen(true)
+
+  const navigateTrackAction = (action: 'add' | 'scan') => {
+    closeTrackMenu()
+    onNavigatePersonalAction(action)
+  }
 
   useEffect(() => {
     if (!trackMenuOpen) return
-    const onPointerDown = (e: MouseEvent | TouchEvent) => {
+    const onPointerDown = (e: MouseEvent) => {
+      if (isMobileViewport) return
       const el = trackMenuRef.current
-      if (el && !el.contains(e.target as Node)) setTrackMenuOpen(false)
+      if (el && !el.contains(e.target as Node)) closeTrackMenu()
     }
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setTrackMenuOpen(false)
+      if (e.key === 'Escape') closeTrackMenu()
     }
     document.addEventListener('mousedown', onPointerDown)
-    document.addEventListener('touchstart', onPointerDown)
     document.addEventListener('keydown', onKeyDown)
     return () => {
       document.removeEventListener('mousedown', onPointerDown)
-      document.removeEventListener('touchstart', onPointerDown)
       document.removeEventListener('keydown', onKeyDown)
     }
-  }, [trackMenuOpen])
+  }, [trackMenuOpen, isMobileViewport])
+
+  useEffect(() => {
+    if (!trackMenuOpen || !isMobileViewport) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prev
+    }
+  }, [trackMenuOpen, isMobileViewport])
 
   const donutSegs = useMemo(() => {
     if (vaults.length === 0) {
@@ -263,79 +293,40 @@ export function CustomerPortfolioOverviewDash(props: {
 
         <div className="pf-portfolio-hero__toolbar">
           <div className="pf-portfolio-hero__actions-primary">
-            {isMobileLayout ? (
-              <div className="pf-track-gold-mobile">
-                <p className="pf-track-gold-mobile__label t-fa">{copy.personalOverview.trackGold}</p>
-                <div className="pf-track-gold-mobile__actions">
-                  <button
-                    type="button"
-                    className="pf-track-gold-mobile__btn pf-track-gold-mobile__btn--scan"
-                    onClick={() => onNavigatePersonalAction('scan')}
-                  >
-                    <span className="pf-track-gold-mobile__btn-icon pf-track-gold-mobile__btn-icon--scan" aria-hidden>
-                      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
-                        <rect x="3" y="5" width="14" height="11" rx="1.5" />
-                        <path d="M7 3h6M10 3v2" strokeLinecap="round" />
-                        <circle cx="10" cy="10.5" r="2.25" />
-                      </svg>
-                    </span>
-                    <span className="pf-track-gold-mobile__btn-text">
-                      <strong>{copy.personalOverview.scanInvoice}</strong>
-                      <span>{copy.personalOverview.scanInvoiceHint}</span>
-                    </span>
-                  </button>
-                  <button
-                    type="button"
-                    className="pf-track-gold-mobile__btn"
-                    onClick={() => onNavigatePersonalAction('add')}
-                  >
-                    <span className="pf-track-gold-mobile__btn-icon" aria-hidden>
-                      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
-                        <path d="M4 6h12M4 10h8M4 14h10" strokeLinecap="round" />
-                        <rect x="3" y="4" width="14" height="12" rx="1.5" />
-                      </svg>
-                    </span>
-                    <span className="pf-track-gold-mobile__btn-text">
-                      <strong>{copy.personalOverview.enterManually}</strong>
-                      <span>{copy.personalOverview.enterManuallyHint}</span>
-                    </span>
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="pf-track-gold-split" ref={trackMenuRef}>
+            <div className="pf-track-gold-split" ref={trackMenuRef}>
+              <button
+                type="button"
+                className="pf-track-gold-split__main"
+                onClick={() => (isMobileViewport ? openTrackMenu() : navigateTrackAction('add'))}
+              >
+                <span className="pf-track-gold-split__icon" aria-hidden>
+                  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6">
+                    <path d="M10 3v14M3 10h14" strokeLinecap="round" />
+                  </svg>
+                </span>
+                {copy.personalOverview.trackGold}
+              </button>
+              <div className={`pf-track-gold-split__menu${trackMenuOpen ? ' is-open' : ''}`}>
                 <button
                   type="button"
-                  className="pf-track-gold-split__main"
-                  onClick={() => onNavigatePersonalAction('add')}
+                  className="pf-track-gold-split__chev"
+                  aria-expanded={trackMenuOpen}
+                  aria-haspopup="menu"
+                  aria-label="More ways to track gold"
+                  onClick={() => (trackMenuOpen ? closeTrackMenu() : openTrackMenu())}
                 >
-                  <span className="pf-track-gold-split__icon" aria-hidden>
-                    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6">
-                      <path d="M10 3v14M3 10h14" strokeLinecap="round" />
-                    </svg>
-                  </span>
-                  {copy.personalOverview.trackGold}
-                </button>
-                <div className={`pf-track-gold-split__menu${trackMenuOpen ? ' is-open' : ''}`}>
-                  <button
-                    type="button"
-                    className="pf-track-gold-split__chev"
-                    aria-expanded={trackMenuOpen}
-                    aria-haspopup="menu"
-                    aria-label="More ways to track gold"
-                    onClick={() => setTrackMenuOpen((o) => !o)}
+                  <svg
+                    className="pf-track-gold-split__chev-icon"
+                    viewBox="0 0 12 12"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    aria-hidden
                   >
-                    <svg
-                      className="pf-track-gold-split__chev-icon"
-                      viewBox="0 0 12 12"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.8"
-                      aria-hidden
-                    >
-                      <path d="M3 4.5L6 7.5L9 4.5" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  </button>
+                    <path d="M3 4.5L6 7.5L9 4.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </button>
+                {!isMobileViewport ? (
                   <div
                     className="pf-track-gold-split__dropdown"
                     role="menu"
@@ -346,10 +337,7 @@ export function CustomerPortfolioOverviewDash(props: {
                       type="button"
                       className="pf-track-gold-split__item pf-track-gold-split__item--featured"
                       role="menuitem"
-                      onClick={() => {
-                        setTrackMenuOpen(false)
-                        onNavigatePersonalAction('scan')
-                      }}
+                      onClick={() => navigateTrackAction('scan')}
                     >
                       <span className="pf-track-gold-split__item-icon pf-track-gold-split__item-icon--scan" aria-hidden>
                         <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -367,10 +355,7 @@ export function CustomerPortfolioOverviewDash(props: {
                       type="button"
                       className="pf-track-gold-split__item"
                       role="menuitem"
-                      onClick={() => {
-                        setTrackMenuOpen(false)
-                        onNavigatePersonalAction('add')
-                      }}
+                      onClick={() => navigateTrackAction('add')}
                     >
                       <span className="pf-track-gold-split__item-icon" aria-hidden>
                         <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -384,12 +369,9 @@ export function CustomerPortfolioOverviewDash(props: {
                       </span>
                     </button>
                   </div>
-                </div>
+                ) : null}
               </div>
-            )}
-            <Link to="/userdashboard?section=invest_fractional" className="btn btn-primary btn-sm pf-portfolio-buy-btn">
-              + Buy gold
-            </Link>
+            </div>
           </div>
           <div className="pf-portfolio-hero__actions-meta">
             {kycVerified ? (
@@ -783,6 +765,67 @@ export function CustomerPortfolioOverviewDash(props: {
           Member ID <strong className="tn">{wallet.cridora_member_id}</strong>
         </p>
       ) : null}
+
+      {trackMenuOpen && isMobileViewport
+        ? createPortal(
+            <>
+              <button
+                type="button"
+                className="pf-track-gold-sheet__backdrop"
+                aria-label="Close track gold menu"
+                onClick={closeTrackMenu}
+              />
+              <div
+                className="pf-track-gold-sheet"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="pf-track-gold-sheet-title"
+              >
+                <div className="pf-track-gold-sheet__grab" aria-hidden />
+                <p id="pf-track-gold-sheet-title" className="pf-track-gold-sheet__title t-fa">
+                  Add personal gold
+                </p>
+                <button
+                  type="button"
+                  className="pf-track-gold-sheet__item pf-track-gold-sheet__item--featured"
+                  onClick={() => navigateTrackAction('scan')}
+                >
+                  <span className="pf-track-gold-sheet__item-icon pf-track-gold-sheet__item-icon--scan" aria-hidden>
+                    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
+                      <rect x="3" y="5" width="14" height="11" rx="1.5" />
+                      <path d="M7 3h6M10 3v2" strokeLinecap="round" />
+                      <circle cx="10" cy="10.5" r="2.25" />
+                    </svg>
+                  </span>
+                  <span className="pf-track-gold-sheet__item-text">
+                    <strong>{copy.personalOverview.scanInvoice}</strong>
+                    <span>{copy.personalOverview.scanInvoiceHint}</span>
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  className="pf-track-gold-sheet__item"
+                  onClick={() => navigateTrackAction('add')}
+                >
+                  <span className="pf-track-gold-sheet__item-icon" aria-hidden>
+                    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
+                      <path d="M4 6h12M4 10h8M4 14h10" strokeLinecap="round" />
+                      <rect x="3" y="4" width="14" height="12" rx="1.5" />
+                    </svg>
+                  </span>
+                  <span className="pf-track-gold-sheet__item-text">
+                    <strong>{copy.personalOverview.enterManually}</strong>
+                    <span>{copy.personalOverview.enterManuallyHint}</span>
+                  </span>
+                </button>
+                <button type="button" className="pf-track-gold-sheet__cancel btn btn-ghost" onClick={closeTrackMenu}>
+                  Cancel
+                </button>
+              </div>
+            </>,
+            document.body,
+          )
+        : null}
     </>
   )
 }

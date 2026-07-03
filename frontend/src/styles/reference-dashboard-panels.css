@@ -44,10 +44,6 @@
   overflow: hidden;
   margin-bottom: 20px;
 }
-
-.ref-dash-shell .dash-content .hero.pf-portfolio-hero {
-  overflow: visible;
-}
 .ref-dash-shell .dash-content .hero::after {
   content: '';
   position: absolute;
@@ -688,11 +684,6 @@ html[data-theme='dark'] .ref-dash-shell .dash-content .pf-holdings-scope-toggle_
     width: 100%;
   }
 
-  .ref-dash-shell .dash-content .pf-portfolio-buy-btn {
-    width: 100%;
-    min-height: 44px;
-  }
-
   .ref-dash-shell .dash-content .pf-portfolio-hero__actions-meta {
     justify-content: space-between;
     width: 100%;
@@ -737,6 +728,10 @@ html[data-theme='dark'] .ref-dash-shell .dash-content .pf-holdings-scope-toggle_
 }
 
 /* Portfolio overview — hero layout */
+.ref-dash-shell .dash-content .hero.pf-portfolio-hero {
+  overflow: visible;
+}
+
 .ref-dash-shell .dash-content .pf-portfolio-page-head {
   margin-bottom: 14px;
 }
@@ -798,9 +793,6 @@ html[data-theme='dark'] .ref-dash-shell .dash-content .pf-holdings-scope-toggle_
   border-radius: 10px;
   background: rgba(201, 168, 64, 0.06);
   border: 1px solid rgba(201, 168, 64, 0.16);
-  position: relative;
-  z-index: 6;
-  overflow: visible;
 }
 
 .ref-dash-shell .dash-content .pf-portfolio-hero__actions-primary {
@@ -810,15 +802,6 @@ html[data-theme='dark'] .ref-dash-shell .dash-content .pf-holdings-scope-toggle_
   gap: 8px;
   flex: 1 1 220px;
   min-width: 0;
-}
-
-.ref-dash-shell .dash-content .pf-portfolio-buy-btn {
-  flex: 1 1 120px;
-  min-height: 38px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  white-space: nowrap;
 }
 
 .ref-dash-shell .dash-content .pf-portfolio-hero__actions-meta {
@@ -1140,123 +1123,152 @@ html[data-theme='dark'] .ref-dash-shell .dash-content .pf-track-gold-split__drop
     min-width: 44px;
     min-height: 44px;
   }
-  .ref-dash-shell .dash-content .pf-track-gold-split__dropdown {
-    left: 0;
-    right: 0;
-    min-width: 0;
-  }
 }
 
-.ref-dash-shell .dash-content .pf-track-gold-mobile {
+.pf-track-gold-sheet__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: rgba(0, 8, 20, 0.56);
+  backdrop-filter: blur(5px);
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
+}
+
+.pf-track-gold-sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 121;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  width: 100%;
+  padding:
+    10px max(16px, env(safe-area-inset-left, 0px)) calc(16px + env(safe-area-inset-bottom, 0px))
+    max(16px, env(safe-area-inset-right, 0px));
+  border-radius: 18px 18px 0 0;
+  background: var(--surface, #fff);
+  border: 1px solid rgba(167, 139, 250, 0.22);
+  border-bottom: none;
+  box-shadow: 0 -14px 48px rgba(15, 23, 42, 0.28);
+  animation: pf-track-gold-sheet-in 0.22s ease-out;
 }
 
-.ref-dash-shell .dash-content .pf-track-gold-mobile__label {
-  margin: 0;
-  font-size: 0.58rem;
+@keyframes pf-track-gold-sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.pf-track-gold-sheet__grab {
+  align-self: center;
+  width: 2.35rem;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.42);
+  margin-bottom: 2px;
+}
+
+.pf-track-gold-sheet__title {
+  margin: 0 0 4px;
+  padding: 0 4px;
+  font-size: 0.62rem;
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--ink3);
+  text-align: center;
 }
 
-.ref-dash-shell .dash-content .pf-track-gold-mobile__actions {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  width: 100%;
-}
-
-.ref-dash-shell .dash-content .pf-track-gold-mobile__btn {
+.pf-track-gold-sheet__item {
   display: flex;
   align-items: flex-start;
   gap: 12px;
   width: 100%;
-  min-height: 52px;
-  padding: 12px 14px;
   text-align: left;
   appearance: none;
-  border-radius: 10px;
-  border: 1px solid rgba(167, 139, 250, 0.28);
-  background: rgba(167, 139, 250, 0.06);
-  color: inherit;
+  border: 1px solid rgba(167, 139, 250, 0.14);
+  background: transparent;
+  padding: 14px 12px;
+  border-radius: 12px;
   cursor: pointer;
-  font-family: inherit;
-  transition:
-    background 0.15s ease,
-    border-color 0.15s ease,
-    transform 0.12s ease;
+  transition: background 0.15s ease, border-color 0.15s ease;
+  min-height: 44px;
 }
 
-.ref-dash-shell .dash-content .pf-track-gold-mobile__btn:active {
-  transform: scale(0.99);
+.pf-track-gold-sheet__item:hover,
+.pf-track-gold-sheet__item:focus-visible {
+  background: rgba(167, 139, 250, 0.1);
+  border-color: rgba(167, 139, 250, 0.28);
+  outline: none;
 }
 
-.ref-dash-shell .dash-content .pf-track-gold-mobile__btn--scan {
-  border-color: rgba(167, 139, 250, 0.45);
-  background: linear-gradient(180deg, rgba(167, 139, 250, 0.14), rgba(167, 139, 250, 0.06));
+.pf-track-gold-sheet__item--featured {
+  background: rgba(167, 139, 250, 0.08);
+  border-color: rgba(167, 139, 250, 0.22);
 }
 
-.ref-dash-shell .dash-content .pf-track-gold-mobile__btn-icon {
+.pf-track-gold-sheet__item-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 36px;
   height: 36px;
-  border-radius: 9px;
+  border-radius: 10px;
   background: rgba(148, 163, 184, 0.12);
   color: var(--ink2);
   flex-shrink: 0;
 }
 
-.ref-dash-shell .dash-content .pf-track-gold-mobile__btn-icon svg {
+.pf-track-gold-sheet__item-icon svg {
   width: 20px;
   height: 20px;
 }
 
-.ref-dash-shell .dash-content .pf-track-gold-mobile__btn-icon--scan {
-  background: rgba(124, 58, 237, 0.14);
-  color: #7c3aed;
+.pf-track-gold-sheet__item-icon--scan {
+  background: rgba(124, 58, 237, 0.12);
+  color: #6d28d9;
 }
 
-.ref-dash-shell .dash-content .pf-track-gold-mobile__btn-text {
+.pf-track-gold-sheet__item-text {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
   min-width: 0;
 }
 
-.ref-dash-shell .dash-content .pf-track-gold-mobile__btn-text strong {
-  font-size: 0.84rem;
+.pf-track-gold-sheet__item-text strong {
+  font-size: 0.92rem;
   font-weight: 700;
   color: var(--ink);
   line-height: 1.25;
 }
 
-.ref-dash-shell .dash-content .pf-track-gold-mobile__btn-text span {
-  font-size: 0.72rem;
+.pf-track-gold-sheet__item-text span {
+  font-size: 0.78rem;
   color: var(--ink3);
   line-height: 1.35;
 }
 
-html[data-theme='dark'] .ref-dash-shell .dash-content .pf-track-gold-mobile__btn-text strong {
-  color: var(--ink);
+.pf-track-gold-sheet__cancel {
+  width: 100%;
+  min-height: 44px;
+  margin-top: 4px;
 }
 
-@media (max-width: 767px) {
-  .ref-dash-shell .dash-content .pf-personal-preview__empty-actions {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .ref-dash-shell .dash-content .pf-personal-preview__empty-actions .btn {
-    width: 100%;
-    min-height: 44px;
-    justify-content: center;
-  }
+html[data-theme='dark'] .pf-track-gold-sheet {
+  background: var(--surface);
+  border-color: rgba(167, 139, 250, 0.18);
+  box-shadow: 0 -14px 48px rgba(0, 0, 0, 0.55);
 }
 
 .ref-dash-shell .dash-content .pf-personal-stat-card {

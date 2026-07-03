@@ -8510,94 +8510,45 @@ select.input {
   align-self: center;
 }
 .pf-scope .pf-vault-import-pick {
-  padding: 1rem 1.35rem 1.25rem;
+  padding: 1.15rem 1.35rem 1.35rem;
 }
-
 .pf-scope .pf-vault-import-pick__actions {
   display: flex;
   flex-wrap: wrap;
   gap: 0.65rem;
 }
-
+.pf-scope .pf-vault-import-pick__choose,
 .pf-scope .pf-vault-import-pick__btn {
   display: inline-flex;
   align-items: center;
-  gap: 0.85rem;
-  width: 100%;
-  min-height: 52px;
-  padding: 0.85rem 1rem;
-  text-align: left;
-  appearance: none;
-  border-radius: 12px;
-  border: 1.5px dashed rgba(148, 163, 184, 0.35);
-  background: rgba(15, 23, 42, 0.35);
-  color: inherit;
-  cursor: pointer;
-  font-family: inherit;
-  transition:
-    background 0.15s ease,
-    border-color 0.15s ease,
-    box-shadow 0.15s ease,
-    transform 0.12s ease;
+  justify-content: center;
+  gap: 0.55rem;
+  min-height: 2.85rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
 }
-
-.pf-scope .pf-vault-import-pick__btn:hover,
-.pf-scope .pf-vault-import-pick__btn:focus-visible {
-  border-color: rgba(251, 191, 36, 0.55);
-  background: rgba(251, 191, 36, 0.08);
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.12);
+.pf-scope .pf-vault-import-pick__choose {
+  max-width: 22rem;
 }
-
-.pf-scope .pf-vault-import-pick__btn:active {
-  transform: scale(0.99);
-}
-
-.pf-scope .pf-vault-import-pick__btn--primary {
-  border-style: solid;
-  border-color: rgba(251, 191, 36, 0.45);
-  background: linear-gradient(165deg, rgba(251, 191, 36, 0.14), rgba(251, 191, 36, 0.05));
-}
-
-.pf-scope .pf-vault-import-pick__btn--wide {
-  max-width: 28rem;
-}
-
 .pf-scope .pf-vault-import-pick__btn-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: 10px;
-  background: rgba(251, 191, 36, 0.12);
-  color: rgba(251, 191, 36, 0.95);
+  width: 1.15rem;
+  height: 1.15rem;
   flex-shrink: 0;
 }
-
 .pf-scope .pf-vault-import-pick__btn-icon svg {
-  width: 1.35rem;
-  height: 1.35rem;
+  width: 100%;
+  height: 100%;
 }
-
-.pf-scope .pf-vault-import-pick__btn-text {
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-  min-width: 0;
+.pf-scope .pf-vault-import-pick .ui-file-row__meta {
+  margin: 0.75rem 0 0;
+  font-size: 0.82rem;
+  color: var(--text-muted, var(--ink3));
 }
-
-.pf-scope .pf-vault-import-pick__btn-text strong {
-  font-size: 0.92rem;
-  font-weight: 700;
-  line-height: 1.25;
-  color: var(--text, #f8fafc);
-}
-
-.pf-scope .pf-vault-import-pick__btn-text span {
-  font-size: 0.78rem;
-  line-height: 1.35;
-  color: var(--text-muted);
+.pf-scope .pf-vault-import-pick .form-error {
+  margin: 0 0 0.75rem;
 }
 .pf-scope .pf-vault-import-missing {
   margin: 0 0 1rem;
@@ -8986,8 +8937,8 @@ select.input {
     align-items: stretch;
   }
 
-  .pf-scope .pf-vault-import-pick__btn,
-  .pf-scope .pf-vault-import-pick__btn--wide {
+  .pf-scope .pf-vault-import-pick__choose,
+  .pf-scope .pf-vault-import-pick__actions .btn {
     width: 100%;
     max-width: none;
   }

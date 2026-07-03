@@ -20,7 +20,6 @@ import {
   PersonalVaultPricingFields,
   type PersonalVaultPriceAnchor,
 } from '@/features/portfolio/PersonalVaultPricingFields'
-import { usePublicLayoutMax767 } from '@/hooks/usePublicLayoutMax767'
 
 const CATS = [
   { v: 'ornament', l: 'Ornament' },
@@ -46,6 +45,18 @@ type ReviewItem = {
   priceAnchor: PersonalVaultPriceAnchor
   confidence: 'high' | 'medium' | 'low'
   missingFields: InvoiceMissingField[]
+}
+
+function useIsMobile(): boolean {
+  const [mobile, setMobile] = useState(
+    () => typeof window !== 'undefined' && window.innerWidth < 768,
+  )
+  useEffect(() => {
+    const onResize = () => setMobile(window.innerWidth < 768)
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+  return mobile
 }
 
 function jewellerSuggestLabel(j: JewellerStorefrontDTO): string {
@@ -123,7 +134,7 @@ export function InvoiceImportFlow({
   onCreated,
   jewellers = [],
 }: InvoiceImportFlowProps) {
-  const isMobileLayout = usePublicLayoutMax767()
+  const isMobile = useIsMobile()
   const fileInputId = useId()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const captureRef = useRef<'environment' | undefined>(undefined)
@@ -412,59 +423,55 @@ export function InvoiceImportFlow({
               {error}
             </p>
           ) : null}
-          {isMobileLayout ? (
-            <div className="pf-vault-import-pick__actions">
+          <div className="pf-vault-import-pick__actions">
+            {isMobile ? (
+              <>
+                <button
+                  type="button"
+                  className="btn btn-primary btn--block pf-vault-import-pick__btn"
+                  onClick={() => triggerFilePick('environment')}
+                >
+                  <span className="pf-vault-import-pick__btn-icon" aria-hidden>
+                    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6">
+                      <path
+                        d="M4 7h2.5l1.2-1.5a1 1 0 0 1 .78-.4h3.04a1 1 0 0 1 .78.4L13.5 7H16a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2Z"
+                        strokeLinejoin="round"
+                      />
+                      <circle cx="10" cy="11.5" r="2.75" />
+                    </svg>
+                  </span>
+                  Take photo
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-ghost btn--block pf-vault-import-pick__btn"
+                  onClick={() => triggerFilePick()}
+                >
+                  <span className="pf-vault-import-pick__btn-icon" aria-hidden>
+                    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6">
+                      <path d="M10 3v10M6 9l4 4 4-4" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M4 15h12" strokeLinecap="round" />
+                    </svg>
+                  </span>
+                  Upload file
+                </button>
+              </>
+            ) : (
               <button
                 type="button"
-                className="pf-vault-import-pick__btn pf-vault-import-pick__btn--primary"
-                onClick={() => triggerFilePick('environment')}
-              >
-                <span className="pf-vault-import-pick__btn-icon" aria-hidden>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
-                    <path d="M4 7h3l2-3h6l2 3h3a2 2 0 012 2v9a2 2 0 01-2 2H4a2 2 0 01-2-2V9a2 2 0 012-2z" />
-                    <circle cx="12" cy="13" r="3.5" />
-                  </svg>
-                </span>
-                <span className="pf-vault-import-pick__btn-text">
-                  <strong>Take photo</strong>
-                  <span>Use your camera to capture the bill</span>
-                </span>
-              </button>
-              <button
-                type="button"
-                className="pf-vault-import-pick__btn"
+                className="btn btn-primary btn--block pf-vault-import-pick__choose"
                 onClick={() => triggerFilePick()}
               >
                 <span className="pf-vault-import-pick__btn-icon" aria-hidden>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
-                    <path d="M12 3v12M7 8l5 5 5-5" strokeLinecap="round" strokeLinejoin="round" />
-                    <path d="M4 19h16" strokeLinecap="round" />
+                  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6">
+                    <path d="M10 3v10M6 9l4 4 4-4" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M4 15h12" strokeLinecap="round" />
                   </svg>
                 </span>
-                <span className="pf-vault-import-pick__btn-text">
-                  <strong>Upload file</strong>
-                  <span>Photo or PDF from your gallery</span>
-                </span>
+                Choose invoice (photo or PDF)
               </button>
-            </div>
-          ) : (
-            <button
-              type="button"
-              className="pf-vault-import-pick__btn pf-vault-import-pick__btn--primary pf-vault-import-pick__btn--wide"
-              onClick={() => triggerFilePick()}
-            >
-              <span className="pf-vault-import-pick__btn-icon" aria-hidden>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
-                  <path d="M12 3v12M7 8l5 5 5-5" strokeLinecap="round" strokeLinejoin="round" />
-                  <path d="M4 19h16" strokeLinecap="round" />
-                </svg>
-              </span>
-              <span className="pf-vault-import-pick__btn-text">
-                <strong>Choose invoice</strong>
-                <span>Photo or PDF from your device</span>
-              </span>
-            </button>
-          )}
+            )}
+          </div>
           {sourceFile ? (
             <p className="ui-file-row__meta">Last file: {sourceFile.name}</p>
           ) : null}
