@@ -165,8 +165,8 @@ export function CustomerPersonalHoldingsPanel({
   const [editBusy, setEditBusy] = useState(false)
   const submitInFlightRef = useRef(false)
 
-  const [formOpen, setFormOpen] = useState(false)
-  const [invoiceImportOpen, setInvoiceImportOpen] = useState(false)
+  const [formOpen, setFormOpen] = useState(() => standaloneFlow === 'add')
+  const [invoiceImportOpen, setInvoiceImportOpen] = useState(() => standaloneFlow === 'scan')
 
   useEffect(() => {
     if (!standaloneFlow) return

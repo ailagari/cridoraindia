@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { FormSubmitFoot } from '@/components/ui/FormSubmitFoot'
 import type { JewellerStorefrontDTO } from '@/lib/marketplaceApi'
 import {
@@ -257,7 +257,7 @@ export function InvoiceImportFlow({
     el.click()
   }
 
-  const handleFile = async (file: File | null) => {
+  const handleFile = useCallback(async (file: File | null) => {
     if (!file) return
     setSourceFile(file)
     setError('')
@@ -281,14 +281,14 @@ export function InvoiceImportFlow({
       setError('Could not reach the server.')
       setPhase('picking')
     }
-  }
+  }, [])
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!open || !initialFile) return
     if (initialFileHandledRef.current === initialFile) return
     initialFileHandledRef.current = initialFile
     void handleFile(initialFile)
-  }, [open, initialFile])
+  }, [open, initialFile, handleFile])
 
   const confirmCreate = async () => {
     const toSave = reviewItems.filter((it) => it.include)

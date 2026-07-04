@@ -165,6 +165,7 @@ export function CustomerPortfolioPanel({ defaultPortfolioTab }: { defaultPortfol
   const [personalHoldingsCount, setPersonalHoldingsCount] = useState(0)
   const [personalFlowOverlay, setPersonalFlowOverlay] = useState<'add' | 'scan' | null>(null)
   const [pendingScanFile, setPendingScanFile] = useState<File | null>(null)
+  const pendingScanFileRef = useRef<File | null>(null)
   const scanFileInputRef = useRef<HTMLInputElement>(null)
   const portfolioTabsRef = useRef<HTMLElement | null>(null)
 
@@ -187,6 +188,7 @@ export function CustomerPortfolioPanel({ defaultPortfolioTab }: { defaultPortfol
   const closePersonalFlowOverlay = useCallback(() => {
     setPersonalFlowOverlay(null)
     setPendingScanFile(null)
+    pendingScanFileRef.current = null
     setSearchParams(
       (prev) => {
         const next = new URLSearchParams(prev)
@@ -199,8 +201,11 @@ export function CustomerPortfolioPanel({ defaultPortfolioTab }: { defaultPortfol
 
   const openPersonalFlowOverlay = useCallback(
     (action: 'add' | 'scan', scanFile?: File | null) => {
+      if (scanFile) {
+        pendingScanFileRef.current = scanFile
+        setPendingScanFile(scanFile)
+      }
       setPersonalFlowOverlay(action)
-      setPendingScanFile(scanFile ?? null)
       setSearchParams(
         (prev) => {
           const next = new URLSearchParams(prev)
@@ -285,9 +290,9 @@ export function CustomerPortfolioPanel({ defaultPortfolioTab }: { defaultPortfol
       hasHolding
 
     if (actionRaw === 'add' || actionRaw === 'scan') {
-      setPersonalFlowOverlay(actionRaw)
+      setPersonalFlowOverlay((prev) => prev ?? actionRaw)
     } else if (hasScan) {
-      setPersonalFlowOverlay('scan')
+      setPersonalFlowOverlay((prev) => prev ?? 'scan')
     }
 
     if (openPersonalVaultTab) {
@@ -808,7 +813,8 @@ export function CustomerPortfolioPanel({ defaultPortfolioTab }: { defaultPortfol
         onChange={(e) => {
           const file = e.target.files?.[0] ?? null
           e.target.value = ''
-          if (!file) return
+          if (!file || file.size <= 0) return
+          pendingScanFileRef.current = file
           openPersonalFlowOverlay('scan', file)
         }}
       />
@@ -829,8 +835,15 @@ export function CustomerPortfolioPanel({ defaultPortfolioTab }: { defaultPortfol
                 aria-label={personalFlowOverlay === 'scan' ? 'Import from invoice' : 'Add personal gold'}
               >
                 <CustomerPersonalHoldingsPanel
+                  key={
+                    pendingScanFile
+                      ? `scan-${pendingScanFile.name}-${pendingScanFile.lastModified}-${pendingScanFile.size}`
+                      : personalFlowOverlay === 'scan'
+                        ? 'scan-pick'
+                        : 'add'
+                  }
                   standaloneFlow={personalFlowOverlay}
-                  initialScanFile={pendingScanFile}
+                  initialScanFile={pendingScanFile ?? pendingScanFileRef.current}
                   onStandaloneFlowClose={closePersonalFlowOverlay}
                   onChanged={() => {
                     void refreshPersonalPreview()
