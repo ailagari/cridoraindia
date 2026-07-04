@@ -1341,14 +1341,34 @@ html[data-theme='dark'] .pf-track-gold-sheet {
   transform: translateX(-50%);
   width: min(100%, 640px);
   max-height: min(92vh, 900px);
-  overflow: auto;
+  /* Flex column so the footer is always pinned; only the body scrolls */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   overscroll-behavior: contain;
-  padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+  padding: 0;
   background: var(--surface);
   border: 1px solid var(--border);
   border-bottom: 0;
   border-radius: 16px 16px 0 0;
   box-shadow: 0 -12px 40px rgba(15, 23, 42, 0.18);
+}
+
+.pf-vault-form--flex {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.pf-vault-form__scroll-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  padding: 16px 16px 1rem;
 }
 
 .pf-personal-flow-standalone .pf-vault-form {

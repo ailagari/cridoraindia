@@ -227,10 +227,7 @@ export function CustomerPortfolioPanel({ defaultPortfolioTab }: { defaultPortfol
       if (action === 'scan') {
         const el = scanFileInputRef.current
         if (el) {
-          const mobile =
-            typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches
-          if (mobile) el.setAttribute('capture', 'environment')
-          else el.removeAttribute('capture')
+          el.removeAttribute('capture')
           el.click()
         }
         return

@@ -391,16 +391,18 @@ export function InvoiceImportFlow({
     .sort((a, b) => a.label.localeCompare(b.label))
 
   const listId = `cridora-invoice-jeweller-${fileInputId.replace(/:/g, '')}`
+  const formId = `${fileInputId.replace(/:/g, '')}-inv-form`
   const busy = phase === 'analyzing' || phase === 'creating'
   const multiItem = reviewItems.length > 1
 
   return (
     <section
-      className="pf-vault-form pf-vault-form--import"
+      className="pf-vault-form pf-vault-form--import pf-vault-form--flex"
       id="pf-vault-invoice-import"
       aria-labelledby="pf-vault-invoice-import-title"
       aria-busy={busy}
     >
+      <div className="pf-vault-form__scroll-body">
       <header className="pf-vault-form__header">
         <span className="pf-vault-form__eyebrow">Smart import</span>
         <h4 id="pf-vault-invoice-import-title" className="pf-vault-form__title">
@@ -431,15 +433,24 @@ export function InvoiceImportFlow({
 
       {phase === 'picking' ? (
         <div className="pf-vault-import-pick">
-          {notLegibleReason ? (
-            <p className="form-error" role="alert">
-              {notLegibleReason} Please try a clearer photo or PDF.
-            </p>
-          ) : null}
-          {error ? (
-            <p className="form-error" role="alert">
-              {error}
-            </p>
+          {(notLegibleReason || error) ? (
+            <div className="pf-invoice-error-notice" role="alert">
+              <svg className="pf-invoice-error-notice__icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden>
+                <circle cx="10" cy="10" r="8.5" />
+                <path d="M10 6v5" strokeLinecap="round" />
+                <circle cx="10" cy="14" r="0.6" fill="currentColor" stroke="none" />
+              </svg>
+              <div>
+                <p className="pf-invoice-error-notice__title">
+                  {notLegibleReason ? 'Could not read the bill' : 'Upload failed'}
+                </p>
+                <p className="pf-invoice-error-notice__body">
+                  {notLegibleReason
+                    ? `${notLegibleReason} Try a clearer photo or a PDF.`
+                    : error}
+                </p>
+              </div>
+            </div>
           ) : null}
           <div className="pf-vault-import-pick__actions">
             {isMobile ? (
@@ -520,6 +531,7 @@ export function InvoiceImportFlow({
 
       {phase === 'review' || phase === 'creating' ? (
         <form
+          id={formId}
           className="pf-vault-form__sections"
           onSubmit={(e) => {
             e.preventDefault()
@@ -713,35 +725,6 @@ export function InvoiceImportFlow({
             </section>
           ) : null}
 
-          <footer className="pf-vault-form__footer pf-vault-form__footer--sticky">
-            {missingRequiredFields.length > 0 && !busy ? (
-              <p className="pf-invoice-save-hint" role="status">
-                <strong>To save:</strong> {missingRequiredFields[0]}
-                {missingRequiredFields.length > 1 ? ` (+${missingRequiredFields.length - 1} more)` : ''}
-              </p>
-            ) : null}
-            <FormSubmitFoot error={error} className="pf-vault-form__actions">
-              <button
-                type="button"
-                className="btn btn-ghost"
-                disabled={busy}
-                onClick={() => resetFlow()}
-              >
-                Upload different file
-              </button>
-              <button
-                type="submit"
-                className="btn btn-primary pf-vault-form__submit"
-                disabled={busy || !canSave}
-              >
-                {phase === 'creating'
-                  ? 'Saving…'
-                  : includedItems.length > 1
-                    ? `Save ${includedItems.length} items to vault`
-                    : 'Save to vault'}
-              </button>
-            </FormSubmitFoot>
-          </footer>
         </form>
       ) : null}
 
@@ -751,6 +734,40 @@ export function InvoiceImportFlow({
             ? `${savedCount} items saved to your vault.`
             : 'Saved to your vault.'}
         </p>
+      ) : null}
+      </div>{/* end pf-vault-form__scroll-body */}
+
+      {phase === 'review' || phase === 'creating' ? (
+        <footer className="pf-vault-form__footer pf-vault-form__footer--pinned">
+          {missingRequiredFields.length > 0 && !busy ? (
+            <p className="pf-invoice-save-hint" role="status">
+              <strong>To save:</strong> {missingRequiredFields[0]}
+              {missingRequiredFields.length > 1 ? ` (+${missingRequiredFields.length - 1} more)` : ''}
+            </p>
+          ) : null}
+          <FormSubmitFoot error={error} className="pf-vault-form__actions">
+            <button
+              type="button"
+              className="btn btn-ghost"
+              disabled={busy}
+              onClick={() => resetFlow()}
+            >
+              Upload different file
+            </button>
+            <button
+              type="submit"
+              form={formId}
+              className="btn btn-primary pf-vault-form__submit"
+              disabled={busy || !canSave}
+            >
+              {phase === 'creating'
+                ? 'Saving…'
+                : includedItems.length > 1
+                  ? `Save ${includedItems.length} items to vault`
+                  : 'Save to vault'}
+            </button>
+          </FormSubmitFoot>
+        </footer>
       ) : null}
     </section>
   )
