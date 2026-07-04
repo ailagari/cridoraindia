@@ -574,6 +574,7 @@ export const enMessages = {
   'idx.member.c2': 'Import Excel records in minutes',
   'idx.member.c3': 'Auto-create customer portfolios',
   'idx.member.c4': 'Modernize engagement without workflow change',
+  'idx.member.ctaWhy': 'Why Cridora works with membership systems',
 
   // How it works
   'idx.how.eyebrow': 'How it works',
@@ -621,7 +622,7 @@ export const enMessages = {
   'idx.jw.f6title': 'Digital portfolio experience',
   'idx.jw.f6desc': 'Give customers a premium gold tracking experience linked to your showroom.',
   'idx.jw.cta1': 'Apply as jeweller →',
-  'idx.jw.cta2': 'Learn more',
+  'idx.jw.cta2': 'Why jewellers choose Cridora',
   'idx.jw.mockDeskTitle': "Today's engagement",
   'idx.jw.mockCustomers': 'Active customers',
   'idx.jw.mockNotifications': 'Notifications sent',

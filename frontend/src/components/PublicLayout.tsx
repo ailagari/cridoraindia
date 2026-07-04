@@ -141,7 +141,7 @@ function PublicLayoutInner() {
           </div>
 
           <div className="footer-col">
-            <h4>{t('footer.platform')}</h4>
+            <h3 className="footer-col-title">{t('footer.platform')}</h3>
             <Link className="footer-link" to={{ pathname: '/', hash: 'home' }}>
               {t('footer.home')}
             </Link>
@@ -163,7 +163,7 @@ function PublicLayoutInner() {
           </div>
 
           <div className="footer-col">
-            <h4>{t('footer.customers')}</h4>
+            <h3 className="footer-col-title">{t('footer.customers')}</h3>
             <Link className="footer-link" to="/login">
               {t('footer.logIn')}
             </Link>
@@ -191,7 +191,7 @@ function PublicLayoutInner() {
           </div>
 
           <div className="footer-col">
-            <h4>{t('footer.goldRatesCities')}</h4>
+            <h3 className="footer-col-title">{t('footer.goldRatesCities')}</h3>
             {GOLD_RATE_CITIES.map((city) => (
               <Link key={city.slug} className="footer-link" to={goldRateCityPath(city.slug)}>
                 {locale === 'ml' ? city.nameMl : city.nameEn}
@@ -203,7 +203,7 @@ function PublicLayoutInner() {
           </div>
 
           <div className="footer-col">
-            <h4>{t('footer.company')}</h4>
+            <h3 className="footer-col-title">{t('footer.company')}</h3>
             <Link className="footer-link" to="/jeweller/apply">
               {t('footer.forJewellers')}
             </Link>

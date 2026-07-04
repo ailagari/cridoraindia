@@ -53,13 +53,21 @@ class SeoFilesMiddlewareTests(SimpleTestCase):
 
 
 class AdSenseVerificationTests(SimpleTestCase):
-    def test_inject_route_seo_places_adsense_tags_after_head(self):
-        html = "<html><head></head><body><div id=\"root\"></div></body></html>"
+    def test_inject_route_seo_places_adsense_meta_on_homepage(self):
+        html = '<html><head></head><body><div id="root"></div></body></html>'
         out = inject_route_seo(html, "/")
         head_end = out.index("</head>")
         head = out[:head_end]
         self.assertIn('name="google-adsense-account"', head)
         self.assertIn("ca-pub-1180208702657280", head)
+        self.assertNotIn("adsbygoogle.js", head)
+
+    def test_inject_route_seo_places_adsense_script_on_gold_rates(self):
+        html = '<html><head></head><body><div id="root"></div></body></html>'
+        out = inject_route_seo(html, "/gold-rates/kerala")
+        head_end = out.index("</head>")
+        head = out[:head_end]
+        self.assertIn('name="google-adsense-account"', head)
         self.assertIn("adsbygoogle.js", head)
         self.assertIn('crossorigin="anonymous"', head)
         self.assertLess(head.index("google-adsense-account"), head.index("application/ld+json"))
@@ -87,6 +95,6 @@ class AdSenseVerificationTests(SimpleTestCase):
             '<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1180208702657280"></script>'
             "</head><body></body></html>"
         )
-        out = inject_adsense_verification(html)
+        out = inject_adsense_verification(html, "/gold-rates/kerala")
         self.assertEqual(out.count("google-adsense-account"), 1)
         self.assertEqual(out.count("adsbygoogle.js"), 1)

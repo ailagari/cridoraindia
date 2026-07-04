@@ -1018,6 +1018,7 @@
   max-width: 280px;
   margin: 4px 0 0;
 }
+.pub-ref .ref-index-footer .footer-col h3.footer-col-title,
 .pub-ref .ref-index-footer .footer-col h4 {
   font-size: 0.72rem;
   font-weight: 700;

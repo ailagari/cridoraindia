@@ -550,7 +550,7 @@ export function HomePage() {
                 {t('idx.hero.cta2')}
               </Link>
               <Link className="btn btn-ghost" to="/why-cridora">
-                {t('idx.jw.cta2')}
+                {t('idx.member.ctaWhy')}
               </Link>
             </div>
           </div>

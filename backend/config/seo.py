@@ -12,8 +12,8 @@ SITE_NAME = "Cridora India"
 SITE_LOGO_URL = f"{SITE_URL}/icon-512.png"
 DEFAULT_OG_IMAGE = f"{SITE_URL}/og-preview.png"
 ADSENSE_PUBLISHER_ID = "ca-pub-1180208702657280"
-ADSENSE_HEAD_SNIPPET = (
-    f'    <meta name="google-adsense-account" content="{ADSENSE_PUBLISHER_ID}">\n'
+ADSENSE_META_SNIPPET = f'    <meta name="google-adsense-account" content="{ADSENSE_PUBLISHER_ID}">\n'
+ADSENSE_SCRIPT_SNIPPET = (
     f'    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client={ADSENSE_PUBLISHER_ID}" '
     'crossorigin="anonymous"></script>\n'
 )
@@ -355,8 +355,8 @@ def seo_for_path(path: str) -> dict[str, str]:
     return ROUTE_SEO.get(normalized, ROUTE_SEO["/"])
 
 
-def inject_adsense_verification(html_doc: str) -> str:
-    """Place AdSense verification tags immediately after <head> (visible to crawlers)."""
+def inject_adsense_verification(html_doc: str, request_path: str = "/") -> str:
+    """AdSense account meta on all pages; loader script only where ad slots render."""
     html_doc = re.sub(
         r'<meta\s+name=["\']google-adsense-account["\'][^>]*>\s*',
         "",
@@ -369,7 +369,10 @@ def inject_adsense_verification(html_doc: str) -> str:
         html_doc,
         flags=re.I | re.S,
     )
-    return html_doc.replace("<head>", f"<head>\n{ADSENSE_HEAD_SNIPPET}", 1)
+    snippet = ADSENSE_META_SNIPPET
+    if _needs_live_rates(request_path):
+        snippet += ADSENSE_SCRIPT_SNIPPET
+    return html_doc.replace("<head>", f"<head>\n{snippet}", 1)
 
 
 def ads_txt() -> str:
@@ -1025,7 +1028,7 @@ def inject_route_seo(html_doc: str, request_path: str) -> str:
     if prerender and 'id="seo-prerender"' not in out:
         out = out.replace("<div id=\"root\"></div>", prerender + '    <div id="root"></div>', 1)
 
-    return inject_adsense_verification(out)
+    return inject_adsense_verification(out, path)
 
 
 def robots_txt() -> str:
