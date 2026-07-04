@@ -269,25 +269,25 @@
       --poster-pad-y: 40px;
       --poster-gap: 8px;
       --poster-sep-my: 7px;
-      --fs-k22: 112px;
-      --fs-rate: 32px;
-      --fs-label: 12px;
-      --fs-sub: 11px;
-      --fs-change: 11px;
-      --fs-meta: 11px;
-      --fs-hd-name: 22px;
-      --fs-hd-tag: 11px;
-      --fs-hd-url: 12px;
-      --fs-shop: 26px;
-      --fs-tagline: 13px;
-      --fs-eyebrow: 12px;
-      --fs-contact: 12px;
-      --fs-contact-strong: 14px;
-      --fs-cta: 12px;
-      --fs-foot: 11px;
-      --fs-foot-url: 13px;
-      --fs-headline: 38px;
-      --fs-message: 19px;
+      --fs-k22: 132px;
+      --fs-rate: 40px;
+      --fs-label: 15px;
+      --fs-sub: 13px;
+      --fs-change: 13px;
+      --fs-meta: 12px;
+      --fs-hd-name: 24px;
+      --fs-hd-tag: 12px;
+      --fs-hd-url: 14px;
+      --fs-shop: 30px;
+      --fs-tagline: 16px;
+      --fs-eyebrow: 14px;
+      --fs-contact: 13px;
+      --fs-contact-strong: 15px;
+      --fs-cta: 13px;
+      --fs-foot: 12px;
+      --fs-foot-url: 15px;
+      --fs-headline: 46px;
+      --fs-message: 24px;
       --logo-mark: 56px;
       --logo-wrap: 56px;
       --frame-inset: 20px;
@@ -564,14 +564,14 @@
       color: var(--poster-accent-hi); margin: 0;
     }
     .poster[data-template="royal-cream"] .poster__shop-name { color: #3e2804; }
-    .poster__tagline { margin: 3px 0 0; font-size: var(--fs-tagline); opacity: 0.72; font-weight: 500; }
+    .poster__tagline { margin: 3px 0 0; font-size: var(--fs-tagline); opacity: 0.82; font-weight: 600; }
 
     /* ── EYEBROW ── */
     .poster__eyebrow {
       text-align: center;
-      font-size: var(--fs-eyebrow); font-weight: 700;
+      font-size: var(--fs-eyebrow); font-weight: 800;
       letter-spacing: 0.12em; text-transform: uppercase;
-      color: var(--poster-accent); opacity: 0.92;
+      color: var(--poster-accent); opacity: 0.95;
       flex-shrink: 0;
     }
 
@@ -594,7 +594,7 @@
       line-height: 1.35;
       letter-spacing: -0.01em;
       color: inherit;
-      opacity: 0.82;
+      opacity: 0.9;
       flex-shrink: 0;
       margin: 0;
     }
@@ -612,8 +612,8 @@
     }
     .poster__k22 { display: flex; flex-direction: column; align-items: center; }
     .poster__k22-label {
-      font-size: var(--fs-label); font-weight: 700;
-      letter-spacing: 0.12em; text-transform: uppercase;
+      font-size: var(--fs-label); font-weight: 800;
+      letter-spacing: 0.14em; text-transform: uppercase;
       color: var(--poster-accent); margin-bottom: calc(var(--poster-gap) * 0.75);
     }
     .poster__k22-price {
@@ -629,8 +629,8 @@
       -webkit-background-clip: text; background-clip: text;
     }
     .poster__k22-sub {
-      font-size: var(--fs-sub); font-weight: 600;
-      opacity: 0.72; letter-spacing: 0.04em;
+      font-size: var(--fs-sub); font-weight: 700;
+      opacity: 0.82; letter-spacing: 0.04em;
       text-transform: uppercase; margin-top: calc(var(--poster-gap) * 0.75);
     }
     .poster__k22-change {
@@ -640,6 +640,7 @@
     }
     .poster__k22-change.is-up   { color: #34d399; background: rgba(52,211,153,0.13); }
     .poster__k22-change.is-down { color: #f87171; background: rgba(248,113,113,0.13); }
+    .poster__k22-change.is-flat { color: inherit; opacity: 0.72; background: rgba(255,255,255,0.08); }
     .poster[data-template="royal-cream"] .poster__k22-change.is-up   { color: #059669; background: rgba(5,150,105,0.09); }
     .poster[data-template="royal-cream"] .poster__k22-change.is-down { color: #dc2626; background: rgba(220,38,38,0.09); }
 
@@ -664,8 +665,8 @@
       background: linear-gradient(180deg, transparent, rgba(139,105,20,0.25), transparent);
     }
     .poster__rate-label {
-      font-size: var(--fs-label); font-weight: 700;
-      letter-spacing: 0.10em; text-transform: uppercase;
+      font-size: var(--fs-label); font-weight: 800;
+      letter-spacing: 0.12em; text-transform: uppercase;
       color: var(--poster-accent); margin-bottom: calc(var(--poster-gap) * 0.5);
     }
     .poster__rate-price {
@@ -684,6 +685,7 @@
     .poster__rate-change { font-size: var(--fs-change); font-weight: 700; margin-top: calc(var(--poster-gap) * 0.35); }
     .poster__rate-change.is-up   { color: #34d399; }
     .poster__rate-change.is-down { color: #f87171; }
+    .poster__rate-change.is-flat { color: inherit; opacity: 0.72; }
     .poster[data-template="royal-cream"] .poster__rate-change.is-up   { color: #059669; }
     .poster[data-template="royal-cream"] .poster__rate-change.is-down { color: #dc2626; }
 
@@ -776,8 +778,8 @@
     .poster--landscape .poster__sep--d     { display: none; }
     .poster--landscape .poster__jeweller   { grid-area: jewel; padding-top: 4px; align-self: start; }
     .poster--landscape .poster__eyebrow    { display: none; }
-    .poster--landscape .poster__headline   { text-align: left; font-size: calc(var(--fs-headline) * 0.95); }
-    .poster--landscape .poster__message    { text-align: left; margin-bottom: calc(var(--poster-gap) * 0.5); font-size: calc(var(--fs-message) * 1.02); }
+    .poster--landscape .poster__headline   { text-align: left; font-size: calc(var(--fs-headline) * 1); }
+    .poster--landscape .poster__message    { text-align: left; margin-bottom: calc(var(--poster-gap) * 0.5); font-size: calc(var(--fs-message) * 1.06); }
     .poster--landscape .poster__main       { grid-area: main; align-self: stretch; padding: 0; align-items: flex-start; text-align: left; justify-content: center; }
     .poster--landscape .poster__k22        { align-items: flex-start; width: 100%; }
     .poster--landscape .poster__k22-price  { text-align: left; }
@@ -867,18 +869,11 @@
       </div>
 
       <div class="panel-block">
-        <h2>Live rates API</h2>
-        <label class="field">
-          <span>API base URL</span>
-          <input type="url" id="apiBase" value="https://www.cridoraindia.com" placeholder="https://www.cridoraindia.com" />
-        </label>
-        <p class="panel-hint" style="margin-top:0.35rem;font-size:0.78rem;opacity:0.75">
-          Live 22K / 24K / 18K &amp; silver from <a href="https://www.cridoraindia.com/gold-rates/kerala" target="_blank" rel="noopener">cridoraindia.com/gold-rates/kerala</a>
+        <h2>Live rates</h2>
+        <p class="panel-hint" style="margin:0 0 0.55rem;font-size:0.78rem;opacity:0.75;line-height:1.45">
+          Pulled from <a href="https://www.cridoraindia.com/gold-rates/kerala" target="_blank" rel="noopener">cridoraindia.com/gold-rates/kerala</a>.
+          Works as a standalone file — no server needed.
         </p>
-        <div class="chip-row" style="margin-bottom:0.55rem">
-          <button type="button" class="chip is-active" data-api="https://www.cridoraindia.com">cridoraindia.com</button>
-          <button type="button" class="chip" data-api="http://localhost:8000">Local Django</button>
-        </div>
         <div class="btn-row">
           <button type="button" class="btn btn-ghost" id="btnRefresh">Refresh now</button>
         </div>
@@ -1110,6 +1105,9 @@
       sourcePrefix: "Source",
       perGramKerala: "per gram · Kerala",
       vsYesterday: "vs yesterday",
+      vsPrevious: "vs previous close",
+      wasRate: "was",
+      noChange: "No change",
       gold22K: "22K GOLD",
       gold24K: "24K GOLD",
       gold18K: "18K GOLD",
@@ -1134,6 +1132,9 @@
       sourcePrefix: "ഉറവിടം",
       perGramKerala: "ഗ്രാമത്തിന് · കേരളം",
       vsYesterday: "ഇന്നലേക്കാൾ",
+      vsPrevious: "മുൻ ദിവസത്തെ നിരക്കിനോ",
+      wasRate: "മുൻപ്",
+      noChange: "മാറ്റമില്ല",
       gold22K: "22K സ്വർണ്ണം",
       gold24K: "24K സ്വർണ്ണം",
       gold18K: "18K സ്വർണ്ണം",
@@ -1154,18 +1155,11 @@
 
   var REFRESH_MS = 120000;
   var RATES_CACHE_LS_KEY = "cridora.poster.kerala_gold_rates.v1";
-  var RATE_API_FALLBACKS = [
-    "https://www.cridoraindia.com",
-    "https://cridoraindia.com",
-    "http://localhost:8000",
-  ];
-  var RATE_API_PATHS = [
-    "/api/v1/marketplace/kerala-gold-rates/",
-  ];
-  var CRIDORA_RATE_BASES = [
-    "https://www.cridoraindia.com",
-    "https://cridoraindia.com",
-  ];
+  var CRIDORA_SITE = "https://www.cridoraindia.com";
+  var KERALA_RATES_API = CRIDORA_SITE + "/api/v1/marketplace/kerala-gold-rates/";
+  var KERALA_RATES_DAILY = CRIDORA_SITE + "/api/v1/marketplace/kerala-gold-rates/daily/?limit=8";
+  var KERALA_RATES_PAGE = CRIDORA_SITE + "/gold-rates/kerala";
+  var CORS_PROXY = "https://api.allorigins.win/get?url=";
 
   function cridoraLogoSvg(sizePx, gradId) {
     return (
@@ -1195,26 +1189,26 @@
     var reserved = padY * 2 + 46;
     if (opts.showCridoraBar) reserved += Math.round(h * 0.072);
     if (opts.showJeweller) reserved += Math.round(h * 0.078);
-    if (opts.showHeadline) reserved += Math.round(h * (isStory ? 0.068 : isLandscape ? 0.052 : 0.058));
-    if (opts.showMessage) reserved += Math.round(h * 0.042);
-    if (opts.showEyebrow && !isLandscape) reserved += Math.round(h * 0.028);
-    reserved += Math.round(h * (rateCols === 3 ? 0.105 : 0.092));
-    if (opts.showJeweller) reserved += Math.round(h * 0.072);
-    else reserved += Math.round(h * 0.052);
+    if (opts.showHeadline) reserved += Math.round(h * (isStory ? 0.074 : isLandscape ? 0.056 : 0.064));
+    if (opts.showMessage) reserved += Math.round(h * 0.048);
+    if (opts.showEyebrow && !isLandscape) reserved += Math.round(h * 0.032);
+    reserved += Math.round(h * (rateCols === 3 ? 0.112 : 0.098));
+    if (opts.showJeweller) reserved += Math.round(h * 0.068);
+    else reserved += Math.round(h * 0.048);
     reserved += sepMy * (opts.showCridoraBar ? 4 : 3);
-    if (showHero) reserved += Math.round(h * (isStory ? 0.16 : 0.17));
+    if (showHero) reserved += Math.round(h * (isStory ? 0.14 : 0.15));
 
     var mainAvail = Math.max(100, h - reserved);
-    var widthCap = w * (isLandscape ? 0.46 : 0.88);
+    var widthCap = w * (isLandscape ? 0.48 : 0.9);
 
-    var k22Size = Math.round(Math.min(widthCap * 0.22, mainAvail * 0.55, isStory ? 210 : isLandscape ? 148 : 188));
-    if (!showHero) k22Size = Math.round(Math.min(k22Size * 1.1, isStory ? 228 : 200));
-    if (!opts.showJeweller) k22Size = Math.round(Math.min(k22Size * 1.06, isStory ? 235 : 205));
+    var k22Size = Math.round(Math.min(widthCap * 0.245, mainAvail * 0.6, isStory ? 248 : isLandscape ? 172 : 218));
+    if (!showHero) k22Size = Math.round(Math.min(k22Size * 1.12, isStory ? 262 : 228));
+    if (!opts.showJeweller) k22Size = Math.round(Math.min(k22Size * 1.08, isStory ? 270 : 238));
 
-    var rateSize = Math.round(Math.max(k22Size * (isLandscape ? 0.28 : 0.27), isStory ? 38 : 28));
-    var labelSize = Math.max(10, Math.round(k22Size * 0.1));
-    var subSize = Math.max(9, Math.round(k22Size * 0.088));
-    var changeSize = Math.max(9, Math.round(k22Size * 0.088));
+    var rateSize = Math.round(Math.max(k22Size * (isLandscape ? 0.31 : 0.3), isStory ? 44 : 34));
+    var labelSize = Math.max(12, Math.round(k22Size * 0.118));
+    var subSize = Math.max(11, Math.round(k22Size * 0.102));
+    var changeSize = Math.max(11, Math.round(k22Size * 0.098));
     var scale = w / 1080;
     if (isLandscape) scale = h / 630;
     if (isStory) scale = w / 1080 * 1.25;
@@ -1223,10 +1217,10 @@
     var logoWrap = Math.round(54 * scale);
     if (isLandscape) { logoMark = Math.round(52 * (h / 630)); logoWrap = Math.round(46 * (h / 630)); }
 
-    var headlineSize = Math.max(22, Math.round((isStory ? 46 : isLandscape ? 30 : 38) * scale));
-    if (opts.showHeadline && opts.headlineLen > 24) headlineSize = Math.round(headlineSize * 0.88);
-    else if (opts.showHeadline && opts.headlineLen > 18) headlineSize = Math.round(headlineSize * 0.94);
-    var messageSize = Math.max(14, Math.round((isStory ? 26 : isLandscape ? 18 : 21) * scale));
+    var headlineSize = Math.max(26, Math.round((isStory ? 54 : isLandscape ? 36 : 46) * scale));
+    if (opts.showHeadline && opts.headlineLen > 28) headlineSize = Math.round(headlineSize * 0.9);
+    else if (opts.showHeadline && opts.headlineLen > 20) headlineSize = Math.round(headlineSize * 0.96);
+    var messageSize = Math.max(16, Math.round((isStory ? 32 : isLandscape ? 22 : 26) * scale));
 
     return {
       padX: padX,
@@ -1242,9 +1236,9 @@
       hdName: Math.max(16, Math.round(22 * scale)),
       hdTag: Math.max(10, Math.round(11 * scale)),
       hdUrl: Math.max(13, Math.round(16 * scale)),
-      shopName: Math.max(15, Math.round(26 * scale)),
-      taglineSize: Math.max(11, Math.round(13 * scale)),
-      eyebrowSize: Math.max(10, Math.round(12 * scale)),
+      shopName: Math.max(17, Math.round(30 * scale)),
+      taglineSize: Math.max(13, Math.round(16 * scale)),
+      eyebrowSize: Math.max(12, Math.round(14 * scale)),
       headlineSize: headlineSize,
       messageSize: messageSize,
       contactSize: Math.max(10, Math.round(12 * scale)),
@@ -1308,7 +1302,6 @@
     rateStatus: document.getElementById("rateStatus"),
     rateStatusTitle: document.getElementById("rateStatusTitle"),
     rateStatusSub: document.getElementById("rateStatusSub"),
-    apiBase: document.getElementById("apiBase"),
     shopName: document.getElementById("shopName"),
     tagline: document.getElementById("tagline"),
     phone: document.getElementById("phone"),
@@ -1435,9 +1428,6 @@
         if (parsed.showWebsiteUrl == null) parsed.showWebsiteUrl = true;
         if (parsed.showRatesEyebrow == null) parsed.showRatesEyebrow = true;
         if (!parsed.lang) parsed.lang = "en";
-        if (parsed.apiBase && /railway\.app$/i.test(String(parsed.apiBase).replace(/\/$/, ""))) {
-          parsed.apiBase = "https://www.cridoraindia.com";
-        }
         var validIds = ["luxury-dark","royal-cream","festive-ruby","midnight-sapphire","heritage-green"];
         if (validIds.indexOf(parsed.templateId) === -1) parsed.templateId = "luxury-dark";
         return parsed;
@@ -1448,7 +1438,6 @@
       texts: defaultTexts(),
       formatId: "ig-square",
       templateId: "luxury-dark",
-      apiBase: "https://www.cridoraindia.com",
       phone: "+91 98765 43210",
       website: "",
       accentColor: "#d4a84b",
@@ -1479,7 +1468,6 @@
     state.formatId    = getSelectedFormat().id;
     state.templateId  = el.poster.dataset.template || "luxury-dark";
     state.lang        = getLang();
-    state.apiBase     = el.apiBase.value.trim().replace(/\/$/, "");
     state.phone       = el.phone.value;
     state.website     = el.website.value;
     state.accentColor = el.accentColor.value;
@@ -1503,7 +1491,6 @@
   }
 
   function applyStateToForm() {
-    el.apiBase.value        = state.apiBase;
     loadTextsToForm();
     el.phone.value          = state.phone || "";
     el.website.value        = state.website || "";
@@ -1657,6 +1644,7 @@
       gold: normalizedGold,
       silver: normalizedSilver,
       daily_change: raw.daily_change || {},
+      previous_rates: raw.previous_rates || null,
       note: raw.note || "",
     };
   }
@@ -1676,30 +1664,30 @@
     }
   }
 
-  function getRateApiBases() {
-    var bases = [];
-    CRIDORA_RATE_BASES.forEach(function (base) {
-      if (base && bases.indexOf(base) === -1) bases.push(base);
-    });
-    if (location.protocol.startsWith("http") && location.host) {
-      var origin = location.origin.replace(/\/$/, "");
-      if (origin && bases.indexOf(origin) === -1) bases.push(origin);
+  function isCridoraHosted() {
+    return /(^|\.)corridoraindia\.com$/i.test(location.hostname || "");
+  }
+
+  async function fetchTextViaProxy(url) {
+    var proxyUrl = CORS_PROXY + encodeURIComponent(url);
+    var ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
+    var timer = ctrl ? setTimeout(function () { ctrl.abort(); }, 22000) : null;
+    try {
+      var res = await fetch(proxyUrl, {
+        cache: "no-store",
+        credentials: "omit",
+        signal: ctrl ? ctrl.signal : undefined,
+      });
+      if (!res.ok) throw new Error("Proxy HTTP " + res.status);
+      var wrap = await res.json();
+      if (!wrap || wrap.contents == null) throw new Error("Empty proxy response");
+      return String(wrap.contents);
+    } finally {
+      if (timer) clearTimeout(timer);
     }
-    var custom = (el.apiBase.value || "").trim().replace(/\/$/, "");
-    if (custom && bases.indexOf(custom) === -1) bases.push(custom);
-    RATE_API_FALLBACKS.forEach(function (base) {
-      if (base && bases.indexOf(base) === -1) bases.push(base);
-    });
-    return bases;
   }
 
-  function syncApiBaseChips(activeBase) {
-    document.querySelectorAll("[data-api]").forEach(function (btn) {
-      btn.classList.toggle("is-active", btn.dataset.api === activeBase);
-    });
-  }
-
-  async function fetchRatesFromUrl(url) {
+  async function fetchJsonUrl(url) {
     var ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
     var timer = ctrl ? setTimeout(function () { ctrl.abort(); }, 22000) : null;
     try {
@@ -1711,13 +1699,133 @@
         signal: ctrl ? ctrl.signal : undefined,
       });
       if (!res.ok) throw new Error("HTTP " + res.status);
-      var raw = await res.json();
-      var normalized = normalizeRatesPayload(raw);
-      if (!normalized) throw new Error("No usable 22K rate in response");
-      return normalized;
+      return await res.json();
     } finally {
       if (timer) clearTimeout(timer);
     }
+  }
+
+  function parseRatesFromKeralaPageHtml(html) {
+    if (!html) return null;
+    var live = html.match(
+      /22K gold:\s*₹([\d,]+(?:\.\d+)?)[^·]*·\s*24K gold:\s*₹([\d,]+(?:\.\d+)?)[^·]*·\s*18K gold:\s*₹([\d,]+(?:\.\d+)?)[^·]*·\s*Silver 999:\s*₹([\d,]+(?:\.\d+)?)/i
+    );
+    if (!live) return null;
+    var rateDate = (html.match(/Live rates\s*\(([\d-]+)\)/i) || [])[1] || null;
+    return normalizeRatesPayload({
+      region: "Kerala",
+      gold: { "22K": live[1], "24K": live[2], "18K": live[3] },
+      silver: { "999": live[4] },
+      source: "cridoraindia.com",
+      source_label: "Cridora live rate",
+      source_updated_at: rateDate,
+      rate_date: rateDate,
+      daily_change: {},
+    });
+  }
+
+  async function fetchDailyRatesPayload(viaProxy) {
+    var url = KERALA_RATES_DAILY;
+    if (isCridoraHosted() && !viaProxy) {
+      try { return await fetchJsonUrl("/api/v1/marketplace/kerala-gold-rates/daily/?limit=8"); } catch (e) { /* fall through */ }
+    }
+    if (viaProxy) return JSON.parse(await fetchTextViaProxy(url));
+    try { return await fetchJsonUrl(url); } catch (e) {
+      return JSON.parse(await fetchTextViaProxy(url));
+    }
+  }
+
+  function buildChangeObject(cur, prev) {
+    if (cur == null || prev == null || prev <= 0) return { change_inr: null, change_pct: null };
+    var ch = cur - prev;
+    var pct = (ch / prev) * 100;
+    return { change_inr: ch.toFixed(2), change_pct: pct.toFixed(4) };
+  }
+
+  function dailyChangeIsEmpty(changes) {
+    if (!changes || typeof changes !== "object") return true;
+    var keys = Object.keys(changes);
+    if (!keys.length) return true;
+    return keys.every(function (k) {
+      var inr = parseFloat((changes[k] || {}).change_inr);
+      return !isFinite(inr) || Math.abs(inr) < 0.005;
+    });
+  }
+
+  function pickPreviousRateRow(rows, rates) {
+    if (!rows || rows.length < 2 || !rates || !rates.gold) return rows && rows[1];
+    var cur22 = rates.gold["22K"];
+    var i;
+    for (i = 1; i < rows.length; i++) {
+      var v = parseRateNum(rows[i].gold_22k);
+      if (v != null && cur22 != null && Math.abs(v - cur22) >= 0.005) return rows[i];
+    }
+    return rows[1];
+  }
+
+  function applyDailyChangeFromRows(rates, dailyPayload) {
+    var rows = dailyPayload && dailyPayload.rows;
+    if (!rates || !rows || rows.length < 2) return rates;
+    var prevRow = pickPreviousRateRow(rows, rates);
+    var prevGold = {
+      "22K": parseRateNum(prevRow.gold_22k),
+      "24K": parseRateNum(prevRow.gold_24k),
+      "18K": parseRateNum(prevRow.gold_18k),
+    };
+    var prevSilver = { "999": parseRateNum(prevRow.silver_999) };
+    var computed = {
+      "22K": buildChangeObject(rates.gold["22K"], prevGold["22K"]),
+      "24K": buildChangeObject(rates.gold["24K"], prevGold["24K"]),
+      "18K": buildChangeObject(rates.gold["18K"], prevGold["18K"]),
+      "silver999": buildChangeObject(rates.silver && rates.silver["999"], prevSilver["999"]),
+    };
+    if (dailyChangeIsEmpty(rates.daily_change)) rates.daily_change = computed;
+    else {
+      var merged = Object.assign({}, computed, rates.daily_change);
+      ["22K", "24K", "18K", "silver999"].forEach(function (k) {
+        var apiInr = parseFloat((rates.daily_change[k] || {}).change_inr);
+        if (!isFinite(apiInr) || Math.abs(apiInr) < 0.005) merged[k] = computed[k];
+      });
+      rates.daily_change = merged;
+    }
+    rates.previous_rates = {
+      date: prevRow.date,
+      gold: prevGold,
+      silver: prevSilver,
+      isYesterday: prevRow === rows[1],
+    };
+    return rates;
+  }
+
+  async function enrichRatesWithDailyChange(rates, viaProxy) {
+    var daily = null;
+    try { daily = await fetchDailyRatesPayload(viaProxy); } catch (e) {
+      try { daily = await fetchDailyRatesPayload(true); } catch (e2) { /* ignore */ }
+    }
+    if (daily) applyDailyChangeFromRows(rates, daily);
+    return rates;
+  }
+
+  async function fetchRatesFromApiUrl(url, viaProxy) {
+    var raw;
+    if (viaProxy) raw = JSON.parse(await fetchTextViaProxy(url));
+    else raw = await fetchJsonUrl(url);
+    var normalized = normalizeRatesPayload(raw);
+    if (!normalized) throw new Error("No usable 22K rate in response");
+    return normalized;
+  }
+
+  async function fetchRatesFromKeralaPage(viaProxy) {
+    var html = viaProxy
+      ? await fetchTextViaProxy(KERALA_RATES_PAGE)
+      : await (async function () {
+          var res = await fetch(KERALA_RATES_PAGE, { cache: "no-store", credentials: "omit" });
+          if (!res.ok) throw new Error("Page HTTP " + res.status);
+          return res.text();
+        })();
+    var normalized = parseRatesFromKeralaPageHtml(html);
+    if (!normalized) throw new Error("Could not parse rates from Kerala page");
+    return normalized;
   }
 
   function applyRatesPayload(data, opts) {
@@ -1730,7 +1838,7 @@
     saveRatesCache(data);
     var title = (opts.cached ? t("ratesCached") : t("liveRatesOk")) + " · " + fmtInr(data.gold && data.gold["22K"]);
     var sub = formatStatusTimestamp();
-    if (opts.sourceUrl && !opts.cached) sub = "cridoraindia.com · " + sub;
+    if (opts.sourceLabel && !opts.cached) sub = opts.sourceLabel + " · " + sub;
     setRateStatus(true, title, sub);
     renderPoster();
     if (changed) scheduleRefresh();
@@ -1738,34 +1846,58 @@
 
   async function fetchRates() {
     var errors = [];
-    var bases = getRateApiBases();
-    var pathIdx, baseIdx;
+    var strategies = [];
 
-    for (baseIdx = 0; baseIdx < bases.length; baseIdx++) {
-      for (pathIdx = 0; pathIdx < RATE_API_PATHS.length; pathIdx++) {
-        var base = bases[baseIdx];
-        var path = RATE_API_PATHS[pathIdx];
-        var url = base + path;
-        try {
-          var data = await fetchRatesFromUrl(url);
-          el.apiBase.value = base;
-          syncApiBaseChips(base);
-          state.apiBase = base;
-          applyRatesPayload(data, { cached: false, sourceUrl: url });
-          return data;
-        } catch (err) {
-          errors.push(url + " → " + (err.message || String(err)));
-        }
+    if (isCridoraHosted()) {
+      strategies.push({
+        label: "cridoraindia.com",
+        run: async function () {
+          var data = await fetchRatesFromApiUrl("/api/v1/marketplace/kerala-gold-rates/");
+          return enrichRatesWithDailyChange(data, false);
+        },
+      });
+    }
+    strategies.push({
+      label: "cridoraindia.com",
+      run: async function () {
+        var data = await fetchRatesFromApiUrl(KERALA_RATES_API);
+        return enrichRatesWithDailyChange(data, false);
+      },
+    });
+    strategies.push({
+      label: "cridoraindia.com (proxy)",
+      run: async function () {
+        var data = await fetchRatesFromApiUrl(KERALA_RATES_API, true);
+        return enrichRatesWithDailyChange(data, true);
+      },
+    });
+    strategies.push({
+      label: "cridoraindia.com page",
+      run: async function () {
+        var data = await fetchRatesFromKeralaPage(true);
+        return enrichRatesWithDailyChange(data, true);
+      },
+    });
+
+    var i;
+    for (i = 0; i < strategies.length; i++) {
+      try {
+        var data = await strategies[i].run();
+        applyRatesPayload(data, { cached: false, sourceLabel: strategies[i].label });
+        return data;
+      } catch (err) {
+        errors.push(strategies[i].label + " → " + (err.message || String(err)));
       }
     }
 
     var cached = loadRatesCache();
     if (cached) {
+      try { await enrichRatesWithDailyChange(cached, true); } catch (e) { /* ignore */ }
       applyRatesPayload(cached, { cached: true });
       setRateStatus(
         true,
         t("ratesCached") + " · " + fmtInr(cached.gold && cached.gold["22K"]),
-        (errors[0] || "Network blocked") + " · showing last good Cridora rates."
+        (errors[0] || "Could not reach cridoraindia.com") + " · showing last good rates."
       );
       return cached;
     }
@@ -1773,7 +1905,7 @@
     setRateStatus(
       false,
       t("ratesLoadFail"),
-      (errors.slice(0, 2).join(" · ") || "Check connection / CORS") + ". Using demo values."
+      (errors.slice(0, 2).join(" · ") || "Check internet connection") + ". Using demo values."
     );
     if (!rates) {
       rates = {
@@ -1805,18 +1937,40 @@
     refreshTimer = setInterval(fetchRates, REFRESH_MS);
   }
 
-  function buildChangeHtml(changeKey, elemClass, showPct) {
+  function getPreviousRateForKey(changeKey) {
+    if (!rates || !rates.previous_rates) return null;
+    if (changeKey === "silver999") return rates.previous_rates.silver && rates.previous_rates.silver["999"];
+    return rates.previous_rates.gold && rates.previous_rates.gold[changeKey];
+  }
+
+  function buildChangeHtml(changeKey, elemClass, opts) {
+    if (typeof opts === "boolean") opts = { showPct: opts };
+    opts = opts || {};
     if (!el.showChange.checked || !rates || !rates.daily_change) return "";
     var chg = rates.daily_change[changeKey];
     if (!chg) return "";
     var inr = parseFloat(chg.change_inr);
     var pct = parseFloat(chg.change_pct);
     if (!isFinite(inr)) return "";
-    var sign = inr >= 0 ? "+" : "";
-    var dir  = inr >= 0 ? "is-up" : "is-down";
-    var txt  = sign + inr.toFixed(0);
-    if (showPct && isFinite(pct)) txt += " (" + sign + pct.toFixed(2) + "%)";
-    txt += " " + t("vsYesterday");
+    var dir, txt, sign;
+    if (Math.abs(inr) < 0.005) {
+      if (!opts.showFlat) return "";
+      dir = "is-flat";
+      txt = t("noChange");
+    } else {
+      sign = inr >= 0 ? "+" : "−";
+      dir = inr >= 0 ? "is-up" : "is-down";
+      txt = sign + "₹" + Math.abs(inr).toFixed(0);
+      if (opts.showPct && isFinite(pct)) txt += " (" + sign + Math.abs(pct).toFixed(2) + "%)";
+      if (opts.showVsYesterday !== false) {
+        var vsLabel = (rates.previous_rates && rates.previous_rates.isYesterday === false) ? t("vsPrevious") : t("vsYesterday");
+        txt += " " + vsLabel;
+      }
+      if (opts.showPrev !== false) {
+        var prevVal = getPreviousRateForKey(changeKey);
+        if (prevVal != null && opts.showPrevFull) txt += " · " + t("wasRate") + " " + fmtInr(prevVal);
+      }
+    }
     return '<div class="' + elemClass + " " + dir + '">' + escapeHtml(txt) + "</div>";
   }
 
@@ -1826,7 +1980,7 @@
         '<div class="poster__rate-label">' + escapeHtml(t(labelKey)) + "</div>" +
         '<div class="poster__rate-price">' + fmtInr(price) + "</div>" +
         '<div class="poster__rate-sub">' + escapeHtml(t("perGramKerala")) + "</div>" +
-        buildChangeHtml(changeKey, "poster__rate-change", false) +
+        buildChangeHtml(changeKey, "poster__rate-change", { showPct: false, showPrevFull: false }) +
       "</div>"
     );
   }
@@ -1946,7 +2100,7 @@
           '<div class="poster__k22-label">' + escapeHtml(t("gold22K")) + "</div>" +
           '<div class="poster__k22-price">' + fmtInr(g["22K"]) + "</div>" +
           '<div class="poster__k22-sub">' + escapeHtml(t("perGramKerala")) + "</div>" +
-          buildChangeHtml("22K", "poster__k22-change", true) +
+          buildChangeHtml("22K", "poster__k22-change", { showPct: true, showPrevFull: true, showFlat: true }) +
         "</div>" +
         heroImgHtml +
       "</div>";
@@ -2094,7 +2248,7 @@
 
   function bindForm() {
     var inputs = [
-      el.apiBase, el.shopName, el.tagline, el.phone, el.address, el.website,
+      el.shopName, el.tagline, el.phone, el.address, el.website,
       el.ctaText, el.accentColor, el.bgMode, el.bgColor1, el.bgColor2,
       el.cridoraWebsite, el.cridoraTagline, el.posterHeadline, el.posterMessage,
       el.showChange, el.showSilver, el.showHero, el.showCta,
@@ -2166,14 +2320,6 @@
     el.btnRefresh.addEventListener("click", fetchRates);
     el.btnFitPreview.addEventListener("click", fitPreview);
     window.addEventListener("resize", fitPreview);
-
-    document.querySelectorAll("[data-api]").forEach(function (btn) {
-      btn.addEventListener("click", function () {
-        el.apiBase.value = btn.dataset.api;
-        syncApiBaseChips(btn.dataset.api);
-        fetchRates();
-      });
-    });
 
     document.querySelectorAll("[data-headline]").forEach(function (btn) {
       btn.addEventListener("click", function () {
@@ -2386,7 +2532,6 @@
   });
 
   applyStateToForm();
-  syncApiBaseChips(el.apiBase.value.replace(/\/$/, "") || "https://www.cridoraindia.com");
   buildLangChips();
   buildFormatChips();
   buildTemplateGrid();

@@ -17,7 +17,6 @@ from .metal_ticker_adjustments import (
     adjusted_inr_from_decimal,
     apply_live_adjustments_to_spot_payload,
 )
-from .public_api_cors import public_cors_response
 from .public_rate_copy import (
     CRIDORA_LIVE_RATE_NOTE,
     CRIDORA_LIVE_RATE_STALE_NOTE,
@@ -491,9 +490,4 @@ class MarketplaceSpotPricesView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
-        return public_cors_response(
-            attach_public_rate_labels(public_spot_prices_payload(include_live_raw=False))
-        )
-
-    def options(self, request):
-        return public_cors_response({})
+        return Response(attach_public_rate_labels(public_spot_prices_payload(include_live_raw=False)))

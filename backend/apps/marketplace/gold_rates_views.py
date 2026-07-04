@@ -23,7 +23,6 @@ from .kerala_board_history import (
     yesterday_change_for_metal,
 )
 from .models import GoldRatesAdPlacement, ensure_default_gold_rates_ad_placements, get_or_create_gold_rates_page_config
-from .public_api_cors import public_cors_response
 from .public_rate_copy import attach_public_rate_labels, public_rate_source_label
 from .spot_prices import public_spot_prices_payload
 
@@ -137,10 +136,7 @@ class MarketplaceKeralaGoldRatesView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
-        return public_cors_response(public_kerala_rates_payload())
-
-    def options(self, request):
-        return public_cors_response({})
+        return Response(public_kerala_rates_payload())
 
 
 class MarketplaceKeralaGoldRatesHistoryView(APIView):
