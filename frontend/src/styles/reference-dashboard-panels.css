@@ -1340,8 +1340,8 @@ html[data-theme='dark'] .pf-track-gold-sheet {
   bottom: 0;
   transform: translateX(-50%);
   width: min(100%, 640px);
-  max-height: min(92vh, 900px);
-  /* Flex column so the footer is always pinned; only the body scrolls */
+  /* Explicit height so flex scroll-body can activate — max-height alone is insufficient */
+  height: min(92svh, min(92vh, 900px));
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -1368,7 +1368,7 @@ html[data-theme='dark'] .pf-track-gold-sheet {
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
-  padding: 16px 16px 1rem;
+  padding: 4px 16px 1.5rem;
 }
 
 .pf-personal-flow-standalone .pf-vault-form {
@@ -1382,7 +1382,10 @@ html[data-theme='dark'] .pf-track-gold-sheet {
     transform: translate(-50%, -50%);
     border-radius: 16px;
     border-bottom: 1px solid var(--border);
-    max-height: min(88vh, 860px);
+    height: min(88svh, min(88vh, 860px));
+  }
+  .pf-sheet-handle {
+    display: none;
   }
 }
 

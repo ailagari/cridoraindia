@@ -402,15 +402,18 @@ export function InvoiceImportFlow({
       aria-labelledby="pf-vault-invoice-import-title"
       aria-busy={busy}
     >
+      <div className="pf-sheet-handle" aria-hidden />
       <div className="pf-vault-form__scroll-body">
       <header className="pf-vault-form__header">
         <span className="pf-vault-form__eyebrow">Smart import</span>
         <h4 id="pf-vault-invoice-import-title" className="pf-vault-form__title">
-          Import from invoice
+          {phase === 'analyzing' ? 'Reading invoice…' : phase === 'review' || phase === 'creating' ? 'Confirm details' : 'Import from invoice'}
         </h4>
-        <p className="pf-vault-form__lede">
-          Upload a purchase bill photo, PDF, or screenshot. We read item tables and line details — you confirm before saving.
-        </p>
+        {phase === 'picking' ? (
+          <p className="pf-vault-form__lede">
+            Take a photo of the bill or upload a PDF — we extract item names, weights and pricing for you.
+          </p>
+        ) : null}
         <button type="button" className="btn btn-ghost btn-sm pf-vault-form__close" onClick={onClose} disabled={busy}>
           Close
         </button>
@@ -508,24 +511,10 @@ export function InvoiceImportFlow({
       ) : null}
 
       {phase === 'analyzing' ? (
-        <div className="pf-invoice-scanning" role="status" aria-live="polite">
-          <div className="pf-invoice-scanning__orbit" aria-hidden>
-            <div className="pf-invoice-scanning__ring" />
-            <div className="pf-invoice-scanning__ring pf-invoice-scanning__ring--2" />
-            <svg className="pf-invoice-scanning__icon" viewBox="0 0 28 28" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <rect x="3" y="5" width="22" height="18" rx="2.5" />
-              <path d="M8 11h12M8 15h8" strokeLinecap="round" />
-              <circle cx="21" cy="18" r="4.5" fill="var(--surface)" />
-              <path d="M19 18h4M21 16v4" strokeLinecap="round" strokeWidth="1.4" />
-            </svg>
-          </div>
-          <p className="pf-invoice-scanning__headline">Reading your bill…</p>
-          <p className="pf-invoice-scanning__sub">Extracting item names, weights, and purchase details. This takes a few seconds.</p>
-          <div className="pf-invoice-scanning__steps" aria-hidden>
-            <span className="pf-invoice-scanning__step pf-invoice-scanning__step--done">Photo received</span>
-            <span className="pf-invoice-scanning__step pf-invoice-scanning__step--active">AI reading details</span>
-            <span className="pf-invoice-scanning__step">Confirm &amp; save</span>
-          </div>
+        <div className="pf-scan-loader" role="status" aria-live="polite">
+          <span className="pf-scan-loader__ring" aria-hidden />
+          <p className="pf-scan-loader__label">Reading your invoice…</p>
+          <p className="pf-scan-loader__sub">This usually takes a few seconds.</p>
         </div>
       ) : null}
 
