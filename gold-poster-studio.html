@@ -6,7 +6,7 @@
   <title>Cridora Gold Poster Studio — Kerala Live Rates</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Anek+Malayalam:wght@500;600;700;800&family=Fraunces:opsz,wght@9..144,600;9..144,700;9..144,800&family=Noto+Sans+Malayalam:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Anek+Malayalam:wght@500;600;700;800&family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Malayalam:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <style>
     :root {
       --ui-bg: #0c0f18;
@@ -24,7 +24,7 @@
     *, *::before, *::after { box-sizing: border-box; }
     html, body { margin: 0; min-height: 100%; }
     body {
-      font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+      font-family: "Inter", system-ui, -apple-system, sans-serif;
       background: var(--ui-bg);
       color: var(--ui-text);
       line-height: 1.45;
@@ -56,16 +56,13 @@
       margin-bottom: 1.25rem;
     }
     .brand-head__mark {
-      width: 42px; height: 42px;
-      border-radius: 12px;
-      background: linear-gradient(135deg,#f0d48a,#b8862e);
+      width: 48px; height: 48px;
+      flex-shrink: 0;
       display: grid;
       place-items: center;
-      font-weight: 800;
-      color: #1a1208;
-      font-size: 1.1rem;
-      box-shadow: 0 8px 24px rgba(201,168,64,0.25);
+      filter: drop-shadow(0 2px 10px rgba(212, 168, 92, 0.35));
     }
+    .brand-head__mark svg { display: block; width: 48px; height: 48px; }
     .brand-head h1 { margin: 0; font-size: 1.05rem; font-weight: 800; letter-spacing: -0.02em; }
     .brand-head p  { margin: 0.15rem 0 0; font-size: 0.72rem; color: var(--ui-muted); }
     .panel-block { margin-bottom: 1.15rem; padding-bottom: 1.15rem; border-bottom: 1px solid var(--ui-border); }
@@ -262,12 +259,69 @@
     .poster {
       position: relative;
       overflow: hidden;
-      font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+      font-family: "Inter", system-ui, -apple-system, sans-serif;
       color: #fff;
       --poster-accent: #d4a84b;
       --poster-accent-hi: #f5e6b8;
       --poster-bg-a: #0a0e1a;
       --poster-bg-b: #141c2e;
+      --poster-pad-x: 48px;
+      --poster-pad-y: 40px;
+      --poster-gap: 8px;
+      --poster-sep-my: 7px;
+      --fs-k22: 112px;
+      --fs-rate: 32px;
+      --fs-label: 12px;
+      --fs-sub: 11px;
+      --fs-change: 11px;
+      --fs-meta: 11px;
+      --fs-hd-name: 22px;
+      --fs-hd-tag: 11px;
+      --fs-hd-url: 12px;
+      --fs-shop: 26px;
+      --fs-tagline: 13px;
+      --fs-eyebrow: 12px;
+      --fs-contact: 12px;
+      --fs-contact-strong: 14px;
+      --fs-cta: 12px;
+      --fs-foot: 11px;
+      --fs-foot-url: 13px;
+      --fs-headline: 28px;
+      --fs-message: 14px;
+      --logo-mark: 56px;
+      --logo-wrap: 56px;
+      --frame-inset: 20px;
+      --corner-offset: 32px;
+    }
+
+    .cridora-logo__aindia {
+      color: #ffd400;
+      font-weight: 800;
+    }
+    .poster[data-template="royal-cream"] .cridora-logo__aindia { color: #a67a28; }
+    .poster__cridora-mark { flex-shrink: 0; filter: drop-shadow(0 2px 8px rgba(212, 168, 92, 0.32)); }
+
+    /* html2canvas-safe overrides during PNG export */
+    .poster--exporting .poster__k22-price,
+    .poster--exporting .poster__rate-price {
+      background: none !important;
+      -webkit-background-clip: border-box !important;
+      background-clip: border-box !important;
+      -webkit-text-fill-color: var(--poster-accent-hi) !important;
+      color: var(--poster-accent-hi) !important;
+    }
+    .poster--exporting[data-template="royal-cream"] .poster__k22-price,
+    .poster--exporting[data-template="royal-cream"] .poster__rate-price {
+      -webkit-text-fill-color: #7a5810 !important;
+      color: #7a5810 !important;
+    }
+    .poster--exporting .poster__cridora-mark { filter: none !important; }
+    .poster--exporting .poster__deco-ring { opacity: 0.35; }
+    .poster--exporting.poster--landscape .poster__content {
+      display: flex !important;
+      flex-direction: column;
+      grid-area: main;
+      min-height: 0;
     }
 
     /* ── Template colour tokens ── */
@@ -393,7 +447,7 @@
     /* ── Border frame ── */
     .poster__frame {
       position: absolute;
-      inset: 20px;
+      inset: var(--frame-inset);
       border: 1px solid rgba(212,168,75,0.2);
       border-radius: 6px;
       pointer-events: none;
@@ -412,20 +466,30 @@
       z-index: 3;
       pointer-events: none;
     }
-    .poster__corner--tl { top: 32px;    left: 32px;   border-width: 2px 0 0 2px; }
-    .poster__corner--tr { top: 32px;    right: 32px;  border-width: 2px 2px 0 0; }
-    .poster__corner--bl { bottom: 32px; left: 32px;   border-width: 0 0 2px 2px; }
-    .poster__corner--br { bottom: 32px; right: 32px;  border-width: 0 2px 2px 0; }
+    .poster__corner--tl { top: var(--corner-offset);    left: var(--corner-offset);   border-width: 2px 0 0 2px; }
+    .poster__corner--tr { top: var(--corner-offset);    right: var(--corner-offset);  border-width: 2px 2px 0 0; }
+    .poster__corner--bl { bottom: var(--corner-offset); left: var(--corner-offset);   border-width: 0 0 2px 2px; }
+    .poster__corner--br { bottom: var(--corner-offset); right: var(--corner-offset);  border-width: 0 2px 2px 0; }
 
-    /* ── INNER: flex column for square/story ── */
+    /* ── INNER: flex column — content fills canvas, minimal dead space ── */
     .poster__inner {
       position: relative;
       z-index: 4;
       height: 100%;
       display: flex;
       flex-direction: column;
-      padding: 44px 52px 40px;
+      justify-content: space-between;
+      gap: var(--poster-gap);
+      padding: var(--poster-pad-y) var(--poster-pad-x);
       box-sizing: border-box;
+    }
+    .poster__content {
+      flex: 1 1 auto;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: var(--poster-gap);
     }
 
     /* ── BRAND HEADER ── */
@@ -436,18 +500,35 @@
       gap: 14px;
       flex-shrink: 0;
     }
-    .poster__hd-brand { display: flex; align-items: center; gap: 10px; }
+    .poster__hd-brand { display: flex; align-items: center; gap: calc(var(--logo-mark) * 0.22); min-width: 0; }
     .poster__hd-name {
-      font-weight: 800;
-      font-size: 1.4rem;
-      letter-spacing: -0.03em;
-      line-height: 1;
+      font-weight: 700;
+      font-size: var(--fs-hd-name);
+      letter-spacing: -0.02em;
+      line-height: 1.05;
     }
-    .poster__hd-name em { font-style: normal; color: var(--poster-accent-hi); }
-    .poster__hd-tag { font-size: 0.68rem; font-weight: 600; opacity: 0.68; margin-top: 3px; letter-spacing: 0.01em; }
-    .poster__hd-url { font-size: 0.78rem; font-weight: 800; letter-spacing: 0.04em; color: var(--poster-accent-hi); white-space: nowrap; }
+    .poster__hd-tag { font-size: var(--fs-hd-tag); font-weight: 500; opacity: 0.68; margin-top: 3px; letter-spacing: -0.01em; }
+    .poster__hd-url {
+      font-size: var(--fs-hd-url);
+      font-weight: 800;
+      letter-spacing: 0.03em;
+      color: var(--poster-accent-hi);
+      flex-shrink: 0;
+      padding: calc(var(--fs-hd-url) * 0.4) calc(var(--fs-hd-url) * 0.85);
+      background: rgba(212,168,75,0.16);
+      border: 1px solid rgba(212,168,75,0.42);
+      border-radius: 999px;
+      line-height: 1.1;
+      opacity: 1;
+      text-shadow: 0 1px 8px rgba(0,0,0,0.25);
+    }
+    .poster[data-template="royal-cream"] .poster__hd-url {
+      color: #6b4c0c;
+      background: rgba(139,105,20,0.12);
+      border-color: rgba(139,105,20,0.35);
+      text-shadow: none;
+    }
     .poster[data-template="royal-cream"] .poster__hd-name     { color: #2a1c06; }
-    .poster[data-template="royal-cream"] .poster__hd-name em  { color: #7a5c10; }
     .poster[data-template="royal-cream"] .poster__hd-url      { color: #7a5c10; }
 
     /* ── GOLD RULED SEPARATOR ── */
@@ -457,7 +538,7 @@
       background: linear-gradient(90deg,
         transparent 0%, rgba(212,168,75,0.45) 20%,
         rgba(212,168,75,0.6) 50%, rgba(212,168,75,0.45) 80%, transparent 100%);
-      margin: 13px 0;
+      margin: var(--poster-sep-my) 0;
     }
     .poster[data-template="royal-cream"] .poster__sep {
       background: linear-gradient(90deg, transparent, rgba(139,105,20,0.35), transparent);
@@ -466,7 +547,7 @@
     /* ── JEWELLER SECTION ── */
     .poster__jeweller { display: flex; align-items: center; gap: 14px; flex-shrink: 0; }
     .poster__logo-wrap {
-      width: 60px; height: 60px;
+      width: var(--logo-wrap); height: var(--logo-wrap);
       border-radius: 12px;
       background: rgba(255,255,255,0.07);
       border: 1.5px solid rgba(212,168,75,0.28);
@@ -475,44 +556,70 @@
     }
     .poster[data-template="royal-cream"] .poster__logo-wrap { background: rgba(255,255,255,0.65); border-color: rgba(139,105,20,0.24); }
     .poster__logo-wrap img { width: 100%; height: 100%; object-fit: contain; }
-    .poster__logo-placeholder { font-size: 1.4rem; opacity: 0.35; }
+    .poster__logo-placeholder { font-size: calc(var(--logo-wrap) * 0.45); opacity: 0.35; }
     .poster__shop-name {
-      font-family: "Fraunces", Georgia, serif;
-      font-size: 1.6rem; font-weight: 700;
+      font-family: "Inter", system-ui, sans-serif;
+      font-size: var(--fs-shop); font-weight: 800;
       line-height: 1.08; letter-spacing: -0.02em;
       color: var(--poster-accent-hi); margin: 0;
     }
     .poster[data-template="royal-cream"] .poster__shop-name { color: #3e2804; }
-    .poster__tagline { margin: 4px 0 0; font-size: 0.82rem; opacity: 0.72; font-weight: 500; }
+    .poster__tagline { margin: 3px 0 0; font-size: var(--fs-tagline); opacity: 0.72; font-weight: 500; }
 
     /* ── EYEBROW ── */
     .poster__eyebrow {
       text-align: center;
-      font-size: 0.76rem; font-weight: 700;
-      letter-spacing: 0.14em; text-transform: uppercase;
+      font-size: var(--fs-eyebrow); font-weight: 700;
+      letter-spacing: 0.12em; text-transform: uppercase;
       color: var(--poster-accent); opacity: 0.92;
       flex-shrink: 0;
     }
 
-    /* ── MAIN: 22K hero — fills remaining height, vertically centred ── */
+    /* ── Custom headline & message ── */
+    .poster__headline {
+      text-align: center;
+      font-size: var(--fs-headline);
+      font-weight: 800;
+      line-height: 1.08;
+      letter-spacing: -0.02em;
+      color: var(--poster-accent-hi);
+      flex-shrink: 0;
+      margin: 0;
+    }
+    .poster[data-template="royal-cream"] .poster__headline { color: #3e2804; }
+    .poster__message {
+      text-align: center;
+      font-size: var(--fs-message);
+      font-weight: 600;
+      line-height: 1.35;
+      letter-spacing: -0.01em;
+      color: inherit;
+      opacity: 0.82;
+      flex-shrink: 0;
+      margin: 0;
+    }
+    .poster--ml .poster__headline { font-family: "Anek Malayalam","Noto Sans Malayalam",sans-serif; letter-spacing: 0; }
+    .poster--ml .poster__message  { font-family: "Noto Sans Malayalam",sans-serif; }
+
+    /* ── MAIN: 22K hero ── */
     .poster__main {
-      flex: 1;
+      flex: 0 0 auto;
       display: flex; flex-direction: column;
       align-items: center; justify-content: center;
       text-align: center;
       min-height: 0;
-      padding: 8px 0;
+      padding: calc(var(--poster-gap) * 0.5) 0;
     }
     .poster__k22 { display: flex; flex-direction: column; align-items: center; }
     .poster__k22-label {
-      font-size: 0.78rem; font-weight: 700;
-      letter-spacing: 0.14em; text-transform: uppercase;
-      color: var(--poster-accent); margin-bottom: 12px;
+      font-size: var(--fs-label); font-weight: 700;
+      letter-spacing: 0.12em; text-transform: uppercase;
+      color: var(--poster-accent); margin-bottom: calc(var(--poster-gap) * 0.75);
     }
     .poster__k22-price {
-      font-family: "Fraunces", Georgia, serif;
-      font-size: 7.0rem; font-weight: 800;
-      line-height: 0.9; letter-spacing: -0.04em;
+      font-family: "Inter", system-ui, sans-serif;
+      font-size: var(--fs-k22); font-weight: 800;
+      line-height: 0.92; letter-spacing: -0.04em;
       font-variant-numeric: tabular-nums;
       background: linear-gradient(155deg, var(--poster-accent-hi) 0%, var(--poster-accent) 45%, var(--poster-accent-hi) 100%);
       -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
@@ -522,14 +629,14 @@
       -webkit-background-clip: text; background-clip: text;
     }
     .poster__k22-sub {
-      font-size: 0.76rem; font-weight: 600;
+      font-size: var(--fs-sub); font-weight: 600;
       opacity: 0.72; letter-spacing: 0.04em;
-      text-transform: uppercase; margin-top: 14px;
+      text-transform: uppercase; margin-top: calc(var(--poster-gap) * 0.75);
     }
     .poster__k22-change {
       display: inline-flex; align-items: center; gap: 5px;
-      margin-top: 14px; padding: 6px 16px;
-      border-radius: 999px; font-size: 0.78rem; font-weight: 700;
+      margin-top: calc(var(--poster-gap) * 0.75); padding: calc(var(--fs-change) * 0.55) calc(var(--fs-change) * 1.4);
+      border-radius: 999px; font-size: var(--fs-change); font-weight: 700;
     }
     .poster__k22-change.is-up   { color: #34d399; background: rgba(52,211,153,0.13); }
     .poster__k22-change.is-down { color: #f87171; background: rgba(248,113,113,0.13); }
@@ -538,16 +645,16 @@
 
     /* Hero product image */
     .poster__hero-img {
-      max-height: 200px; width: 100%;
+      max-height: var(--hero-max-h, 200px); width: 100%;
       border-radius: 14px; object-fit: cover;
       border: 1px solid rgba(212,168,75,0.24);
       box-shadow: 0 8px 28px rgba(0,0,0,0.28);
-      margin-top: 18px; flex-shrink: 0;
+      margin-top: var(--poster-gap); flex-shrink: 0;
     }
 
     /* ── SECONDARY RATES ROW: 24K / 18K / Silver ── */
     .poster__rates-row { display: flex; align-items: stretch; flex-shrink: 0; }
-    .poster__rate-col  { flex: 1; text-align: center; padding: 12px 8px; }
+    .poster__rate-col  { flex: 1; text-align: center; padding: calc(var(--poster-gap) * 1.1) calc(var(--poster-gap) * 0.6); }
     .poster__rate-vsep {
       width: 1px;
       background: linear-gradient(180deg, transparent 0%, rgba(212,168,75,0.3) 25%, rgba(212,168,75,0.3) 75%, transparent 100%);
@@ -557,13 +664,13 @@
       background: linear-gradient(180deg, transparent, rgba(139,105,20,0.25), transparent);
     }
     .poster__rate-label {
-      font-size: 0.7rem; font-weight: 700;
+      font-size: var(--fs-label); font-weight: 700;
       letter-spacing: 0.10em; text-transform: uppercase;
-      color: var(--poster-accent); margin-bottom: 8px;
+      color: var(--poster-accent); margin-bottom: calc(var(--poster-gap) * 0.5);
     }
     .poster__rate-price {
-      font-family: "Fraunces", Georgia, serif;
-      font-size: 2.05rem; font-weight: 800;
+      font-family: "Inter", system-ui, sans-serif;
+      font-size: var(--fs-rate); font-weight: 800;
       line-height: 1; letter-spacing: -0.03em;
       font-variant-numeric: tabular-nums;
       background: linear-gradient(145deg, var(--poster-accent-hi) 0%, var(--poster-accent) 60%, var(--poster-accent-hi) 100%);
@@ -574,7 +681,7 @@
       -webkit-background-clip: text; background-clip: text;
     }
     .poster__rate-sub  { display: none; }
-    .poster__rate-change { font-size: 0.66rem; font-weight: 700; margin-top: 6px; }
+    .poster__rate-change { font-size: var(--fs-change); font-weight: 700; margin-top: calc(var(--poster-gap) * 0.35); }
     .poster__rate-change.is-up   { color: #34d399; }
     .poster__rate-change.is-down { color: #f87171; }
     .poster[data-template="royal-cream"] .poster__rate-change.is-up   { color: #059669; }
@@ -583,9 +690,9 @@
     /* ── META LINE ── */
     .poster__meta-line {
       display: flex; align-items: center; justify-content: center;
-      gap: 6px; font-size: 0.7rem; font-weight: 600;
-      opacity: 0.7; letter-spacing: 0.01em;
-      flex-shrink: 0; margin-top: 2px;
+      gap: 6px; font-size: var(--fs-meta); font-weight: 600;
+      opacity: 0.7; letter-spacing: -0.01em;
+      flex-shrink: 0;
       font-variant-numeric: tabular-nums;
     }
     .poster__meta-dot { width: 6px; height: 6px; border-radius: 50%; background: #34d399; box-shadow: 0 0 5px rgba(52,211,153,0.55); flex-shrink: 0; }
@@ -598,15 +705,15 @@
       justify-content: space-between;
       gap: 10px; flex-shrink: 0;
     }
-    .poster__contact { font-size: 0.78rem; line-height: 1.5; opacity: 0.8; min-width: 0; flex: 1; }
-    .poster__contact strong { display: block; font-size: 0.9rem; opacity: 1; margin-bottom: 3px; color: var(--poster-accent-hi); font-weight: 700; }
+    .poster__contact { font-size: var(--fs-contact); line-height: 1.45; opacity: 0.8; min-width: 0; flex: 1; }
+    .poster__contact strong { display: block; font-size: var(--fs-contact-strong); opacity: 1; margin-bottom: 2px; color: var(--poster-accent-hi); font-weight: 700; }
     .poster[data-template="royal-cream"] .poster__contact strong { color: #3e2804; }
     .poster__cta {
       display: inline-flex; align-items: center; gap: 6px;
-      padding: 9px 18px; border-radius: 999px;
+      padding: calc(var(--fs-cta) * 0.65) calc(var(--fs-cta) * 1.5); border-radius: 999px;
       background: linear-gradient(135deg, var(--poster-accent-hi), var(--poster-accent));
-      color: #1a1208; font-size: 0.76rem; font-weight: 800;
-      letter-spacing: 0.04em; text-transform: uppercase;
+      color: #1a1208; font-size: var(--fs-cta); font-weight: 800;
+      letter-spacing: 0.03em; text-transform: uppercase;
       box-shadow: 0 3px 14px rgba(201,168,64,0.28);
       flex-shrink: 0; white-space: nowrap;
     }
@@ -617,10 +724,28 @@
       justify-content: space-between;
       gap: 10px; flex-shrink: 0;
     }
-    .poster__foot-brand { display: flex; align-items: center; gap: 7px; opacity: 0.88; }
-    .poster__foot-text  { font-size: 0.68rem; font-weight: 600; line-height: 1.4; opacity: 0.75; }
-    .poster__foot-url   { font-size: 0.8rem; font-weight: 800; color: var(--poster-accent-hi); letter-spacing: 0.03em; }
-    .poster[data-template="royal-cream"] .poster__foot-url { color: #7a5c10; }
+    .poster__foot-brand { display: flex; align-items: center; gap: calc(var(--logo-mark) * 0.18); opacity: 0.92; min-width: 0; flex: 1; }
+    .poster__foot-text  { font-size: var(--fs-foot); font-weight: 600; line-height: 1.35; opacity: 0.75; }
+    .poster__foot-url {
+      font-size: var(--fs-foot-url);
+      font-weight: 800;
+      color: var(--poster-accent-hi);
+      letter-spacing: 0.03em;
+      flex-shrink: 0;
+      padding: calc(var(--fs-foot-url) * 0.42) calc(var(--fs-foot-url) * 0.9);
+      background: rgba(212,168,75,0.16);
+      border: 1px solid rgba(212,168,75,0.42);
+      border-radius: 999px;
+      line-height: 1.1;
+      opacity: 1;
+      text-shadow: 0 1px 8px rgba(0,0,0,0.25);
+    }
+    .poster[data-template="royal-cream"] .poster__foot-url {
+      color: #6b4c0c;
+      background: rgba(139,105,20,0.12);
+      border-color: rgba(139,105,20,0.35);
+      text-shadow: none;
+    }
 
     /* ══════════════════════════════════════════════
        LANDSCAPE  (1200 × 630)
@@ -640,18 +765,22 @@
         "footer   main"
         "foot     foot";
       grid-template-rows: auto auto auto auto auto auto auto;
-      column-gap: 40px;
+      column-gap: calc(var(--poster-pad-x) * 0.75);
       row-gap: 0;
-      padding: 28px 44px 24px;
+      justify-content: stretch;
     }
     .poster--landscape .poster__hd         { grid-area: hd; }
-    .poster--landscape .poster__sep--a     { grid-area: sep-a; margin: 10px 0; }
+    .poster--landscape .poster__sep--a     { grid-area: sep-a; margin: calc(var(--poster-sep-my) * 0.85) 0; }
     .poster--landscape .poster__sep--b     { display: none; }
     .poster--landscape .poster__sep--c     { display: none; }
     .poster--landscape .poster__sep--d     { display: none; }
     .poster--landscape .poster__jeweller   { grid-area: jewel; padding-top: 4px; align-self: start; }
     .poster--landscape .poster__eyebrow    { display: none; }
-    .poster--landscape .poster__main       { grid-area: main; align-self: stretch; padding: 0; }
+    .poster--landscape .poster__headline   { text-align: left; font-size: calc(var(--fs-headline) * 0.92); }
+    .poster--landscape .poster__message    { text-align: left; margin-bottom: calc(var(--poster-gap) * 0.5); }
+    .poster--landscape .poster__main       { grid-area: main; align-self: stretch; padding: 0; align-items: flex-start; text-align: left; justify-content: center; }
+    .poster--landscape .poster__k22        { align-items: flex-start; width: 100%; }
+    .poster--landscape .poster__k22-price  { text-align: left; }
     .poster--landscape .poster__rates-row  { grid-area: rates; flex-direction: column; }
     .poster--landscape .poster__meta-line  { grid-area: meta; justify-content: flex-start; margin-top: 0; }
     .poster--landscape .poster__footer     { grid-area: footer; }
@@ -669,77 +798,25 @@
     }
     .poster--landscape .poster__rate-col:last-child   { border-bottom: none; }
     .poster--landscape .poster__rate-vsep             { display: none; }
-    .poster--landscape .poster__rate-label            { grid-area: lbl; margin-bottom: 0; font-size: 0.68rem; }
-    .poster--landscape .poster__rate-price            { grid-area: price; font-size: 1.65rem; text-align: right; }
+    .poster--landscape .poster__rate-label            { grid-area: lbl; margin-bottom: 0; }
+    .poster--landscape .poster__rate-price            { grid-area: price; text-align: right; }
     .poster--landscape .poster__rate-sub              { display: none; }
-    .poster--landscape .poster__rate-change           { grid-area: change; justify-self: end; font-size: 0.64rem; margin-top: 0; }
-    /* Landscape 22K */
-    .poster--landscape .poster__k22-price             { font-size: 5.2rem; }
-    .poster--landscape .poster__k22-label             { font-size: 0.72rem; }
-    .poster--landscape .poster__k22-sub               { font-size: 0.72rem; margin-top: 10px; }
-    .poster--landscape .poster__k22-change            { font-size: 0.74rem; padding: 5px 13px; margin-top: 10px; }
+    .poster--landscape .poster__rate-change           { grid-area: change; justify-self: end; margin-top: 0; }
     .poster--landscape .poster__hero-img              { display: none; }
-    .poster--landscape .poster__logo-wrap             { width: 50px; height: 50px; border-radius: 10px; }
-    .poster--landscape .poster__shop-name             { font-size: 1.28rem; }
-    .poster--landscape .poster__tagline               { font-size: 0.76rem; }
-    .poster--landscape .poster__contact               { font-size: 0.74rem; }
-    .poster--landscape .poster__contact strong        { font-size: 0.82rem; }
-    .poster--landscape .poster__cta                   { padding: 7px 14px; font-size: 0.68rem; }
+    .poster--landscape .poster__content               { display: contents; }
     .poster[data-template="royal-cream"].poster--landscape .poster__rate-col { border-color: rgba(139,105,20,0.15); }
 
-    /* ══════════════════════════════════════════════
-       STORY / VERTICAL  (1080 × 1920)
-       Scale everything ~1.5× for the tall canvas
-    ══════════════════════════════════════════════ */
-    .poster--story .poster__inner          { padding: 80px 60px 72px; }
-    .poster--story .poster__sep            { margin: 22px 0; }
-    /* Brand */
-    .poster--story .poster__hd-name        { font-size: 2.2rem; }
-    .poster--story .poster__hd-tag         { font-size: 0.98rem; margin-top: 5px; }
-    .poster--story .poster__hd-url         { font-size: 1.12rem; }
-    /* Jeweller */
-    .poster--story .poster__jeweller       { gap: 20px; }
-    .poster--story .poster__logo-wrap      { width: 94px; height: 94px; border-radius: 16px; }
-    .poster--story .poster__shop-name      { font-size: 2.5rem; }
-    .poster--story .poster__tagline        { font-size: 1.15rem; margin-top: 6px; opacity: 0.8; }
-    /* Eyebrow */
-    .poster--story .poster__eyebrow        { font-size: 1.08rem; letter-spacing: 0.14em; }
-    /* 22K hero */
-    .poster--story .poster__k22-price      { font-size: 10.5rem; }
-    .poster--story .poster__k22-label      { font-size: 1.1rem; margin-bottom: 16px; }
-    .poster--story .poster__k22-sub        { font-size: 1.05rem; margin-top: 20px; opacity: 0.8; }
-    .poster--story .poster__k22-change     { font-size: 1.1rem; padding: 10px 22px; margin-top: 20px; }
-    .poster--story .poster__hero-img       { max-height: 380px; margin-top: 24px; border-radius: 20px; }
-    /* Secondary rates */
-    .poster--story .poster__rate-col       { padding: 18px 12px; }
-    .poster--story .poster__rate-label     { font-size: 0.96rem; margin-bottom: 12px; }
-    .poster--story .poster__rate-price     { font-size: 2.9rem; }
-    .poster--story .poster__rate-change    { font-size: 0.9rem; margin-top: 8px; }
-    /* Meta */
-    .poster--story .poster__meta-line      { font-size: 1.0rem; gap: 8px; margin-top: 4px; }
-    .poster--story .poster__meta-dot       { width: 8px; height: 8px; }
-    /* Footer */
-    .poster--story .poster__footer         { gap: 18px; }
-    .poster--story .poster__contact        { font-size: 1.08rem; line-height: 1.56; }
-    .poster--story .poster__contact strong { font-size: 1.22rem; margin-bottom: 5px; }
-    .poster--story .poster__cta            { padding: 14px 28px; font-size: 1.02rem; }
-    /* Cridora foot */
-    .poster--story .poster__foot-text      { font-size: 0.9rem; }
-    .poster--story .poster__foot-url       { font-size: 1.1rem; }
+    /* Story / vertical — sizes driven by --fs-* variables from JS */
+    .poster--story .poster__hero-img { border-radius: calc(var(--poster-gap) * 2); }
+    .poster--story .poster__meta-dot { width: calc(var(--fs-meta) * 0.75); height: calc(var(--fs-meta) * 0.75); }
 
     /* ── Malayalam typography ── */
-    .poster--ml { font-family: "Noto Sans Malayalam","Plus Jakarta Sans",system-ui,sans-serif; }
+    .poster--ml { font-family: "Noto Sans Malayalam","Inter",system-ui,sans-serif; }
     .poster--ml .poster__shop-name,
     .poster--ml .poster__hd-name {
       font-family: "Anek Malayalam","Noto Sans Malayalam",sans-serif;
       font-weight: 800; line-height: 1.2; letter-spacing: 0;
     }
-    .poster--ml .poster__hd-name                      { font-size: 1.15rem; }
-    .poster--ml.poster--story .poster__hd-name        { font-size: 1.9rem; }
-    .poster--ml.poster--landscape .poster__hd-name    { font-size: 1.05rem; }
-    .poster--ml .poster__shop-name                    { font-size: 1.6rem; }
-    .poster--ml.poster--story .poster__shop-name      { font-size: 2.1rem; }
-    .poster--ml.poster--landscape .poster__shop-name  { font-size: 1.1rem; }
     .poster--ml .poster__eyebrow { letter-spacing: 0.06em; font-family: "Noto Sans Malayalam",sans-serif; }
     .poster--ml .poster__tagline,
     .poster--ml .poster__contact,
@@ -751,8 +828,8 @@
     .poster--ml .poster__rate-change,
     .poster--ml .poster__meta-line,
     .poster--ml .poster__hd-tag { font-family: "Noto Sans Malayalam",sans-serif; }
-    .poster--ml .poster__k22-price  { font-family: "Fraunces","Plus Jakarta Sans",sans-serif; }
-    .poster--ml .poster__rate-price { font-family: "Fraunces","Plus Jakarta Sans",sans-serif; }
+    .poster--ml .poster__k22-price  { font-family: "Inter","Noto Sans Malayalam",sans-serif; }
+    .poster--ml .poster__rate-price { font-family: "Inter","Noto Sans Malayalam",sans-serif; }
     .poster--ml .poster__cta { text-transform: none; letter-spacing: 0; font-family: "Noto Sans Malayalam",sans-serif; font-weight: 700; }
     .lang-chip-row .chip[data-lang="ml"] { font-family: "Noto Sans Malayalam",sans-serif; font-size: 0.82rem; }
 
@@ -763,7 +840,7 @@
   <div class="app">
     <aside class="sidebar">
       <div class="brand-head">
-        <div class="brand-head__mark">C</div>
+        <div class="brand-head__mark" id="sidebarLogo" aria-hidden="true"></div>
         <div>
           <h1>CridoraIndia Poster Studio</h1>
           <p>Live Kerala gold rates · daily social export</p>
@@ -793,11 +870,11 @@
         <h2>Live rates API</h2>
         <label class="field">
           <span>API base URL</span>
-          <input type="url" id="apiBase" value="https://cridoraindia-production-e162.up.railway.app" placeholder="https://www.cridoraindia.com" />
+          <input type="url" id="apiBase" value="https://www.cridoraindia.com" placeholder="https://www.cridoraindia.com" />
         </label>
         <div class="chip-row" style="margin-bottom:0.55rem">
+          <button type="button" class="chip is-active" data-api="https://www.cridoraindia.com">cridoraindia.com</button>
           <button type="button" class="chip" data-api="https://cridoraindia-production-e162.up.railway.app">Railway live</button>
-          <button type="button" class="chip" data-api="https://www.cridoraindia.com">cridoraindia.com</button>
           <button type="button" class="chip" data-api="http://localhost:8000">Local Django</button>
         </div>
         <div class="btn-row">
@@ -850,11 +927,37 @@
       </div>
 
       <div class="panel-block">
+        <h2>Poster headline &amp; message</h2>
+        <label class="toggle-row"><span>Show main heading</span><input type="checkbox" id="showPosterHeadline" /></label>
+        <label class="field">
+          <span>Main heading</span>
+          <input type="text" id="posterHeadline" value="" placeholder="e.g. Happy Onam · Gold Rate Today" maxlength="60" />
+        </label>
+        <div class="chip-row" style="margin-bottom:0.55rem">
+          <button type="button" class="chip" data-headline="Happy Onam">Happy Onam</button>
+          <button type="button" class="chip" data-headline="Happy Vishu">Happy Vishu</button>
+          <button type="button" class="chip" data-headline="Gold Rate Today">Gold Rate Today</button>
+        </div>
+        <label class="toggle-row"><span>Show tagline / message</span><input type="checkbox" id="showPosterMessage" /></label>
+        <label class="field">
+          <span>Tagline / message</span>
+          <input type="text" id="posterMessage" value="" placeholder="e.g. Track your gold · store bills safely" maxlength="90" />
+        </label>
+        <div class="chip-row" style="margin-bottom:0.55rem">
+          <button type="button" class="chip" data-message="Track your gold · live Kerala rates">Track your gold</button>
+          <button type="button" class="chip" data-message="Digital gold passbook · store bills safely">Digital passbook</button>
+          <button type="button" class="chip" data-message="Trusted jeweller · live board rates">Trusted jeweller</button>
+        </div>
+        <label class="toggle-row"><span>Show &ldquo;Kerala · live rates&rdquo; label</span><input type="checkbox" id="showRatesEyebrow" checked /></label>
+      </div>
+
+      <div class="panel-block">
         <h2>Cridora branding</h2>
         <label class="field">
           <span>Website on poster</span>
           <input type="text" id="cridoraWebsite" value="www.cridoraindia.com" />
         </label>
+        <label class="toggle-row"><span>Show website URL on poster</span><input type="checkbox" id="showWebsiteUrl" checked /></label>
         <label class="field">
           <span>Cridora tagline</span>
           <input type="text" id="cridoraTagline" value="Live Kerala gold rates · digital gold passbook" maxlength="80" />
@@ -976,6 +1079,8 @@
       address: "MG Road, Kochi, Kerala 682016",
       ctaText: "Visit showroom today",
       cridoraTagline: "Live Kerala gold rates · digital gold passbook",
+      posterHeadline: "",
+      posterMessage: "",
     },
     ml: {
       shopName: "പവിത്രം ജ്വെല്ലേഴ്സ്",
@@ -983,7 +1088,15 @@
       address: "എം.ജി. റോഡ്, Kochi, Kerala 682016",
       ctaText: "ഇന്ന് തന്നെ സന്ദർശിക്കൂ",
       cridoraTagline: "കേരളത്തിന്റെ ലൈവ് സ്വർണ്ണവില · ഡിജിറ്റൽ ഗോൾഡ് പാസ്‌ബുക്ക്",
+      posterHeadline: "",
+      posterMessage: "",
     },
+  };
+
+  var HEADLINE_PRESETS_ML = {
+    "Happy Onam": "ഹാപ്പി ഓണം",
+    "Happy Vishu": "ഹാപ്പി വിഷു",
+    "Gold Rate Today": "ഇന്നത്തെ സ്വർണ്ണവില",
   };
 
   var COPY = {
@@ -1003,6 +1116,7 @@
       cridoraFootLine2: "Track gold · store bills · live rates",
       perGramInr: "per gram · INR",
       liveRatesOk: "Live Kerala rates",
+      ratesCached: "Cached Kerala rates",
       ratesLoadFail: "Could not load rates",
       demoSource: "Demo (offline)",
       defaultSource: "Kerala board",
@@ -1026,6 +1140,7 @@
       cridoraFootLine2: "സ്വർണ്ണം ട്രാക്ക് ചെയ്യൂ · ബില്ലുകൾ · ലൈവ് നിരക്ക്",
       perGramInr: "ഗ്രാമം · രൂപ",
       liveRatesOk: "കേരള ലൈവ് നിരക്ക്",
+      ratesCached: "സംഭരിച്ച കേരള നിരക്ക്",
       ratesLoadFail: "നിരക്ക് ലോഡ് ചെയ്യാനായില്ല",
       demoSource: "ഡെമോ (ഓഫ്‌ലൈൻ)",
       defaultSource: "കേരള ബോർഡ്",
@@ -1036,26 +1151,141 @@
   };
 
   var REFRESH_MS = 120000;
+  var RATES_CACHE_LS_KEY = "cridora.poster.kerala_gold_rates.v1";
+  var RATE_API_FALLBACKS = [
+    "https://www.cridoraindia.com",
+    "https://cridoraindia.com",
+    "https://cridoraindia-production-e162.up.railway.app",
+    "http://localhost:8000",
+  ];
+  var RATE_API_PATHS = [
+    "/api/v1/marketplace/kerala-gold-rates/",
+    "/api/v1/marketplace/spot-prices/",
+  ];
 
-  var CRIDORA_LOGO_SVG =
-    '<svg class="poster__cridora-mark" width="50" height="50" viewBox="0 0 40 40" fill="none" aria-hidden="true">' +
-    '<circle cx="20" cy="20" r="17.5" stroke="url(#cgL1)" stroke-width="2.2"/>' +
-    '<path d="M13.5 20C13.5 16.41 16.41 13.5 20 13.5" stroke="#d4a85c" stroke-width="3" stroke-linecap="round"/>' +
-    '<path d="M26.5 20C26.5 23.59 23.59 26.5 20 26.5" stroke="#a67a28" stroke-width="3" stroke-linecap="round"/>' +
-    '<circle cx="20" cy="20" r="2.5" fill="url(#cgL1)" opacity="0.6"/>' +
-    '<defs><linearGradient id="cgL1" x1="2" y1="2" x2="38" y2="38" gradientUnits="userSpaceOnUse">' +
-    '<stop offset="0%" stop-color="#f0d070"/><stop offset="50%" stop-color="#b88828"/><stop offset="100%" stop-color="#5c2f0a"/>' +
-    '</linearGradient></defs></svg>';
+  function cridoraLogoSvg(sizePx, gradId) {
+    return (
+      '<svg class="poster__cridora-mark" width="' + sizePx + '" height="' + sizePx + '" viewBox="0 0 40 40" fill="none" aria-hidden="true">' +
+      '<circle cx="20" cy="20" r="18" stroke="url(#' + gradId + ')" stroke-width="2.5"/>' +
+      '<path d="M14 20C14 16.6863 16.6863 14 20 14" stroke="#d4a85c" stroke-width="3" stroke-linecap="round"/>' +
+      '<path d="M26 20C26 23.3137 23.3137 26 20 26" stroke="#a67a28" stroke-width="3" stroke-linecap="round"/>' +
+      '<defs><linearGradient id="' + gradId + '" x1="2" y1="2" x2="38" y2="38" gradientUnits="userSpaceOnUse">' +
+      '<stop offset="0%" stop-color="#e0bc78"/><stop offset="55%" stop-color="#a67a28"/><stop offset="100%" stop-color="#5c2f0a"/>' +
+      '</linearGradient></defs></svg>'
+    );
+  }
 
-  var CRIDORA_LOGO_SVG_SM =
-    '<svg width="30" height="30" viewBox="0 0 40 40" fill="none" aria-hidden="true">' +
-    '<circle cx="20" cy="20" r="17.5" stroke="url(#cgLSm)" stroke-width="2.2"/>' +
-    '<path d="M13.5 20C13.5 16.41 16.41 13.5 20 13.5" stroke="#d4a85c" stroke-width="3" stroke-linecap="round"/>' +
-    '<path d="M26.5 20C26.5 23.59 23.59 26.5 20 26.5" stroke="#a67a28" stroke-width="3" stroke-linecap="round"/>' +
-    '<circle cx="20" cy="20" r="2.5" fill="url(#cgLSm)" opacity="0.6"/>' +
-    '<defs><linearGradient id="cgLSm" x1="2" y1="2" x2="38" y2="38" gradientUnits="userSpaceOnUse">' +
-    '<stop offset="0%" stop-color="#f0d070"/><stop offset="50%" stop-color="#b88828"/><stop offset="100%" stop-color="#5c2f0a"/>' +
-    '</linearGradient></defs></svg>';
+  function computePosterMetrics(fmt, opts) {
+    var w = fmt.w;
+    var h = fmt.h;
+    var isLandscape = (fmt.cls || "").indexOf("landscape") >= 0;
+    var isStory = (fmt.cls || "").indexOf("story") >= 0;
+    var showHero = opts.showHero && opts.hasHero;
+    var rateCols = 2 + (opts.hasSilver ? 1 : 0);
+
+    var padX = Math.round(w * (isLandscape ? 0.034 : isStory ? 0.048 : 0.042));
+    var padY = Math.round(h * (isLandscape ? 0.042 : isStory ? 0.034 : 0.034));
+    var gap = Math.max(5, Math.round(h * 0.0075));
+    var sepMy = Math.max(4, Math.round(gap * 0.75));
+
+    var reserved = padY * 2 + 46;
+    if (opts.showCridoraBar) reserved += Math.round(h * 0.072);
+    if (opts.showJeweller) reserved += Math.round(h * 0.078);
+    if (opts.showHeadline) reserved += Math.round(h * (isStory ? 0.055 : isLandscape ? 0.042 : 0.048));
+    if (opts.showMessage) reserved += Math.round(h * 0.032);
+    if (opts.showEyebrow && !isLandscape) reserved += Math.round(h * 0.028);
+    reserved += Math.round(h * (rateCols === 3 ? 0.105 : 0.092));
+    if (opts.showJeweller) reserved += Math.round(h * 0.072);
+    else reserved += Math.round(h * 0.052);
+    reserved += sepMy * (opts.showCridoraBar ? 4 : 3);
+    if (showHero) reserved += Math.round(h * (isStory ? 0.16 : 0.17));
+
+    var mainAvail = Math.max(100, h - reserved);
+    var widthCap = w * (isLandscape ? 0.46 : 0.88);
+
+    var k22Size = Math.round(Math.min(widthCap * 0.22, mainAvail * 0.55, isStory ? 210 : isLandscape ? 148 : 188));
+    if (!showHero) k22Size = Math.round(Math.min(k22Size * 1.1, isStory ? 228 : 200));
+    if (!opts.showJeweller) k22Size = Math.round(Math.min(k22Size * 1.06, isStory ? 235 : 205));
+
+    var rateSize = Math.round(Math.max(k22Size * (isLandscape ? 0.28 : 0.27), isStory ? 38 : 28));
+    var labelSize = Math.max(10, Math.round(k22Size * 0.1));
+    var subSize = Math.max(9, Math.round(k22Size * 0.088));
+    var changeSize = Math.max(9, Math.round(k22Size * 0.088));
+    var scale = w / 1080;
+    if (isLandscape) scale = h / 630;
+    if (isStory) scale = w / 1080 * 1.25;
+
+    var logoMark = Math.round(58 * scale);
+    var logoWrap = Math.round(54 * scale);
+    if (isLandscape) { logoMark = Math.round(52 * (h / 630)); logoWrap = Math.round(46 * (h / 630)); }
+
+    var headlineSize = Math.max(18, Math.round((isStory ? 34 : isLandscape ? 22 : 28) * scale));
+    if (opts.showHeadline && opts.headlineLen > 20) headlineSize = Math.round(headlineSize * 0.82);
+    var messageSize = Math.max(12, Math.round((isStory ? 18 : isLandscape ? 13 : 15) * scale));
+
+    return {
+      padX: padX,
+      padY: padY,
+      gap: gap,
+      sepMy: sepMy,
+      k22Size: k22Size,
+      rateSize: rateSize,
+      labelSize: labelSize,
+      subSize: subSize,
+      changeSize: changeSize,
+      metaSize: Math.max(10, Math.round(11 * scale)),
+      hdName: Math.max(16, Math.round(22 * scale)),
+      hdTag: Math.max(10, Math.round(11 * scale)),
+      hdUrl: Math.max(13, Math.round(16 * scale)),
+      shopName: Math.max(15, Math.round(26 * scale)),
+      taglineSize: Math.max(11, Math.round(13 * scale)),
+      eyebrowSize: Math.max(10, Math.round(12 * scale)),
+      headlineSize: headlineSize,
+      messageSize: messageSize,
+      contactSize: Math.max(10, Math.round(12 * scale)),
+      contactStrong: Math.max(12, Math.round(14 * scale)),
+      ctaSize: Math.max(10, Math.round(12 * scale)),
+      footSize: Math.max(9, Math.round(11 * scale)),
+      footUrl: Math.max(13, Math.round(17 * scale)),
+      logoMark: logoMark,
+      logoWrap: logoWrap,
+      heroMaxH: Math.round(h * (isStory ? 0.16 : 0.17)),
+      frameInset: Math.round(Math.min(w, h) * 0.018),
+      cornerOffset: Math.round(Math.min(w, h) * 0.028),
+    };
+  }
+
+  function applyPosterMetrics(posterEl, metrics) {
+    var p = posterEl.style;
+    p.setProperty("--poster-pad-x", metrics.padX + "px");
+    p.setProperty("--poster-pad-y", metrics.padY + "px");
+    p.setProperty("--poster-gap", metrics.gap + "px");
+    p.setProperty("--poster-sep-my", metrics.sepMy + "px");
+    p.setProperty("--fs-k22", metrics.k22Size + "px");
+    p.setProperty("--fs-rate", metrics.rateSize + "px");
+    p.setProperty("--fs-label", metrics.labelSize + "px");
+    p.setProperty("--fs-sub", metrics.subSize + "px");
+    p.setProperty("--fs-change", metrics.changeSize + "px");
+    p.setProperty("--fs-meta", metrics.metaSize + "px");
+    p.setProperty("--fs-hd-name", metrics.hdName + "px");
+    p.setProperty("--fs-hd-tag", metrics.hdTag + "px");
+    p.setProperty("--fs-hd-url", metrics.hdUrl + "px");
+    p.setProperty("--fs-shop", metrics.shopName + "px");
+    p.setProperty("--fs-tagline", metrics.taglineSize + "px");
+    p.setProperty("--fs-eyebrow", metrics.eyebrowSize + "px");
+    p.setProperty("--fs-headline", metrics.headlineSize + "px");
+    p.setProperty("--fs-message", metrics.messageSize + "px");
+    p.setProperty("--fs-contact", metrics.contactSize + "px");
+    p.setProperty("--fs-contact-strong", metrics.contactStrong + "px");
+    p.setProperty("--fs-cta", metrics.ctaSize + "px");
+    p.setProperty("--fs-foot", metrics.footSize + "px");
+    p.setProperty("--fs-foot-url", metrics.footUrl + "px");
+    p.setProperty("--logo-mark", metrics.logoMark + "px");
+    p.setProperty("--logo-wrap", metrics.logoWrap + "px");
+    p.setProperty("--hero-max-h", metrics.heroMaxH + "px");
+    p.setProperty("--frame-inset", metrics.frameInset + "px");
+    p.setProperty("--corner-offset", metrics.cornerOffset + "px");
+  }
 
   var state = loadState();
   var rates = null;
@@ -1092,6 +1322,12 @@
     bgCustomImage: document.getElementById("bgCustomImage"),
     cridoraWebsite: document.getElementById("cridoraWebsite"),
     cridoraTagline: document.getElementById("cridoraTagline"),
+    posterHeadline: document.getElementById("posterHeadline"),
+    posterMessage: document.getElementById("posterMessage"),
+    showPosterHeadline: document.getElementById("showPosterHeadline"),
+    showPosterMessage: document.getElementById("showPosterMessage"),
+    showRatesEyebrow: document.getElementById("showRatesEyebrow"),
+    showWebsiteUrl: document.getElementById("showWebsiteUrl"),
     showCridoraBar: document.getElementById("showCridoraBar"),
     showJeweller: document.getElementById("showJeweller"),
     logoFile: document.getElementById("logoFile"),
@@ -1131,6 +1367,8 @@
       address: el.address.value,
       ctaText: el.ctaText.value,
       cridoraTagline: el.cridoraTagline.value,
+      posterHeadline: el.posterHeadline.value,
+      posterMessage: el.posterMessage.value,
     };
   }
 
@@ -1138,11 +1376,13 @@
     if (!state.texts) state.texts = defaultTexts();
     var lang = getLang();
     var tx = state.texts[lang] || TEXT_PRESETS[lang];
-    el.shopName.value      = tx.shopName      || "";
-    el.tagline.value       = tx.tagline       || "";
-    el.address.value       = tx.address       || "";
-    el.ctaText.value       = tx.ctaText       || "";
-    el.cridoraTagline.value = tx.cridoraTagline || TEXT_PRESETS[lang].cridoraTagline;
+    el.shopName.value       = tx.shopName       || "";
+    el.tagline.value        = tx.tagline        || "";
+    el.address.value        = tx.address        || "";
+    el.ctaText.value        = tx.ctaText        || "";
+    el.cridoraTagline.value = tx.cridoraTagline  || TEXT_PRESETS[lang].cridoraTagline;
+    el.posterHeadline.value = tx.posterHeadline  || "";
+    el.posterMessage.value  = tx.posterMessage   || "";
   }
 
   function setLang(lang) {
@@ -1182,9 +1422,17 @@
           parsed.texts.en.ctaText       = parsed.ctaText       || parsed.texts.en.ctaText;
           parsed.texts.en.cridoraTagline = parsed.cridoraTagline || parsed.texts.en.cridoraTagline;
         }
-        if (!parsed.lang)       parsed.lang = "en";
-        if (!parsed.texts.ml)   parsed.texts.ml = Object.assign({}, TEXT_PRESETS.ml);
-        /* Migrate old template IDs if needed */
+        if (!parsed.texts.en.posterHeadline) parsed.texts.en.posterHeadline = "";
+        if (!parsed.texts.en.posterMessage)  parsed.texts.en.posterMessage = "";
+        if (!parsed.texts.ml) parsed.texts.ml = Object.assign({}, TEXT_PRESETS.ml);
+        if (!parsed.texts.ml.posterHeadline) parsed.texts.ml.posterHeadline = "";
+        if (!parsed.texts.ml.posterMessage)  parsed.texts.ml.posterMessage = "";
+        if (parsed.showWebsiteUrl == null) parsed.showWebsiteUrl = true;
+        if (parsed.showRatesEyebrow == null) parsed.showRatesEyebrow = true;
+        if (!parsed.lang) parsed.lang = "en";
+        if (parsed.apiBase === "https://cridoraindia-production-e162.up.railway.app") {
+          parsed.apiBase = "https://www.cridoraindia.com";
+        }
         var validIds = ["luxury-dark","royal-cream","festive-ruby","midnight-sapphire","heritage-green"];
         if (validIds.indexOf(parsed.templateId) === -1) parsed.templateId = "luxury-dark";
         return parsed;
@@ -1195,7 +1443,7 @@
       texts: defaultTexts(),
       formatId: "ig-square",
       templateId: "luxury-dark",
-      apiBase: "https://cridoraindia-production-e162.up.railway.app",
+      apiBase: "https://www.cridoraindia.com",
       phone: "+91 98765 43210",
       website: "",
       accentColor: "#d4a84b",
@@ -1205,6 +1453,10 @@
       bgImageData: "",
       bgOverlay: 72,
       cridoraWebsite: "www.cridoraindia.com",
+      showWebsiteUrl: true,
+      showRatesEyebrow: true,
+      showPosterHeadline: false,
+      showPosterMessage: false,
       showCridoraBar: true,
       showJeweller: true,
       logoData: "",
@@ -1231,6 +1483,10 @@
     state.bgColor2    = el.bgColor2.value;
     state.bgOverlay   = parseInt(el.bgOverlay.value, 10) || 72;
     state.cridoraWebsite = el.cridoraWebsite.value;
+    state.showWebsiteUrl = el.showWebsiteUrl.checked;
+    state.showRatesEyebrow = el.showRatesEyebrow.checked;
+    state.showPosterHeadline = el.showPosterHeadline.checked;
+    state.showPosterMessage = el.showPosterMessage.checked;
     state.showCridoraBar = el.showCridoraBar.checked;
     state.showJeweller   = el.showJeweller.checked;
     state.showChange  = el.showChange.checked;
@@ -1253,6 +1509,10 @@
     el.bgOverlay.value      = state.bgOverlay != null ? state.bgOverlay : 72;
     el.bgOverlayVal.textContent = (state.bgOverlay != null ? state.bgOverlay : 72) + "%";
     el.cridoraWebsite.value = state.cridoraWebsite || "www.cridoraindia.com";
+    el.showWebsiteUrl.checked = state.showWebsiteUrl !== false;
+    el.showRatesEyebrow.checked = state.showRatesEyebrow !== false;
+    el.showPosterHeadline.checked = !!state.showPosterHeadline;
+    el.showPosterMessage.checked = !!state.showPosterMessage;
     el.showCridoraBar.checked = state.showCridoraBar !== false;
     el.showJeweller.checked   = state.showJeweller !== false;
     el.showChange.checked  = state.showChange;
@@ -1352,40 +1612,159 @@
     el.rateStatusSub.textContent   = sub || "";
   }
 
-  async function fetchRates() {
-    var base = el.apiBase.value.trim().replace(/\/$/, "");
-    var url  = base + "/api/v1/marketplace/kerala-gold-rates/";
+  function parseRateNum(v) {
+    if (v == null) return null;
+    var n = typeof v === "number" ? v : parseFloat(String(v).replace(/,/g, "").trim());
+    return isFinite(n) && n > 0 ? n : null;
+  }
+
+  function normalizeRatesPayload(raw) {
+    if (!raw || typeof raw !== "object") return null;
+    var gold = raw.gold;
+    var silver = raw.silver;
+    if ((!gold || parseRateNum(gold["22K"]) == null) && raw.kerala_board && raw.kerala_board.gold) {
+      gold = raw.kerala_board.gold;
+      silver = raw.kerala_board.silver || silver;
+    }
+    if ((!gold || parseRateNum(gold["22K"]) == null) && raw.spot && raw.spot.gold) {
+      gold = raw.spot.gold;
+      silver = raw.spot.silver || silver;
+    }
+    var normalizedGold = {};
+    ["18K", "22K", "24K", "21K"].forEach(function (k) {
+      var val = parseRateNum(gold && gold[k]);
+      if (val != null) normalizedGold[k] = val;
+    });
+    if (parseRateNum(normalizedGold["22K"]) == null) return null;
+    var normalizedSilver = {};
+    var s999 = parseRateNum(silver && silver["999"]);
+    if (s999 != null) normalizedSilver["999"] = s999;
+    return {
+      region: raw.region || "Kerala",
+      currency: raw.currency || "INR",
+      unit: raw.unit || "per_gram",
+      source: raw.source || raw.cridora_base_source || "cridoraindia",
+      source_label: raw.source_label || raw.source || "CridoraIndia",
+      source_updated_at: raw.source_updated_at || raw.updated_at || null,
+      rate_date: raw.rate_date || null,
+      gold: normalizedGold,
+      silver: normalizedSilver,
+      daily_change: raw.daily_change || {},
+      note: raw.note || "",
+    };
+  }
+
+  function saveRatesCache(payload) {
+    if (!normalizeRatesPayload(payload)) return;
+    try { localStorage.setItem(RATES_CACHE_LS_KEY, JSON.stringify(payload)); } catch (e) { /* ignore */ }
+  }
+
+  function loadRatesCache() {
     try {
-      var res  = await fetch(url, { cache: "no-store", mode: "cors" });
-      if (!res.ok) throw new Error("HTTP " + res.status);
-      var data = await res.json();
-      var hash = rateHash(data);
-      var changed = hash !== lastRateHash;
-      lastRateHash = hash;
-      rates = data;
-      ratesFetchedAt = Date.now();
-      setRateStatus(true, t("liveRatesOk") + " · " + fmtInr(data.gold && data.gold["22K"]), formatStatusTimestamp());
-      renderPoster();
-      if (changed) scheduleRefresh();
-      return data;
-    } catch (err) {
-      setRateStatus(false, t("ratesLoadFail"), (err.message || "Check API URL / CORS") + ". Using last known or demo values.");
-      if (!rates) {
-        rates = {
-          region: "Kerala",
-          gold: { "24K": 14710, "22K": 13475, "18K": 11130 },
-          silver: { "999": 92.5 },
-          source_label: t("demoSource"),
-          source: "demo",
-          rate_date: new Date().toISOString().slice(0, 10),
-          source_updated_at: new Date().toISOString(),
-          daily_change: {},
-        };
-        ratesFetchedAt = Date.now();
-        renderPoster();
-      }
+      var raw = localStorage.getItem(RATES_CACHE_LS_KEY);
+      if (!raw) return null;
+      return normalizeRatesPayload(JSON.parse(raw));
+    } catch (e) {
       return null;
     }
+  }
+
+  function getRateApiBases() {
+    var bases = [];
+    if (location.protocol.startsWith("http") && location.host) {
+      bases.push(location.origin.replace(/\/$/, ""));
+    }
+    var custom = (el.apiBase.value || "").trim().replace(/\/$/, "");
+    if (custom && bases.indexOf(custom) === -1) bases.push(custom);
+    RATE_API_FALLBACKS.forEach(function (base) {
+      if (base && bases.indexOf(base) === -1) bases.push(base);
+    });
+    return bases;
+  }
+
+  function syncApiBaseChips(activeBase) {
+    document.querySelectorAll("[data-api]").forEach(function (btn) {
+      btn.classList.toggle("is-active", btn.dataset.api === activeBase);
+    });
+  }
+
+  async function fetchRatesFromUrl(url) {
+    var res = await fetch(url, { cache: "no-store", mode: "cors", credentials: "omit" });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    var raw = await res.json();
+    var normalized = normalizeRatesPayload(raw);
+    if (!normalized) throw new Error("No usable 22K rate in response");
+    return normalized;
+  }
+
+  function applyRatesPayload(data, opts) {
+    opts = opts || {};
+    var hash = rateHash(data);
+    var changed = hash !== lastRateHash;
+    lastRateHash = hash;
+    rates = data;
+    ratesFetchedAt = Date.now();
+    saveRatesCache(data);
+    var title = (opts.cached ? t("ratesCached") : t("liveRatesOk")) + " · " + fmtInr(data.gold && data.gold["22K"]);
+    setRateStatus(true, title, formatStatusTimestamp());
+    renderPoster();
+    if (changed) scheduleRefresh();
+  }
+
+  async function fetchRates() {
+    var errors = [];
+    var bases = getRateApiBases();
+    var pathIdx, baseIdx;
+
+    for (baseIdx = 0; baseIdx < bases.length; baseIdx++) {
+      for (pathIdx = 0; pathIdx < RATE_API_PATHS.length; pathIdx++) {
+        var base = bases[baseIdx];
+        var path = RATE_API_PATHS[pathIdx];
+        var url = base + path;
+        try {
+          var data = await fetchRatesFromUrl(url);
+          el.apiBase.value = base;
+          syncApiBaseChips(base);
+          state.apiBase = base;
+          applyRatesPayload(data, { cached: false });
+          return data;
+        } catch (err) {
+          errors.push(url + " → " + (err.message || String(err)));
+        }
+      }
+    }
+
+    var cached = loadRatesCache();
+    if (cached) {
+      applyRatesPayload(cached, { cached: true });
+      setRateStatus(
+        true,
+        t("ratesCached") + " · " + fmtInr(cached.gold && cached.gold["22K"]),
+        (errors[0] || "Network blocked") + " · showing last good Cridora rates."
+      );
+      return cached;
+    }
+
+    setRateStatus(
+      false,
+      t("ratesLoadFail"),
+      (errors.slice(0, 2).join(" · ") || "Check connection / CORS") + ". Using demo values."
+    );
+    if (!rates) {
+      rates = {
+        region: "Kerala",
+        gold: { "24K": 14710, "22K": 13475, "18K": 11130 },
+        silver: { "999": 92.5 },
+        source_label: t("demoSource"),
+        source: "demo",
+        rate_date: new Date().toISOString().slice(0, 10),
+        source_updated_at: new Date().toISOString(),
+        daily_change: {},
+      };
+      ratesFetchedAt = Date.now();
+      renderPoster();
+    }
+    return null;
   }
 
   function syncBgModePanels() {
@@ -1438,6 +1817,28 @@
     var showJeweller   = el.showJeweller.checked;
     var showCridoraBar = el.showCridoraBar.checked;
     var hasSilver = el.showSilver.checked && s["999"] != null;
+    var showHeroBlock = el.showHero.checked && !!state.heroData;
+    var headlineText = (el.posterHeadline.value || "").trim();
+    var messageText = (el.posterMessage.value || "").trim();
+    var showHeadline = el.showPosterHeadline.checked && !!headlineText;
+    var showMessage = el.showPosterMessage.checked && !!messageText;
+    var showEyebrow = el.showRatesEyebrow.checked && !showHeadline;
+    var showWebsite = el.showWebsiteUrl.checked && !!cridoraUrl;
+    var metrics = computePosterMetrics(fmt, {
+      showCridoraBar: showCridoraBar,
+      showJeweller: showJeweller,
+      showHero: el.showHero.checked,
+      hasHero: !!state.heroData,
+      hasSilver: hasSilver,
+      showHeadline: showHeadline,
+      showMessage: showMessage,
+      showEyebrow: showEyebrow,
+      headlineLen: headlineText.length,
+    });
+    applyPosterMetrics(el.poster, metrics);
+
+    var logoHd = cridoraLogoSvg(metrics.logoMark, "cgHd");
+    var logoFoot = cridoraLogoSvg(Math.round(metrics.logoMark * 0.78), "cgFoot");
 
     el.poster.dataset.template = state.templateId;
     el.poster.dataset.bgMode   = bgMode;
@@ -1464,16 +1865,19 @@
       : "";
 
     /* ── Brand header ── */
+    var hdUrlHtml = showWebsite
+      ? '<div class="poster__hd-url">' + escapeHtml(cridoraUrl) + "</div>"
+      : "";
     var hdHtml = showCridoraBar
       ? '<div class="poster__hd">' +
           '<div class="poster__hd-brand">' +
-            CRIDORA_LOGO_SVG +
+            logoHd +
             '<div>' +
-              '<div class="poster__hd-name">Cridora<em>India</em></div>' +
+              '<div class="poster__hd-name">Cridora<span class="cridora-logo__aindia">India</span></div>' +
               '<div class="poster__hd-tag">' + escapeHtml(el.cridoraTagline.value) + "</div>" +
             "</div>" +
           "</div>" +
-          '<div class="poster__hd-url">' + escapeHtml(cridoraUrl) + "</div>" +
+          hdUrlHtml +
         "</div>" +
         '<div class="poster__sep poster__sep--a"></div>'
       : "";
@@ -1493,15 +1897,26 @@
         '<div class="poster__sep poster__sep--b"></div>'
       : "";
 
-    /* ── Eyebrow ── */
-    var eyebrowHtml = '<div class="poster__eyebrow">' + escapeHtml(t("posterEyebrow")) + "</div>";
+    /* ── Headline, message & eyebrow ── */
+    var headlineHtml = showHeadline
+      ? '<h2 class="poster__headline">' + escapeHtml(headlineText) + "</h2>"
+      : "";
+    var messageHtml = showMessage
+      ? '<p class="poster__message">' + escapeHtml(messageText) + "</p>"
+      : "";
+    var eyebrowHtml = showEyebrow
+      ? '<div class="poster__eyebrow">' + escapeHtml(t("posterEyebrow")) + "</div>"
+      : "";
 
     /* ── 22K hero section ── */
-    var heroImgHtml = (el.showHero.checked && state.heroData)
+    var heroImgHtml = showHeroBlock
       ? '<img class="poster__hero-img" src="' + state.heroData + '" alt="" crossorigin="anonymous" />'
       : "";
     var mainHtml =
       '<div class="poster__main">' +
+        headlineHtml +
+        messageHtml +
+        eyebrowHtml +
         '<div class="poster__k22">' +
           '<div class="poster__k22-label">' + escapeHtml(t("gold22K")) + "</div>" +
           '<div class="poster__k22-price">' + fmtInr(g["22K"]) + "</div>" +
@@ -1551,13 +1966,16 @@
         "</div>";
 
     /* ── Cridora foot ── */
+    var footUrlHtml = showWebsite
+      ? '<div class="poster__foot-url">' + escapeHtml(cridoraUrl) + "</div>"
+      : "";
     var footHtml =
       '<div class="poster__foot">' +
         '<div class="poster__foot-brand">' +
-          CRIDORA_LOGO_SVG_SM +
+          logoFoot +
           '<div class="poster__foot-text">' + escapeHtml(t("cridoraFootLine1")) + "<br>" + escapeHtml(t("cridoraFootLine2")) + "</div>" +
         "</div>" +
-        '<div class="poster__foot-url">' + escapeHtml(cridoraUrl) + "</div>" +
+        footUrlHtml +
       "</div>";
 
     el.poster.innerHTML =
@@ -1573,10 +1991,11 @@
       '<div class="poster__inner">' +
         hdHtml +
         jewellerHtml +
-        eyebrowHtml +
-        mainHtml +
-        ratesHtml +
-        metaHtml +
+        '<div class="poster__content">' +
+          mainHtml +
+          ratesHtml +
+          metaHtml +
+        "</div>" +
         footerHtml +
         footHtml +
       "</div>";
@@ -1652,9 +2071,10 @@
     var inputs = [
       el.apiBase, el.shopName, el.tagline, el.phone, el.address, el.website,
       el.ctaText, el.accentColor, el.bgMode, el.bgColor1, el.bgColor2,
-      el.cridoraWebsite, el.cridoraTagline,
+      el.cridoraWebsite, el.cridoraTagline, el.posterHeadline, el.posterMessage,
       el.showChange, el.showSilver, el.showHero, el.showCta,
-      el.showCridoraBar, el.showJeweller, el.autoRefresh,
+      el.showCridoraBar, el.showJeweller, el.showWebsiteUrl, el.showRatesEyebrow,
+      el.showPosterHeadline, el.showPosterMessage, el.autoRefresh,
     ];
     inputs.forEach(function (input) {
       input.addEventListener("input", renderPoster);
@@ -1725,8 +2145,37 @@
     document.querySelectorAll("[data-api]").forEach(function (btn) {
       btn.addEventListener("click", function () {
         el.apiBase.value = btn.dataset.api;
+        syncApiBaseChips(btn.dataset.api);
         fetchRates();
       });
+    });
+
+    document.querySelectorAll("[data-headline]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var val = btn.dataset.headline;
+        if (getLang() === "ml" && HEADLINE_PRESETS_ML[val]) val = HEADLINE_PRESETS_ML[val];
+        el.posterHeadline.value = val;
+        el.showPosterHeadline.checked = true;
+        renderPoster();
+      });
+    });
+
+    document.querySelectorAll("[data-message]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        el.posterMessage.value = btn.dataset.message;
+        el.showPosterMessage.checked = true;
+        renderPoster();
+      });
+    });
+
+    el.posterHeadline.addEventListener("input", function () {
+      if (el.posterHeadline.value.trim()) el.showPosterHeadline.checked = true;
+      renderPoster();
+    });
+
+    el.posterMessage.addEventListener("input", function () {
+      if (el.posterMessage.value.trim()) el.showPosterMessage.checked = true;
+      renderPoster();
     });
   }
 
@@ -1741,37 +2190,134 @@
     });
   }
 
+  function preparePosterForExport(root, win) {
+    if (!root) return;
+    var view = win || window;
+    root.classList.add("poster--exporting");
+    root.querySelectorAll("*").forEach(function (node) {
+      var cs = view.getComputedStyle(node);
+      var clip = cs.getPropertyValue("-webkit-background-clip") || cs.getPropertyValue("background-clip");
+      var fill = cs.getPropertyValue("-webkit-text-fill-color");
+      var bgImage = cs.getPropertyValue("background-image");
+      var needsFix = clip === "text" || fill === "rgba(0, 0, 0, 0)" || fill === "transparent";
+      if (!needsFix && bgImage && bgImage !== "none" && clip === "text") needsFix = true;
+      if (!needsFix) return;
+      var color = cs.getPropertyValue("color");
+      if (!color || color === "transparent" || color === "rgba(0, 0, 0, 0)") {
+        color = root.style.getPropertyValue("--poster-accent-hi") || "#f5e6b8";
+      }
+      node.style.setProperty("background", "none", "important");
+      node.style.setProperty("background-image", "none", "important");
+      node.style.setProperty("-webkit-background-clip", "border-box", "important");
+      node.style.setProperty("background-clip", "border-box", "important");
+      node.style.setProperty("-webkit-text-fill-color", color, "important");
+      node.style.setProperty("color", color, "important");
+    });
+    root.querySelectorAll(".poster__cridora-mark").forEach(function (node) {
+      node.style.setProperty("filter", "none", "important");
+    });
+  }
+
+  function triggerBlobDownload(blob, filename) {
+    if (!blob) throw new Error("Could not create PNG image.");
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.style.display = "none";
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 1500);
+  }
+
+  function canvasToBlob(canvas) {
+    return new Promise(function (resolve, reject) {
+      if (!canvas || !canvas.width || !canvas.height) {
+        reject(new Error("Poster render produced an empty canvas."));
+        return;
+      }
+      if (canvas.toBlob) {
+        canvas.toBlob(function (blob) {
+          if (blob) resolve(blob);
+          else {
+            try {
+              var dataUrl = canvas.toDataURL("image/png");
+              fetch(dataUrl).then(function (r) { return r.blob(); }).then(resolve).catch(reject);
+            } catch (err) {
+              reject(err);
+            }
+          }
+        }, "image/png", 1);
+        return;
+      }
+      try {
+        var data = canvas.toDataURL("image/png");
+        fetch(data).then(function (r) { return r.blob(); }).then(resolve).catch(reject);
+      } catch (err) {
+        reject(err);
+      }
+    });
+  }
+
+  function waitForFonts() {
+    if (document.fonts && document.fonts.ready) {
+      return document.fonts.ready.catch(function () {});
+    }
+    return Promise.resolve();
+  }
+
   async function exportPoster(format, filename) {
-    var html2canvas = await loadHtml2Canvas();
     var fmt = format || getSelectedFormat();
-    renderPoster();
-    el.poster.style.width  = fmt.w + "px";
-    el.poster.style.height = fmt.h + "px";
-    el.previewScaler.style.transform = "scale(1)";
+    var outName = filename || ("kerala-gold-" + fmt.id + "-" + dateSlug() + ".png");
+    var prevTransform = el.previewScaler.style.transform;
 
-    var canvas = await html2canvas(el.poster, {
-      scale: 2,
-      useCORS: true,
-      allowTaint: true,
-      backgroundColor: null,
-      width: fmt.w,
-      height: fmt.h,
-      windowWidth: fmt.w,
-      windowHeight: fmt.h,
-    });
+    try {
+      var html2canvas = await loadHtml2Canvas();
+      renderPoster();
+      el.poster.style.width  = fmt.w + "px";
+      el.poster.style.height = fmt.h + "px";
+      el.previewScaler.style.transform = "scale(1)";
+      preparePosterForExport(el.poster, window);
+      await waitForFonts();
+      await new Promise(function (r) { requestAnimationFrame(function () { requestAnimationFrame(r); }); });
 
-    fitPreview();
+      var canvas = await html2canvas(el.poster, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: "#0a0e1a",
+        width: fmt.w,
+        height: fmt.h,
+        scrollX: 0,
+        scrollY: -window.scrollY,
+        onclone: function (clonedDoc) {
+          preparePosterForExport(clonedDoc.getElementById("poster"), clonedDoc.defaultView);
+        },
+      });
 
-    return new Promise(function (resolve) {
-      canvas.toBlob(function (blob) {
-        var a = document.createElement("a");
-        a.href = URL.createObjectURL(blob);
-        a.download = filename || ("kerala-gold-" + fmt.id + "-" + dateSlug() + ".png");
-        a.click();
-        URL.revokeObjectURL(a.href);
-        resolve(blob);
-      }, "image/png", 1);
-    });
+      var blob = await canvasToBlob(canvas);
+      triggerBlobDownload(blob, outName);
+      return blob;
+    } finally {
+      el.poster.classList.remove("poster--exporting");
+      el.previewScaler.style.transform = prevTransform || "";
+      fitPreview();
+      renderPoster();
+    }
+  }
+
+  function showExportError(err) {
+    var msg = (err && err.message) ? err.message : String(err || "Export failed");
+    if (el.rateStatus) {
+      el.rateStatus.classList.add("is-error");
+      el.rateStatusTitle.textContent = "PNG export failed";
+      el.rateStatusSub.textContent = msg + " · Try Chrome/Edge, or reload and retry.";
+    } else {
+      window.alert("PNG export failed: " + msg);
+    }
   }
 
   function dateSlug() { return new Date().toISOString().slice(0, 10); }
@@ -1804,20 +2350,32 @@
   el.btnDownload.addEventListener("click", function () {
     el.btnDownload.disabled = true;
     el.btnDownload.textContent = "Rendering…";
-    exportPoster(null).finally(function () {
+    exportPoster(null).catch(showExportError).finally(function () {
       el.btnDownload.disabled = false;
       el.btnDownload.textContent = "Download PNG";
     });
   });
 
-  el.btnDownloadAll.addEventListener("click", exportAllFormats);
+  el.btnDownloadAll.addEventListener("click", function () {
+    exportAllFormats().catch(showExportError);
+  });
 
   applyStateToForm();
+  syncApiBaseChips(el.apiBase.value.replace(/\/$/, "") || "https://www.cridoraindia.com");
   buildLangChips();
   buildFormatChips();
   buildTemplateGrid();
   bindForm();
+  var sidebarLogo = document.getElementById("sidebarLogo");
+  if (sidebarLogo) sidebarLogo.innerHTML = cridoraLogoSvg(48, "cgSidebar");
   el.rateStatusTitle.textContent = t("loadingRates");
+  var bootCache = loadRatesCache();
+  if (bootCache) {
+    rates = bootCache;
+    ratesFetchedAt = Date.now();
+    renderPoster();
+  }
+  loadHtml2Canvas().catch(function () { /* offline / blocked CDN — error shown on export */ });
   fetchRates().then(scheduleRefresh);
 })();
   </script>

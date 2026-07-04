@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import App from '@/App'
 import { applyDocumentLocale, readStoredPublicLocale } from '@/i18n/engine'
 import { OFFLINE_PAGE_URL } from '@/lib/offlineFallback'
+import { clearPwaCachesForRecovery } from '@/lib/pwaRecovery'
 import '@/lib/pwaRegister'
 import { initPlatformShellClasses } from '@/lib/platformShell'
 
@@ -10,6 +11,7 @@ initPlatformShellClasses()
 applyDocumentLocale(readStoredPublicLocale())
 
 const STALE_CHUNK_RELOAD_KEY = 'cridora-stale-chunk-reload'
+const BOOT_SW_CLEAR_KEY = 'cridora-boot-sw-clear'
 
 function isStaleAssetBootError(message: string): boolean {
   return /Failed to fetch dynamically imported module|Loading chunk \d+ failed|Importing a module script failed|error loading dynamically imported module|404.*\.js/i.test(
@@ -30,6 +32,17 @@ function showBootFailure(message: string): void {
     } catch {
       /* private mode */
     }
+  }
+  try {
+    if (!sessionStorage.getItem(BOOT_SW_CLEAR_KEY)) {
+      sessionStorage.setItem(BOOT_SW_CLEAR_KEY, '1')
+      void clearPwaCachesForRecovery().finally(() => {
+        window.location.reload()
+      })
+      return
+    }
+  } catch {
+    /* private mode */
   }
   try {
     sessionStorage.setItem(
@@ -64,6 +77,7 @@ function BootShell({ children }: { children: ReactNode }) {
   useEffect(() => {
     try {
       sessionStorage.removeItem(STALE_CHUNK_RELOAD_KEY)
+      sessionStorage.removeItem(BOOT_SW_CLEAR_KEY)
     } catch {
       /* private mode */
     }

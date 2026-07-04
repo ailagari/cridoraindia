@@ -1385,7 +1385,7 @@ html[data-theme='dark'] .pf-track-gold-sheet {
 }
 
 .pf-vault-form__scroll-body {
-  flex: 1 1 auto;
+  flex: 1 1 0;
   min-height: 0;
   overflow-x: hidden;
   overflow-y: auto;
@@ -1393,6 +1393,11 @@ html[data-theme='dark'] .pf-track-gold-sheet {
   overscroll-behavior: contain;
   touch-action: pan-y;
   padding: 4px 16px 1.5rem;
+}
+
+.pf-vault-form--flex > .pf-vault-form__footer--pinned,
+.pf-invoice-import-footer {
+  flex-shrink: 0;
 }
 
 /* Pinned footer in overlay (portal is outside main pf-scope tree) */
@@ -1405,6 +1410,25 @@ html[data-theme='dark'] .pf-track-gold-sheet {
   padding: 0.75rem 1.35rem calc(1rem + env(safe-area-inset-bottom, 0px));
   border-top: 1px solid rgba(148, 163, 184, 0.18);
   background: var(--surface, #0f172a);
+  z-index: 2;
+}
+
+/* Confirm-details footer: primary Confirm always visible on top */
+.pf-invoice-import-footer .form-submit-foot__actions {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.45rem;
+}
+
+.pf-invoice-import-footer__confirm {
+  width: 100%;
+  min-height: 2.75rem;
+  font-weight: 700;
+}
+
+.pf-invoice-import-footer__secondary {
+  width: 100%;
+  min-height: 2.25rem;
 }
 
 @media (min-width: 768px) {

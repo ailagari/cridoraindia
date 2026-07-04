@@ -188,8 +188,6 @@ export function InvoiceImportFlow({
     return lines
   }, [includedItems])
 
-  const canSave = includedItems.length > 0
-
   const missingRequiredFields = useMemo(() => {
     const missing: string[] = []
     includedItems.forEach((it, idx) => {
@@ -727,33 +725,33 @@ export function InvoiceImportFlow({
       </div>{/* end pf-vault-form__scroll-body */}
 
       {phase === 'review' || phase === 'creating' ? (
-        <footer className="pf-vault-form__footer pf-vault-form__footer--pinned">
+        <footer className="pf-vault-form__footer pf-vault-form__footer--pinned pf-invoice-import-footer">
           {missingRequiredFields.length > 0 && !busy ? (
             <p className="pf-invoice-save-hint" role="status">
-              <strong>To save:</strong> {missingRequiredFields[0]}
+              <strong>To confirm:</strong> {missingRequiredFields[0]}
               {missingRequiredFields.length > 1 ? ` (+${missingRequiredFields.length - 1} more)` : ''}
             </p>
           ) : null}
           <FormSubmitFoot error={error} className="pf-vault-form__actions">
             <button
-              type="button"
-              className="btn btn-ghost"
-              disabled={busy}
-              onClick={() => resetFlow()}
-            >
-              Upload different file
-            </button>
-            <button
               type="submit"
               form={formId}
-              className="btn btn-primary pf-vault-form__submit"
-              disabled={busy || !canSave}
+              className="btn btn-primary pf-vault-form__submit pf-invoice-import-footer__confirm"
+              disabled={busy}
             >
               {phase === 'creating'
                 ? 'Saving…'
                 : includedItems.length > 1
-                  ? `Save ${includedItems.length} items to vault`
-                  : 'Save to vault'}
+                  ? `Confirm ${includedItems.length} items`
+                  : 'Confirm'}
+            </button>
+            <button
+              type="button"
+              className="btn btn-ghost pf-invoice-import-footer__secondary"
+              disabled={busy}
+              onClick={() => resetFlow()}
+            >
+              Upload different file
             </button>
           </FormSubmitFoot>
         </footer>

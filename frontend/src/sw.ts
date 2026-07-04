@@ -17,6 +17,21 @@ declare const self: ServiceWorkerGlobalScope & { __WB_MANIFEST: unknown }
 
 const NAVIGATION_TIMEOUT_MS = 12000
 
+async function fetchNavigationWithRetry(request: Request): Promise<Response> {
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), NAVIGATION_TIMEOUT_MS)
+      const response = await fetch(request, { signal: controller.signal, cache: 'no-store' })
+      clearTimeout(timeoutId)
+      return response
+    } catch (error) {
+      if (attempt === 1) throw error
+    }
+  }
+  throw new Error('navigation fetch failed')
+}
+
 cleanupOutdatedCaches()
 precacheAndRoute(self.__WB_MANIFEST)
 
@@ -31,10 +46,7 @@ registerRoute(
   ({ request }) => isNavigationRequest(request) && !request.url.includes(OFFLINE_PAGE_URL),
   async ({ request }) => {
     try {
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), NAVIGATION_TIMEOUT_MS)
-      const response = await fetch(request, { signal: controller.signal })
-      clearTimeout(timeoutId)
+      const response = await fetchNavigationWithRetry(request)
       if (shouldShowMaintenancePage(response)) {
         const offline = await serveOfflineShell()
         if (offline.type !== 'error') return offline

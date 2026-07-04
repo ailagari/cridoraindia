@@ -392,17 +392,21 @@
             footNote.textContent = 'Saved on your device · Cridora India'
             ratesLink.style.opacity = '0.5'
             ratesLink.style.pointerEvents = 'none'
+            retryBtn.textContent = 'Try again'
             return
           }
 
           if (maintenance) {
-            headline.textContent = 'Polishing the vault…'
+            headline.textContent = bootFailure ? 'App update needed' : 'Polishing the vault…'
             subtitle.textContent = bootFailure
-              ? 'The app was updated — tap Try again to load the latest version. Your data is safe.'
+              ? 'Your browser has an older copy of Cridora saved. Tap Load latest version to refresh — your account data is safe on our servers.'
               : 'Cridora is temporarily down for maintenance or experiencing an issue. Your data is safe — we\'ll reload automatically when service is restored.'
-            mlLine.textContent = 'സേവനം താൽക്കാലികമായി ലഭ്യമല്ല — ഞങ്ങൾ ഉടൻ തിരിച്ചെത്തും.'
-            statusLabel.textContent = 'Maintenance'
-            footNote.textContent = 'Service interruption · Cridora India'
+            mlLine.textContent = bootFailure
+              ? 'പഴയ ആപ്പ് കാഷ് കാരണം പ്രശ്നം — \'Load latest version\' ടാപ്പ് ചെയ്യുക.'
+              : 'സേവനം താൽക്കാലികമായി ലഭ്യമല്ല — ഞങ്ങൾ ഉടൻ തിരിച്ചെത്തും.'
+            statusLabel.textContent = bootFailure ? 'Update required' : 'Maintenance'
+            footNote.textContent = bootFailure ? 'Clear saved app files · Cridora India' : 'Service interruption · Cridora India'
+            retryBtn.textContent = bootFailure ? 'Load latest version' : 'Try again'
             return
           }
 
@@ -481,7 +485,7 @@
           retryBtn.disabled = true
           retryBtn.textContent = 'Reloading…'
           var target = returnTarget()
-          var bust = bootFailure ? (target.indexOf('?') >= 0 ? '&' : '?') + '_fresh=' + Date.now() : ''
+          var bust = (target.indexOf('?') >= 0 ? '&' : '?') + '_fresh=' + Date.now()
           window.setTimeout(function () {
             var done = function () {
               window.location.replace(target + bust)
@@ -516,7 +520,7 @@
         function tryReload() {
           if (reloading) return
           retryBtn.disabled = true
-          retryBtn.textContent = bootFailure ? 'Refreshing app…' : 'Checking…'
+          retryBtn.textContent = bootFailure ? 'Loading latest version…' : 'Checking…'
           if (bootFailure) {
             clearPwaCachesForRecovery().then(function () {
               scheduleReload()
@@ -537,14 +541,12 @@
           onlineBanner.textContent = 'Connection restored — checking Cridora…'
           onlineBanner.classList.add('show')
           retryBtn.disabled = false
-          retryBtn.textContent = 'Try again'
+          retryBtn.textContent = bootFailure ? 'Load latest version' : 'Try again'
           if (forcedMode === 'offline') {
             forcedMode = null
             applyMode()
           }
-          if (!bootFailure) {
-            startProbing()
-          }
+          startProbing()
         }
 
         function onOffline() {
@@ -572,6 +574,14 @@
         window.addEventListener('offline', onOffline)
 
         startProbing()
+
+        if (bootFailure) {
+          window.setTimeout(function () {
+            if (!reloading) {
+              tryReload()
+            }
+          }, 1500)
+        }
       })()
     </script>
   </body>
