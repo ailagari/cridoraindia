@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
 import { dashboardCopy } from '@/content/dashboardCopy'
 import {
   firstHoldingCelebration,
@@ -145,14 +144,17 @@ function PurchaseSourceJewellerField({
 
 export function CustomerPersonalHoldingsPanel({
   onChanged,
-  initialAction,
-  onInitialActionConsumed,
+  standaloneFlow,
+  onStandaloneFlowClose,
+  initialScanFile = null,
 }: {
   onChanged?: () => void
-  initialAction?: 'add' | 'scan' | null
-  onInitialActionConsumed?: () => void
+  /** When set, render only the chosen flow (overlay) — no vault hero or duplicate CTAs. */
+  standaloneFlow?: 'add' | 'scan' | null
+  onStandaloneFlowClose?: () => void
+  /** File picked synchronously before the import overlay opens. */
+  initialScanFile?: File | null
 }) {
-  const [searchParams, setSearchParams] = useSearchParams()
   const [rows, setRows] = useState<PersonalHoldingDTO[]>([])
   const [loadErr, setLoadErr] = useState('')
   const [addFormError, setAddFormError] = useState('')
@@ -167,27 +169,8 @@ export function CustomerPersonalHoldingsPanel({
   const [invoiceImportOpen, setInvoiceImportOpen] = useState(false)
 
   useEffect(() => {
-    if (searchParams.get('scan') !== '1') return
-    setInvoiceImportOpen(true)
-    setFormOpen(false)
-    setSearchParams(
-      (prev) => {
-        const next = new URLSearchParams(prev)
-        next.delete('scan')
-        // scan=1 opens the vault importer; drop scope-only portfolio_tab=personal so parent URL sync
-        // does not immediately return to overview after scan is consumed.
-        if (next.get('portfolio_tab') === 'personal' && !next.get('portfolio_action')) {
-          next.delete('portfolio_tab')
-        }
-        return next
-      },
-      { replace: true },
-    )
-  }, [searchParams, setSearchParams])
-
-  useEffect(() => {
-    if (!initialAction) return
-    if (initialAction === 'scan') {
+    if (!standaloneFlow) return
+    if (standaloneFlow === 'scan') {
       setInvoiceImportOpen(true)
       setFormOpen(false)
       setAddFormSuccess('')
@@ -199,8 +182,7 @@ export function CustomerPersonalHoldingsPanel({
       setAddFormError('')
     }
     setLoadErr('')
-    onInitialActionConsumed?.()
-  }, [initialAction, onInitialActionConsumed])
+  }, [standaloneFlow])
   const [title, setTitle] = useState('')
   const [category, setCategory] = useState('ornament')
   const [weight, setWeight] = useState('')
@@ -399,6 +381,7 @@ export function CustomerPersonalHoldingsPanel({
       }
     }
     onChanged?.()
+    if (standaloneFlow) onStandaloneFlowClose?.()
   }
 
   const saveEdit = async () => {
@@ -545,7 +528,8 @@ export function CustomerPersonalHoldingsPanel({
   }
 
   return (
-    <div>
+    <div className={standaloneFlow ? 'pf-personal-flow-standalone' : undefined}>
+      {!standaloneFlow ? (
       <div className="pf-vault-hero pf-vault-hero--bar">
         <div className="pf-vault-hero__text">
           <span className="pf-vault-hero__eyebrow">Personal vault</span>
@@ -624,6 +608,7 @@ export function CustomerPersonalHoldingsPanel({
           </button>
         </div>
       </div>
+      ) : null}
 
       {loadErr ? (
         <p className="form-error" role="alert">
@@ -632,7 +617,11 @@ export function CustomerPersonalHoldingsPanel({
       ) : null}
       <InvoiceImportFlow
         open={invoiceImportOpen}
-        onClose={() => setInvoiceImportOpen(false)}
+        initialFile={initialScanFile}
+        onClose={() => {
+          setInvoiceImportOpen(false)
+          if (standaloneFlow) onStandaloneFlowClose?.()
+        }}
         jewellers={approvedJewellers}
         onCreated={async (holdings) => {
           setInvoiceImportOpen(false)
@@ -656,6 +645,7 @@ export function CustomerPersonalHoldingsPanel({
             }
           }
           onChanged?.()
+          if (standaloneFlow) onStandaloneFlowClose?.()
         }}
       />
       {formOpen ? (
@@ -678,6 +668,16 @@ export function CustomerPersonalHoldingsPanel({
               Capture what you own. Estimated value updates from the platform <strong className="tabular">22K</strong> reference rate — jeweller marks
               are not used for personal items.
             </p>
+            {standaloneFlow ? (
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm pf-vault-form__close"
+                onClick={() => onStandaloneFlowClose?.()}
+                disabled={busy}
+              >
+                Close
+              </button>
+            ) : null}
           </header>
 
           <div className="pf-vault-form__sections">
@@ -818,13 +818,14 @@ export function CustomerPersonalHoldingsPanel({
           </footer>
         </form>
       ) : null}
-      {!formOpen && addFormSuccess ? (
+      {!standaloneFlow && !formOpen && addFormSuccess ? (
         <p className="form-feedback form-feedback--success pf-vault-save-flash pf-vault-save-flash--hero" role="status">
           {addFormSuccess}
         </p>
       ) : null}
 
-      {rows.length === 0 ? (
+      {!standaloneFlow ? (
+      rows.length === 0 ? (
         <p style={{ color: 'var(--text-muted)', lineHeight: 1.55 }}>
           {dashboardCopy.customer.empty.personalHoldings.description}
         </p>
@@ -1049,9 +1050,10 @@ export function CustomerPersonalHoldingsPanel({
             </nav>
           ) : null}
         </div>
-      )}
+      )
+      ) : null}
 
-      {!formOpen && !invoiceImportOpen ? (
+      {!standaloneFlow && !formOpen && !invoiceImportOpen ? (
         <button
           type="button"
           className="pf-vault-mobile-fab"

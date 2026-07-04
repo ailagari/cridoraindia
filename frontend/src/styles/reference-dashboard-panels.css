@@ -1322,6 +1322,54 @@ html[data-theme='dark'] .pf-track-gold-sheet {
   box-shadow: 0 -14px 48px rgba(0, 0, 0, 0.55);
 }
 
+.pf-personal-flow-overlay__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: calc(var(--z-overlay) + 2);
+  border: 0;
+  padding: 0;
+  margin: 0;
+  background: var(--overlay);
+  cursor: default;
+}
+
+.pf-personal-flow-overlay {
+  position: fixed;
+  z-index: calc(var(--z-overlay) + 3);
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  width: min(100%, 640px);
+  max-height: min(92vh, 900px);
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-bottom: 0;
+  border-radius: 16px 16px 0 0;
+  box-shadow: 0 -12px 40px rgba(15, 23, 42, 0.18);
+}
+
+.pf-personal-flow-standalone .pf-vault-form {
+  margin: 0;
+}
+
+@media (min-width: 768px) {
+  .pf-personal-flow-overlay {
+    top: 50%;
+    bottom: auto;
+    transform: translate(-50%, -50%);
+    border-radius: 16px;
+    border-bottom: 1px solid var(--border);
+    max-height: min(88vh, 860px);
+  }
+}
+
+html[data-theme='dark'] .pf-personal-flow-overlay {
+  box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.45);
+}
+
 .ref-dash-shell .dash-content .pf-personal-stat-card {
   appearance: none;
   border: 1px solid rgba(167, 139, 250, 0.35);

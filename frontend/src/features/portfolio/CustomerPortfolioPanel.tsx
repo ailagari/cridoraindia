@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useSearchParams } from 'react-router-dom'
 import { fetchGoldWallet, vaultRowEstimatedInr, vaultRowTotalGrams, type VaultRowDTO } from '@/lib/goldTransferApi'
 import {
@@ -32,6 +33,7 @@ import { dashboardCopy } from '@/content/dashboardCopy'
 import { PortfolioLiveGoldPriceCard } from './PortfolioLiveGoldPriceCard'
 import { CustomerVaultsPanel } from './CustomerVaultsPanel'
 import { CustomerPersonalHoldingsPanel } from './CustomerPersonalHoldingsPanel'
+import { INVOICE_IMPORT_ACCEPT } from './InvoiceImportFlow'
 import { TablePagination } from '@/components/ui'
 import { useTablePagination } from '@/hooks/useTablePagination'
 
@@ -161,7 +163,9 @@ export function CustomerPortfolioPanel({ defaultPortfolioTab }: { defaultPortfol
   const [holdingsScope, setHoldingsScope] = useState<HoldingsScope>(loadHoldingsScopePref)
   const [personalPreview, setPersonalPreview] = useState<PersonalHoldingDTO[]>([])
   const [personalHoldingsCount, setPersonalHoldingsCount] = useState(0)
-  const [personalInitialAction, setPersonalInitialAction] = useState<'add' | 'scan' | null>(null)
+  const [personalFlowOverlay, setPersonalFlowOverlay] = useState<'add' | 'scan' | null>(null)
+  const [pendingScanFile, setPendingScanFile] = useState<File | null>(null)
+  const scanFileInputRef = useRef<HTMLInputElement>(null)
   const portfolioTabsRef = useRef<HTMLElement | null>(null)
 
   useEffect(() => {
@@ -180,27 +184,9 @@ export function CustomerPortfolioPanel({ defaultPortfolioTab }: { defaultPortfol
     setPersonalPreview(list.slice(0, 3))
   }, [])
 
-  const navigatePersonalAction = useCallback(
-    (action: 'add' | 'scan') => {
-      setPersonalInitialAction(action)
-      setPortfolioTab('personal')
-      setSearchParams(
-        (prev) => {
-          const next = new URLSearchParams(prev)
-          // portfolio_tab=personal is reserved for overview + personal scope deeplinks.
-          // Vault actions use portfolio_action only so clearing it does not bounce back to overview.
-          next.set('portfolio_action', action)
-          if (action === 'scan') next.delete('scan')
-          return next
-        },
-        { replace: true },
-      )
-    },
-    [setSearchParams],
-  )
-
-  const clearPersonalInitialAction = useCallback(() => {
-    setPersonalInitialAction(null)
+  const closePersonalFlowOverlay = useCallback(() => {
+    setPersonalFlowOverlay(null)
+    setPendingScanFile(null)
     setSearchParams(
       (prev) => {
         const next = new URLSearchParams(prev)
@@ -210,6 +196,44 @@ export function CustomerPortfolioPanel({ defaultPortfolioTab }: { defaultPortfol
       { replace: true },
     )
   }, [setSearchParams])
+
+  const openPersonalFlowOverlay = useCallback(
+    (action: 'add' | 'scan', scanFile?: File | null) => {
+      setPersonalFlowOverlay(action)
+      setPendingScanFile(scanFile ?? null)
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev)
+          next.set('portfolio_action', action)
+          next.delete('scan')
+          if (next.get('portfolio_tab') === 'personal') {
+            next.delete('portfolio_tab')
+          }
+          return next
+        },
+        { replace: true },
+      )
+    },
+    [setSearchParams],
+  )
+
+  const navigatePersonalAction = useCallback(
+    (action: 'add' | 'scan') => {
+      if (action === 'scan') {
+        const el = scanFileInputRef.current
+        if (el) {
+          const mobile =
+            typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches
+          if (mobile) el.setAttribute('capture', 'environment')
+          else el.removeAttribute('capture')
+          el.click()
+        }
+        return
+      }
+      openPersonalFlowOverlay('add')
+    },
+    [openPersonalFlowOverlay],
+  )
 
   const refresh = useCallback(async () => {
     setLoadErr('')
@@ -238,24 +262,35 @@ export function CustomerPortfolioPanel({ defaultPortfolioTab }: { defaultPortfol
   }, [refreshPersonalPreview])
 
   useEffect(() => {
+    if (searchParams.get('scan') !== '1') return
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev)
+        next.delete('scan')
+        if (!next.get('portfolio_action')) next.set('portfolio_action', 'scan')
+        if (next.get('portfolio_tab') === 'personal') next.delete('portfolio_tab')
+        return next
+      },
+      { replace: true },
+    )
+  }, [searchParams, setSearchParams])
+
+  useEffect(() => {
     const raw = (searchParams.get('portfolio_tab') || '').trim().toLowerCase()
     const actionRaw = (searchParams.get('portfolio_action') || '').trim().toLowerCase()
     const hasScan = searchParams.get('scan') === '1'
     const hasHolding = Boolean((searchParams.get('holding') || '').trim())
-    const openPersonalVault =
+    const openPersonalVaultTab =
       defaultPortfolioTab === 'personal' ||
-      actionRaw === 'add' ||
-      actionRaw === 'scan' ||
-      hasScan ||
       hasHolding
 
     if (actionRaw === 'add' || actionRaw === 'scan') {
-      setPersonalInitialAction(actionRaw)
+      setPersonalFlowOverlay(actionRaw)
     } else if (hasScan) {
-      setPersonalInitialAction('scan')
+      setPersonalFlowOverlay('scan')
     }
 
-    if (openPersonalVault) {
+    if (openPersonalVaultTab) {
       setPortfolioTab('personal')
     } else if (raw === 'documents') {
       setPortfolioTab('personal')
@@ -274,6 +309,15 @@ export function CustomerPortfolioPanel({ defaultPortfolioTab }: { defaultPortfol
       setPortfolioTab(defaultPortfolioTab)
     }
   }, [searchParams, defaultPortfolioTab])
+
+  useEffect(() => {
+    if (!personalFlowOverlay) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prev
+    }
+  }, [personalFlowOverlay])
 
   useEffect(() => {
     const nav = portfolioTabsRef.current
@@ -662,11 +706,7 @@ export function CustomerPortfolioPanel({ defaultPortfolioTab }: { defaultPortfol
         ) : null}
 
         {portfolioTab === 'personal' ? (
-          <CustomerPersonalHoldingsPanel
-            onChanged={refresh}
-            initialAction={personalInitialAction}
-            onInitialActionConsumed={clearPersonalInitialAction}
-          />
+          <CustomerPersonalHoldingsPanel onChanged={refresh} />
         ) : null}
 
         {portfolioTab === 'transactions' ? (
@@ -757,6 +797,51 @@ export function CustomerPortfolioPanel({ defaultPortfolioTab }: { defaultPortfol
           </article>
         ) : null}
       </div>
+
+      <input
+        ref={scanFileInputRef}
+        type="file"
+        accept={INVOICE_IMPORT_ACCEPT}
+        tabIndex={-1}
+        aria-hidden
+        style={{ position: 'fixed', width: 1, height: 1, opacity: 0, pointerEvents: 'none' }}
+        onChange={(e) => {
+          const file = e.target.files?.[0] ?? null
+          e.target.value = ''
+          if (!file) return
+          openPersonalFlowOverlay('scan', file)
+        }}
+      />
+
+      {personalFlowOverlay
+        ? createPortal(
+            <>
+              <button
+                type="button"
+                className="pf-personal-flow-overlay__backdrop"
+                aria-label="Close"
+                onClick={closePersonalFlowOverlay}
+              />
+              <div
+                className="pf-personal-flow-overlay"
+                role="dialog"
+                aria-modal="true"
+                aria-label={personalFlowOverlay === 'scan' ? 'Import from invoice' : 'Add personal gold'}
+              >
+                <CustomerPersonalHoldingsPanel
+                  standaloneFlow={personalFlowOverlay}
+                  initialScanFile={pendingScanFile}
+                  onStandaloneFlowClose={closePersonalFlowOverlay}
+                  onChanged={() => {
+                    void refreshPersonalPreview()
+                    void refresh()
+                  }}
+                />
+              </div>
+            </>,
+            document.body,
+          )
+        : null}
     </div>
   )
 }

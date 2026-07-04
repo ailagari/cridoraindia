@@ -28,7 +28,8 @@ const CATS = [
   { v: 'other', l: 'Other' },
 ]
 
-const ACCEPT = 'image/*,application/pdf'
+export const INVOICE_IMPORT_ACCEPT = 'image/*,application/pdf'
+const ACCEPT = INVOICE_IMPORT_ACCEPT
 
 type FlowPhase = 'picking' | 'analyzing' | 'review' | 'creating' | 'done'
 
@@ -126,6 +127,8 @@ type InvoiceImportFlowProps = {
   onClose: () => void
   onCreated: (holdings: PersonalHoldingDTO[]) => void
   jewellers?: JewellerStorefrontDTO[]
+  /** When set, skip the pick step and analyze this file immediately (e.g. after a synchronous file input). */
+  initialFile?: File | null
 }
 
 export function InvoiceImportFlow({
@@ -133,6 +136,7 @@ export function InvoiceImportFlow({
   onClose,
   onCreated,
   jewellers = [],
+  initialFile = null,
 }: InvoiceImportFlowProps) {
   const isMobile = useIsMobile()
   const fileInputId = useId()
@@ -208,9 +212,12 @@ export function InvoiceImportFlow({
     itemKeyRef.current = 0
   }, [])
 
+  const initialFileHandledRef = useRef<File | null>(null)
+
   useEffect(() => {
     if (!open) {
       resetFlow()
+      initialFileHandledRef.current = null
     }
   }, [open, resetFlow])
 
@@ -275,6 +282,13 @@ export function InvoiceImportFlow({
       setPhase('picking')
     }
   }
+
+  useEffect(() => {
+    if (!open || !initialFile) return
+    if (initialFileHandledRef.current === initialFile) return
+    initialFileHandledRef.current = initialFile
+    void handleFile(initialFile)
+  }, [open, initialFile])
 
   const confirmCreate = async () => {
     const toSave = reviewItems.filter((it) => it.include)
