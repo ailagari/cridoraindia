@@ -1340,8 +1340,9 @@ html[data-theme='dark'] .pf-track-gold-sheet {
   bottom: 0;
   transform: translateX(-50%);
   width: min(100%, 640px);
-  /* Explicit height so flex scroll-body can activate — max-height alone is insufficient */
-  height: min(92svh, min(92vh, 900px));
+  /* Explicit height so inner flex scroll region can activate */
+  height: min(92vh, 900px);
+  height: min(92dvh, 900px);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -1354,6 +1355,27 @@ html[data-theme='dark'] .pf-track-gold-sheet {
   box-shadow: 0 -12px 40px rgba(15, 23, 42, 0.18);
 }
 
+/* Pass bounded height through the wrapper into the import form */
+.pf-personal-flow-overlay > .pf-personal-flow-standalone {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.pf-personal-flow-standalone .pf-vault-form {
+  margin: 0;
+}
+
+.pf-personal-flow-standalone .pf-vault-form.pf-vault-form--flex {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
 .pf-vault-form--flex {
   display: flex;
   flex-direction: column;
@@ -1363,16 +1385,26 @@ html[data-theme='dark'] .pf-track-gold-sheet {
 }
 
 .pf-vault-form__scroll-body {
-  flex: 1;
+  flex: 1 1 auto;
   min-height: 0;
+  overflow-x: hidden;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
+  touch-action: pan-y;
   padding: 4px 16px 1.5rem;
 }
 
-.pf-personal-flow-standalone .pf-vault-form {
-  margin: 0;
+/* Pinned footer in overlay (portal is outside main pf-scope tree) */
+.pf-personal-flow-overlay .pf-vault-form__footer--pinned {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  padding: 0.75rem 1.35rem calc(1rem + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid rgba(148, 163, 184, 0.18);
+  background: var(--surface, #0f172a);
 }
 
 @media (min-width: 768px) {
@@ -1382,7 +1414,8 @@ html[data-theme='dark'] .pf-track-gold-sheet {
     transform: translate(-50%, -50%);
     border-radius: 16px;
     border-bottom: 1px solid var(--border);
-    height: min(88svh, min(88vh, 860px));
+    height: min(88vh, 860px);
+    height: min(88dvh, 860px);
   }
   .pf-sheet-handle {
     display: none;

@@ -826,7 +826,7 @@ export function CustomerPortfolioPanel({ defaultPortfolioTab }: { defaultPortfol
                 onClick={closePersonalFlowOverlay}
               />
               <div
-                className="pf-personal-flow-overlay"
+                className="pf-personal-flow-overlay pf-scope"
                 role="dialog"
                 aria-modal="true"
                 aria-label={personalFlowOverlay === 'scan' ? 'Import from invoice' : 'Add personal gold'}
