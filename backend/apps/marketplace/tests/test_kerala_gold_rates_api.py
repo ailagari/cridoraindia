@@ -46,6 +46,7 @@ class KeralaGoldRatesApiTests(TestCase):
     def test_public_kerala_rates_payload(self):
         res = self.client.get("/api/v1/marketplace/kerala-gold-rates/")
         self.assertEqual(res.status_code, 200)
+        self.assertEqual(res["Access-Control-Allow-Origin"], "*")
         body = res.json()
         self.assertEqual(body.get("region"), "Kerala")
         self.assertIn("22K", body.get("gold", {}))

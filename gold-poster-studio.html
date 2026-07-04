@@ -286,8 +286,8 @@
       --fs-cta: 12px;
       --fs-foot: 11px;
       --fs-foot-url: 13px;
-      --fs-headline: 28px;
-      --fs-message: 14px;
+      --fs-headline: 38px;
+      --fs-message: 19px;
       --logo-mark: 56px;
       --logo-wrap: 56px;
       --frame-inset: 20px;
@@ -776,8 +776,8 @@
     .poster--landscape .poster__sep--d     { display: none; }
     .poster--landscape .poster__jeweller   { grid-area: jewel; padding-top: 4px; align-self: start; }
     .poster--landscape .poster__eyebrow    { display: none; }
-    .poster--landscape .poster__headline   { text-align: left; font-size: calc(var(--fs-headline) * 0.92); }
-    .poster--landscape .poster__message    { text-align: left; margin-bottom: calc(var(--poster-gap) * 0.5); }
+    .poster--landscape .poster__headline   { text-align: left; font-size: calc(var(--fs-headline) * 0.95); }
+    .poster--landscape .poster__message    { text-align: left; margin-bottom: calc(var(--poster-gap) * 0.5); font-size: calc(var(--fs-message) * 1.02); }
     .poster--landscape .poster__main       { grid-area: main; align-self: stretch; padding: 0; align-items: flex-start; text-align: left; justify-content: center; }
     .poster--landscape .poster__k22        { align-items: flex-start; width: 100%; }
     .poster--landscape .poster__k22-price  { text-align: left; }
@@ -872,9 +872,11 @@
           <span>API base URL</span>
           <input type="url" id="apiBase" value="https://www.cridoraindia.com" placeholder="https://www.cridoraindia.com" />
         </label>
+        <p class="panel-hint" style="margin-top:0.35rem;font-size:0.78rem;opacity:0.75">
+          Live 22K / 24K / 18K &amp; silver from <a href="https://www.cridoraindia.com/gold-rates/kerala" target="_blank" rel="noopener">cridoraindia.com/gold-rates/kerala</a>
+        </p>
         <div class="chip-row" style="margin-bottom:0.55rem">
           <button type="button" class="chip is-active" data-api="https://www.cridoraindia.com">cridoraindia.com</button>
-          <button type="button" class="chip" data-api="https://cridoraindia-production-e162.up.railway.app">Railway live</button>
           <button type="button" class="chip" data-api="http://localhost:8000">Local Django</button>
         </div>
         <div class="btn-row">
@@ -1155,12 +1157,14 @@
   var RATE_API_FALLBACKS = [
     "https://www.cridoraindia.com",
     "https://cridoraindia.com",
-    "https://cridoraindia-production-e162.up.railway.app",
     "http://localhost:8000",
   ];
   var RATE_API_PATHS = [
     "/api/v1/marketplace/kerala-gold-rates/",
-    "/api/v1/marketplace/spot-prices/",
+  ];
+  var CRIDORA_RATE_BASES = [
+    "https://www.cridoraindia.com",
+    "https://cridoraindia.com",
   ];
 
   function cridoraLogoSvg(sizePx, gradId) {
@@ -1191,8 +1195,8 @@
     var reserved = padY * 2 + 46;
     if (opts.showCridoraBar) reserved += Math.round(h * 0.072);
     if (opts.showJeweller) reserved += Math.round(h * 0.078);
-    if (opts.showHeadline) reserved += Math.round(h * (isStory ? 0.055 : isLandscape ? 0.042 : 0.048));
-    if (opts.showMessage) reserved += Math.round(h * 0.032);
+    if (opts.showHeadline) reserved += Math.round(h * (isStory ? 0.068 : isLandscape ? 0.052 : 0.058));
+    if (opts.showMessage) reserved += Math.round(h * 0.042);
     if (opts.showEyebrow && !isLandscape) reserved += Math.round(h * 0.028);
     reserved += Math.round(h * (rateCols === 3 ? 0.105 : 0.092));
     if (opts.showJeweller) reserved += Math.round(h * 0.072);
@@ -1219,9 +1223,10 @@
     var logoWrap = Math.round(54 * scale);
     if (isLandscape) { logoMark = Math.round(52 * (h / 630)); logoWrap = Math.round(46 * (h / 630)); }
 
-    var headlineSize = Math.max(18, Math.round((isStory ? 34 : isLandscape ? 22 : 28) * scale));
-    if (opts.showHeadline && opts.headlineLen > 20) headlineSize = Math.round(headlineSize * 0.82);
-    var messageSize = Math.max(12, Math.round((isStory ? 18 : isLandscape ? 13 : 15) * scale));
+    var headlineSize = Math.max(22, Math.round((isStory ? 46 : isLandscape ? 30 : 38) * scale));
+    if (opts.showHeadline && opts.headlineLen > 24) headlineSize = Math.round(headlineSize * 0.88);
+    else if (opts.showHeadline && opts.headlineLen > 18) headlineSize = Math.round(headlineSize * 0.94);
+    var messageSize = Math.max(14, Math.round((isStory ? 26 : isLandscape ? 18 : 21) * scale));
 
     return {
       padX: padX,
@@ -1430,7 +1435,7 @@
         if (parsed.showWebsiteUrl == null) parsed.showWebsiteUrl = true;
         if (parsed.showRatesEyebrow == null) parsed.showRatesEyebrow = true;
         if (!parsed.lang) parsed.lang = "en";
-        if (parsed.apiBase === "https://cridoraindia-production-e162.up.railway.app") {
+        if (parsed.apiBase && /railway\.app$/i.test(String(parsed.apiBase).replace(/\/$/, ""))) {
           parsed.apiBase = "https://www.cridoraindia.com";
         }
         var validIds = ["luxury-dark","royal-cream","festive-ruby","midnight-sapphire","heritage-green"];
@@ -1626,9 +1631,11 @@
       gold = raw.kerala_board.gold;
       silver = raw.kerala_board.silver || silver;
     }
-    if ((!gold || parseRateNum(gold["22K"]) == null) && raw.spot && raw.spot.gold) {
-      gold = raw.spot.gold;
-      silver = raw.spot.silver || silver;
+    if ((!gold || parseRateNum(gold["22K"]) == null) && raw.latest_point && raw.latest_point.gold) {
+      gold = raw.latest_point.gold;
+      if (!silver && raw.latest_point.silver != null) {
+        silver = { "999": raw.latest_point.silver };
+      }
     }
     var normalizedGold = {};
     ["18K", "22K", "24K", "21K"].forEach(function (k) {
@@ -1671,8 +1678,12 @@
 
   function getRateApiBases() {
     var bases = [];
+    CRIDORA_RATE_BASES.forEach(function (base) {
+      if (base && bases.indexOf(base) === -1) bases.push(base);
+    });
     if (location.protocol.startsWith("http") && location.host) {
-      bases.push(location.origin.replace(/\/$/, ""));
+      var origin = location.origin.replace(/\/$/, "");
+      if (origin && bases.indexOf(origin) === -1) bases.push(origin);
     }
     var custom = (el.apiBase.value || "").trim().replace(/\/$/, "");
     if (custom && bases.indexOf(custom) === -1) bases.push(custom);
@@ -1689,12 +1700,24 @@
   }
 
   async function fetchRatesFromUrl(url) {
-    var res = await fetch(url, { cache: "no-store", mode: "cors", credentials: "omit" });
-    if (!res.ok) throw new Error("HTTP " + res.status);
-    var raw = await res.json();
-    var normalized = normalizeRatesPayload(raw);
-    if (!normalized) throw new Error("No usable 22K rate in response");
-    return normalized;
+    var ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
+    var timer = ctrl ? setTimeout(function () { ctrl.abort(); }, 22000) : null;
+    try {
+      var res = await fetch(url, {
+        cache: "no-store",
+        mode: "cors",
+        credentials: "omit",
+        headers: { Accept: "application/json" },
+        signal: ctrl ? ctrl.signal : undefined,
+      });
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      var raw = await res.json();
+      var normalized = normalizeRatesPayload(raw);
+      if (!normalized) throw new Error("No usable 22K rate in response");
+      return normalized;
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
   }
 
   function applyRatesPayload(data, opts) {
@@ -1706,7 +1729,9 @@
     ratesFetchedAt = Date.now();
     saveRatesCache(data);
     var title = (opts.cached ? t("ratesCached") : t("liveRatesOk")) + " · " + fmtInr(data.gold && data.gold["22K"]);
-    setRateStatus(true, title, formatStatusTimestamp());
+    var sub = formatStatusTimestamp();
+    if (opts.sourceUrl && !opts.cached) sub = "cridoraindia.com · " + sub;
+    setRateStatus(true, title, sub);
     renderPoster();
     if (changed) scheduleRefresh();
   }
@@ -1726,7 +1751,7 @@
           el.apiBase.value = base;
           syncApiBaseChips(base);
           state.apiBase = base;
-          applyRatesPayload(data, { cached: false });
+          applyRatesPayload(data, { cached: false, sourceUrl: url });
           return data;
         } catch (err) {
           errors.push(url + " → " + (err.message || String(err)));
