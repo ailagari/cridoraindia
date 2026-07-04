@@ -331,6 +331,7 @@
         <div class="actions">
           <button type="button" id="retry-btn">Try again</button>
           <a class="btn-secondary" href="/gold-rates" id="rates-link">View gold rates (when online)</a>
+          <a class="btn-secondary" href="https://cridoraindia-production.up.railway.app/" id="fallback-link" style="display:none">Open Cridora (alternate link)</a>
         </div>
 
         <p class="foot" id="foot-note">Cached offline page · Cridora India</p>
@@ -362,7 +363,11 @@
         var onlineBanner = document.getElementById('online-banner')
         var retryBtn = document.getElementById('retry-btn')
         var ratesLink = document.getElementById('rates-link')
+        var fallbackLink = document.getElementById('fallback-link')
         var footNote = document.getElementById('foot-note')
+        var FALLBACK_ORIGIN = 'https://cridoraindia-production.up.railway.app'
+        var onCustomDomain = /cridoraindia\.com$/i.test(window.location.hostname)
+        var probeFailCount = 0
 
         function spawnParticles() {
           var container = document.getElementById('particles')
@@ -407,13 +412,29 @@
             statusLabel.textContent = bootFailure ? 'Update required' : 'Maintenance'
             footNote.textContent = bootFailure ? 'Clear saved app files · Cridora India' : 'Service interruption · Cridora India'
             retryBtn.textContent = bootFailure ? 'Load latest version' : 'Try again'
+            if (onCustomDomain && fallbackLink && !bootFailure) {
+              fallbackLink.style.display = 'flex'
+            }
             return
           }
 
           headline.textContent = 'Connection hiccup'
-          subtitle.textContent = 'We couldn\'t reach Cridora just now. Checking automatically — you\'ll be redirected when it\'s back.'
-          mlLine.textContent = 'കണക്ഷൻ പ്രശ്നം — കുറച്ച് കഴിഞ്ഞ് വീണ്ടും ശ്രമിക്കുക.'
+          subtitle.textContent = onCustomDomain
+            ? 'We couldn\'t reach cridoraindia.com — the server may still be up on our backup link below. Tap Try again or use the alternate link.'
+            : 'We couldn\'t reach Cridora just now. Checking automatically — you\'ll be redirected when it\'s back.'
+          mlLine.textContent = 'കണക്ഷൻ പ്രശ്നം — ചുവടെയുള്ള ബാക്കപ്പ് ലിങ്ക് ശ്രമിക്കുക.'
           statusLabel.textContent = 'Unavailable'
+          if (onCustomDomain && fallbackLink) {
+            fallbackLink.style.display = 'flex'
+          }
+        }
+
+        function maybeShowFallbackLink() {
+          if (!onCustomDomain || !fallbackLink) return
+          probeFailCount += 1
+          if (probeFailCount >= 2) {
+            fallbackLink.style.display = 'flex'
+          }
         }
 
         function rotateFact() {
@@ -450,6 +471,7 @@
                   return res.ok && res.status < 500
                 })
                 .catch(function () {
+                  maybeShowFallbackLink()
                   return false
                 })
             })

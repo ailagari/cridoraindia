@@ -1,72 +1,22 @@
 /// <reference lib="webworker" />
-import { cleanupOutdatedCaches, matchPrecache, precacheAndRoute } from 'workbox-precaching'
-import { registerRoute, setCatchHandler } from 'workbox-routing'
+import { cleanupOutdatedCaches, precacheAndRoute } from 'workbox-precaching'
 
 import {
   CRIDORA_PUSH_REFRESH_MESSAGE_TYPE,
   CRIDORA_PUSH_RESUBSCRIBE_MESSAGE_TYPE,
   CRIDORA_SHOW_LOCAL_TRAY_MESSAGE_TYPE,
 } from './lib/cridoraSwMessages'
-import {
-  isNavigationRequest,
-  OFFLINE_PAGE_URL,
-  shouldShowMaintenancePage,
-} from './lib/offlineFallback'
 
 declare const self: ServiceWorkerGlobalScope & { __WB_MANIFEST: unknown }
 
-const NAVIGATION_TIMEOUT_MS = 12000
-
-async function fetchNavigationWithRetry(request: Request): Promise<Response> {
-  for (let attempt = 0; attempt < 2; attempt += 1) {
-    try {
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), NAVIGATION_TIMEOUT_MS)
-      const response = await fetch(request, { signal: controller.signal, cache: 'no-store' })
-      clearTimeout(timeoutId)
-      return response
-    } catch (error) {
-      if (attempt === 1) throw error
-    }
-  }
-  throw new Error('navigation fetch failed')
-}
-
+/**
+ * Do NOT intercept document navigations here.
+ * Replacing slow/failed page loads with offline.html caused false "maintenance"
+ * when Cloudflare or DNS hiccupped while the Railway backend was still healthy.
+ * offline.html remains precached for explicit boot-failure redirects from main.tsx.
+ */
 cleanupOutdatedCaches()
 precacheAndRoute(self.__WB_MANIFEST)
-
-async function serveOfflineShell(): Promise<Response> {
-  const cached = await matchPrecache(OFFLINE_PAGE_URL)
-  if (cached) return cached
-  return Response.error()
-}
-
-/** Navigation: network-first with offline / maintenance shell when origin is unreachable. */
-registerRoute(
-  ({ request }) => isNavigationRequest(request) && !request.url.includes(OFFLINE_PAGE_URL),
-  async ({ request }) => {
-    try {
-      const response = await fetchNavigationWithRetry(request)
-      if (shouldShowMaintenancePage(response)) {
-        const offline = await serveOfflineShell()
-        if (offline.type !== 'error') return offline
-      }
-      return response
-    } catch {
-      const offline = await serveOfflineShell()
-      if (offline.type !== 'error') return offline
-      throw new Error('offline shell missing from precache')
-    }
-  },
-)
-
-setCatchHandler(async ({ request }) => {
-  if (request.mode === 'navigate') {
-    const offline = await serveOfflineShell()
-    if (offline.type !== 'error') return offline
-  }
-  return Response.error()
-})
 
 self.addEventListener('install', (event: ExtendableEvent) => {
   event.waitUntil(self.skipWaiting())
