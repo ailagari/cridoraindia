@@ -80,7 +80,7 @@ function reviewItemFromExtract(it: InvoiceExtractItemDTO, index: number): Review
     key: `item-${index}-${it.title.slice(0, 24) || index}`,
     include: true,
     title: it.title,
-    category: CATS.some((c) => c.v === it.category) ? it.category : 'other',
+    category: CATS.some((c) => c.v === it.category) ? it.category : 'ornament',
     weight: it.weight_grams,
     purity: normalizePersonalVaultPurity(it.purity),
     purchasePricePerGram: it.purchase_price_inr_per_gram ?? '',
@@ -188,14 +188,18 @@ export function InvoiceImportFlow({
     return lines
   }, [includedItems])
 
-  const canSave =
-    includedItems.length > 0 &&
-    includedItems.every(
-      (it) =>
-        it.title.trim() &&
-        it.weight.trim() &&
-        Number.parseFloat(it.weight) > 0,
-    )
+  const canSave = includedItems.length > 0
+
+  const missingRequiredFields = useMemo(() => {
+    const missing: string[] = []
+    includedItems.forEach((it, idx) => {
+      const label = it.title.trim() || `Item ${idx + 1}`
+      if (!it.title.trim()) missing.push(`${label}: title is required`)
+      if (!it.weight.trim() || Number.parseFloat(it.weight) <= 0)
+        missing.push(`${label}: weight is required`)
+    })
+    return missing
+  }, [includedItems])
 
   const resetFlow = useCallback(() => {
     setPhase('picking')
@@ -300,12 +304,12 @@ export function InvoiceImportFlow({
     for (let i = 0; i < toSave.length; i += 1) {
       const it = toSave[i]
       if (!it.title.trim()) {
-        setError(`Item ${i + 1}: title is required.`)
+        setError(`${it.title.trim() || `Item ${i + 1}`}: please enter a title.`)
         setActiveItemIndex(reviewItems.indexOf(it))
         return
       }
       if (!it.weight.trim() || Number.parseFloat(it.weight) <= 0) {
-        setError(`Item ${i + 1}: weight must be greater than zero.`)
+        setError(`${it.title.trim() || `Item ${i + 1}`}: weight must be greater than zero.`)
         setActiveItemIndex(reviewItems.indexOf(it))
         return
       }
@@ -493,9 +497,25 @@ export function InvoiceImportFlow({
       ) : null}
 
       {phase === 'analyzing' ? (
-        <p className="pf-vault-form__lede" role="status">
-          Reading invoice…
-        </p>
+        <div className="pf-invoice-scanning" role="status" aria-live="polite">
+          <div className="pf-invoice-scanning__orbit" aria-hidden>
+            <div className="pf-invoice-scanning__ring" />
+            <div className="pf-invoice-scanning__ring pf-invoice-scanning__ring--2" />
+            <svg className="pf-invoice-scanning__icon" viewBox="0 0 28 28" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <rect x="3" y="5" width="22" height="18" rx="2.5" />
+              <path d="M8 11h12M8 15h8" strokeLinecap="round" />
+              <circle cx="21" cy="18" r="4.5" fill="var(--surface)" />
+              <path d="M19 18h4M21 16v4" strokeLinecap="round" strokeWidth="1.4" />
+            </svg>
+          </div>
+          <p className="pf-invoice-scanning__headline">Reading your bill…</p>
+          <p className="pf-invoice-scanning__sub">Extracting item names, weights, and purchase details. This takes a few seconds.</p>
+          <div className="pf-invoice-scanning__steps" aria-hidden>
+            <span className="pf-invoice-scanning__step pf-invoice-scanning__step--done">Photo received</span>
+            <span className="pf-invoice-scanning__step pf-invoice-scanning__step--active">AI reading details</span>
+            <span className="pf-invoice-scanning__step">Confirm &amp; save</span>
+          </div>
+        </div>
       ) : null}
 
       {phase === 'review' || phase === 'creating' ? (
@@ -693,7 +713,13 @@ export function InvoiceImportFlow({
             </section>
           ) : null}
 
-          <footer className="pf-vault-form__footer">
+          <footer className="pf-vault-form__footer pf-vault-form__footer--sticky">
+            {missingRequiredFields.length > 0 && !busy ? (
+              <p className="pf-invoice-save-hint" role="status">
+                <strong>To save:</strong> {missingRequiredFields[0]}
+                {missingRequiredFields.length > 1 ? ` (+${missingRequiredFields.length - 1} more)` : ''}
+              </p>
+            ) : null}
             <FormSubmitFoot error={error} className="pf-vault-form__actions">
               <button
                 type="button"

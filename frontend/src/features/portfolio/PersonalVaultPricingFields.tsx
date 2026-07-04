@@ -7,9 +7,9 @@ import {
 
 export type { PersonalVaultPriceAnchor }
 
-const PRICING_MODES: { v: PersonalVaultPriceAnchor; l: string }[] = [
-  { v: 'total', l: 'Bill total + making charge %' },
-  { v: 'rate', l: 'Rate per gram + making charge %' },
+const PRICING_MODES: { v: PersonalVaultPriceAnchor; l: string; hint: string }[] = [
+  { v: 'total', l: 'Total amount paid', hint: 'I know the bill total' },
+  { v: 'rate', l: 'Rate per gram', hint: 'I know the gold rate' },
 ]
 
 export function detectPersonalVaultPriceAnchor(h: {
@@ -117,7 +117,7 @@ export function PersonalVaultPricingFields({
   return (
     <>
       <div className="pf-vault-field">
-        <span id="pf-vault-pricing-mode-label">How do you want to enter purchase cost?</span>
+        <span id="pf-vault-pricing-mode-label">Purchase cost</span>
         <div
           className="pf-vault-form__chips pf-vault-form__chips--pricing"
           role="group"
@@ -127,8 +127,9 @@ export function PersonalVaultPricingFields({
             <button
               key={m.v}
               type="button"
-              className={`pf-vault-form__chip${anchor === m.v ? ' pf-vault-form__chip--active' : ''}`}
+              className={`pf-vault-form__chip pf-vault-form__chip--mode${anchor === m.v ? ' pf-vault-form__chip--active' : ''}`}
               aria-pressed={anchor === m.v}
+              title={m.hint}
               onClick={() => handleAnchorChange(m.v)}
               disabled={disabled}
             >
