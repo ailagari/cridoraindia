@@ -10,6 +10,7 @@ import { LIVE_PRICE_POLL_MS } from '@/lib/liveDeskIntervals'
 import {
   fetchGoldCalculatorAds,
   fetchKeralaGoldRates,
+  getCachedKeralaGoldRates,
   type GoldRatesAdsPayload,
   type KeralaGoldRatesPayload,
 } from '@/lib/marketplaceApi'
@@ -44,7 +45,7 @@ function parseNum(s: string | number | undefined | null): number | null {
 export function GoldCalculatorPage() {
   const { t } = usePublicLocale()
   const { seoPath, locale: routeLocale } = useGoldRatesSeoContext()
-  const [rates, setRates] = useState<KeralaGoldRatesPayload | null>(null)
+  const [rates, setRates] = useState<KeralaGoldRatesPayload | null>(() => getCachedKeralaGoldRates())
   const [ads, setAds] = useState<GoldRatesAdsPayload | null>(null)
   const seo = PAGE_SEO['/gold-calculator']
 
@@ -58,7 +59,9 @@ export function GoldCalculatorPage() {
       : ads?.page_description || seo.description
 
   const loadRates = useCallback(() => {
-    void fetchKeralaGoldRates().then(setRates)
+    void fetchKeralaGoldRates().then((payload) => {
+      setRates((prev) => payload ?? prev)
+    })
   }, [])
 
   useEffect(() => {

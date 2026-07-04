@@ -11,7 +11,7 @@
     :root {
       --ui-bg: #0c0f18;
       --ui-panel: #141926;
-      --ui-border: rgba(255, 255, 255, 0.08);
+      --ui-border: rgba(255,255,255,0.08);
       --ui-text: #eef2ff;
       --ui-muted: #94a3b8;
       --ui-gold: #d4a84b;
@@ -56,33 +56,19 @@
       margin-bottom: 1.25rem;
     }
     .brand-head__mark {
-      width: 42px;
-      height: 42px;
+      width: 42px; height: 42px;
       border-radius: 12px;
-      background: linear-gradient(135deg, #f0d48a, #b8862e);
+      background: linear-gradient(135deg,#f0d48a,#b8862e);
       display: grid;
       place-items: center;
       font-weight: 800;
       color: #1a1208;
       font-size: 1.1rem;
-      box-shadow: 0 8px 24px rgba(201, 168, 64, 0.25);
+      box-shadow: 0 8px 24px rgba(201,168,64,0.25);
     }
-    .brand-head h1 {
-      margin: 0;
-      font-size: 1.05rem;
-      font-weight: 800;
-      letter-spacing: -0.02em;
-    }
-    .brand-head p {
-      margin: 0.15rem 0 0;
-      font-size: 0.72rem;
-      color: var(--ui-muted);
-    }
-    .panel-block {
-      margin-bottom: 1.15rem;
-      padding-bottom: 1.15rem;
-      border-bottom: 1px solid var(--ui-border);
-    }
+    .brand-head h1 { margin: 0; font-size: 1.05rem; font-weight: 800; letter-spacing: -0.02em; }
+    .brand-head p  { margin: 0.15rem 0 0; font-size: 0.72rem; color: var(--ui-muted); }
+    .panel-block { margin-bottom: 1.15rem; padding-bottom: 1.15rem; border-bottom: 1px solid var(--ui-border); }
     .panel-block:last-child { border-bottom: none; }
     .panel-block h2 {
       margin: 0 0 0.65rem;
@@ -92,12 +78,7 @@
       text-transform: uppercase;
       color: var(--ui-gold-hi);
     }
-    label.field {
-      display: block;
-      margin-bottom: 0.65rem;
-      font-size: 0.78rem;
-      color: var(--ui-muted);
-    }
+    label.field { display: block; margin-bottom: 0.65rem; font-size: 0.78rem; color: var(--ui-muted); }
     label.field span { display: block; margin-bottom: 0.3rem; font-weight: 600; color: #cbd5e1; }
     input[type="text"],
     input[type="url"],
@@ -109,21 +90,17 @@
       padding: 0.55rem 0.7rem;
       border-radius: 10px;
       border: 1px solid var(--ui-border);
-      background: rgba(0, 0, 0, 0.25);
+      background: rgba(0,0,0,0.25);
       color: var(--ui-text);
       font: inherit;
     }
     textarea { min-height: 62px; resize: vertical; }
     input[type="color"] { height: 40px; padding: 4px; cursor: pointer; }
-    .chip-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.4rem;
-    }
+    .chip-row { display: flex; flex-wrap: wrap; gap: 0.4rem; }
     .chip {
       appearance: none;
       border: 1px solid var(--ui-border);
-      background: rgba(255, 255, 255, 0.03);
+      background: rgba(255,255,255,0.03);
       color: var(--ui-muted);
       padding: 0.4rem 0.65rem;
       border-radius: 999px;
@@ -132,15 +109,15 @@
       cursor: pointer;
       transition: 0.15s ease;
     }
-    .chip:hover { border-color: rgba(212, 168, 75, 0.45); color: var(--ui-text); }
+    .chip:hover { border-color: rgba(212,168,75,0.45); color: var(--ui-text); }
     .chip.is-active {
-      background: linear-gradient(135deg, rgba(212, 168, 75, 0.22), rgba(184, 134, 46, 0.12));
-      border-color: rgba(212, 168, 75, 0.55);
+      background: linear-gradient(135deg,rgba(212,168,75,0.22),rgba(184,134,46,0.12));
+      border-color: rgba(212,168,75,0.55);
       color: var(--ui-gold-hi);
     }
     .tpl-grid {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(auto-fill, minmax(64px,1fr));
       gap: 0.45rem;
       margin-bottom: 0.55rem;
     }
@@ -164,31 +141,21 @@
       background: #111;
       position: relative;
     }
-    .tpl-btn.is-active { border-color: var(--ui-gold); box-shadow: 0 0 0 2px rgba(201, 168, 64, 0.25); }
-    .tpl-btn__swatch {
-      position: absolute;
-      inset: 0;
-    }
+    .tpl-btn.is-active { border-color: var(--ui-gold); box-shadow: 0 0 0 2px rgba(201,168,64,0.25); }
+    .tpl-btn__swatch { position: absolute; inset: 0; }
     .tpl-btn__label {
-      position: absolute;
-      left: 0; right: 0; bottom: 0;
+      position: absolute; left: 0; right: 0; bottom: 0;
       padding: 0.35rem;
-      font-size: 0.58rem;
+      font-size: 0.55rem;
       font-weight: 700;
       text-align: center;
-      background: linear-gradient(transparent, rgba(0,0,0,0.85));
+      background: linear-gradient(transparent,rgba(0,0,0,0.85));
       color: #fff;
     }
-    .file-row {
-      display: flex;
-      align-items: center;
-      gap: 0.55rem;
-      margin-bottom: 0.55rem;
-    }
+    .file-row { display: flex; align-items: center; gap: 0.55rem; margin-bottom: 0.55rem; }
     .file-row input[type="file"] { font-size: 0.72rem; color: var(--ui-muted); max-width: 100%; }
     .file-thumb {
-      width: 44px;
-      height: 44px;
+      width: 44px; height: 44px;
       border-radius: 8px;
       object-fit: cover;
       border: 1px solid var(--ui-border);
@@ -210,15 +177,12 @@
       gap: 0.55rem;
       padding: 0.65rem 0.75rem;
       border-radius: 10px;
-      background: rgba(52, 211, 153, 0.08);
-      border: 1px solid rgba(52, 211, 153, 0.22);
+      background: rgba(52,211,153,0.08);
+      border: 1px solid rgba(52,211,153,0.22);
       font-size: 0.74rem;
       margin-bottom: 0.75rem;
     }
-    .rate-status.is-error {
-      background: rgba(248, 113, 113, 0.08);
-      border-color: rgba(248, 113, 113, 0.25);
-    }
+    .rate-status.is-error { background: rgba(248,113,113,0.08); border-color: rgba(248,113,113,0.25); }
     .rate-status__dot {
       width: 8px; height: 8px;
       border-radius: 50%;
@@ -228,10 +192,7 @@
       animation: pulse 2s infinite;
     }
     .rate-status.is-error .rate-status__dot { background: var(--ui-err); animation: none; }
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.45; }
-    }
+    @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.45; } }
     .btn-row { display: flex; flex-wrap: wrap; gap: 0.45rem; }
     .btn {
       appearance: none;
@@ -245,9 +206,9 @@
       transition: 0.15s ease;
     }
     .btn-primary {
-      background: linear-gradient(135deg, #f0d48a, #c9a840 45%, #9a7228);
+      background: linear-gradient(135deg,#f0d48a,#c9a840 45%,#9a7228);
       color: #1a1208;
-      box-shadow: 0 8px 24px rgba(201, 168, 64, 0.28);
+      box-shadow: 0 8px 24px rgba(201,168,64,0.28);
     }
     .btn-primary:hover { filter: brightness(1.06); transform: translateY(-1px); }
     .btn-ghost {
@@ -273,10 +234,7 @@
       justify-content: space-between;
       gap: 0.65rem;
     }
-    .workspace-toolbar__meta {
-      font-size: 0.78rem;
-      color: var(--ui-muted);
-    }
+    .workspace-toolbar__meta { font-size: 0.78rem; color: var(--ui-muted); }
     .preview-stage {
       width: 100%;
       max-width: 920px;
@@ -286,19 +244,21 @@
       padding: 1rem;
       border-radius: var(--radius);
       background:
-        radial-gradient(circle at 20% 20%, rgba(201,168,64,0.06), transparent 40%),
-        repeating-linear-gradient(45deg, rgba(255,255,255,0.02) 0 12px, transparent 12px 24px),
+        radial-gradient(circle at 20% 20%,rgba(201,168,64,0.06),transparent 40%),
+        repeating-linear-gradient(45deg,rgba(255,255,255,0.02) 0 12px,transparent 12px 24px),
         #0a0d14;
       border: 1px solid var(--ui-border);
       min-height: 420px;
       overflow: auto;
     }
-    .preview-scaler {
-      transform-origin: top center;
-      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.55);
-    }
+    .preview-scaler { transform-origin: top center; box-shadow: 0 24px 80px rgba(0,0,0,0.55); }
 
-    /* ── POSTER (export target) ── */
+    /* ─────────────────────────────────────────
+       POSTER — editorial premium redesign
+       No card boxes. 22K price is the hero.
+       Gold ruled lines divide sections.
+       Landscape = CSS grid two-column.
+    ───────────────────────────────────────── */
     .poster {
       position: relative;
       overflow: hidden;
@@ -309,6 +269,8 @@
       --poster-bg-a: #0a0e1a;
       --poster-bg-b: #141c2e;
     }
+
+    /* ── Template colour tokens ── */
     .poster[data-template="royal-cream"] {
       --poster-accent: #b8862e;
       --poster-accent-hi: #8b6914;
@@ -317,15 +279,28 @@
       color: #1a1510;
     }
     .poster[data-template="festive-ruby"] {
-      --poster-accent: #f0d48a;
-      --poster-accent-hi: #ffd700;
-      --poster-bg-a: #2a0810;
-      --poster-bg-b: #5c1020;
-      color: #fff8f0;
+      --poster-accent: #f0c860;
+      --poster-accent-hi: #ffe080;
+      --poster-bg-a: #18030c;
+      --poster-bg-b: #3a0a18;
+      color: #fff5ec;
     }
-    .poster[data-bg-mode="custom-image"] .poster__bg-image {
-      display: block;
+    .poster[data-template="midnight-sapphire"] {
+      --poster-accent: #dbb870;
+      --poster-accent-hi: #f0dca0;
+      --poster-bg-a: #04091c;
+      --poster-bg-b: #0b1438;
+      color: #e8efff;
     }
+    .poster[data-template="heritage-green"] {
+      --poster-accent: #c8a040;
+      --poster-accent-hi: #ecd080;
+      --poster-bg-a: #050f08;
+      --poster-bg-b: #0c2214;
+      color: #e5f0e8;
+    }
+
+    /* ── Background image layer ── */
     .poster__bg-image {
       display: none;
       position: absolute;
@@ -334,500 +309,452 @@
       background-position: center;
       z-index: 0;
     }
+    .poster[data-bg-mode="custom-image"] .poster__bg-image { display: block; }
+
     .poster__bg-overlay {
       position: absolute;
       inset: 0;
       z-index: 1;
+      opacity: var(--poster-bg-overlay, 0.82);
       background: linear-gradient(155deg, var(--poster-bg-a), var(--poster-bg-b));
-      opacity: var(--poster-bg-overlay, 0.72);
     }
-    .poster[data-bg-mode="template"] .poster__bg-overlay {
-      opacity: 0.55;
-    }
-    .poster[data-bg-mode="custom-colors"] .poster__bg-overlay {
-      opacity: 0.88;
-    }
+    .poster[data-bg-mode="template"]      .poster__bg-overlay { opacity: 0.6; }
+    .poster[data-bg-mode="custom-colors"] .poster__bg-overlay { opacity: 0.9; }
+
+    /* ── Atmospheric background ── */
     .poster__bg {
       position: absolute;
       inset: 0;
       z-index: 0;
       background:
-        radial-gradient(ellipse 80% 60% at 85% 10%, rgba(212, 168, 75, 0.18), transparent 55%),
-        radial-gradient(ellipse 70% 50% at 10% 90%, rgba(212, 168, 75, 0.1), transparent 50%),
+        radial-gradient(ellipse 75% 55% at 88%  6%,  rgba(212,168,75,0.22) 0%, transparent 55%),
+        radial-gradient(ellipse 55% 45% at  6% 94%,  rgba(212,168,75,0.12) 0%, transparent 50%),
+        radial-gradient(ellipse 45% 35% at 50% 55%,  rgba(212,168,75,0.04) 0%, transparent 60%),
         linear-gradient(155deg, var(--poster-bg-a), var(--poster-bg-b));
     }
     .poster[data-bg-mode="custom-colors"] .poster__bg,
-    .poster[data-bg-mode="custom-image"] .poster__bg {
+    .poster[data-bg-mode="custom-image"]  .poster__bg {
       background: linear-gradient(155deg, var(--poster-bg-a), var(--poster-bg-b));
     }
     .poster[data-template="royal-cream"] .poster__bg {
       background:
-        radial-gradient(ellipse 70% 50% at 90% 5%, rgba(184, 134, 46, 0.12), transparent 50%),
-        linear-gradient(160deg, var(--poster-bg-a), var(--poster-bg-b));
+        radial-gradient(ellipse 60% 40% at 92% 4%, rgba(184,134,46,0.16), transparent 50%),
+        radial-gradient(ellipse 40% 30% at  8% 96%, rgba(184,134,46,0.09), transparent 45%),
+        linear-gradient(160deg, #faf6ee, #f0e8d8);
     }
     .poster[data-template="festive-ruby"] .poster__bg {
       background:
-        radial-gradient(ellipse 60% 40% at 50% 0%, rgba(255, 80, 80, 0.15), transparent 55%),
-        radial-gradient(ellipse 80% 60% at 100% 100%, rgba(212, 168, 75, 0.12), transparent 50%),
-        linear-gradient(160deg, var(--poster-bg-a), var(--poster-bg-b));
+        radial-gradient(ellipse 70% 50% at 50%  -5%, rgba(200,40,60,0.32),  transparent 55%),
+        radial-gradient(ellipse 80% 60% at 100% 100%, rgba(212,168,75,0.16), transparent 50%),
+        radial-gradient(ellipse 55% 40% at   0%  50%, rgba(120,15,35,0.48), transparent 50%),
+        linear-gradient(160deg, #18030c, #3a0a18);
     }
-    .poster__frame {
-      position: absolute;
-      inset: 24px;
-      border: 2px solid rgba(212, 168, 75, 0.35);
-      border-radius: 8px;
-      pointer-events: none;
+    .poster[data-template="midnight-sapphire"] .poster__bg {
+      background:
+        radial-gradient(ellipse 70% 50% at 82%  8%, rgba(80,120,230,0.2),  transparent 55%),
+        radial-gradient(ellipse 55% 45% at  8% 92%, rgba(212,168,75,0.12), transparent 50%),
+        radial-gradient(ellipse 40% 30% at 40% 40%, rgba(60,90,200,0.08),  transparent 60%),
+        linear-gradient(155deg, #04091c, #0b1438);
     }
-    .poster[data-template="royal-cream"] .poster__frame {
-      border-color: rgba(139, 105, 20, 0.35);
-      border-width: 3px;
+    .poster[data-template="heritage-green"] .poster__bg {
+      background:
+        radial-gradient(ellipse 65% 48% at 88%  6%, rgba(60,160,80,0.13),  transparent 55%),
+        radial-gradient(ellipse 50% 40% at  8% 94%, rgba(212,168,75,0.10), transparent 50%),
+        linear-gradient(155deg, #050f08, #0c2214);
     }
-    .poster__corner {
-      position: absolute;
-      width: 48px;
-      height: 48px;
-      border-color: var(--poster-accent);
-      border-style: solid;
-      opacity: 0.7;
-    }
-    .poster__corner--tl { top: 36px; left: 36px; border-width: 3px 0 0 3px; }
-    .poster__corner--tr { top: 36px; right: 36px; border-width: 3px 3px 0 0; }
-    .poster__corner--bl { bottom: 36px; left: 36px; border-width: 0 0 3px 3px; }
-    .poster__corner--br { bottom: 36px; right: 36px; border-width: 0 3px 3px 0; }
-    .poster__inner {
-      position: relative;
-      z-index: 2;
-      height: 100%;
-      display: flex;
-      flex-direction: column;
-      padding: 44px 52px 40px;
-    }
-    .poster--landscape .poster__inner { padding: 28px 40px; }
-    .poster--story .poster__inner { padding: 64px 52px 56px; }
 
-    /* Cridora brand ribbon — always visible */
-    .poster__cridora-bar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-      padding: 14px 18px;
-      margin-bottom: 22px;
-      border-radius: 14px;
-      background: linear-gradient(135deg, rgba(212,168,75,0.16), rgba(212,168,75,0.04));
-      border: 1px solid rgba(212,168,75,0.32);
-      backdrop-filter: blur(6px);
-    }
-    .poster[data-template="royal-cream"] .poster__cridora-bar {
-      background: linear-gradient(135deg, rgba(255,255,255,0.88), rgba(250,246,238,0.72));
-      border-color: rgba(139,105,20,0.28);
-    }
-    .poster--landscape .poster__cridora-bar { margin-bottom: 14px; padding: 10px 14px; }
-    .poster__cridora-brand {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      min-width: 0;
-    }
-    .poster__cridora-mark {
-      flex-shrink: 0;
-      filter: drop-shadow(0 2px 8px rgba(212,168,75,0.35));
-    }
-    .poster__cridora-wordmark {
-      font-family: "Plus Jakarta Sans", sans-serif;
-      font-weight: 800;
-      font-size: 1.55rem;
-      letter-spacing: -0.03em;
-      line-height: 1;
-      color: #fff;
-    }
-    .poster[data-template="royal-cream"] .poster__cridora-wordmark { color: #3d2a08; }
-    .poster__cridora-wordmark span {
-      font-weight: 700;
-      color: var(--poster-accent-hi);
-    }
-    .poster[data-template="royal-cream"] .poster__cridora-wordmark span { color: #9a7228; }
-    .poster__cridora-tag {
-      font-size: 0.72rem;
-      font-weight: 600;
-      opacity: 0.72;
-      margin-top: 4px;
-      letter-spacing: 0.02em;
-    }
-    .poster__cridora-url {
-      text-align: right;
-      font-size: 0.82rem;
-      font-weight: 800;
-      letter-spacing: 0.04em;
-      color: var(--poster-accent-hi);
-      white-space: nowrap;
-    }
-    .poster--landscape .poster__cridora-wordmark { font-size: 1.2rem; }
-    .poster--landscape .poster__cridora-url { font-size: 0.72rem; }
-
-    .poster__jeweller {
-      display: flex;
-      align-items: center;
-      gap: 18px;
-      margin-bottom: 22px;
-      padding-bottom: 18px;
-      border-bottom: 1px solid rgba(212,168,75,0.18);
-    }
-    .poster--landscape .poster__jeweller { margin-bottom: 12px; padding-bottom: 10px; }
-    .poster__logo-wrap {
-      width: 88px;
-      height: 88px;
-      border-radius: 16px;
-      background: rgba(255,255,255,0.08);
-      border: 2px solid rgba(212,168,75,0.4);
-      display: grid;
-      place-items: center;
-      overflow: hidden;
-      flex-shrink: 0;
-    }
-    .poster[data-template="royal-cream"] .poster__logo-wrap {
-      background: rgba(255,255,255,0.65);
-      border-color: rgba(139,105,20,0.35);
-    }
-    .poster__logo-wrap img {
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
-    }
-    .poster__logo-placeholder {
-      font-size: 2rem;
-      opacity: 0.5;
-    }
-    .poster__shop-name {
-      font-family: "Fraunces", Georgia, serif;
-      font-size: 2rem;
-      font-weight: 700;
-      line-height: 1.12;
-      letter-spacing: -0.02em;
-      color: var(--poster-accent-hi);
-      margin: 0;
-    }
-    .poster[data-template="royal-cream"] .poster__shop-name { color: #5c4010; }
-    .poster__tagline {
-      margin: 6px 0 0;
-      font-size: 0.95rem;
-      opacity: 0.75;
-      font-weight: 500;
-    }
-    .poster--landscape .poster__shop-name { font-size: 1.85rem; }
-    .poster__headline-block {
-      text-align: center;
-      margin-bottom: 24px;
-    }
-    .poster--landscape .poster__headline-block {
-      text-align: left;
-      margin-bottom: 12px;
-    }
-    .poster__eyebrow {
-      display: inline-block;
-      font-size: 0.72rem;
-      font-weight: 800;
-      letter-spacing: 0.2em;
-      text-transform: uppercase;
-      color: var(--poster-accent);
-      margin-bottom: 8px;
-    }
-    .poster__headline {
-      font-family: "Fraunces", Georgia, serif;
-      font-size: 3rem;
-      font-weight: 800;
-      line-height: 1.05;
-      margin: 0;
-      background: linear-gradient(135deg, var(--poster-accent-hi), var(--poster-accent));
-      -webkit-background-clip: text;
-      background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-    .poster[data-template="royal-cream"] .poster__headline {
-      background: linear-gradient(135deg, #8b6914, #c9a840);
-      -webkit-background-clip: text;
-      background-clip: text;
-    }
-    .poster--landscape .poster__headline { font-size: 2.2rem; }
-    .poster--story .poster__headline { font-size: 3.6rem; }
-    .poster__date-line {
-      margin-top: 8px;
-      font-size: 0.92rem;
-      opacity: 0.78;
-      font-weight: 600;
-    }
-    .poster__rate-ref {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      margin-top: 12px;
-      padding: 8px 14px;
-      border-radius: 999px;
-      background: rgba(0,0,0,0.28);
-      border: 1px solid rgba(212,168,75,0.28);
-      font-size: 0.76rem;
-      font-weight: 700;
-      letter-spacing: 0.02em;
-      font-variant-numeric: tabular-nums;
-    }
-    .poster[data-template="royal-cream"] .poster__rate-ref {
-      background: rgba(255,255,255,0.72);
-      border-color: rgba(139,105,20,0.22);
-      color: #3d2a08;
-    }
-    .poster__rate-ref-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: #34d399;
-      box-shadow: 0 0 8px rgba(52,211,153,0.65);
-      flex-shrink: 0;
-    }
-    .poster__rate-ref-dot.is-stale { background: #fbbf24; box-shadow: none; }
-    .poster__source-line {
-      margin-top: 6px;
-      font-size: 0.68rem;
-      font-weight: 600;
-      opacity: 0.55;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-    }
-    .poster__body {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      gap: 20px;
-      min-height: 0;
-    }
-    .poster--landscape .poster__body {
-      flex-direction: row;
-      align-items: center;
-      gap: 28px;
-    }
-    .poster__rates {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 14px;
-    }
-    .poster--landscape .poster__rates {
-      flex: 1;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 10px;
-    }
-    .poster--story .poster__rates { gap: 18px; }
-    .rate-card {
-      background: rgba(255,255,255,0.06);
-      border: 1px solid rgba(212,168,75,0.28);
-      border-radius: 14px;
-      padding: 18px 16px;
-      text-align: center;
-      backdrop-filter: blur(4px);
-    }
-    .poster[data-template="royal-cream"] .rate-card {
-      background: rgba(255,255,255,0.72);
-      border-color: rgba(139,105,20,0.22);
-      box-shadow: 0 4px 20px rgba(92,64,16,0.08);
-    }
-    .rate-card--hero {
-      grid-column: span 2;
-      background: linear-gradient(135deg, rgba(212,168,75,0.22), rgba(212,168,75,0.06));
-      border-color: rgba(212,168,75,0.45);
-    }
-    .poster--landscape .rate-card--hero { grid-column: span 1; }
-    .poster--landscape .rate-card { padding: 12px 10px; }
-    .rate-card__karat {
-      font-size: 0.78rem;
-      font-weight: 800;
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
-      color: var(--poster-accent);
-      margin-bottom: 6px;
-    }
-    .rate-card__price {
-      font-family: "Plus Jakarta Sans", sans-serif;
-      font-size: 2.1rem;
-      font-weight: 800;
-      font-variant-numeric: tabular-nums;
-      line-height: 1;
-      letter-spacing: -0.03em;
-    }
-    .poster--landscape .rate-card__price { font-size: 1.45rem; }
-    .poster--story .rate-card__price { font-size: 2.35rem; }
-    .rate-card__unit {
-      font-size: 0.72rem;
-      opacity: 0.6;
-      margin-top: 4px;
-      font-weight: 600;
-    }
-    .rate-card__change {
-      margin-top: 8px;
-      font-size: 0.72rem;
-      font-weight: 700;
-    }
-    .rate-card__change.is-up { color: #34d399; }
-    .rate-card__change.is-down { color: #f87171; }
-    .poster[data-template="royal-cream"] .rate-card__change.is-up { color: #059669; }
-    .poster[data-template="royal-cream"] .rate-card__change.is-down { color: #dc2626; }
-    .poster__hero-img {
-      width: 100%;
-      max-height: 280px;
-      border-radius: 16px;
-      object-fit: cover;
-      border: 2px solid rgba(212,168,75,0.3);
-    }
-    .poster--landscape .poster__hero-img {
-      width: 38%;
-      max-height: none;
-      height: 100%;
-      max-width: 320px;
-      object-fit: cover;
-    }
-    .poster--story .poster__hero-img { max-height: 340px; }
-    .poster__footer {
-      margin-top: auto;
-      padding-top: 24px;
-      border-top: 1px solid rgba(212,168,75,0.2);
-      display: flex;
-      flex-wrap: wrap;
-      align-items: flex-end;
-      justify-content: space-between;
-      gap: 16px;
-    }
-    .poster--landscape .poster__footer { padding-top: 14px; }
-    .poster__contact {
-      font-size: 0.82rem;
-      line-height: 1.55;
-      opacity: 0.8;
-      max-width: 70%;
-    }
-    .poster__contact strong {
-      display: block;
-      font-size: 0.95rem;
-      opacity: 1;
-      margin-bottom: 4px;
-      color: var(--poster-accent-hi);
-    }
-    .poster[data-template="royal-cream"] .poster__contact strong { color: #5c4010; }
-    .poster__cta {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 12px 20px;
-      border-radius: 999px;
-      background: linear-gradient(135deg, var(--poster-accent-hi), var(--poster-accent));
-      color: #1a1208;
-      font-size: 0.82rem;
-      font-weight: 800;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-    }
-    .poster__watermark {
-      display: none;
-    }
-    .poster__cridora-foot {
-      margin-top: auto;
-      padding-top: 18px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      border-top: 1px solid rgba(212,168,75,0.22);
-    }
-    .poster--landscape .poster__cridora-foot { padding-top: 10px; }
-    .poster__cridora-foot-mark {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      opacity: 0.92;
-    }
-    .poster__cridora-foot-text {
-      font-size: 0.72rem;
-      font-weight: 700;
-      line-height: 1.35;
-      opacity: 0.75;
-    }
-    .poster__cridora-foot-url {
-      font-size: 0.88rem;
-      font-weight: 800;
-      color: var(--poster-accent-hi);
-      letter-spacing: 0.03em;
-    }
-    .poster[data-template="royal-cream"] .poster__cridora-foot-url { color: #8b6914; }
-    .poster__ornament {
+    /* ── Decorative rings ── */
+    .poster__deco-ring {
       position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 420px;
-      height: 420px;
+      right: -130px;
+      bottom: -130px;
+      width: 500px;
+      height: 500px;
       border-radius: 50%;
-      border: 1px solid rgba(212,168,75,0.06);
+      border: 1px solid rgba(212,168,75,0.07);
       pointer-events: none;
+      z-index: 1;
     }
-    .poster__ornament::before {
+    .poster__deco-ring::before {
       content: "";
       position: absolute;
-      inset: 40px;
+      inset: 55px;
+      border-radius: 50%;
+      border: 1px solid rgba(212,168,75,0.05);
+    }
+    .poster__deco-ring::after {
+      content: "";
+      position: absolute;
+      inset: 110px;
       border-radius: 50%;
       border: 1px solid rgba(212,168,75,0.04);
     }
 
-    /* Malayalam typography */
-    .poster--ml {
-      font-family: "Noto Sans Malayalam", "Plus Jakarta Sans", system-ui, sans-serif;
+    /* ── Border frame ── */
+    .poster__frame {
+      position: absolute;
+      inset: 20px;
+      border: 1px solid rgba(212,168,75,0.2);
+      border-radius: 6px;
+      pointer-events: none;
+      z-index: 2;
     }
-    .poster--ml .poster__headline,
-    .poster--ml .poster__shop-name {
-      font-family: "Anek Malayalam", "Noto Sans Malayalam", sans-serif;
+    .poster[data-template="royal-cream"] .poster__frame { border-color: rgba(139,105,20,0.26); border-width: 2px; }
+
+    /* ── Corner marks ── */
+    .poster__corner {
+      position: absolute;
+      width: 22px;
+      height: 22px;
+      border-color: var(--poster-accent);
+      border-style: solid;
+      opacity: 0.7;
+      z-index: 3;
+      pointer-events: none;
+    }
+    .poster__corner--tl { top: 32px;    left: 32px;   border-width: 2px 0 0 2px; }
+    .poster__corner--tr { top: 32px;    right: 32px;  border-width: 2px 2px 0 0; }
+    .poster__corner--bl { bottom: 32px; left: 32px;   border-width: 0 0 2px 2px; }
+    .poster__corner--br { bottom: 32px; right: 32px;  border-width: 0 2px 2px 0; }
+
+    /* ── INNER: flex column for square/story ── */
+    .poster__inner {
+      position: relative;
+      z-index: 4;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      padding: 44px 52px 40px;
+      box-sizing: border-box;
+    }
+
+    /* ── BRAND HEADER ── */
+    .poster__hd {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      flex-shrink: 0;
+    }
+    .poster__hd-brand { display: flex; align-items: center; gap: 10px; }
+    .poster__hd-name {
       font-weight: 800;
-      line-height: 1.18;
-      letter-spacing: 0;
+      font-size: 1.4rem;
+      letter-spacing: -0.03em;
+      line-height: 1;
     }
-    .poster--ml .poster__headline {
-      font-size: 2.65rem;
+    .poster__hd-name em { font-style: normal; color: var(--poster-accent-hi); }
+    .poster__hd-tag { font-size: 0.68rem; font-weight: 600; opacity: 0.68; margin-top: 3px; letter-spacing: 0.01em; }
+    .poster__hd-url { font-size: 0.78rem; font-weight: 800; letter-spacing: 0.04em; color: var(--poster-accent-hi); white-space: nowrap; }
+    .poster[data-template="royal-cream"] .poster__hd-name     { color: #2a1c06; }
+    .poster[data-template="royal-cream"] .poster__hd-name em  { color: #7a5c10; }
+    .poster[data-template="royal-cream"] .poster__hd-url      { color: #7a5c10; }
+
+    /* ── GOLD RULED SEPARATOR ── */
+    .poster__sep {
+      height: 1px;
+      flex-shrink: 0;
+      background: linear-gradient(90deg,
+        transparent 0%, rgba(212,168,75,0.45) 20%,
+        rgba(212,168,75,0.6) 50%, rgba(212,168,75,0.45) 80%, transparent 100%);
+      margin: 13px 0;
     }
-    .poster--ml.poster--story .poster__headline {
-      font-size: 3rem;
+    .poster[data-template="royal-cream"] .poster__sep {
+      background: linear-gradient(90deg, transparent, rgba(139,105,20,0.35), transparent);
     }
-    .poster--ml.poster--landscape .poster__headline {
-      font-size: 1.95rem;
+
+    /* ── JEWELLER SECTION ── */
+    .poster__jeweller { display: flex; align-items: center; gap: 14px; flex-shrink: 0; }
+    .poster__logo-wrap {
+      width: 60px; height: 60px;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.07);
+      border: 1.5px solid rgba(212,168,75,0.28);
+      display: grid; place-items: center;
+      overflow: hidden; flex-shrink: 0;
     }
-    .poster--ml .poster__shop-name {
-      font-size: 1.85rem;
+    .poster[data-template="royal-cream"] .poster__logo-wrap { background: rgba(255,255,255,0.65); border-color: rgba(139,105,20,0.24); }
+    .poster__logo-wrap img { width: 100%; height: 100%; object-fit: contain; }
+    .poster__logo-placeholder { font-size: 1.4rem; opacity: 0.35; }
+    .poster__shop-name {
+      font-family: "Fraunces", Georgia, serif;
+      font-size: 1.6rem; font-weight: 700;
+      line-height: 1.08; letter-spacing: -0.02em;
+      color: var(--poster-accent-hi); margin: 0;
     }
-    .poster--ml .poster__eyebrow {
-      letter-spacing: 0.04em;
-      font-family: "Noto Sans Malayalam", sans-serif;
+    .poster[data-template="royal-cream"] .poster__shop-name { color: #3e2804; }
+    .poster__tagline { margin: 4px 0 0; font-size: 0.82rem; opacity: 0.72; font-weight: 500; }
+
+    /* ── EYEBROW ── */
+    .poster__eyebrow {
+      text-align: center;
+      font-size: 0.76rem; font-weight: 700;
+      letter-spacing: 0.14em; text-transform: uppercase;
+      color: var(--poster-accent); opacity: 0.92;
+      flex-shrink: 0;
     }
-    .poster--ml .poster__date-line,
-    .poster--ml .poster__rate-ref,
-    .poster--ml .poster__source-line,
+
+    /* ── MAIN: 22K hero — fills remaining height, vertically centred ── */
+    .poster__main {
+      flex: 1;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      text-align: center;
+      min-height: 0;
+      padding: 8px 0;
+    }
+    .poster__k22 { display: flex; flex-direction: column; align-items: center; }
+    .poster__k22-label {
+      font-size: 0.78rem; font-weight: 700;
+      letter-spacing: 0.14em; text-transform: uppercase;
+      color: var(--poster-accent); margin-bottom: 12px;
+    }
+    .poster__k22-price {
+      font-family: "Fraunces", Georgia, serif;
+      font-size: 7.0rem; font-weight: 800;
+      line-height: 0.9; letter-spacing: -0.04em;
+      font-variant-numeric: tabular-nums;
+      background: linear-gradient(155deg, var(--poster-accent-hi) 0%, var(--poster-accent) 45%, var(--poster-accent-hi) 100%);
+      -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .poster[data-template="royal-cream"] .poster__k22-price {
+      background: linear-gradient(155deg, #7a5810, #c9a840, #7a5810);
+      -webkit-background-clip: text; background-clip: text;
+    }
+    .poster__k22-sub {
+      font-size: 0.76rem; font-weight: 600;
+      opacity: 0.72; letter-spacing: 0.04em;
+      text-transform: uppercase; margin-top: 14px;
+    }
+    .poster__k22-change {
+      display: inline-flex; align-items: center; gap: 5px;
+      margin-top: 14px; padding: 6px 16px;
+      border-radius: 999px; font-size: 0.78rem; font-weight: 700;
+    }
+    .poster__k22-change.is-up   { color: #34d399; background: rgba(52,211,153,0.13); }
+    .poster__k22-change.is-down { color: #f87171; background: rgba(248,113,113,0.13); }
+    .poster[data-template="royal-cream"] .poster__k22-change.is-up   { color: #059669; background: rgba(5,150,105,0.09); }
+    .poster[data-template="royal-cream"] .poster__k22-change.is-down { color: #dc2626; background: rgba(220,38,38,0.09); }
+
+    /* Hero product image */
+    .poster__hero-img {
+      max-height: 200px; width: 100%;
+      border-radius: 14px; object-fit: cover;
+      border: 1px solid rgba(212,168,75,0.24);
+      box-shadow: 0 8px 28px rgba(0,0,0,0.28);
+      margin-top: 18px; flex-shrink: 0;
+    }
+
+    /* ── SECONDARY RATES ROW: 24K / 18K / Silver ── */
+    .poster__rates-row { display: flex; align-items: stretch; flex-shrink: 0; }
+    .poster__rate-col  { flex: 1; text-align: center; padding: 12px 8px; }
+    .poster__rate-vsep {
+      width: 1px;
+      background: linear-gradient(180deg, transparent 0%, rgba(212,168,75,0.3) 25%, rgba(212,168,75,0.3) 75%, transparent 100%);
+      margin: 4px 0; flex-shrink: 0;
+    }
+    .poster[data-template="royal-cream"] .poster__rate-vsep {
+      background: linear-gradient(180deg, transparent, rgba(139,105,20,0.25), transparent);
+    }
+    .poster__rate-label {
+      font-size: 0.7rem; font-weight: 700;
+      letter-spacing: 0.10em; text-transform: uppercase;
+      color: var(--poster-accent); margin-bottom: 8px;
+    }
+    .poster__rate-price {
+      font-family: "Fraunces", Georgia, serif;
+      font-size: 2.05rem; font-weight: 800;
+      line-height: 1; letter-spacing: -0.03em;
+      font-variant-numeric: tabular-nums;
+      background: linear-gradient(145deg, var(--poster-accent-hi) 0%, var(--poster-accent) 60%, var(--poster-accent-hi) 100%);
+      -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .poster[data-template="royal-cream"] .poster__rate-price {
+      background: linear-gradient(145deg, #6b4c0c, #b8882e, #6b4c0c);
+      -webkit-background-clip: text; background-clip: text;
+    }
+    .poster__rate-sub  { display: none; }
+    .poster__rate-change { font-size: 0.66rem; font-weight: 700; margin-top: 6px; }
+    .poster__rate-change.is-up   { color: #34d399; }
+    .poster__rate-change.is-down { color: #f87171; }
+    .poster[data-template="royal-cream"] .poster__rate-change.is-up   { color: #059669; }
+    .poster[data-template="royal-cream"] .poster__rate-change.is-down { color: #dc2626; }
+
+    /* ── META LINE ── */
+    .poster__meta-line {
+      display: flex; align-items: center; justify-content: center;
+      gap: 6px; font-size: 0.7rem; font-weight: 600;
+      opacity: 0.7; letter-spacing: 0.01em;
+      flex-shrink: 0; margin-top: 2px;
+      font-variant-numeric: tabular-nums;
+    }
+    .poster__meta-dot { width: 6px; height: 6px; border-radius: 50%; background: #34d399; box-shadow: 0 0 5px rgba(52,211,153,0.55); flex-shrink: 0; }
+    .poster__meta-dot.is-stale { background: #fbbf24; box-shadow: none; }
+    .poster[data-template="royal-cream"] .poster__meta-line { color: #3e2804; }
+
+    /* ── FOOTER: contact + CTA ── */
+    .poster__footer {
+      display: flex; align-items: center;
+      justify-content: space-between;
+      gap: 10px; flex-shrink: 0;
+    }
+    .poster__contact { font-size: 0.78rem; line-height: 1.5; opacity: 0.8; min-width: 0; flex: 1; }
+    .poster__contact strong { display: block; font-size: 0.9rem; opacity: 1; margin-bottom: 3px; color: var(--poster-accent-hi); font-weight: 700; }
+    .poster[data-template="royal-cream"] .poster__contact strong { color: #3e2804; }
+    .poster__cta {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 9px 18px; border-radius: 999px;
+      background: linear-gradient(135deg, var(--poster-accent-hi), var(--poster-accent));
+      color: #1a1208; font-size: 0.76rem; font-weight: 800;
+      letter-spacing: 0.04em; text-transform: uppercase;
+      box-shadow: 0 3px 14px rgba(201,168,64,0.28);
+      flex-shrink: 0; white-space: nowrap;
+    }
+
+    /* ── CRIDORA FOOT ── */
+    .poster__foot {
+      display: flex; align-items: center;
+      justify-content: space-between;
+      gap: 10px; flex-shrink: 0;
+    }
+    .poster__foot-brand { display: flex; align-items: center; gap: 7px; opacity: 0.88; }
+    .poster__foot-text  { font-size: 0.68rem; font-weight: 600; line-height: 1.4; opacity: 0.75; }
+    .poster__foot-url   { font-size: 0.8rem; font-weight: 800; color: var(--poster-accent-hi); letter-spacing: 0.03em; }
+    .poster[data-template="royal-cream"] .poster__foot-url { color: #7a5c10; }
+
+    /* ══════════════════════════════════════════════
+       LANDSCAPE  (1200 × 630)
+       CSS grid: brand strip full-width, then
+       left col = jeweller + secondary rates + footer
+       right col = huge 22K price (vertically centred)
+    ══════════════════════════════════════════════ */
+    .poster--landscape .poster__inner {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-areas:
+        "hd       hd"
+        "sep-a    sep-a"
+        "jewel    main"
+        "rates    main"
+        "meta     main"
+        "footer   main"
+        "foot     foot";
+      grid-template-rows: auto auto auto auto auto auto auto;
+      column-gap: 40px;
+      row-gap: 0;
+      padding: 28px 44px 24px;
+    }
+    .poster--landscape .poster__hd         { grid-area: hd; }
+    .poster--landscape .poster__sep--a     { grid-area: sep-a; margin: 10px 0; }
+    .poster--landscape .poster__sep--b     { display: none; }
+    .poster--landscape .poster__sep--c     { display: none; }
+    .poster--landscape .poster__sep--d     { display: none; }
+    .poster--landscape .poster__jeweller   { grid-area: jewel; padding-top: 4px; align-self: start; }
+    .poster--landscape .poster__eyebrow    { display: none; }
+    .poster--landscape .poster__main       { grid-area: main; align-self: stretch; padding: 0; }
+    .poster--landscape .poster__rates-row  { grid-area: rates; flex-direction: column; }
+    .poster--landscape .poster__meta-line  { grid-area: meta; justify-content: flex-start; margin-top: 0; }
+    .poster--landscape .poster__footer     { grid-area: footer; }
+    .poster--landscape .poster__foot       { grid-area: foot; }
+    /* Landscape secondary rates: vertical list, label left, price right */
+    .poster--landscape .poster__rate-col {
+      display: grid;
+      grid-template-areas: "lbl price" "lbl change";
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      column-gap: 12px;
+      row-gap: 1px;
+      padding: 7px 0;
+      border-bottom: 1px solid rgba(212,168,75,0.1);
+    }
+    .poster--landscape .poster__rate-col:last-child   { border-bottom: none; }
+    .poster--landscape .poster__rate-vsep             { display: none; }
+    .poster--landscape .poster__rate-label            { grid-area: lbl; margin-bottom: 0; font-size: 0.68rem; }
+    .poster--landscape .poster__rate-price            { grid-area: price; font-size: 1.65rem; text-align: right; }
+    .poster--landscape .poster__rate-sub              { display: none; }
+    .poster--landscape .poster__rate-change           { grid-area: change; justify-self: end; font-size: 0.64rem; margin-top: 0; }
+    /* Landscape 22K */
+    .poster--landscape .poster__k22-price             { font-size: 5.2rem; }
+    .poster--landscape .poster__k22-label             { font-size: 0.72rem; }
+    .poster--landscape .poster__k22-sub               { font-size: 0.72rem; margin-top: 10px; }
+    .poster--landscape .poster__k22-change            { font-size: 0.74rem; padding: 5px 13px; margin-top: 10px; }
+    .poster--landscape .poster__hero-img              { display: none; }
+    .poster--landscape .poster__logo-wrap             { width: 50px; height: 50px; border-radius: 10px; }
+    .poster--landscape .poster__shop-name             { font-size: 1.28rem; }
+    .poster--landscape .poster__tagline               { font-size: 0.76rem; }
+    .poster--landscape .poster__contact               { font-size: 0.74rem; }
+    .poster--landscape .poster__contact strong        { font-size: 0.82rem; }
+    .poster--landscape .poster__cta                   { padding: 7px 14px; font-size: 0.68rem; }
+    .poster[data-template="royal-cream"].poster--landscape .poster__rate-col { border-color: rgba(139,105,20,0.15); }
+
+    /* ══════════════════════════════════════════════
+       STORY / VERTICAL  (1080 × 1920)
+       Scale everything ~1.5× for the tall canvas
+    ══════════════════════════════════════════════ */
+    .poster--story .poster__inner          { padding: 80px 60px 72px; }
+    .poster--story .poster__sep            { margin: 22px 0; }
+    /* Brand */
+    .poster--story .poster__hd-name        { font-size: 2.2rem; }
+    .poster--story .poster__hd-tag         { font-size: 0.98rem; margin-top: 5px; }
+    .poster--story .poster__hd-url         { font-size: 1.12rem; }
+    /* Jeweller */
+    .poster--story .poster__jeweller       { gap: 20px; }
+    .poster--story .poster__logo-wrap      { width: 94px; height: 94px; border-radius: 16px; }
+    .poster--story .poster__shop-name      { font-size: 2.5rem; }
+    .poster--story .poster__tagline        { font-size: 1.15rem; margin-top: 6px; opacity: 0.8; }
+    /* Eyebrow */
+    .poster--story .poster__eyebrow        { font-size: 1.08rem; letter-spacing: 0.14em; }
+    /* 22K hero */
+    .poster--story .poster__k22-price      { font-size: 10.5rem; }
+    .poster--story .poster__k22-label      { font-size: 1.1rem; margin-bottom: 16px; }
+    .poster--story .poster__k22-sub        { font-size: 1.05rem; margin-top: 20px; opacity: 0.8; }
+    .poster--story .poster__k22-change     { font-size: 1.1rem; padding: 10px 22px; margin-top: 20px; }
+    .poster--story .poster__hero-img       { max-height: 380px; margin-top: 24px; border-radius: 20px; }
+    /* Secondary rates */
+    .poster--story .poster__rate-col       { padding: 18px 12px; }
+    .poster--story .poster__rate-label     { font-size: 0.96rem; margin-bottom: 12px; }
+    .poster--story .poster__rate-price     { font-size: 2.9rem; }
+    .poster--story .poster__rate-change    { font-size: 0.9rem; margin-top: 8px; }
+    /* Meta */
+    .poster--story .poster__meta-line      { font-size: 1.0rem; gap: 8px; margin-top: 4px; }
+    .poster--story .poster__meta-dot       { width: 8px; height: 8px; }
+    /* Footer */
+    .poster--story .poster__footer         { gap: 18px; }
+    .poster--story .poster__contact        { font-size: 1.08rem; line-height: 1.56; }
+    .poster--story .poster__contact strong { font-size: 1.22rem; margin-bottom: 5px; }
+    .poster--story .poster__cta            { padding: 14px 28px; font-size: 1.02rem; }
+    /* Cridora foot */
+    .poster--story .poster__foot-text      { font-size: 0.9rem; }
+    .poster--story .poster__foot-url       { font-size: 1.1rem; }
+
+    /* ── Malayalam typography ── */
+    .poster--ml { font-family: "Noto Sans Malayalam","Plus Jakarta Sans",system-ui,sans-serif; }
+    .poster--ml .poster__shop-name,
+    .poster--ml .poster__hd-name {
+      font-family: "Anek Malayalam","Noto Sans Malayalam",sans-serif;
+      font-weight: 800; line-height: 1.2; letter-spacing: 0;
+    }
+    .poster--ml .poster__hd-name                      { font-size: 1.15rem; }
+    .poster--ml.poster--story .poster__hd-name        { font-size: 1.9rem; }
+    .poster--ml.poster--landscape .poster__hd-name    { font-size: 1.05rem; }
+    .poster--ml .poster__shop-name                    { font-size: 1.6rem; }
+    .poster--ml.poster--story .poster__shop-name      { font-size: 2.1rem; }
+    .poster--ml.poster--landscape .poster__shop-name  { font-size: 1.1rem; }
+    .poster--ml .poster__eyebrow { letter-spacing: 0.06em; font-family: "Noto Sans Malayalam",sans-serif; }
     .poster--ml .poster__tagline,
     .poster--ml .poster__contact,
-    .poster--ml .poster__cridora-tag,
-    .poster--ml .rate-card__karat,
-    .poster--ml .rate-card__unit,
-    .poster--ml .rate-card__change,
-    .poster--ml .poster__cridora-foot-text {
-      font-family: "Noto Sans Malayalam", sans-serif;
-    }
-    .poster--ml .rate-card__price {
-      font-family: "Plus Jakarta Sans", "Noto Sans Malayalam", sans-serif;
-    }
-    .poster--ml .poster__cta {
-      text-transform: none;
-      letter-spacing: 0;
-      font-family: "Noto Sans Malayalam", sans-serif;
-      font-weight: 700;
-    }
-    .poster--ml .rate-card__karat {
-      letter-spacing: 0.06em;
-    }
-    .lang-chip-row .chip[data-lang="ml"] {
-      font-family: "Noto Sans Malayalam", sans-serif;
-      font-size: 0.82rem;
-    }
+    .poster--ml .poster__foot-text,
+    .poster--ml .poster__k22-label,
+    .poster--ml .poster__k22-sub,
+    .poster--ml .poster__rate-label,
+    .poster--ml .poster__rate-sub,
+    .poster--ml .poster__rate-change,
+    .poster--ml .poster__meta-line,
+    .poster--ml .poster__hd-tag { font-family: "Noto Sans Malayalam",sans-serif; }
+    .poster--ml .poster__k22-price  { font-family: "Fraunces","Plus Jakarta Sans",sans-serif; }
+    .poster--ml .poster__rate-price { font-family: "Fraunces","Plus Jakarta Sans",sans-serif; }
+    .poster--ml .poster__cta { text-transform: none; letter-spacing: 0; font-family: "Noto Sans Malayalam",sans-serif; font-weight: 700; }
+    .lang-chip-row .chip[data-lang="ml"] { font-family: "Noto Sans Malayalam",sans-serif; font-size: 0.82rem; }
 
     .hidden { display: none !important; }
   </style>
@@ -1002,7 +929,7 @@
       </div>
       <p style="font-size:0.68rem;color:var(--ui-muted);margin:0.65rem 0 0;line-height:1.45">
         Open in Chrome/Edge. Rates auto-refresh every 2 min — poster shows <strong>rates as of</strong> date &amp; time from Cridora.
-        Uncheck “Show jeweller details” for a Cridora-only premium poster. Settings save in your browser.
+        Uncheck "Show jeweller details" for a Cridora-only premium poster. Settings save in your browser.
       </p>
     </aside>
 
@@ -1026,18 +953,20 @@
   "use strict";
 
   var FORMATS = [
-    { id: "ig-square", label: "Instagram Post", w: 1080, h: 1080, cls: "" },
-    { id: "ig-story", label: "Instagram Story", w: 1080, h: 1920, cls: "poster--story" },
-    { id: "wa-status", label: "WhatsApp Status", w: 1080, h: 1920, cls: "poster--story" },
-    { id: "fb-post", label: "Facebook Post", w: 1200, h: 630, cls: "poster--landscape" },
-    { id: "fb-square", label: "Facebook Square", w: 1080, h: 1080, cls: "" },
-    { id: "wa-chat", label: "WhatsApp Share", w: 1080, h: 1080, cls: "" },
+    { id: "ig-square",  label: "Instagram Post",    w: 1080, h: 1080, cls: "" },
+    { id: "ig-story",   label: "Instagram Story",   w: 1080, h: 1920, cls: "poster--story" },
+    { id: "wa-status",  label: "WhatsApp Status",   w: 1080, h: 1920, cls: "poster--story" },
+    { id: "fb-post",    label: "Facebook Post",     w: 1200, h: 630,  cls: "poster--landscape" },
+    { id: "fb-square",  label: "Facebook Square",   w: 1080, h: 1080, cls: "" },
+    { id: "wa-chat",    label: "WhatsApp Share",    w: 1080, h: 1080, cls: "" },
   ];
 
   var TEMPLATES = [
-    { id: "luxury-dark", label: "Luxury Dark", swatch: "linear-gradient(135deg,#0a0e1a,#1a2540)", bgA: "#0a0e1a", bgB: "#141c2e" },
-    { id: "royal-cream", label: "Royal Cream", swatch: "linear-gradient(135deg,#faf6ee,#e8dcc8)", bgA: "#faf6ee", bgB: "#f0e8d8" },
-    { id: "festive-ruby", label: "Festive Ruby", swatch: "linear-gradient(135deg,#2a0810,#5c1020)", bgA: "#2a0810", bgB: "#5c1020" },
+    { id: "luxury-dark",       label: "Luxury Dark",     swatch: "linear-gradient(135deg,#0a0e1a,#1a2540)",  bgA: "#0a0e1a", bgB: "#141c2e" },
+    { id: "royal-cream",       label: "Royal Cream",     swatch: "linear-gradient(135deg,#faf6ee,#e8dcc8)",  bgA: "#faf6ee", bgB: "#f0e8d8" },
+    { id: "festive-ruby",      label: "Festive Ruby",    swatch: "linear-gradient(135deg,#18030c,#3a0a18)",  bgA: "#18030c", bgB: "#3a0a18" },
+    { id: "midnight-sapphire", label: "Midnight Blue",   swatch: "linear-gradient(135deg,#04091c,#0b1438)",  bgA: "#04091c", bgB: "#0b1438" },
+    { id: "heritage-green",    label: "Heritage Green",  swatch: "linear-gradient(135deg,#050f08,#0c2214)",  bgA: "#050f08", bgB: "#0c2214" },
   ];
 
   var TEXT_PRESETS = {
@@ -1107,22 +1036,25 @@
   };
 
   var REFRESH_MS = 120000;
+
   var CRIDORA_LOGO_SVG =
-    '<svg class="poster__cridora-mark" width="52" height="52" viewBox="0 0 40 40" fill="none" aria-hidden="true">' +
-    '<circle cx="20" cy="20" r="18" stroke="url(#cridoraGoldLine)" stroke-width="2.5"/>' +
-    '<path d="M14 20C14 16.6863 16.6863 14 20 14" stroke="#d4a85c" stroke-width="3" stroke-linecap="round"/>' +
-    '<path d="M26 20C26 23.3137 23.3137 26 20 26" stroke="#a67a28" stroke-width="3" stroke-linecap="round"/>' +
-    '<defs><linearGradient id="cridoraGoldLine" x1="2" y1="2" x2="38" y2="38" gradientUnits="userSpaceOnUse">' +
-    '<stop offset="0%" stop-color="#e0bc78"/><stop offset="55%" stop-color="#a67a28"/><stop offset="100%" stop-color="#5c2f0a"/>' +
+    '<svg class="poster__cridora-mark" width="50" height="50" viewBox="0 0 40 40" fill="none" aria-hidden="true">' +
+    '<circle cx="20" cy="20" r="17.5" stroke="url(#cgL1)" stroke-width="2.2"/>' +
+    '<path d="M13.5 20C13.5 16.41 16.41 13.5 20 13.5" stroke="#d4a85c" stroke-width="3" stroke-linecap="round"/>' +
+    '<path d="M26.5 20C26.5 23.59 23.59 26.5 20 26.5" stroke="#a67a28" stroke-width="3" stroke-linecap="round"/>' +
+    '<circle cx="20" cy="20" r="2.5" fill="url(#cgL1)" opacity="0.6"/>' +
+    '<defs><linearGradient id="cgL1" x1="2" y1="2" x2="38" y2="38" gradientUnits="userSpaceOnUse">' +
+    '<stop offset="0%" stop-color="#f0d070"/><stop offset="50%" stop-color="#b88828"/><stop offset="100%" stop-color="#5c2f0a"/>' +
     '</linearGradient></defs></svg>';
 
   var CRIDORA_LOGO_SVG_SM =
-    '<svg width="32" height="32" viewBox="0 0 40 40" fill="none" aria-hidden="true">' +
-    '<circle cx="20" cy="20" r="18" stroke="url(#cridoraGoldLineSm)" stroke-width="2.5"/>' +
-    '<path d="M14 20C14 16.6863 16.6863 14 20 14" stroke="#d4a85c" stroke-width="3" stroke-linecap="round"/>' +
-    '<path d="M26 20C26 23.3137 23.3137 26 20 26" stroke="#a67a28" stroke-width="3" stroke-linecap="round"/>' +
-    '<defs><linearGradient id="cridoraGoldLineSm" x1="2" y1="2" x2="38" y2="38" gradientUnits="userSpaceOnUse">' +
-    '<stop offset="0%" stop-color="#e0bc78"/><stop offset="55%" stop-color="#a67a28"/><stop offset="100%" stop-color="#5c2f0a"/>' +
+    '<svg width="30" height="30" viewBox="0 0 40 40" fill="none" aria-hidden="true">' +
+    '<circle cx="20" cy="20" r="17.5" stroke="url(#cgLSm)" stroke-width="2.2"/>' +
+    '<path d="M13.5 20C13.5 16.41 16.41 13.5 20 13.5" stroke="#d4a85c" stroke-width="3" stroke-linecap="round"/>' +
+    '<path d="M26.5 20C26.5 23.59 23.59 26.5 20 26.5" stroke="#a67a28" stroke-width="3" stroke-linecap="round"/>' +
+    '<circle cx="20" cy="20" r="2.5" fill="url(#cgLSm)" opacity="0.6"/>' +
+    '<defs><linearGradient id="cgLSm" x1="2" y1="2" x2="38" y2="38" gradientUnits="userSpaceOnUse">' +
+    '<stop offset="0%" stop-color="#f0d070"/><stop offset="50%" stop-color="#b88828"/><stop offset="100%" stop-color="#5c2f0a"/>' +
     '</linearGradient></defs></svg>';
 
   var state = loadState();
@@ -1179,9 +1111,7 @@
     langChips: document.getElementById("langChips"),
   };
 
-  function getLang() {
-    return state.lang === "ml" ? "ml" : "en";
-  }
+  function getLang() { return state.lang === "ml" ? "ml" : "en"; }
 
   function t(key) {
     var lang = getLang();
@@ -1189,10 +1119,7 @@
   }
 
   function defaultTexts() {
-    return {
-      en: Object.assign({}, TEXT_PRESETS.en),
-      ml: Object.assign({}, TEXT_PRESETS.ml),
-    };
+    return { en: Object.assign({}, TEXT_PRESETS.en), ml: Object.assign({}, TEXT_PRESETS.ml) };
   }
 
   function syncTextsFromForm() {
@@ -1211,10 +1138,10 @@
     if (!state.texts) state.texts = defaultTexts();
     var lang = getLang();
     var tx = state.texts[lang] || TEXT_PRESETS[lang];
-    el.shopName.value = tx.shopName || "";
-    el.tagline.value = tx.tagline || "";
-    el.address.value = tx.address || "";
-    el.ctaText.value = tx.ctaText || "";
+    el.shopName.value      = tx.shopName      || "";
+    el.tagline.value       = tx.tagline       || "";
+    el.address.value       = tx.address       || "";
+    el.ctaText.value       = tx.ctaText       || "";
     el.cridoraTagline.value = tx.cridoraTagline || TEXT_PRESETS[lang].cridoraTagline;
   }
 
@@ -1238,9 +1165,7 @@
     if (!el.langChips) return;
     el.langChips.querySelectorAll(".chip").forEach(function (btn) {
       btn.classList.toggle("is-active", btn.dataset.lang === getLang());
-      btn.addEventListener("click", function () {
-        setLang(btn.dataset.lang);
-      });
+      btn.addEventListener("click", function () { setLang(btn.dataset.lang); });
     });
   }
 
@@ -1251,14 +1176,17 @@
         var parsed = JSON.parse(raw);
         if (!parsed.texts) {
           parsed.texts = defaultTexts();
-          parsed.texts.en.shopName = parsed.shopName || parsed.texts.en.shopName;
-          parsed.texts.en.tagline = parsed.tagline || parsed.texts.en.tagline;
-          parsed.texts.en.address = parsed.address || parsed.texts.en.address;
-          parsed.texts.en.ctaText = parsed.ctaText || parsed.texts.en.ctaText;
+          parsed.texts.en.shopName      = parsed.shopName      || parsed.texts.en.shopName;
+          parsed.texts.en.tagline       = parsed.tagline       || parsed.texts.en.tagline;
+          parsed.texts.en.address       = parsed.address       || parsed.texts.en.address;
+          parsed.texts.en.ctaText       = parsed.ctaText       || parsed.texts.en.ctaText;
           parsed.texts.en.cridoraTagline = parsed.cridoraTagline || parsed.texts.en.cridoraTagline;
         }
-        if (!parsed.lang) parsed.lang = "en";
-        if (!parsed.texts.ml) parsed.texts.ml = Object.assign({}, TEXT_PRESETS.ml);
+        if (!parsed.lang)       parsed.lang = "en";
+        if (!parsed.texts.ml)   parsed.texts.ml = Object.assign({}, TEXT_PRESETS.ml);
+        /* Migrate old template IDs if needed */
+        var validIds = ["luxury-dark","royal-cream","festive-ruby","midnight-sapphire","heritage-green"];
+        if (validIds.indexOf(parsed.templateId) === -1) parsed.templateId = "luxury-dark";
         return parsed;
       }
     } catch (e) { /* ignore */ }
@@ -1291,63 +1219,51 @@
 
   function saveState() {
     syncTextsFromForm();
-    state.formatId = getSelectedFormat().id;
-    state.templateId = el.poster.dataset.template || "luxury-dark";
-    state.lang = getLang();
-    state.apiBase = el.apiBase.value.trim().replace(/\/$/, "");
-    state.phone = el.phone.value;
-    state.website = el.website.value;
+    state.formatId    = getSelectedFormat().id;
+    state.templateId  = el.poster.dataset.template || "luxury-dark";
+    state.lang        = getLang();
+    state.apiBase     = el.apiBase.value.trim().replace(/\/$/, "");
+    state.phone       = el.phone.value;
+    state.website     = el.website.value;
     state.accentColor = el.accentColor.value;
-    state.bgMode = el.bgMode.value;
-    state.bgColor1 = el.bgColor1.value;
-    state.bgColor2 = el.bgColor2.value;
-    state.bgOverlay = parseInt(el.bgOverlay.value, 10) || 72;
+    state.bgMode      = el.bgMode.value;
+    state.bgColor1    = el.bgColor1.value;
+    state.bgColor2    = el.bgColor2.value;
+    state.bgOverlay   = parseInt(el.bgOverlay.value, 10) || 72;
     state.cridoraWebsite = el.cridoraWebsite.value;
     state.showCridoraBar = el.showCridoraBar.checked;
-    state.showJeweller = el.showJeweller.checked;
-    /* logoData, heroData, bgImageData preserved from uploads */
-    state.showChange = el.showChange.checked;
-    state.showSilver = el.showSilver.checked;
-    state.showHero = el.showHero.checked;
-    state.showCta = el.showCta.checked;
+    state.showJeweller   = el.showJeweller.checked;
+    state.showChange  = el.showChange.checked;
+    state.showSilver  = el.showSilver.checked;
+    state.showHero    = el.showHero.checked;
+    state.showCta     = el.showCta.checked;
     state.autoRefresh = el.autoRefresh.checked;
-    try {
-      localStorage.setItem("cridoraPosterStudio", JSON.stringify(state));
-    } catch (e) { /* ignore quota */ }
+    try { localStorage.setItem("cridoraPosterStudio", JSON.stringify(state)); } catch (e) {}
   }
 
   function applyStateToForm() {
-    el.apiBase.value = state.apiBase;
+    el.apiBase.value        = state.apiBase;
     loadTextsToForm();
-    el.phone.value = state.phone || "";
-    el.website.value = state.website || "";
-    el.accentColor.value = state.accentColor || "#d4a84b";
-    el.bgMode.value = state.bgMode || "template";
-    el.bgColor1.value = state.bgColor1 || "#0a0e1a";
-    el.bgColor2.value = state.bgColor2 || "#141c2e";
-    el.bgOverlay.value = state.bgOverlay != null ? state.bgOverlay : 72;
+    el.phone.value          = state.phone || "";
+    el.website.value        = state.website || "";
+    el.accentColor.value    = state.accentColor || "#d4a84b";
+    el.bgMode.value         = state.bgMode || "template";
+    el.bgColor1.value       = state.bgColor1 || "#0a0e1a";
+    el.bgColor2.value       = state.bgColor2 || "#141c2e";
+    el.bgOverlay.value      = state.bgOverlay != null ? state.bgOverlay : 72;
     el.bgOverlayVal.textContent = (state.bgOverlay != null ? state.bgOverlay : 72) + "%";
     el.cridoraWebsite.value = state.cridoraWebsite || "www.cridoraindia.com";
     el.showCridoraBar.checked = state.showCridoraBar !== false;
-    el.showJeweller.checked = state.showJeweller !== false;
-    el.showChange.checked = state.showChange;
-    el.showSilver.checked = state.showSilver;
-    el.showHero.checked = state.showHero;
-    el.showCta.checked = state.showCta;
+    el.showJeweller.checked   = state.showJeweller !== false;
+    el.showChange.checked  = state.showChange;
+    el.showSilver.checked  = state.showSilver;
+    el.showHero.checked    = state.showHero;
+    el.showCta.checked     = state.showCta;
     el.autoRefresh.checked = state.autoRefresh;
     syncBgModePanels();
-    if (state.bgImageData) {
-      el.bgThumb.src = state.bgImageData;
-      el.bgThumb.classList.remove("hidden");
-    }
-    if (state.logoData) {
-      el.logoThumb.src = state.logoData;
-      el.logoThumb.classList.remove("hidden");
-    }
-    if (state.heroData) {
-      el.heroThumb.src = state.heroData;
-      el.heroThumb.classList.remove("hidden");
-    }
+    if (state.bgImageData) { el.bgThumb.src = state.bgImageData; el.bgThumb.classList.remove("hidden"); }
+    if (state.logoData)    { el.logoThumb.src = state.logoData;  el.logoThumb.classList.remove("hidden"); }
+    if (state.heroData)    { el.heroThumb.src = state.heroData;  el.heroThumb.classList.remove("hidden"); }
     document.documentElement.lang = getLang() === "ml" ? "ml" : "en";
   }
 
@@ -1366,15 +1282,13 @@
     var pct = change.change_pct != null ? parseFloat(change.change_pct) : NaN;
     if (!isFinite(inr) && !isFinite(pct)) return "";
     var sign = inr >= 0 ? "+" : "";
-    var cls = inr >= 0 ? "is-up" : "is-down";
-    var txt = sign + (isFinite(inr) ? inr.toFixed(0) : "0");
+    var cls  = inr >= 0 ? "is-up" : "is-down";
+    var txt  = sign + (isFinite(inr) ? inr.toFixed(0) : "0");
     if (isFinite(pct)) txt += " (" + sign + pct.toFixed(2) + "%)";
     return '<div class="rate-card__change ' + cls + '">' + txt + " " + t("vsYesterday") + "</div>";
   }
 
-  function getLocale() {
-    return getLang() === "ml" ? "ml-IN" : "en-IN";
-  }
+  function getLocale() { return getLang() === "ml" ? "ml-IN" : "en-IN"; }
 
   function formatInKolkata(d, opts) {
     return d.toLocaleString(getLocale(), Object.assign({ timeZone: "Asia/Kolkata" }, opts || {}));
@@ -1400,18 +1314,23 @@
   function formatRateReferenceLine() {
     var updated = parseApiTimestamp(rates && rates.source_updated_at);
     var fetched = ratesFetchedAt ? new Date(ratesFetchedAt) : null;
-    var ref = updated || fetched || new Date();
+    var ref     = updated || fetched || new Date();
     var datePart = formatInKolkata(ref, { day: "numeric", month: "short", year: "numeric" });
     var timePart = formatInKolkata(ref, { hour: "2-digit", minute: "2-digit", hour12: true });
     var stale = false;
-    if (fetched && updated) {
-      stale = fetched.getTime() - updated.getTime() > 3600000;
-    }
+    if (fetched && updated) stale = fetched.getTime() - updated.getTime() > 3600000;
     return {
       text: t("ratesAsOf") + " " + datePart + " · " + timePart + " " + t("ist"),
       stale: stale,
       source: (rates && (rates.source_label || rates.source)) || t("defaultSource"),
     };
+  }
+
+  function formatRateTime() {
+    var updated = parseApiTimestamp(rates && rates.source_updated_at);
+    var fetched = ratesFetchedAt ? new Date(ratesFetchedAt) : null;
+    var ref = updated || fetched || new Date();
+    return formatInKolkata(ref, { hour: "2-digit", minute: "2-digit", hour12: true }) + " " + t("ist");
   }
 
   function formatStatusTimestamp() {
@@ -1430,14 +1349,14 @@
   function setRateStatus(ok, title, sub) {
     el.rateStatus.classList.toggle("is-error", !ok);
     el.rateStatusTitle.textContent = title;
-    el.rateStatusSub.textContent = sub || "";
+    el.rateStatusSub.textContent   = sub || "";
   }
 
   async function fetchRates() {
     var base = el.apiBase.value.trim().replace(/\/$/, "");
-    var url = base + "/api/v1/marketplace/kerala-gold-rates/";
+    var url  = base + "/api/v1/marketplace/kerala-gold-rates/";
     try {
-      var res = await fetch(url, { cache: "no-store", mode: "cors" });
+      var res  = await fetch(url, { cache: "no-store", mode: "cors" });
       if (!res.ok) throw new Error("HTTP " + res.status);
       var data = await res.json();
       var hash = rateHash(data);
@@ -1472,7 +1391,7 @@
   function syncBgModePanels() {
     var mode = el.bgMode.value;
     el.bgCustomColors.classList.toggle("hidden", mode !== "custom-colors");
-    el.bgCustomImage.classList.toggle("hidden", mode !== "custom-image");
+    el.bgCustomImage.classList.toggle("hidden",  mode !== "custom-image");
     el.templateGrid.style.opacity = mode === "template" ? "1" : "0.55";
   }
 
@@ -1482,35 +1401,50 @@
     refreshTimer = setInterval(fetchRates, REFRESH_MS);
   }
 
-  function buildRateCard(label, price, changeKey, hero) {
-    var change = el.showChange.checked && rates && rates.daily_change ? rates.daily_change[changeKey] : null;
+  function buildChangeHtml(changeKey, elemClass, showPct) {
+    if (!el.showChange.checked || !rates || !rates.daily_change) return "";
+    var chg = rates.daily_change[changeKey];
+    if (!chg) return "";
+    var inr = parseFloat(chg.change_inr);
+    var pct = parseFloat(chg.change_pct);
+    if (!isFinite(inr)) return "";
+    var sign = inr >= 0 ? "+" : "";
+    var dir  = inr >= 0 ? "is-up" : "is-down";
+    var txt  = sign + inr.toFixed(0);
+    if (showPct && isFinite(pct)) txt += " (" + sign + pct.toFixed(2) + "%)";
+    txt += " " + t("vsYesterday");
+    return '<div class="' + elemClass + " " + dir + '">' + escapeHtml(txt) + "</div>";
+  }
+
+  function buildRateItem(labelKey, price, changeKey) {
     return (
-      '<div class="rate-card' + (hero ? " rate-card--hero" : "") + '">' +
-        '<div class="rate-card__karat">' + label + "</div>" +
-        '<div class="rate-card__price">' + fmtInr(price) + "</div>" +
-        '<div class="rate-card__unit">' + t("perGramKerala") + "</div>" +
-        (change ? fmtChange(change) : "") +
+      '<div class="poster__rate-col">' +
+        '<div class="poster__rate-label">' + escapeHtml(t(labelKey)) + "</div>" +
+        '<div class="poster__rate-price">' + fmtInr(price) + "</div>" +
+        '<div class="poster__rate-sub">' + escapeHtml(t("perGramKerala")) + "</div>" +
+        buildChangeHtml(changeKey, "poster__rate-change", false) +
       "</div>"
     );
   }
 
   function renderPoster() {
-    var fmt = getSelectedFormat();
-    var g = (rates && rates.gold) || {};
-    var s = (rates && rates.silver) || {};
-    var accent = el.accentColor.value || "#d4a84b";
-    var bgMode = el.bgMode.value || "template";
-    var rateRef = formatRateReferenceLine();
+    var fmt        = getSelectedFormat();
+    var g          = (rates && rates.gold)   || {};
+    var s          = (rates && rates.silver) || {};
+    var accent     = el.accentColor.value || "#d4a84b";
+    var bgMode     = el.bgMode.value || "template";
+    var rateRef    = formatRateReferenceLine();
     var cridoraUrl = (el.cridoraWebsite.value || "www.cridoraindia.com").trim();
-    var showJeweller = el.showJeweller.checked;
+    var showJeweller   = el.showJeweller.checked;
     var showCridoraBar = el.showCridoraBar.checked;
+    var hasSilver = el.showSilver.checked && s["999"] != null;
 
     el.poster.dataset.template = state.templateId;
-    el.poster.dataset.bgMode = bgMode;
+    el.poster.dataset.bgMode   = bgMode;
     el.poster.className = "poster " + (fmt.cls || "") + (getLang() === "ml" ? " poster--ml" : "");
-    el.poster.style.width = fmt.w + "px";
+    el.poster.style.width  = fmt.w + "px";
     el.poster.style.height = fmt.h + "px";
-    el.poster.style.setProperty("--poster-accent", accent);
+    el.poster.style.setProperty("--poster-accent",    accent);
     el.poster.style.setProperty("--poster-accent-hi", accent);
     el.poster.style.setProperty("--poster-bg-overlay", (parseInt(el.bgOverlay.value, 10) || 72) / 100);
 
@@ -1518,7 +1452,7 @@
       el.poster.style.setProperty("--poster-bg-a", el.bgColor1.value);
       el.poster.style.setProperty("--poster-bg-b", el.bgColor2.value);
     } else if (bgMode === "template") {
-      var tpl = TEMPLATES.find(function (t) { return t.id === state.templateId; });
+      var tpl = TEMPLATES.find(function (tt) { return tt.id === state.templateId; });
       if (tpl && tpl.bgA) {
         el.poster.style.setProperty("--poster-bg-a", tpl.bgA);
         el.poster.style.setProperty("--poster-bg-b", tpl.bgB);
@@ -1529,97 +1463,122 @@
       ? ' style="background-image:url(\'' + state.bgImageData + '\')"'
       : "";
 
-    var jewellerLogoHtml = state.logoData
-      ? '<img src="' + state.logoData + '" alt="Logo" crossorigin="anonymous" />'
-      : '<span class="poster__logo-placeholder">✦</span>';
-
-    var heroHtml = (el.showHero.checked && state.heroData)
-      ? '<img class="poster__hero-img" src="' + state.heroData + '" alt="" crossorigin="anonymous" />'
-      : "";
-
-    var ratesHtml =
-      buildRateCard(t("gold22K"), g["22K"], "22K", true) +
-      buildRateCard(t("gold24K"), g["24K"], "24K", false) +
-      buildRateCard(t("gold18K"), g["18K"], "18K", false);
-    if (el.showSilver.checked && s["999"] != null) {
-      ratesHtml += buildRateCard(t("silver999"), s["999"], "silver999", false);
-    }
-
-    var ctaHtml = el.showCta.checked && showJeweller
-      ? '<div class="poster__cta">' + escapeHtml(el.ctaText.value) + "</div>"
-      : "";
-
-    var cridoraBarHtml = showCridoraBar
-      ? '<div class="poster__cridora-bar">' +
-          '<div class="poster__cridora-brand">' +
+    /* ── Brand header ── */
+    var hdHtml = showCridoraBar
+      ? '<div class="poster__hd">' +
+          '<div class="poster__hd-brand">' +
             CRIDORA_LOGO_SVG +
             '<div>' +
-              '<div class="poster__cridora-wordmark">Cridora<span>India</span></div>' +
-              '<div class="poster__cridora-tag">' + escapeHtml(el.cridoraTagline.value) + "</div>" +
+              '<div class="poster__hd-name">Cridora<em>India</em></div>' +
+              '<div class="poster__hd-tag">' + escapeHtml(el.cridoraTagline.value) + "</div>" +
             "</div>" +
           "</div>" +
-          '<div class="poster__cridora-url">' + escapeHtml(cridoraUrl) + "</div>" +
-        "</div>"
+          '<div class="poster__hd-url">' + escapeHtml(cridoraUrl) + "</div>" +
+        "</div>" +
+        '<div class="poster__sep poster__sep--a"></div>'
       : "";
 
+    /* ── Jeweller ── */
+    var logoHtml = state.logoData
+      ? '<img src="' + state.logoData + '" alt="Logo" crossorigin="anonymous" />'
+      : '<span class="poster__logo-placeholder">✦</span>';
     var jewellerHtml = showJeweller
       ? '<div class="poster__jeweller">' +
-          '<div class="poster__logo-wrap">' + jewellerLogoHtml + "</div>" +
+          '<div class="poster__logo-wrap">' + logoHtml + "</div>" +
           '<div>' +
             '<h2 class="poster__shop-name">' + escapeHtml(el.shopName.value) + "</h2>" +
             '<p class="poster__tagline">' + escapeHtml(el.tagline.value) + "</p>" +
           "</div>" +
-        "</div>"
+        "</div>" +
+        '<div class="poster__sep poster__sep--b"></div>'
       : "";
 
-    var footerContactHtml = showJeweller
-      ? '<div class="poster__contact">' +
-          "<strong>" + escapeHtml(el.phone.value) + "</strong>" +
-          escapeHtml(el.address.value).replace(/\n/g, "<br>") +
-          (el.website.value ? "<br>" + escapeHtml(el.website.value) : "") +
-        "</div>" + ctaHtml
-      : '<div class="poster__contact">' +
-          "<strong>CridoraIndia</strong>" +
-          escapeHtml(el.cridoraTagline.value) +
-          "<br>" + escapeHtml(cridoraUrl) +
+    /* ── Eyebrow ── */
+    var eyebrowHtml = '<div class="poster__eyebrow">' + escapeHtml(t("posterEyebrow")) + "</div>";
+
+    /* ── 22K hero section ── */
+    var heroImgHtml = (el.showHero.checked && state.heroData)
+      ? '<img class="poster__hero-img" src="' + state.heroData + '" alt="" crossorigin="anonymous" />'
+      : "";
+    var mainHtml =
+      '<div class="poster__main">' +
+        '<div class="poster__k22">' +
+          '<div class="poster__k22-label">' + escapeHtml(t("gold22K")) + "</div>" +
+          '<div class="poster__k22-price">' + fmtInr(g["22K"]) + "</div>" +
+          '<div class="poster__k22-sub">' + escapeHtml(t("perGramKerala")) + "</div>" +
+          buildChangeHtml("22K", "poster__k22-change", true) +
+        "</div>" +
+        heroImgHtml +
+      "</div>";
+
+    /* ── Secondary rates: 24K / 18K / Silver ── */
+    var vsep = '<div class="poster__rate-vsep"></div>';
+    var ratesHtml =
+      '<div class="poster__sep poster__sep--c"></div>' +
+      '<div class="poster__rates-row">' +
+        buildRateItem("gold24K", g["24K"], "24K") + vsep +
+        buildRateItem("gold18K", g["18K"], "18K") +
+        (hasSilver ? vsep + buildRateItem("silver999", s["999"], "silver999") : "") +
+      "</div>";
+
+    /* ── Meta line ── */
+    var metaHtml =
+      '<div class="poster__meta-line">' +
+        '<span class="poster__meta-dot' + (rateRef.stale ? " is-stale" : "") + '"></span>' +
+        escapeHtml(formatDateLine()) + " · " + escapeHtml(formatRateTime()) + " · " + escapeHtml(rateRef.source) +
+      "</div>";
+
+    /* ── Footer ── */
+    var ctaHtml = el.showCta.checked && showJeweller
+      ? '<div class="poster__cta">' + escapeHtml(el.ctaText.value) + "</div>"
+      : "";
+    var footerHtml = showJeweller
+      ? '<div class="poster__sep poster__sep--d"></div>' +
+        '<div class="poster__footer">' +
+          '<div class="poster__contact">' +
+            "<strong>" + escapeHtml(el.phone.value) + "</strong>" +
+            escapeHtml(el.address.value).replace(/\n/g, "<br>") +
+            (el.website.value ? "<br>" + escapeHtml(el.website.value) : "") +
+          "</div>" + ctaHtml +
+        "</div>"
+      : '<div class="poster__sep poster__sep--d"></div>' +
+        '<div class="poster__footer">' +
+          '<div class="poster__contact">' +
+            "<strong>CridoraIndia</strong>" +
+            escapeHtml(el.cridoraTagline.value) +
+            "<br>" + escapeHtml(cridoraUrl) +
+          "</div>" +
         "</div>";
+
+    /* ── Cridora foot ── */
+    var footHtml =
+      '<div class="poster__foot">' +
+        '<div class="poster__foot-brand">' +
+          CRIDORA_LOGO_SVG_SM +
+          '<div class="poster__foot-text">' + escapeHtml(t("cridoraFootLine1")) + "<br>" + escapeHtml(t("cridoraFootLine2")) + "</div>" +
+        "</div>" +
+        '<div class="poster__foot-url">' + escapeHtml(cridoraUrl) + "</div>" +
+      "</div>";
 
     el.poster.innerHTML =
       '<div class="poster__bg-image"' + bgImageStyle + "></div>" +
       '<div class="poster__bg-overlay"></div>' +
       '<div class="poster__bg"></div>' +
-      '<div class="poster__ornament"></div>' +
+      '<div class="poster__deco-ring"></div>' +
       '<div class="poster__frame"></div>' +
       '<div class="poster__corner poster__corner--tl"></div>' +
       '<div class="poster__corner poster__corner--tr"></div>' +
       '<div class="poster__corner poster__corner--bl"></div>' +
       '<div class="poster__corner poster__corner--br"></div>' +
       '<div class="poster__inner">' +
-        cridoraBarHtml +
+        hdHtml +
         jewellerHtml +
-        '<div class="poster__headline-block">' +
-          '<div class="poster__eyebrow">' + escapeHtml(t("posterEyebrow")) + "</div>" +
-          '<h1 class="poster__headline">' + escapeHtml(t("posterHeadline")) + "</h1>" +
-          '<div class="poster__date-line">' + escapeHtml(formatDateLine()) + "</div>" +
-          '<div class="poster__rate-ref">' +
-            '<span class="poster__rate-ref-dot' + (rateRef.stale ? " is-stale" : "") + '"></span>' +
-            escapeHtml(rateRef.text) +
-          "</div>" +
-          '<div class="poster__source-line">' + escapeHtml(t("sourcePrefix")) + ": " + escapeHtml(rateRef.source) + " · " + escapeHtml(t("perGramInr")) + "</div>" +
-        "</div>" +
-        '<div class="poster__body">' +
-          (fmt.cls === "poster--landscape" ? heroHtml : "") +
-          '<div class="poster__rates">' + ratesHtml + "</div>" +
-          (fmt.cls !== "poster--landscape" ? heroHtml : "") +
-        "</div>" +
-        '<div class="poster__footer">' + footerContactHtml + "</div>" +
-        '<div class="poster__cridora-foot">' +
-          '<div class="poster__cridora-foot-mark">' +
-            CRIDORA_LOGO_SVG_SM +
-            '<div class="poster__cridora-foot-text">' + escapeHtml(t("cridoraFootLine1")) + "<br>" + escapeHtml(t("cridoraFootLine2")) + "</div>" +
-          "</div>" +
-          '<div class="poster__cridora-foot-url">' + escapeHtml(cridoraUrl) + "</div>" +
-        "</div>" +
+        eyebrowHtml +
+        mainHtml +
+        ratesHtml +
+        metaHtml +
+        footerHtml +
+        footHtml +
       "</div>";
 
     el.previewMeta.textContent = fmt.label + " · " + fmt.w + "×" + fmt.h + "px · " + rateRef.text;
@@ -1636,15 +1595,15 @@
   }
 
   function fitPreview() {
-    var fmt = getSelectedFormat();
+    var fmt  = getSelectedFormat();
     var stage = el.previewStage;
-    var pad = 32;
-    var maxW = stage.clientWidth - pad;
-    var maxH = Math.max(360, window.innerHeight - 220);
+    var pad   = 32;
+    var maxW  = stage.clientWidth - pad;
+    var maxH  = Math.max(360, window.innerHeight - 220);
     var scale = Math.min(maxW / fmt.w, maxH / fmt.h, 1);
     el.previewScaler.style.transform = "scale(" + scale + ")";
-    el.previewScaler.style.width = fmt.w + "px";
-    el.previewScaler.style.height = fmt.h + "px";
+    el.previewScaler.style.width     = fmt.w + "px";
+    el.previewScaler.style.height    = fmt.h + "px";
   }
 
   function buildFormatChips() {
@@ -1661,11 +1620,11 @@
   }
 
   function buildTemplateGrid() {
-    el.templateGrid.innerHTML = TEMPLATES.map(function (t) {
+    el.templateGrid.innerHTML = TEMPLATES.map(function (tpl) {
       return (
-        '<button type="button" class="tpl-btn' + (t.id === state.templateId ? " is-active" : "") + '" data-template="' + t.id + '" title="' + t.label + '">' +
-          '<div class="tpl-btn__swatch" style="background:' + t.swatch + '"></div>' +
-          '<span class="tpl-btn__label">' + t.label + "</span>" +
+        '<button type="button" class="tpl-btn' + (tpl.id === state.templateId ? " is-active" : "") + '" data-template="' + tpl.id + '" title="' + tpl.label + '">' +
+          '<div class="tpl-btn__swatch" style="background:' + tpl.swatch + '"></div>' +
+          '<span class="tpl-btn__label">' + tpl.label + "</span>" +
         "</button>"
       );
     }).join("");
@@ -1786,7 +1745,7 @@
     var html2canvas = await loadHtml2Canvas();
     var fmt = format || getSelectedFormat();
     renderPoster();
-    el.poster.style.width = fmt.w + "px";
+    el.poster.style.width  = fmt.w + "px";
     el.poster.style.height = fmt.h + "px";
     el.previewScaler.style.transform = "scale(1)";
 
@@ -1815,9 +1774,7 @@
     });
   }
 
-  function dateSlug() {
-    return new Date().toISOString().slice(0, 10);
-  }
+  function dateSlug() { return new Date().toISOString().slice(0, 10); }
 
   async function exportAllFormats() {
     el.btnDownloadAll.disabled = true;

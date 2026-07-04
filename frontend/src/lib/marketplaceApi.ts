@@ -237,6 +237,62 @@ export type KeralaGoldRatesPayload = {
   note?: string
 }
 
+const KERALA_GOLD_RATES_LS_KEY = 'cridora.kerala_gold_rates.v1'
+
+let keralaGoldRatesMemoryCache: KeralaGoldRatesPayload | null = null
+
+function hasUsableKeralaGoldRates(payload: KeralaGoldRatesPayload | null | undefined): boolean {
+  if (!payload?.gold || typeof payload.gold !== 'object') return false
+  for (const key of ['22K', '24K', '18K'] as const) {
+    const v = payload.gold[key]
+    if (typeof v === 'number' && Number.isFinite(v) && v > 0) return true
+  }
+  return false
+}
+
+function readKeralaGoldRatesCache(): KeralaGoldRatesPayload | null {
+  if (hasUsableKeralaGoldRates(keralaGoldRatesMemoryCache)) return keralaGoldRatesMemoryCache
+  if (typeof localStorage === 'undefined') return null
+  try {
+    const raw = localStorage.getItem(KERALA_GOLD_RATES_LS_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as KeralaGoldRatesPayload
+    if (!hasUsableKeralaGoldRates(parsed)) return null
+    keralaGoldRatesMemoryCache = parsed
+    return parsed
+  } catch {
+    return null
+  }
+}
+
+function writeKeralaGoldRatesCache(payload: KeralaGoldRatesPayload): void {
+  if (!hasUsableKeralaGoldRates(payload)) return
+  keralaGoldRatesMemoryCache = payload
+  if (typeof localStorage === 'undefined') return
+  try {
+    localStorage.setItem(KERALA_GOLD_RATES_LS_KEY, JSON.stringify(payload))
+  } catch {
+    /* private mode / quota */
+  }
+}
+
+function resolveKeralaGoldRatesRefresh(
+  next: KeralaGoldRatesPayload | null | undefined,
+  prev?: KeralaGoldRatesPayload | null,
+): KeralaGoldRatesPayload | null {
+  if (hasUsableKeralaGoldRates(next)) {
+    writeKeralaGoldRatesCache(next!)
+    return next!
+  }
+  if (hasUsableKeralaGoldRates(prev)) return prev!
+  return readKeralaGoldRatesCache()
+}
+
+/** Last good Kerala rates snapshot (memory / localStorage) for instant paint and poll fallback. */
+export function getCachedKeralaGoldRates(): KeralaGoldRatesPayload | null {
+  return readKeralaGoldRatesCache()
+}
+
 export type KeralaGoldRatesHistoryPayload = GoldTickerHistoryPayload & {
   metal?: string
   latest?: Record<string, unknown>
@@ -287,9 +343,16 @@ export type GoldRatesAdsPayload = {
 }
 
 export async function fetchKeralaGoldRates(): Promise<KeralaGoldRatesPayload | null> {
-  const res = await apiFetch('/api/v1/marketplace/kerala-gold-rates/', { cache: 'no-store' })
-  if (!res.ok) return null
-  return (await res.json()) as KeralaGoldRatesPayload
+  try {
+    const res = await apiFetch('/api/v1/marketplace/kerala-gold-rates/', { cache: 'no-store' })
+    if (res.ok) {
+      const data = (await res.json()) as KeralaGoldRatesPayload
+      return resolveKeralaGoldRatesRefresh(data)
+    }
+  } catch {
+    /* network / timeout — use last good rates */
+  }
+  return readKeralaGoldRatesCache()
 }
 
 export async function fetchKeralaGoldRatesHistory(

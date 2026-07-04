@@ -15,7 +15,7 @@ import {
 
 declare const self: ServiceWorkerGlobalScope & { __WB_MANIFEST: unknown }
 
-const NAVIGATION_TIMEOUT_MS = 5000
+const NAVIGATION_TIMEOUT_MS = 12000
 
 cleanupOutdatedCaches()
 precacheAndRoute(self.__WB_MANIFEST)

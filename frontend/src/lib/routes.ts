@@ -28,7 +28,7 @@ function customerNeedsKyc(user: AuthUser): boolean {
 
 /** First-time customer landing: personal gold tracking with bill scan open. */
 export function customerOnboardingLandingPath(): string {
-  return '/userdashboard?section=portfolio_overview&portfolio_tab=personal&scan=1'
+  return '/userdashboard?section=portfolio_overview&portfolio_action=scan'
 }
 
 function dashboardPortfolioSection(user: AuthUser): string | null {

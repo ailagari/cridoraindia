@@ -55,7 +55,15 @@ Or with curl **only if wrapped in a shell** (Railway cron does not expand `${CRO
 
 `GET /api/v1/health/` also runs a throttled processor (~every 4 minutes).
 
-#### Troubleshooting `curl: (22) ... 403` on `cron-festival-broadcasts`
+#### Troubleshooting `curl: (22) ... 403` or `HTTP 403: error code: 1010` on `cron-festival-broadcasts`
+
+**1010** is **Cloudflare** blocking Railway’s cron IP when the hook targets `cridoraindia.com` / `www.cridoraindia.com`. It does **not** stop the main web app (`cridoraindia` service).
+
+| Fix | Action |
+|-----|--------|
+| **Recommended backup cron** | Set `CRON_TARGET_URL=https://YOUR-SERVICE.up.railway.app` on `cron-festival-broadcasts` (direct Railway hostname, no Cloudflare). |
+| **Simplest cron command** | Start command: `python manage.py process_festival_broadcasts` (uses `DATABASE_URL` directly — no HTTP). |
+| **Primary path (already on)** | `INLINE_BROADCAST_SCHEDULER=true` on **`cridoraindia`** — broadcasts run inside Gunicorn; HTTP cron is optional. |
 
 | Check | Command |
 |-------|---------|
@@ -67,6 +75,8 @@ Or with curl **only if wrapped in a shell** (Railway cron does not expand `${CRO
 If Python returns `Cron hook OK` but curl fails, the cron **start command** is wrong (missing header). Set start command to `python manage.py trigger_scheduled_broadcasts_http` in the Railway dashboard.
 
 If `INLINE_BROADCAST_SCHEDULER=true` is already on **`cridoraindia`**, the HTTP cron service is optional backup — you can pause or remove `cron-festival-broadcasts`.
+
+**Critical:** Never set the **main `cridoraindia` web service** start command to `process_festival_broadcasts` or `trigger_scheduled_broadcasts_http`. That runs a one-shot cron job instead of Gunicorn → the site returns **502** and the PWA shows “temporarily down”. The repo root `railway.toml` pins the correct web start command; cron uses `railway.cron.toml` (set that path on the cron service in Railway settings).
 
 Use separate **cron** services with `python manage.py <command>` or the HTTP `curl` hook above (not the main Gunicorn service start command).
 

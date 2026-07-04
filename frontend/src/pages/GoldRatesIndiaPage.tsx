@@ -7,6 +7,7 @@ import { useGoldRatesSeoContext } from '@/hooks/useGoldRatesSeoContext'
 import { LIVE_PRICE_POLL_MS } from '@/lib/liveDeskIntervals'
 import {
   fetchKeralaGoldRates,
+  getCachedKeralaGoldRates,
   type KeralaGoldRatesPayload,
 } from '@/lib/marketplaceApi'
 import {
@@ -38,13 +39,15 @@ function parseNum(s: string | number | undefined | null): number | null {
 export function GoldRatesIndiaPage() {
   const { t } = usePublicLocale()
   const { seoPath, locale: routeLocale } = useGoldRatesSeoContext()
-  const [rates, setRates] = useState<KeralaGoldRatesPayload | null>(null)
+  const [rates, setRates] = useState<KeralaGoldRatesPayload | null>(() => getCachedKeralaGoldRates())
   const seo = PAGE_SEO['/gold-rates/india']
   const pageTitle = routeLocale === 'ml' ? t('goldRatesIndia.pageTitleMl') : seo.title
   const pageDescription = routeLocale === 'ml' ? t('goldRatesIndia.pageDescriptionMl') : seo.description
 
   const loadRates = useCallback(() => {
-    void fetchKeralaGoldRates().then(setRates)
+    void fetchKeralaGoldRates().then((payload) => {
+      setRates((prev) => payload ?? prev)
+    })
   }, [])
 
   useEffect(() => {

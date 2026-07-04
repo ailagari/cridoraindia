@@ -8,6 +8,28 @@ import urllib.request
 from django.core.management.base import BaseCommand
 
 
+def _resolve_cron_target_base() -> str:
+    """Base URL for server-to-server cron hooks (bypass Cloudflare on custom domains)."""
+    for key in ("CRON_TARGET_URL", "CRIDORA_RAILWAY_APP_URL"):
+        raw = (os.environ.get(key) or "").strip()
+        if raw:
+            return raw if raw.startswith("http") else f"https://{raw.lstrip('/')}"
+
+    linked = (os.environ.get("RAILWAY_SERVICE_CRIDORAINDIA_URL") or "").strip()
+    if linked and "railway.app" in linked:
+        return linked if linked.startswith("http") else f"https://{linked.lstrip('/')}"
+
+    # Custom domains (cridoraindia.com) sit behind Cloudflare and often block Railway cron IPs (403 / 1010).
+    fallback = (os.environ.get("RAILWAY_PUBLIC_DOMAIN") or "").strip()
+    if fallback and "railway.app" in fallback:
+        return fallback if fallback.startswith("http") else f"https://{fallback.lstrip('/')}"
+
+    if linked:
+        return linked if linked.startswith("http") else f"https://{linked.lstrip('/')}"
+
+    return "https://www.cridoraindia.com"
+
+
 class Command(BaseCommand):
     help = (
         "POST to /api/v1/internal/cron/process-festival-broadcasts/ using CRON_SECRET. "
@@ -19,15 +41,8 @@ class Command(BaseCommand):
         if not secret:
             self.stderr.write(self.style.ERROR("CRON_SECRET is not set."))
             raise SystemExit(1)
-        base = (
-            os.environ.get("CRON_TARGET_URL")
-            or os.environ.get("RAILWAY_PUBLIC_DOMAIN")
-            or os.environ.get("RAILWAY_SERVICE_CRIDORAINDIA_URL")
-            or "www.cridoraindia.com"
-        ).strip()
-        if not base.startswith("http"):
-            base = f"https://{base.lstrip('/')}"
-        url = f"{base.rstrip('/')}/api/v1/internal/cron/process-festival-broadcasts/"
+        base = _resolve_cron_target_base().rstrip("/")
+        url = f"{base}/api/v1/internal/cron/process-festival-broadcasts/"
         req = urllib.request.Request(
             url,
             method="POST",

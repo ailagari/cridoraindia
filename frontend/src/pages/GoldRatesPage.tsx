@@ -13,6 +13,7 @@ import {
   fetchKeralaGoldRates,
   fetchKeralaGoldRatesDaily,
   fetchKeralaGoldRatesHistory,
+  getCachedKeralaGoldRates,
   type GoldRatesAdsPayload,
   type KeralaGoldRatesDailyRow,
   type KeralaGoldRatesHistoryPayload,
@@ -128,7 +129,7 @@ function RateCard({
 export function GoldRatesPage() {
   const { t, locale } = usePublicLocale()
   const { seoPath, locale: routeLocale } = useGoldRatesSeoContext()
-  const [rates, setRates] = useState<KeralaGoldRatesPayload | null>(null)
+  const [rates, setRates] = useState<KeralaGoldRatesPayload | null>(() => getCachedKeralaGoldRates())
   const [ads, setAds] = useState<GoldRatesAdsPayload | null>(null)
   const [historyRange, setHistoryRange] = useState<HistoryRange>('1m')
   const [chartMetal, setChartMetal] = useState<ChartMetal>('22K')
@@ -140,18 +141,24 @@ export function GoldRatesPage() {
   const loadRates = useCallback(() => {
     void fetchKeralaGoldRates().then((payload) => {
       setRates((prev) => {
+        const next = payload ?? prev
+        if (!next) return prev
         const prev22 = prev?.gold?.['22K']
-        const next22 = payload?.gold?.['22K']
+        const next22 = next.gold?.['22K']
         if (prev22 != null && next22 != null && Math.abs(prev22 - next22) > 0.005) {
-          void fetchKeralaGoldRatesHistory(historyRange, chartMetal).then(setHistory)
+          void fetchKeralaGoldRatesHistory(historyRange, chartMetal).then((h) => {
+            if (h) setHistory(h)
+          })
         }
-        return payload
+        return next
       })
     })
   }, [historyRange, chartMetal])
 
   const refreshHistory = useCallback(() => {
-    void fetchKeralaGoldRatesHistory(historyRange, chartMetal).then(setHistory)
+    void fetchKeralaGoldRatesHistory(historyRange, chartMetal).then((payload) => {
+      if (payload) setHistory(payload)
+    })
   }, [historyRange, chartMetal])
 
   useEffect(() => {

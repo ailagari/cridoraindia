@@ -174,6 +174,11 @@ export function CustomerPersonalHoldingsPanel({
       (prev) => {
         const next = new URLSearchParams(prev)
         next.delete('scan')
+        // scan=1 opens the vault importer; drop scope-only portfolio_tab=personal so parent URL sync
+        // does not immediately return to overview after scan is consumed.
+        if (next.get('portfolio_tab') === 'personal' && !next.get('portfolio_action')) {
+          next.delete('portfolio_tab')
+        }
         return next
       },
       { replace: true },

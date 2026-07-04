@@ -381,7 +381,7 @@
 
         function applyMode() {
           var online = navigator.onLine
-          var maintenance = forcedMode === 'maintenance' || (online && forcedMode !== 'offline')
+          var maintenance = forcedMode === 'maintenance'
 
           if (!online || forcedMode === 'offline') {
             headline.textContent = 'You\'re offline'
@@ -433,13 +433,14 @@
 
         function probeLive() {
           if (reloading) return Promise.resolve(false)
-          var target = returnTarget()
-          var url = new URL(target, window.location.origin).href
-          return fetch(url, { method: 'HEAD', cache: 'no-store', credentials: 'same-origin' })
+          var healthUrl = new URL('/api/v1/health/', window.location.origin).href
+          return fetch(healthUrl, { method: 'GET', cache: 'no-store', credentials: 'same-origin' })
             .then(function (res) {
               return res.ok && res.status < 500
             })
             .catch(function () {
+              var target = returnTarget()
+              var url = new URL(target, window.location.origin).href
               return fetch(url, { method: 'GET', cache: 'no-store', credentials: 'same-origin' })
                 .then(function (res) {
                   return res.ok && res.status < 500
@@ -570,10 +571,7 @@
         window.addEventListener('online', onOnline)
         window.addEventListener('offline', onOffline)
 
-        // App shell failed after HTML/JS loaded — server may still return 200, so don't auto-reload loop.
-        if (!bootFailure) {
-          startProbing()
-        }
+        startProbing()
       })()
     </script>
   </body>

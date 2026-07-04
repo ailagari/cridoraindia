@@ -1,0 +1,10 @@
+# cron-festival-broadcasts — point Railway service config file to /railway.cron.toml
+
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+startCommand = "python manage.py process_festival_broadcasts"
+cronSchedule = "*/5 * * * *"
+restartPolicyType = "NEVER"

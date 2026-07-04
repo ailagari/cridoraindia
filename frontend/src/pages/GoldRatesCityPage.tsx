@@ -18,6 +18,7 @@ import { useGoldRatesSeoContext } from '@/hooks/useGoldRatesSeoContext'
 import { LIVE_PRICE_POLL_MS } from '@/lib/liveDeskIntervals'
 import {
   fetchKeralaGoldRates,
+  getCachedKeralaGoldRates,
   type KeralaGoldRatesPayload,
 } from '@/lib/marketplaceApi'
 import {
@@ -49,7 +50,7 @@ function parseNum(s: string | number | undefined | null): number | null {
 function GoldRatesCityPageInner({ citySlug }: { citySlug: string }) {
   const { t, locale } = usePublicLocale()
   const { seoPath, locale: routeLocale } = useGoldRatesSeoContext()
-  const [rates, setRates] = useState<KeralaGoldRatesPayload | null>(null)
+  const [rates, setRates] = useState<KeralaGoldRatesPayload | null>(() => getCachedKeralaGoldRates())
 
   const city = GOLD_RATE_CITY_BY_SLUG[citySlug]
   const path = goldRateCityPath(city.slug)
@@ -66,7 +67,9 @@ function GoldRatesCityPageInner({ citySlug }: { citySlug: string }) {
       : t('goldRatesCity.pageDescription', { city: city.nameEn })
 
   const loadRates = useCallback(() => {
-    void fetchKeralaGoldRates().then(setRates)
+    void fetchKeralaGoldRates().then((payload) => {
+      setRates((prev) => payload ?? prev)
+    })
   }, [])
 
   useEffect(() => {
@@ -259,14 +262,16 @@ function GoldRatesCityPageInner({ citySlug }: { citySlug: string }) {
 
 function GoldRatesIndiaCityPageInner({ citySlug }: { citySlug: string }) {
   const { t } = usePublicLocale()
-  const [rates, setRates] = useState<KeralaGoldRatesPayload | null>(null)
+  const [rates, setRates] = useState<KeralaGoldRatesPayload | null>(() => getCachedKeralaGoldRates())
 
   const city = INDIA_GOLD_RATE_CITY_BY_SLUG[citySlug]
   const path = `/gold-rates/${city.slug}`
   const seoStatic = buildIndiaCityPageSeo(city)
 
   const loadRates = useCallback(() => {
-    void fetchKeralaGoldRates().then(setRates)
+    void fetchKeralaGoldRates().then((payload) => {
+      setRates((prev) => payload ?? prev)
+    })
   }, [])
 
   useEffect(() => { loadRates() }, [loadRates])

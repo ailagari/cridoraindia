@@ -187,7 +187,8 @@ export function CustomerPortfolioPanel({ defaultPortfolioTab }: { defaultPortfol
       setSearchParams(
         (prev) => {
           const next = new URLSearchParams(prev)
-          next.set('portfolio_tab', 'personal')
+          // portfolio_tab=personal is reserved for overview + personal scope deeplinks.
+          // Vault actions use portfolio_action only so clearing it does not bounce back to overview.
           next.set('portfolio_action', action)
           if (action === 'scan') next.delete('scan')
           return next
@@ -248,9 +249,17 @@ export function CustomerPortfolioPanel({ defaultPortfolioTab }: { defaultPortfol
       hasScan ||
       hasHolding
 
-    if (raw === 'documents') {
+    if (actionRaw === 'add' || actionRaw === 'scan') {
+      setPersonalInitialAction(actionRaw)
+    } else if (hasScan) {
+      setPersonalInitialAction('scan')
+    }
+
+    if (openPersonalVault) {
       setPortfolioTab('personal')
-    } else if (raw === 'personal' && !openPersonalVault) {
+    } else if (raw === 'documents') {
+      setPortfolioTab('personal')
+    } else if (raw === 'personal') {
       // Push/deep links use portfolio_tab=personal for overview + personal scope, not the vault tab.
       setPortfolioTab('overview')
       setHoldingsScope('personal')
@@ -263,12 +272,6 @@ export function CustomerPortfolioPanel({ defaultPortfolioTab }: { defaultPortfol
       }
     } else if (defaultPortfolioTab) {
       setPortfolioTab(defaultPortfolioTab)
-    }
-
-    if (actionRaw === 'add' || actionRaw === 'scan') {
-      setPersonalInitialAction(actionRaw)
-    } else if (hasScan) {
-      setPersonalInitialAction('scan')
     }
   }, [searchParams, defaultPortfolioTab])
 
