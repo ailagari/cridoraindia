@@ -42,7 +42,7 @@ curl -I --max-time 15 https://cridoraindia-production.up.railway.app/api/v1/heal
 5. **Railway start command** (web service only — must be Gunicorn):
 
 ```bash
-sh -c "python manage.py migrate --noinput && python manage.py collectstatic --noinput && python manage.py ensure_media_root && exec gunicorn config.wsgi:application --bind 0.0.0.0:${PORT:-8000} --workers 2"
+sh -c "python manage.py migrate --noinput && python manage.py collectstatic --noinput && python manage.py ensure_media_root && exec gunicorn config.wsgi:application --bind 0.0.0.0:${PORT:-8000} --workers 2 --worker-class gthread --threads 6 --timeout 60"
 ```
 
 Never set the main web service start command to a cron command (`process_festival_broadcasts`, etc.) — that causes **502** on all domains.

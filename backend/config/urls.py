@@ -2,12 +2,12 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path, re_path
-from django.views.static import serve
 
 from .views import (
     ads_txt_view,
     gold_rates_feed_view,
     gold_rates_og_svg_view,
+    media_serve_cached,
     robots_txt_view,
     sitemap_xml_view,
     spa_index,
@@ -31,7 +31,7 @@ else:
     urlpatterns += [
         re_path(
             r"^media/(?P<path>.*)$",
-            serve,
+            media_serve_cached,
             {"document_root": settings.MEDIA_ROOT},
         ),
         re_path(

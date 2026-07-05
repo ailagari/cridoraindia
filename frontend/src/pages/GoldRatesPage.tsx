@@ -239,13 +239,6 @@ export function GoldRatesPage() {
     refreshHistory()
   }, [refreshHistory])
 
-  useEffect(() => {
-    const id = window.setInterval(() => {
-      refreshHistory()
-    }, LIVE_PRICE_POLL_MS)
-    return () => window.clearInterval(id)
-  }, [refreshHistory])
-
   const loadDaily = useCallback(async (append: boolean) => {
     setDailyLoading(true)
     try {

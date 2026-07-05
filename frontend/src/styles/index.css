@@ -8968,8 +8968,14 @@ select.input {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 0;
+  justify-content: flex-start;
+  gap: 0.65rem;
   padding: 0.75rem 1.35rem calc(1rem + env(safe-area-inset-bottom, 0px));
+}
+
+.pf-scope .pf-vault-form__footer--pinned .pf-vault-form__mvp {
+  flex: none;
+  max-width: none;
 }
 /* Error notice shown in the picking phase after a failed scan */
 .pf-scope .pf-invoice-error-notice {

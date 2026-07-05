@@ -805,29 +805,47 @@ export function CustomerPersonalHoldingsPanel({
                   <span className="pf-vault-form__mvp-tag">MVP</span> Tracking &amp; records only — not redeemable or transferable on Cridora.
                 </p>
                 <FormSubmitFoot error={addFormError} success={addFormSuccess} className="pf-vault-form__actions">
-                  <button
-                    type="button"
-                    className="btn btn-ghost"
-                    onClick={() => {
-                      if (standaloneFlow) {
-                        onStandaloneFlowClose?.()
-                        return
-                      }
-                      setFormOpen(false)
-                      setAddFormError('')
-                      setAddFormSuccess('')
-                    }}
-                    disabled={busy}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="btn btn-primary pf-vault-form__submit"
-                    disabled={busy || !title.trim() || !weight.trim()}
-                  >
-                    {busy ? 'Saving…' : 'Add to vault'}
-                  </button>
+                  {standaloneFlow === 'add' ? (
+                    <>
+                      <button
+                        type="submit"
+                        className="btn btn-primary pf-vault-form__submit"
+                        disabled={busy || !title.trim() || !weight.trim()}
+                      >
+                        {busy ? 'Saving…' : 'Add to vault'}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-ghost"
+                        onClick={() => onStandaloneFlowClose?.()}
+                        disabled={busy}
+                      >
+                        Cancel
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        className="btn btn-ghost"
+                        onClick={() => {
+                          setFormOpen(false)
+                          setAddFormError('')
+                          setAddFormSuccess('')
+                        }}
+                        disabled={busy}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        className="btn btn-primary pf-vault-form__submit"
+                        disabled={busy || !title.trim() || !weight.trim()}
+                      >
+                        {busy ? 'Saving…' : 'Add to vault'}
+                      </button>
+                    </>
+                  )}
                 </FormSubmitFoot>
               </footer>
             )

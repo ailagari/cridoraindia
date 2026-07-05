@@ -18,20 +18,27 @@ export function useLivePoll(
   const cb = useRef(callback)
   cb.current = callback
   const leadingOnVisible = options?.leadingOnVisible ?? true
+  // Guards against overlapping ticks: if a slow/queued backend response takes longer
+  // than intervalMs, skip the next tick instead of firing another request on top of it.
+  const inFlight = useRef(false)
 
   useEffect(() => {
     if (!enabled || intervalMs <= 0) return undefined
 
     const run = () => {
       if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return
-      void cb.current()
+      if (inFlight.current) return
+      inFlight.current = true
+      Promise.resolve(cb.current()).finally(() => {
+        inFlight.current = false
+      })
     }
 
     const id = window.setInterval(run, intervalMs)
 
     const onVis = () => {
       if (document.visibilityState === 'visible' && leadingOnVisible) {
-        void cb.current()
+        run()
       }
     }
     document.addEventListener('visibilitychange', onVis)

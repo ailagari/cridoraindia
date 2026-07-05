@@ -3,6 +3,7 @@ from pathlib import Path
 
 from django.conf import settings
 from django.http import Http404, HttpResponse
+from django.views.static import serve
 
 from .seo import (
     ads_txt,
@@ -60,4 +61,17 @@ def gold_rates_feed_view(request):
     xml = gold_rates_feed_xml()
     response = HttpResponse(xml, content_type="application/rss+xml; charset=utf-8")
     response["Cache-Control"] = "public, max-age=300"
+    return response
+
+
+# Uploaded media (ad banners/videos, invoice scans, etc.) is saved under a fresh UUID
+# filename each time, so a given URL's content never changes — safe to cache "forever".
+# Without this, browsers re-fetch the same ad image/video on every page load, which
+# (combined with a small worker pool) can starve the API from serving other requests.
+_MEDIA_CACHE_CONTROL = "public, max-age=31536000, immutable"
+
+
+def media_serve_cached(request, path, document_root=None, show_indexes=False):
+    response = serve(request, path, document_root=document_root, show_indexes=show_indexes)
+    response["Cache-Control"] = _MEDIA_CACHE_CONTROL
     return response

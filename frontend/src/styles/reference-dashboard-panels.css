@@ -1434,11 +1434,38 @@ html[data-theme='dark'] .pf-track-gold-sheet {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 0;
+  justify-content: flex-start;
+  gap: 0.65rem;
   padding: 0.75rem 1.35rem calc(1rem + env(safe-area-inset-bottom, 0px));
   border-top: 1px solid rgba(148, 163, 184, 0.18);
   background: var(--surface, #0f172a);
   z-index: 2;
+}
+
+.pf-personal-flow-overlay .pf-vault-form__footer--pinned .pf-vault-form__mvp {
+  flex: none;
+  max-width: none;
+}
+
+.pf-personal-flow-overlay .pf-vault-form__footer--pinned .pf-vault-form__actions.form-submit-foot {
+  width: 100%;
+  margin-top: 0;
+}
+
+.pf-personal-flow-overlay .pf-vault-form__footer--pinned .form-submit-foot__actions {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.45rem;
+}
+
+.pf-personal-flow-overlay .pf-vault-form__footer--pinned .form-submit-foot__actions > .btn {
+  width: 100%;
+  min-height: 2.5rem;
+}
+
+.pf-personal-flow-overlay .pf-vault-form__footer--pinned .pf-vault-form__submit {
+  min-height: 2.75rem;
+  font-weight: 700;
 }
 
 /* Confirm-details footer: primary Confirm always visible on top */
