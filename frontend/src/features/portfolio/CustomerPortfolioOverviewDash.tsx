@@ -317,7 +317,7 @@ export function CustomerPortfolioOverviewDash(props: {
               <button
                 type="button"
                 className="pf-track-gold-split__main"
-                onClick={() => (isMobileViewport ? openTrackMenu() : navigateTrackAction('add'))}
+                onClick={() => openTrackMenu()}
               >
                 <span className="pf-track-gold-split__icon" aria-hidden>
                   <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6">

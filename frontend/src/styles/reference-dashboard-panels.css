@@ -1376,6 +1376,34 @@ html[data-theme='dark'] .pf-track-gold-sheet {
   overflow: hidden;
 }
 
+.pf-personal-flow-overlay .pf-vault-form.pf-vault-form--flex:not(.pf-vault-form--import) {
+  flex: 1 1 auto;
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+}
+
+.pf-personal-flow-overlay .pf-vault-form.pf-vault-form--flex:not(.pf-vault-form--import)::before {
+  display: none;
+}
+
+.pf-personal-flow-overlay .pf-vault-form__scroll-body .pf-vault-form__header {
+  padding-top: 0.35rem;
+}
+
+.pf-personal-flow-overlay .pf-vault-form__header {
+  position: relative;
+  padding-right: 4.75rem;
+}
+
+.pf-personal-flow-overlay .pf-vault-form__close {
+  position: absolute;
+  top: 0.65rem;
+  right: 0;
+}
+
 .pf-vault-form--flex {
   display: flex;
   flex-direction: column;

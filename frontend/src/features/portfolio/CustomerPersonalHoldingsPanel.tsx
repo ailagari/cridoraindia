@@ -650,7 +650,7 @@ export function CustomerPersonalHoldingsPanel({
       />
       {formOpen ? (
         <form
-          className="pf-vault-form"
+          className={`pf-vault-form${standaloneFlow === 'add' ? ' pf-vault-form--flex' : ''}`}
           id="pf-vault-add-form"
           aria-labelledby="pf-vault-form-title"
           aria-busy={busy}
@@ -659,28 +659,34 @@ export function CustomerPersonalHoldingsPanel({
             void submit()
           }}
         >
-          <header className="pf-vault-form__header">
-            <span className="pf-vault-form__eyebrow">New record</span>
-            <h4 id="pf-vault-form-title" className="pf-vault-form__title">
-              Add to your vault
-            </h4>
-            <p className="pf-vault-form__lede">
-              Capture what you own. Estimated value updates from the platform <strong className="tabular">22K</strong> reference rate — jeweller marks
-              are not used for personal items.
-            </p>
-            {standaloneFlow ? (
-              <button
-                type="button"
-                className="btn btn-ghost btn-sm pf-vault-form__close"
-                onClick={() => onStandaloneFlowClose?.()}
-                disabled={busy}
-              >
-                Close
-              </button>
-            ) : null}
-          </header>
+          {standaloneFlow === 'add' ? <div className="pf-sheet-handle" aria-hidden /> : null}
 
-          <div className="pf-vault-form__sections">
+          {(() => {
+            const formHeader = (
+              <header className="pf-vault-form__header">
+                <span className="pf-vault-form__eyebrow">New record</span>
+                <h4 id="pf-vault-form-title" className="pf-vault-form__title">
+                  Add to your vault
+                </h4>
+                <p className="pf-vault-form__lede">
+                  Capture what you own. Estimated value updates from the platform <strong className="tabular">22K</strong> reference rate — jeweller marks
+                  are not used for personal items.
+                </p>
+                {standaloneFlow ? (
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm pf-vault-form__close"
+                    onClick={() => onStandaloneFlowClose?.()}
+                    disabled={busy}
+                  >
+                    Close
+                  </button>
+                ) : null}
+              </header>
+            )
+
+            const formSections = (
+              <div className="pf-vault-form__sections">
             <section className="pf-vault-form__section" aria-labelledby="pf-vault-section-item">
               <h5 id="pf-vault-section-item" className="pf-vault-form__section-title">
                 Item
@@ -782,40 +788,72 @@ export function CustomerPersonalHoldingsPanel({
                 </label>
               </div>
             </section>
-          </div>
+              </div>
+            )
 
-          {busy ? (
-            <p className="pf-vault-form__saving" role="status" aria-live="polite">
-              Saving to your vault…
-            </p>
-          ) : null}
+            const formSaving = busy ? (
+              <p className="pf-vault-form__saving" role="status" aria-live="polite">
+                Saving to your vault…
+              </p>
+            ) : null
 
-          <footer className="pf-vault-form__footer">
-            <p className="pf-vault-form__mvp">
-              <span className="pf-vault-form__mvp-tag">MVP</span> Tracking &amp; records only — not redeemable or transferable on Cridora.
-            </p>
-            <FormSubmitFoot error={addFormError} success={addFormSuccess} className="pf-vault-form__actions">
-              <button
-                type="button"
-                className="btn btn-ghost"
-                onClick={() => {
-                  setFormOpen(false)
-                  setAddFormError('')
-                  setAddFormSuccess('')
-                }}
-                disabled={busy}
+            const formFooter = (
+              <footer
+                className={`pf-vault-form__footer${standaloneFlow === 'add' ? ' pf-vault-form__footer--pinned' : ''}`}
               >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="btn btn-primary pf-vault-form__submit"
-                disabled={busy || !title.trim() || !weight.trim()}
-              >
-                {busy ? 'Saving…' : 'Add to vault'}
-              </button>
-            </FormSubmitFoot>
-          </footer>
+                <p className="pf-vault-form__mvp">
+                  <span className="pf-vault-form__mvp-tag">MVP</span> Tracking &amp; records only — not redeemable or transferable on Cridora.
+                </p>
+                <FormSubmitFoot error={addFormError} success={addFormSuccess} className="pf-vault-form__actions">
+                  <button
+                    type="button"
+                    className="btn btn-ghost"
+                    onClick={() => {
+                      if (standaloneFlow) {
+                        onStandaloneFlowClose?.()
+                        return
+                      }
+                      setFormOpen(false)
+                      setAddFormError('')
+                      setAddFormSuccess('')
+                    }}
+                    disabled={busy}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn btn-primary pf-vault-form__submit"
+                    disabled={busy || !title.trim() || !weight.trim()}
+                  >
+                    {busy ? 'Saving…' : 'Add to vault'}
+                  </button>
+                </FormSubmitFoot>
+              </footer>
+            )
+
+            if (standaloneFlow === 'add') {
+              return (
+                <>
+                  <div className="pf-vault-form__scroll-body">
+                    {formHeader}
+                    {formSections}
+                    {formSaving}
+                  </div>
+                  {formFooter}
+                </>
+              )
+            }
+
+            return (
+              <>
+                {formHeader}
+                {formSections}
+                {formSaving}
+                {formFooter}
+              </>
+            )
+          })()}
         </form>
       ) : null}
       {!standaloneFlow && !formOpen && addFormSuccess ? (
