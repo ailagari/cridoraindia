@@ -106,6 +106,42 @@ class AdSenseVerificationTests(SimpleTestCase):
         self.assertEqual(out.count("adsbygoogle.js"), 1)
 
 
+class CanonicalLinkTests(SimpleTestCase):
+    def test_inject_route_seo_removes_static_placeholder_canonical(self):
+        # frontend/index.html ships a hardcoded canonical pointing at the homepage;
+        # inject_route_seo must replace it, not add a second one for the real path.
+        html = (
+            "<html><head>"
+            '<link rel="canonical" href="https://www.cridoraindia.com/" />'
+            '<link rel="alternate" hreflang="en-IN" href="https://www.cridoraindia.com/" />'
+            '<link rel="alternate" hreflang="ml-IN" href="https://www.cridoraindia.com/" />'
+            "</head><body><div id=\"root\"></div></body></html>"
+        )
+        out = inject_route_seo(html, "/gold-rates/kerala")
+        self.assertEqual(out.count('rel="canonical"'), 1)
+        self.assertIn(
+            'rel="canonical" href="https://www.cridoraindia.com/gold-rates/kerala"', out
+        )
+        self.assertNotIn(
+            'rel="canonical" href="https://www.cridoraindia.com/" />', out
+        )
+
+    def test_inject_route_seo_dedupes_hreflang_alternates(self):
+        html = (
+            "<html><head>"
+            '<link rel="canonical" href="https://www.cridoraindia.com/" />'
+            '<link rel="alternate" hreflang="en-IN" href="https://www.cridoraindia.com/" />'
+            '<link rel="alternate" hreflang="ml-IN" href="https://www.cridoraindia.com/" />'
+            "</head><body><div id=\"root\"></div></body></html>"
+        )
+        out = inject_route_seo(html, "/gold-rates/kerala")
+        self.assertEqual(out.count('hreflang="en-IN"'), 1)
+        self.assertEqual(out.count('hreflang="ml-IN"'), 1)
+        self.assertIn(
+            'href="https://www.cridoraindia.com/gold-rates/kerala" hreflang="en-IN"', out
+        )
+
+
 class GA4AnalyticsTests(SimpleTestCase):
     def test_inject_ga4_is_noop_when_id_blank(self):
         html = "<html><head></head><body></body></html>"

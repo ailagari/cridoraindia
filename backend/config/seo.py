@@ -463,8 +463,19 @@ def _inject_link(html_doc: str, rel: str, href: str, **extra: str) -> str:
     attrs = " ".join(f'{k}="{html.escape(v, quote=True)}"' for k, v in extra.items())
     attrs_str = f" {attrs}" if attrs else ""
     tag = f'    <link rel="{rel}" href="{safe_href}"{attrs_str} />\n'
-    if f'rel="{rel}" href="{safe_href}"' in html_doc:
-        return html_doc
+
+    # Strip any existing <link> tag sharing the same rel (+ hreflang/type, if any),
+    # regardless of its href. Without this, the static placeholder baked into
+    # index.html (e.g. canonical -> homepage) survives alongside the tag we're
+    # about to inject for the current path, producing duplicate/conflicting
+    # canonical or hreflang tags — a real SEO/AdSense page-quality issue.
+    identity_parts = [re.escape(f'rel="{rel}"')]
+    for key, value in extra.items():
+        identity_parts.append(re.escape(f'{key}="{html.escape(value, quote=True)}"'))
+    lookahead = "".join(f"(?=[^>]*{part})" for part in identity_parts)
+    stale_pattern = re.compile(r"[ \t]*<link\b" + lookahead + r"[^>]*/?>\n?")
+    html_doc = stale_pattern.sub("", html_doc)
+
     return html_doc.replace("<head>", f"<head>\n{tag}", 1)
 
 
