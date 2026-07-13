@@ -405,12 +405,13 @@ def ads_txt() -> str:
 def _ga4_snippet(measurement_id: str) -> str:
     safe_id = html.escape(measurement_id, quote=True)
     return (
+        f'    <meta name="ga4-measurement-id" content="{safe_id}">\n'
         f'    <script async src="https://www.googletagmanager.com/gtag/js?id={safe_id}"></script>\n'
         "    <script>\n"
         "      window.dataLayer = window.dataLayer || [];\n"
         "      function gtag(){dataLayer.push(arguments);}\n"
         "      gtag('js', new Date());\n"
-        f"      gtag('config', '{safe_id}');\n"
+        f"      gtag('config', '{safe_id}', {{'send_page_view': true}});\n"
         "    </script>\n"
     )
 

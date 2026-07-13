@@ -115,7 +115,8 @@ class GA4AnalyticsTests(SimpleTestCase):
         html = "<html><head></head><body></body></html>"
         out = inject_ga4(html, "G-TESTID123")
         self.assertIn("googletagmanager.com/gtag/js?id=G-TESTID123", out)
-        self.assertIn("gtag('config', 'G-TESTID123');", out)
+        self.assertIn("gtag('config', 'G-TESTID123', {'send_page_view': true});", out)
+        self.assertIn('name="ga4-measurement-id"', out)
 
     def test_inject_ga4_deduplicates_on_repeated_calls(self):
         html = "<html><head></head><body></body></html>"

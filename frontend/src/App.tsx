@@ -1,5 +1,6 @@
 import { BrowserRouter, HashRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { ScrollToTop } from '@/components/ScrollToTop'
+import { GoogleAnalytics } from '@/components/GoogleAnalytics'
 import { AuthProvider } from '@/context/AuthContext'
 import { ThemeProvider } from '@/context/ThemeContext'
 import { ToastProvider } from '@/context/ToastContext'
@@ -68,6 +69,7 @@ export default function App() {
   return (
     <AppRouter>
       <ScrollToTop />
+      <GoogleAnalytics />
       <ThemeProvider>
         <ToastProvider>
         <AuthProvider>
