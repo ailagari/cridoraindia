@@ -10,6 +10,7 @@ import { MarketplaceCartNavIcon } from '@/components/MarketplaceCartNavIcon'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { useAuth } from '@/context/AuthContext'
 import { useMarketplaceCartBadgeCount } from '@/hooks/useMarketplaceCartBadgeCount'
+import { CookieConsentBanner } from '@/components/CookieConsentBanner'
 import { LanguageSwitcher, PublicLocaleProvider, usePublicLocale } from '@/i18n/PublicLocaleProvider'
 import { dashboardLandingPath } from '@/lib/routes'
 import { marketplaceListingCartHref } from '@/lib/marketplaceCartStorage'
@@ -237,10 +238,14 @@ function PublicLayoutInner() {
             <Link className="fb-link" to="/grievance">
               {t('footer.grievance')}
             </Link>
+            <Link className="fb-link" to="/editorial-standards">
+              {t('footer.editorialStandards')}
+            </Link>
           </div>
           <span style={{ color: 'var(--ink3)', fontSize: '0.68rem' }}>{t('footer.ratesNote')}</span>
         </div>
       </footer>
+      <CookieConsentBanner />
     </div>
   )
 }

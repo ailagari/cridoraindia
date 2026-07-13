@@ -317,12 +317,6 @@
     }
     .poster--exporting .poster__cridora-mark { filter: none !important; }
     .poster--exporting .poster__deco-ring { opacity: 0.35; }
-    .poster--exporting.poster--landscape .poster__content {
-      display: flex !important;
-      flex-direction: column;
-      grid-area: main;
-      min-height: 0;
-    }
 
     /* ── Template colour tokens ── */
     .poster[data-template="royal-cream"] {
@@ -1059,6 +1053,7 @@
     { id: "fb-post",    label: "Facebook Post",     w: 1200, h: 630,  cls: "poster--landscape" },
     { id: "fb-square",  label: "Facebook Square",   w: 1080, h: 1080, cls: "" },
     { id: "wa-chat",    label: "WhatsApp Share",    w: 1080, h: 1080, cls: "" },
+    { id: "full-hd",    label: "Full HD",           w: 1920, h: 1080, cls: "poster--landscape", outScale: 1 },
   ];
 
   var TEMPLATES = [
@@ -2365,6 +2360,20 @@
     if (!root) return;
     var view = win || window;
     root.classList.add("poster--exporting");
+    /* html2canvas does not support display:contents (the trick the live
+       preview grid uses to let .poster__content's children become direct
+       grid items). Unwrap it in the DOM so the export matches the preview
+       exactly instead of falling back to a different (broken) layout. */
+    if (root.classList.contains("poster--landscape")) {
+      var content = root.querySelector(".poster__content");
+      if (content && content.parentNode) {
+        var parent = content.parentNode;
+        while (content.firstChild) {
+          parent.insertBefore(content.firstChild, content);
+        }
+        parent.removeChild(content);
+      }
+    }
     root.querySelectorAll("*").forEach(function (node) {
       var cs = view.getComputedStyle(node);
       var clip = cs.getPropertyValue("-webkit-background-clip") || cs.getPropertyValue("background-clip");
@@ -2456,7 +2465,7 @@
       await new Promise(function (r) { requestAnimationFrame(function () { requestAnimationFrame(r); }); });
 
       var canvas = await html2canvas(el.poster, {
-        scale: 2,
+        scale: fmt.outScale || 2,
         useCORS: true,
         allowTaint: true,
         backgroundColor: "#0a0e1a",

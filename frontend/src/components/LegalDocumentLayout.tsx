@@ -4,6 +4,7 @@ import { SeoHead } from '@/components/SeoHead'
 import { LEGAL_ROUTES } from '@/content/siteLegal'
 
 const legalNav = [
+  { to: LEGAL_ROUTES.editorialStandards, label: 'Editorial standards' },
   { to: LEGAL_ROUTES.privacy, label: 'Privacy policy' },
   { to: LEGAL_ROUTES.terms, label: 'Terms of use' },
   { to: LEGAL_ROUTES.disclaimer, label: 'Disclaimer' },

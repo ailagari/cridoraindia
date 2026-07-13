@@ -11,12 +11,25 @@ SITE_URL = "https://www.cridoraindia.com"
 SITE_NAME = "Cridora India"
 SITE_LOGO_URL = f"{SITE_URL}/icon-512.png"
 DEFAULT_OG_IMAGE = f"{SITE_URL}/og-preview.png"
-ADSENSE_PUBLISHER_ID = "ca-pub-1180208702657280"
-ADSENSE_META_SNIPPET = f'    <meta name="google-adsense-account" content="{ADSENSE_PUBLISHER_ID}">\n'
-ADSENSE_SCRIPT_SNIPPET = (
-    f'    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client={ADSENSE_PUBLISHER_ID}" '
-    'crossorigin="anonymous"></script>\n'
-)
+_DEFAULT_ADSENSE_PUBLISHER_ID = "ca-pub-1180208702657280"
+
+
+def adsense_publisher_id() -> str:
+    from django.conf import settings
+
+    return (getattr(settings, "ADSENSE_PUBLISHER_ID", "") or _DEFAULT_ADSENSE_PUBLISHER_ID).strip()
+
+
+def adsense_meta_snippet() -> str:
+    return f'    <meta name="google-adsense-account" content="{adsense_publisher_id()}">\n'
+
+
+def adsense_script_snippet() -> str:
+    pub_id = adsense_publisher_id()
+    return (
+        f'    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client={pub_id}" '
+        'crossorigin="anonymous"></script>\n'
+    )
 
 DEFAULT_KEYWORDS = (
     "gold rate today, Kerala gold rate, gold rate in India, 22K gold rate, "
@@ -226,6 +239,14 @@ ROUTE_SEO: dict[str, dict[str, str]] = {
         "description": "Contact Cridora India for support and partnerships. Based in Kerala, India.",
         "keywords": "contact Cridora India",
     },
+    "/editorial-standards": {
+        "title": "Editorial Standards & Data Sources — Cridora India",
+        "description": (
+            "How Cridora India sources, verifies, and corrects Kerala gold rate data, the gold jewellery "
+            "calculator, and city rate references."
+        ),
+        "keywords": "Cridora data sources, gold rate accuracy, editorial standards",
+    },
 }
 
 for _city in GOLD_RATE_CITIES:
@@ -311,6 +332,7 @@ SITEMAP_PATHS: list[tuple[str, str, str]] = [
     ("/disclaimer", "monthly", "0.4"),
     ("/grievance", "monthly", "0.4"),
     ("/contact", "monthly", "0.5"),
+    ("/editorial-standards", "monthly", "0.5"),
 ]
 
 GOLD_RATE_PATHS = frozenset(
@@ -369,15 +391,42 @@ def inject_adsense_verification(html_doc: str, request_path: str = "/") -> str:
         html_doc,
         flags=re.I | re.S,
     )
-    snippet = ADSENSE_META_SNIPPET
+    snippet = adsense_meta_snippet()
     if _needs_live_rates(request_path):
-        snippet += ADSENSE_SCRIPT_SNIPPET
+        snippet += adsense_script_snippet()
     return html_doc.replace("<head>", f"<head>\n{snippet}", 1)
 
 
 def ads_txt() -> str:
-    pub_id = ADSENSE_PUBLISHER_ID.removeprefix("ca-pub-")
+    pub_id = adsense_publisher_id().removeprefix("ca-pub-")
     return f"google.com, pub-{pub_id}, DIRECT, f08c47fec0942fa0\n"
+
+
+def _ga4_snippet(measurement_id: str) -> str:
+    safe_id = html.escape(measurement_id, quote=True)
+    return (
+        f'    <script async src="https://www.googletagmanager.com/gtag/js?id={safe_id}"></script>\n'
+        "    <script>\n"
+        "      window.dataLayer = window.dataLayer || [];\n"
+        "      function gtag(){dataLayer.push(arguments);}\n"
+        "      gtag('js', new Date());\n"
+        f"      gtag('config', '{safe_id}');\n"
+        "    </script>\n"
+    )
+
+
+def inject_ga4(html_doc: str, measurement_id: str) -> str:
+    """Inject the GA4 gtag.js snippet once, on every page — no-op when unset."""
+    if not measurement_id:
+        return html_doc
+    html_doc = re.sub(
+        r'<script\b[^>]*googletagmanager\.com/gtag/js[^>]*>\s*</script>\s*'
+        r'(<script>\s*window\.dataLayer[\s\S]*?</script>\s*)?',
+        "",
+        html_doc,
+        flags=re.I,
+    )
+    return html_doc.replace("<head>", f"<head>\n{_ga4_snippet(measurement_id)}", 1)
 
 def _replace_or_insert_title(html_doc: str, title: str) -> str:
     safe = html.escape(title, quote=True)
@@ -1028,7 +1077,13 @@ def inject_route_seo(html_doc: str, request_path: str) -> str:
     if prerender and 'id="seo-prerender"' not in out:
         out = out.replace("<div id=\"root\"></div>", prerender + '    <div id="root"></div>', 1)
 
-    return inject_adsense_verification(out, path)
+    out = inject_adsense_verification(out, path)
+
+    ga4_id = getattr(settings, "GA4_MEASUREMENT_ID", "").strip()
+    if ga4_id:
+        out = inject_ga4(out, ga4_id)
+
+    return out
 
 
 def robots_txt() -> str:

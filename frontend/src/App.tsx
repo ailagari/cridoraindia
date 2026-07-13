@@ -44,6 +44,7 @@ import { TermsOfUsePage } from '@/pages/TermsOfUsePage'
 import { DisclaimerPage } from '@/pages/DisclaimerPage'
 import { GrievancePage } from '@/pages/GrievancePage'
 import { ContactPage } from '@/pages/ContactPage'
+import { EditorialStandardsPage } from '@/pages/EditorialStandardsPage'
 import { PlatformBillingTaxBootstrap } from '@/components/PlatformBillingTaxBootstrap'
 import { isNativePlatform } from '@/lib/capacitorPlatform'
 import '@/styles/index.css'
@@ -110,6 +111,7 @@ export default function App() {
               <Route path="disclaimer" element={<DisclaimerPage />} />
               <Route path="grievance" element={<GrievancePage />} />
               <Route path="contact" element={<ContactPage />} />
+              <Route path="editorial-standards" element={<EditorialStandardsPage />} />
             </Route>
 
             <Route path="dashboard" element={<DashboardIndexRedirect />} />

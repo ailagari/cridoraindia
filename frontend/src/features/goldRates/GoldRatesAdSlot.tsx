@@ -1,4 +1,4 @@
-import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react'
+import { useEffect, useRef, type CSSProperties, type ReactNode, type RefObject } from 'react'
 import type { GoldRatesAdPlacementDTO } from '@/lib/marketplaceApi'
 import { adSlotFrameStyle, getGoldRatesAdSlotSpec } from '@/features/goldRates/goldRatesAdSpecs'
 
@@ -6,6 +6,56 @@ declare global {
   interface Window {
     adsbygoogle?: unknown[]
   }
+}
+
+/**
+ * Injects a manual ad-network snippet (Media.net, Adsterra, Ezoic, a direct
+ * jeweller banner, etc.) into a container.
+ *
+ * `dangerouslySetInnerHTML` parses `<script>` tags into inert DOM nodes that
+ * never execute — that's a browser/HTML-spec rule, not a React quirk. Any
+ * network snippet pasted into "manual" mode would silently render nothing.
+ * This clones each `<script>` (inline or with `src`) into a freshly created
+ * element so the browser actually runs it.
+ */
+function useManualAdHtml(containerRef: RefObject<HTMLElement | null>, html: string | undefined) {
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+    container.innerHTML = ''
+    if (!html?.trim()) return
+
+    const template = document.createElement('template')
+    template.innerHTML = html
+    const fragment = template.content
+
+    for (const original of Array.from(fragment.querySelectorAll('script'))) {
+      const executable = document.createElement('script')
+      for (const attr of Array.from(original.attributes)) {
+        executable.setAttribute(attr.name, attr.value)
+      }
+      executable.text = original.textContent ?? ''
+      original.replaceWith(executable)
+    }
+
+    container.appendChild(fragment)
+  }, [containerRef, html])
+}
+
+function ManualAdHtml({
+  html,
+  className,
+  style,
+  label,
+}: {
+  html: string
+  className?: string
+  style?: CSSProperties
+  label?: string
+}) {
+  const ref = useRef<HTMLElement | null>(null)
+  useManualAdHtml(ref, html)
+  return <aside ref={ref} className={className} style={style} aria-label={label} />
 }
 
 const SLOT_PLACEHOLDER_IMAGES: Record<string, string> = {
@@ -188,11 +238,11 @@ export function GoldRatesAdSlot({
 
   if (placement.mode === 'manual' && placement.manual_html?.trim()) {
     return (
-      <aside
+      <ManualAdHtml
         className={`${baseCls} gr-ad--manual`}
         style={frameStyle}
-        aria-label={placement.label || 'Sponsored'}
-        dangerouslySetInnerHTML={{ __html: placement.manual_html }}
+        label={placement.label || 'Sponsored'}
+        html={placement.manual_html}
       />
     )
   }

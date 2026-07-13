@@ -31,6 +31,12 @@ DJANGO_PUBLIC_BASE_URL = (os.environ.get("DJANGO_PUBLIC_BASE_URL") or "").strip(
 GOOGLE_SITE_VERIFICATION = (os.environ.get("GOOGLE_SITE_VERIFICATION") or "").strip()
 GOOGLE_OAUTH_CLIENT_ID = (os.environ.get("GOOGLE_OAUTH_CLIENT_ID") or "").strip()
 
+# GA4 measurement ID (e.g. "G-XXXXXXXXXX"). Injected on every public page for traffic analytics.
+GA4_MEASUREMENT_ID = (os.environ.get("GA4_MEASUREMENT_ID") or "G-4KGJCVPZV6").strip()
+
+# Google AdSense publisher ID (e.g. ca-pub-xxxxxxxx). Used for ads.txt, verification meta, and admin defaults.
+ADSENSE_PUBLISHER_ID = (os.environ.get("ADSENSE_PUBLISHER_ID") or "ca-pub-1180208702657280").strip()
+
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",

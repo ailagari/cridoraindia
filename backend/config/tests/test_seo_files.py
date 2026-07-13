@@ -1,7 +1,7 @@
-from django.test import RequestFactory, SimpleTestCase
+from django.test import RequestFactory, SimpleTestCase, override_settings
 
 from config.middleware import SeoFilesMiddleware
-from config.seo import inject_adsense_verification, inject_route_seo, sitemap_xml
+from config.seo import inject_adsense_verification, inject_ga4, inject_route_seo, sitemap_xml
 
 
 class SeoFilesMiddlewareTests(SimpleTestCase):
@@ -88,6 +88,12 @@ class AdSenseVerificationTests(SimpleTestCase):
         self.assertNotIn('J00" />', out)
         self.assertNotIn('s0" />', out)
 
+    @override_settings(ADSENSE_PUBLISHER_ID="ca-pub-TESTENV999")
+    def test_ads_txt_uses_settings_publisher_id(self):
+        from config.seo import ads_txt
+
+        self.assertIn("pub-TESTENV999", ads_txt())
+
     def test_inject_adsense_verification_deduplicates_tags(self):
         html = (
             "<html><head>"
@@ -98,3 +104,32 @@ class AdSenseVerificationTests(SimpleTestCase):
         out = inject_adsense_verification(html, "/gold-rates/kerala")
         self.assertEqual(out.count("google-adsense-account"), 1)
         self.assertEqual(out.count("adsbygoogle.js"), 1)
+
+
+class GA4AnalyticsTests(SimpleTestCase):
+    def test_inject_ga4_is_noop_when_id_blank(self):
+        html = "<html><head></head><body></body></html>"
+        self.assertEqual(inject_ga4(html, ""), html)
+
+    def test_inject_ga4_adds_gtag_snippet(self):
+        html = "<html><head></head><body></body></html>"
+        out = inject_ga4(html, "G-TESTID123")
+        self.assertIn("googletagmanager.com/gtag/js?id=G-TESTID123", out)
+        self.assertIn("gtag('config', 'G-TESTID123');", out)
+
+    def test_inject_ga4_deduplicates_on_repeated_calls(self):
+        html = "<html><head></head><body></body></html>"
+        out = inject_ga4(inject_ga4(html, "G-TESTID123"), "G-TESTID123")
+        self.assertEqual(out.count("googletagmanager.com/gtag/js"), 1)
+
+    @override_settings(GA4_MEASUREMENT_ID="G-ROUTEID456")
+    def test_inject_route_seo_adds_ga4_when_configured(self):
+        html = '<html><head></head><body><div id="root"></div></body></html>'
+        out = inject_route_seo(html, "/")
+        self.assertIn("googletagmanager.com/gtag/js?id=G-ROUTEID456", out)
+
+    @override_settings(GA4_MEASUREMENT_ID="")
+    def test_inject_route_seo_skips_ga4_when_unset(self):
+        html = '<html><head></head><body><div id="root"></div></body></html>'
+        out = inject_route_seo(html, "/")
+        self.assertNotIn("googletagmanager.com", out)

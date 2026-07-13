@@ -43,8 +43,16 @@ export const mlMessages: Record<MessageKey, string> = {
   'footer.terms': 'ഉപയോഗ നിബന്ധനകൾ',
   'footer.disclaimer': 'ഡിസ്‌ക്ലൈമർ',
   'footer.grievance': 'പരാതി പരിഹാരം',
+  'footer.editorialStandards': 'എഡിറ്റോറിയൽ മാനദണ്ഡങ്ങൾ',
   'footer.ratesNote':
     'ഇവിടെ നൽകിയിരിക്കുന്ന സ്വർണ്ണനിരക്കുകൾ സൂചനകൾ മാത്രമാണ്. ഇത് സെബി (SEBI) അംഗീകൃത നിക്ഷേപ ഉപദേശമല്ല.',
+
+  'cookie.title': 'കുക്കികളും പരസ്യങ്ങളും',
+  'cookie.body':
+    'ലോഗിൻ, മുൻഗണനകൾ എന്നിവയ്ക്ക് അത്യാവശ്യ കുക്കികളും പൊതു പേജുകളിൽ അനലിറ്റിക്സ്, Google AdSense പരസ്യ കുക്കികളും ഉപയോഗിച്ചേക്കാം. വിശദാംശങ്ങൾ:',
+  'cookie.privacyLink': 'പ്രൈവസി പോളിസി',
+  'cookie.accept': 'എല്ലാം അംഗീകരിക്കുക',
+  'cookie.essential': 'അത്യാവശ്യം മാത്രം',
   'footer.kycBadge': 'KYC തയ്യാറ്',
   'footer.bisBadge': 'ഹാൾമാർക്ക് വിവരം',
   'mobile.home': 'ഹോം',

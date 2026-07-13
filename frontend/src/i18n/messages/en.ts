@@ -43,7 +43,15 @@ export const enMessages = {
   'footer.terms': 'Terms of use',
   'footer.disclaimer': 'Disclaimer',
   'footer.grievance': 'Grievance',
+  'footer.editorialStandards': 'Editorial standards',
   'footer.ratesNote': 'Gold rates are indicative. Not SEBI regulated investment advice.',
+
+  'cookie.title': 'Cookies & advertising',
+  'cookie.body':
+    'We use essential cookies for login and preferences, and may use analytics and Google AdSense advertising cookies on public pages. See our',
+  'cookie.privacyLink': 'Privacy policy',
+  'cookie.accept': 'Accept all',
+  'cookie.essential': 'Essential only',
   'footer.kycBadge': 'KYC-ready',
   'footer.bisBadge': 'Hallmark info',
 

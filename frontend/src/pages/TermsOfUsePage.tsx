@@ -63,7 +63,16 @@ export function TermsOfUsePage() {
         </ul>
       </LegalSection>
 
-      <LegalSection title="7. Intellectual property">
+      <LegalSection title="7. Advertising and third-party content">
+        <p style={{ margin: 0 }}>
+          Some public pages display advertisements served by <strong>Google AdSense</strong> and similar partners.
+          Ads are identified as sponsored content and may use cookies as described in our{' '}
+          <Link to={LEGAL_ROUTES.privacy}>Privacy policy</Link>. Cridora does not endorse products or services shown
+          in third-party ads. Jeweller listings and marketplace content are separate from display advertising.
+        </p>
+      </LegalSection>
+
+      <LegalSection title="8. Intellectual property">
         <p style={{ margin: 0 }}>
           Cridora branding, software, and original content on the site are owned by or licensed to{' '}
           {SITE_LEGAL.publisherName}. You may not copy or redistribute site content for commercial use without
@@ -71,7 +80,7 @@ export function TermsOfUsePage() {
         </p>
       </LegalSection>
 
-      <LegalSection title="8. Limitation of liability">
+      <LegalSection title="9. Limitation of liability">
         <p style={{ margin: 0 }}>
           To the maximum extent permitted by law, {SITE_LEGAL.publisherName} is not liable for indirect,
           incidental, or consequential damages arising from use of the site, rate inaccuracies, jeweller actions, or
@@ -81,14 +90,14 @@ export function TermsOfUsePage() {
         </p>
       </LegalSection>
 
-      <LegalSection title="9. Governing law">
+      <LegalSection title="10. Governing law">
         <p style={{ margin: 0 }}>
           These terms are governed by the laws of India. Courts in Kerala shall have exclusive jurisdiction, subject
           to mandatory consumer protections in your state of residence.
         </p>
       </LegalSection>
 
-      <LegalSection title="10. Contact">
+      <LegalSection title="11. Contact">
         <p style={{ margin: 0 }}>
           Questions about these terms:{' '}
           <a href={`mailto:${SITE_LEGAL.contactEmail}`}>{SITE_LEGAL.contactEmail}</a> or our{' '}

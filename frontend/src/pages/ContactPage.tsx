@@ -103,6 +103,12 @@ export function ContactPage() {
               {' · '}
               <Link to={LEGAL_ROUTES.disclaimer}>Disclaimer</Link>
             </li>
+            <li>
+              <strong>Advertising:</strong> Google AdSense publisher ID {SITE_LEGAL.adsensePublisherId}.{' '}
+              <a href={`${SITE_LEGAL.website}/ads.txt`} target="_blank" rel="noopener noreferrer">
+                ads.txt
+              </a>
+            </li>
           </ul>
         </div>
 

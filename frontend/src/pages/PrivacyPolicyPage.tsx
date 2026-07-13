@@ -87,15 +87,45 @@ export function PrivacyPolicyPage() {
         </ul>
       </LegalSection>
 
-      <LegalSection title="5. Cookies">
+      <LegalSection title="5. Google Analytics">
+        <p style={{ margin: '0 0 0.75rem' }}>
+          We use <strong>Google Analytics (GA4)</strong> to measure page views, session behaviour, and which gold
+          rate or calculator pages are most useful, so we can improve the site. Google Analytics sets cookies and
+          collects usage data (pages visited, approximate location from IP, device/browser type); it does not
+          receive your name, phone, or account details.
+        </p>
+        <ul style={{ margin: 0, paddingLeft: '1.15rem' }}>
+          <li>
+            Learn how Google uses this data at{' '}
+            <a href="https://policies.google.com/technologies/partner-sites" target="_blank" rel="noopener noreferrer">
+              Google partner sites policy
+            </a>
+            .
+          </li>
+          <li>
+            You can opt out of Google Analytics tracking using the{' '}
+            <a
+              href="https://tools.google.com/dlpage/gaoptout"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Google Analytics Opt-out Browser Add-on
+            </a>
+            , or via your browser&apos;s cookie settings.
+          </li>
+        </ul>
+      </LegalSection>
+
+      <LegalSection title="6. Cookies">
         <p style={{ margin: '0 0 0.75rem' }}>
           We use essential cookies for login and security, preference cookies for theme/language, and analytics or
-          advertising cookies where enabled. You can control cookies through your browser settings; disabling
-          essential cookies may limit site functionality.
+          advertising cookies where enabled. On your first visit we show a cookie notice so you can accept all cookies
+          or limit use to essential cookies only. You can also control cookies through your browser settings;
+          disabling essential cookies may limit site functionality.
         </p>
       </LegalSection>
 
-      <LegalSection title="6. Sharing">
+      <LegalSection title="7. Sharing">
         <p style={{ margin: '0 0 0.75rem' }}>
           We do not sell your personal data. We may share information with verified jeweller partners (when you
           transact with them), payment and KYC service providers, hosting and analytics vendors, and authorities
@@ -103,7 +133,7 @@ export function PrivacyPolicyPage() {
         </p>
       </LegalSection>
 
-      <LegalSection title="7. Retention and security">
+      <LegalSection title="8. Retention and security">
         <p style={{ margin: '0 0 0.75rem' }}>
           We retain data while your account is active and as needed for legal, tax, and fraud-prevention
           obligations. We apply reasonable technical and organisational measures; no online service is completely
@@ -111,7 +141,7 @@ export function PrivacyPolicyPage() {
         </p>
       </LegalSection>
 
-      <LegalSection title="8. Your rights">
+      <LegalSection title="9. Your rights">
         <p style={{ margin: '0 0 0.75rem' }}>
           Depending on applicable law, you may request access, correction, or deletion of personal data, or
           withdraw consent for marketing. Contact{' '}
@@ -120,13 +150,13 @@ export function PrivacyPolicyPage() {
         </p>
       </LegalSection>
 
-      <LegalSection title="9. Children">
+      <LegalSection title="10. Children">
         <p style={{ margin: 0 }}>
           Our services are not directed at children under 18. We do not knowingly collect data from minors.
         </p>
       </LegalSection>
 
-      <LegalSection title="10. Changes">
+      <LegalSection title="11. Changes">
         <p style={{ margin: 0 }}>
           We may update this policy. Material changes will be reflected on this page with a revised date. Continued
           use after changes constitutes acceptance.

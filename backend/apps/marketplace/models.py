@@ -1051,8 +1051,21 @@ def get_or_create_ticker() -> GoldTickerConfig:
     return obj
 
 
+def _default_adsense_client_id() -> str:
+    from django.conf import settings
+
+    return (getattr(settings, "ADSENSE_PUBLISHER_ID", "") or "").strip()
+
+
 def get_or_create_gold_rates_page_config() -> GoldRatesPageConfig:
-    obj, _ = GoldRatesPageConfig.objects.get_or_create(pk=1)
+    client_id = _default_adsense_client_id()
+    obj, created = GoldRatesPageConfig.objects.get_or_create(
+        pk=1,
+        defaults={"adsense_client_id": client_id} if client_id else {},
+    )
+    if not created and not obj.adsense_client_id and client_id:
+        obj.adsense_client_id = client_id
+        obj.save(update_fields=["adsense_client_id"])
     return obj
 
 
@@ -1097,7 +1110,14 @@ def ensure_default_gold_rates_ad_placements() -> None:
 
 
 def get_or_create_gold_calculator_page_config() -> GoldCalculatorPageConfig:
-    obj, _ = GoldCalculatorPageConfig.objects.get_or_create(pk=1)
+    client_id = _default_adsense_client_id()
+    obj, created = GoldCalculatorPageConfig.objects.get_or_create(
+        pk=1,
+        defaults={"adsense_client_id": client_id} if client_id else {},
+    )
+    if not created and not obj.adsense_client_id and client_id:
+        obj.adsense_client_id = client_id
+        obj.save(update_fields=["adsense_client_id"])
     return obj
 
 
