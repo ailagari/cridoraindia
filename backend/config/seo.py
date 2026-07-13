@@ -421,6 +421,18 @@ def inject_ga4(html_doc: str, measurement_id: str) -> str:
     if not measurement_id:
         return html_doc
     html_doc = re.sub(
+        r'<!--\s*Google tag \(gtag\.js\)[^>]*-->\s*',
+        "",
+        html_doc,
+        flags=re.I,
+    )
+    html_doc = re.sub(
+        r'<meta\s+name=["\']ga4-measurement-id["\'][^>]*>\s*',
+        "",
+        html_doc,
+        flags=re.I,
+    )
+    html_doc = re.sub(
         r'<script\b[^>]*googletagmanager\.com/gtag/js[^>]*>\s*</script>\s*'
         r'(<script>\s*window\.dataLayer[\s\S]*?</script>\s*)?',
         "",
