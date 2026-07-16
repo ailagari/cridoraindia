@@ -51,6 +51,32 @@ class SeoFilesMiddlewareTests(SimpleTestCase):
         out = inject_route_seo(html, "/gold-rates/mumbai")
         self.assertIn('name="robots" content="noindex, follow"', out)
 
+    def test_inject_route_seo_canonicalizes_client_redirect_stub_pages(self):
+        # /gold-rates, /verified-jewellers, etc. render nothing but a client-side
+        # <Navigate replace> (App.tsx) to another real page. Left self-canonical
+        # and indexable, Googlebot renders them, lands on duplicate content, and
+        # flags them "Duplicate without user-selected canonical" in Search Console.
+        html = (
+            "<html><head>"
+            '<meta name="robots" content="index, follow" />'
+            '<link rel="canonical" href="https://www.cridoraindia.com/" />'
+            "</head><body><div id=\"root\"></div></body></html>"
+        )
+        out = inject_route_seo(html, "/gold-rates")
+        self.assertIn('name="robots" content="noindex, follow"', out)
+        self.assertEqual(out.count('rel="canonical"'), 1)
+        self.assertIn(
+            'rel="canonical" href="https://www.cridoraindia.com/gold-rates/kerala"', out
+        )
+
+    def test_inject_route_seo_canonicalizes_verified_jewellers_stub(self):
+        html = '<html><head></head><body><div id="root"></div></body></html>'
+        out = inject_route_seo(html, "/verified-jewellers")
+        self.assertIn('name="robots" content="noindex, follow"', out)
+        self.assertIn(
+            'rel="canonical" href="https://www.cridoraindia.com/jewellers"', out
+        )
+
 
 class AdSenseVerificationTests(SimpleTestCase):
     def test_inject_route_seo_places_adsense_meta_on_homepage(self):

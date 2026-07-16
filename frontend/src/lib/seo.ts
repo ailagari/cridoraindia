@@ -266,75 +266,6 @@ export function goldCalculatorWebAppJsonLd(path: string): Record<string, unknown
   }
 }
 
-/**
- * PriceSpecification schema blocks for live gold rates.
- * Enables Google's price-related rich results for gold queries.
- */
-export function priceSpecificationJsonLd(opts: {
-  r22: number | null
-  r24: number | null
-  r18?: number | null
-  city?: string
-}): Record<string, unknown>[] {
-  const location = opts.city ?? 'India'
-  const today = new Date().toISOString().slice(0, 10)
-  const blocks: Record<string, unknown>[] = []
-  if (opts.r22 != null) {
-    blocks.push({
-      '@context': 'https://schema.org',
-      '@type': 'Product',
-      name: `22K Gold per gram — ${location}`,
-      description: `Live 22K (916 BIS hallmark) gold rate per gram in ${location}. Updated every few minutes on Cridora India.`,
-      category: 'Precious Metal',
-      brand: { '@type': 'Brand', name: 'BIS 916 Hallmark Gold' },
-      offers: {
-        '@type': 'Offer',
-        priceCurrency: 'INR',
-        price: opts.r22.toFixed(2),
-        priceValidUntil: today,
-        availability: 'https://schema.org/InStock',
-        seller: { '@type': 'Organization', name: SITE_NAME, url: SITE_URL },
-      },
-    })
-  }
-  if (opts.r24 != null) {
-    blocks.push({
-      '@context': 'https://schema.org',
-      '@type': 'Product',
-      name: `24K Gold per gram — ${location}`,
-      description: `Live 24K (999 pure) gold rate per gram in ${location}. Updated every few minutes on Cridora India.`,
-      category: 'Precious Metal',
-      brand: { '@type': 'Brand', name: '24K Pure Gold' },
-      offers: {
-        '@type': 'Offer',
-        priceCurrency: 'INR',
-        price: opts.r24.toFixed(2),
-        priceValidUntil: today,
-        availability: 'https://schema.org/InStock',
-        seller: { '@type': 'Organization', name: SITE_NAME, url: SITE_URL },
-      },
-    })
-  }
-  if (opts.r18 != null) {
-    blocks.push({
-      '@context': 'https://schema.org',
-      '@type': 'Product',
-      name: `18K Gold per gram — ${location}`,
-      description: `Live 18K (750 hallmark) gold rate per gram in ${location} on Cridora India.`,
-      category: 'Precious Metal',
-      offers: {
-        '@type': 'Offer',
-        priceCurrency: 'INR',
-        price: opts.r18.toFixed(2),
-        priceValidUntil: today,
-        availability: 'https://schema.org/InStock',
-        seller: { '@type': 'Organization', name: SITE_NAME, url: SITE_URL },
-      },
-    })
-  }
-  return blocks
-}
-
 export function goldCalculatorHowToJsonLd(): Record<string, unknown> {
   return {
     '@context': 'https://schema.org',
@@ -364,6 +295,45 @@ export function goldCalculatorHowToJsonLd(): Record<string, unknown> {
         text: 'See metal value, making charges, GST on gold (3%), GST on making (18%), and estimated total.',
       },
     ],
+  }
+}
+
+/**
+ * Product + Offer schema for a real, purchasable marketplace listing (jewellery
+ * item). This is the only place on the site where Product/Offer markup belongs —
+ * unlike the gold-per-gram rate widgets, these are actual items a customer can
+ * buy, with a real photo, price, seller and stock count.
+ */
+export function marketplaceProductJsonLd(opts: {
+  id: number
+  name: string
+  imageUrl: string
+  path: string
+  description: string
+  category?: string
+  jewellerName: string
+  priceInr: number
+  inStock: boolean
+}): Record<string, unknown> {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: opts.name,
+    description: opts.description,
+    image: [opts.imageUrl],
+    sku: String(opts.id),
+    brand: { '@type': 'Brand', name: opts.jewellerName },
+    ...(opts.category ? { category: opts.category } : {}),
+    url: absoluteUrl(opts.path),
+    offers: {
+      '@type': 'Offer',
+      url: absoluteUrl(opts.path),
+      priceCurrency: 'INR',
+      price: opts.priceInr.toFixed(2),
+      availability: opts.inStock ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+      itemCondition: 'https://schema.org/NewCondition',
+      seller: { '@type': 'Organization', name: opts.jewellerName },
+    },
   }
 }
 

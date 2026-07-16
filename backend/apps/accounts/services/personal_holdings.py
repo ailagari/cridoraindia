@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from decimal import Decimal
 from typing import Any
 
@@ -16,12 +17,56 @@ User = get_user_model()
 
 ALLOWED_DOCUMENT_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".pdf"}
 
+# The platform's published "22K reference ₹/g" is itself quoted at BIS 916
+# (22/24 karat) fineness. Holdings recorded at a different purity are scaled
+# relative to that same standard so a 24K item is valued above the 22K rate
+# and an 18K item below it, matching how jewellers actually price purity.
+REFERENCE_FINENESS = Decimal("0.916")
 
-def calculate_holding_value_inr(weight_grams: Decimal, reference_inr_per_gram_22k: Decimal) -> Decimal:
-    """MVP: ornamental weight at published 22K reference ₹/g (BIS 916 default on holdings)."""
+_KARAT_RE = re.compile(r"(\d{1,2})\s*k\b", re.IGNORECASE)
+_FINENESS_RE = re.compile(r"\b(\d{3})\b")
+
+
+def purity_fineness(purity: str | None) -> Decimal:
+    """Best-effort fineness (0-1) parsed from a free-text purity label.
+
+    Recognizes karat notation ("24K", "22 K") and three-digit hallmark
+    fineness ("999", "916", "750"). Falls back to the platform's own 22K/916
+    reference standard for blank or unrecognized text (e.g. legacy
+    "BIS 916" rows, or a custom label nobody validated) — this preserves the
+    old, safe default instead of guessing.
+    """
+    text = (purity or "").strip()
+    if not text:
+        return REFERENCE_FINENESS
+    m = _KARAT_RE.search(text)
+    if m:
+        karat = Decimal(m.group(1))
+        if Decimal("1") <= karat <= Decimal("24"):
+            return (karat / Decimal("24")).quantize(Decimal("0.0001"))
+    m = _FINENESS_RE.search(text)
+    if m:
+        val = Decimal(m.group(1))
+        if Decimal("100") <= val <= Decimal("999"):
+            return (val / Decimal("1000")).quantize(Decimal("0.0001"))
+    return REFERENCE_FINENESS
+
+
+def calculate_holding_value_inr(
+    weight_grams: Decimal,
+    reference_inr_per_gram_22k: Decimal,
+    purity: str | None = None,
+) -> Decimal:
+    """Weight x reference ₹/g, scaled for purity when it's recorded and differs
+    from the platform's 22K/916 reference standard. Omitting `purity` keeps the
+    old flat 22K-rate behavior (used for blended/aggregate grams that don't map
+    to a single holding's purity, e.g. Cridora vault balances)."""
     if weight_grams <= 0:
         return Decimal("0")
-    return (weight_grams * reference_inr_per_gram_22k).quantize(Decimal("0.01"))
+    rate = reference_inr_per_gram_22k
+    if purity:
+        rate = rate * (purity_fineness(purity) / REFERENCE_FINENESS)
+    return (weight_grams * rate).quantize(Decimal("0.01"))
 
 
 def reference_gold_rate_inr_per_gram() -> tuple[Decimal, str]:
@@ -78,11 +123,16 @@ def customer_portfolio_totals_payload(user: User) -> dict[str, Any]:
     ):
         loan_outstanding += ln.principal_outstanding_inr
 
-    pers = PersonalGoldHolding.objects.filter(user=user, is_removed=False).aggregate(
-        g=Coalesce(Sum("weight_grams"), Decimal("0")),
+    personal_rows = list(
+        PersonalGoldHolding.objects.filter(user=user, is_removed=False).values(
+            "weight_grams", "purity"
+        )
     )
-    personal_g = pers["g"] or Decimal("0")
-    ref_personal_inr = calculate_holding_value_inr(personal_g, rate)
+    personal_g = sum((r["weight_grams"] for r in personal_rows), Decimal("0"))
+    ref_personal_inr = sum(
+        (calculate_holding_value_inr(r["weight_grams"], rate, r["purity"]) for r in personal_rows),
+        Decimal("0"),
+    ).quantize(Decimal("0.01"))
 
     recorded_basis = PersonalGoldHolding.objects.filter(user=user, is_removed=False).aggregate(
         b=Coalesce(
@@ -379,7 +429,7 @@ def customer_portfolio_ledger_payload(user: User, ledger_filter: str = "all") ->
         if ph.jeweller_id:
             ju = ph.jeweller
             jn = ju.business_name or ju.email or ""
-        cur = calculate_holding_value_inr(ph.weight_grams, rate)
+        cur = calculate_holding_value_inr(ph.weight_grams, rate, ph.purity)
         rows.append(
             {
                 "occurred_at": ph.created_at.isoformat(),
@@ -506,6 +556,13 @@ def admin_personal_vault_user_summaries(
         )
 
     rate, _ = reference_gold_rate_inr_per_gram()
+    value_by_user: dict[int, Decimal] = {}
+    for r in qs.filter(user_id__in=user_ids).values("user_id", "weight_grams", "purity"):
+        uid = int(r["user_id"])
+        value_by_user[uid] = value_by_user.get(uid, Decimal("0")) + calculate_holding_value_inr(
+            r["weight_grams"], rate, r["purity"]
+        )
+
     out: list[dict[str, Any]] = []
     for row in user_rows:
         uid = int(row["user_id"])
@@ -543,7 +600,9 @@ def admin_personal_vault_user_summaries(
                 "default_jeweller_name": default_name,
                 "holding_count": int(row["holding_count"]),
                 "total_weight_grams": str(total_g),
-                "total_estimated_value_inr": str(calculate_holding_value_inr(total_g, rate)),
+                "total_estimated_value_inr": str(
+                    value_by_user.get(uid, Decimal("0")).quantize(Decimal("0.01"))
+                ),
                 "holdings_by_jeweller": breakdown,
             }
         )

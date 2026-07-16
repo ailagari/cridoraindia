@@ -260,18 +260,6 @@ export function JewellerSkuFormTable({
           </td>
         </tr>
         <tr>
-          <th scope="row">Display rating</th>
-          <td>
-            <label className="field" style={{ margin: 0 }}>
-              <input
-                inputMode="decimal"
-                value={form.rating}
-                onChange={(e) => setForm((prev) => ({ ...prev, rating: e.target.value }))}
-              />
-            </label>
-          </td>
-        </tr>
-        <tr>
           <th scope="row">Cross-jeweller redemption</th>
           <td>
             <label className="field" style={{ margin: 0, flexDirection: 'row', alignItems: 'center', gap: '0.5rem' }}>

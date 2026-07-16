@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ProductPhoto } from '@/components/ProductPhoto'
+import { SeoHead } from '@/components/SeoHead'
 import {
   fetchMarketplaceProduct,
   type MarketplaceProductDTO,
@@ -20,11 +21,13 @@ import {
   hasStoneOrOtherMetal,
 } from '@/features/marketplace/productPricing'
 import {
+  calculateCheckoutPrice,
   makingChargesShortLabel,
   sameStoreMakingExplainer,
   type CheckoutPricingContext,
 } from '@/lib/marketplacePricing'
 import { useMarketplaceCart } from '@/features/marketplace/useMarketplaceCart'
+import { breadcrumbJsonLd, marketplaceProductJsonLd } from '@/lib/seo'
 
 function Row({
   label,
@@ -108,6 +111,42 @@ export function MarketplaceProductDetailPage() {
     return () => window.clearTimeout(t)
   }, [cartToast])
 
+  const productPath = `/marketplace/product/${productId ?? ''}`
+
+  const productDescription = useMemo(() => {
+    if (!product) return ''
+    const purity = (product.metal_purity_label ?? '').trim() || 'hallmark gold'
+    const location = product.jeweller_city ? `, ${product.jeweller_city}` : ''
+    return `${product.category ? `${product.category} — ` : ''}${product.gold_weight_grams} g ${purity} jewellery from ${product.jeweller_name}${location}. Live-priced with GST and making charges included on Cridora India.`
+  }, [product])
+
+  const productPriceInr = useMemo(
+    () => (product ? calculateCheckoutPrice(product, 0, 0).finalAmount : 0),
+    [product],
+  )
+
+  const jsonLd = useMemo(() => {
+    if (!product) return []
+    return [
+      breadcrumbJsonLd([
+        { name: 'Home', path: '/' },
+        { name: 'Marketplace', path: '/marketplace' },
+        { name: product.name, path: productPath },
+      ]),
+      marketplaceProductJsonLd({
+        id: product.id,
+        name: product.name,
+        imageUrl: product.image_url,
+        path: productPath,
+        description: productDescription,
+        category: product.category,
+        jewellerName: product.jeweller_name,
+        priceInr: productPriceInr,
+        inStock: product.stock_quantity == null || product.stock_quantity > 0,
+      }),
+    ]
+  }, [product, productPath, productDescription, productPriceInr])
+
   const goCart = () => navigate('/marketplace?cart=1')
 
   const goCheckout = () => {
@@ -139,6 +178,13 @@ export function MarketplaceProductDetailPage() {
 
   return (
     <div style={{ paddingBottom: '4rem' }}>
+      <SeoHead
+        title={`${product.name} — ${product.jeweller_name} | Cridora India Marketplace`}
+        description={productDescription}
+        path={productPath}
+        ogImage={product.image_url}
+        jsonLd={jsonLd}
+      />
       <div className="container page" style={{ paddingTop: '1.25rem' }}>
         <div style={{ marginBottom: '1.25rem' }}>
           <Link to="/marketplace" className="btn btn-ghost">

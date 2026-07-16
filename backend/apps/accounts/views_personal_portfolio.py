@@ -122,7 +122,7 @@ def _resolve_holding_purchase_fields(
 
 def _recalc_holding_inr(h: PersonalGoldHolding) -> None:
     rate, _ = reference_gold_rate_inr_per_gram()
-    h.estimated_current_value_inr = calculate_holding_value_inr(h.weight_grams, rate)
+    h.estimated_current_value_inr = calculate_holding_value_inr(h.weight_grams, rate, h.purity)
 
 
 def _jeweller_label(u: User) -> str:
@@ -141,7 +141,7 @@ def _holding_detail_dict(
         jeweller_name = _jeweller_label(j)
         purchase_jeweller_label = f"Purchased From {jeweller_name}"
     rate, _ = reference_gold_rate_inr_per_gram()
-    live_inr = calculate_holding_value_inr(h.weight_grams, rate)
+    live_inr = calculate_holding_value_inr(h.weight_grams, rate, h.purity)
     doc_count = h.document_count if hasattr(h, "document_count") else None
     if doc_count is None:
         doc_count = h.documents.filter(is_removed=False).count()

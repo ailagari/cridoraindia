@@ -29,7 +29,6 @@ import {
   organizationJsonLd,
   goldRatesOgImage,
   webSiteJsonLd,
-  priceSpecificationJsonLd,
 } from '@/lib/seo'
 import { useLivePoll } from '@/lib/useLivePoll'
 import '@/styles/gold-rates-page.css'
@@ -104,7 +103,6 @@ function GoldRatesCityPageInner({ citySlug }: { citySlug: string }) {
         { name: 'Kerala gold rates', path: '/gold-rates/kerala' },
         { name: `${city.nameEn} gold rate`, path },
       ]),
-      ...(r22 != null || r24 != null ? priceSpecificationJsonLd({ r22, r24, r18, city: city.nameEn }) : []),
       faqJsonLd([
         {
           question: t('goldRatesCity.faq1q', { city: city.nameEn }),
@@ -305,7 +303,6 @@ function GoldRatesIndiaCityPageInner({ citySlug }: { citySlug: string }) {
         { name: 'Gold rate India', path: '/gold-rates/india' },
         { name: `${city.nameEn} gold rate`, path },
       ]),
-      ...(r22 != null || r24 != null ? priceSpecificationJsonLd({ r22, r24, r18, city: city.nameEn }) : []),
       faqJsonLd([
         {
           question: `What is the gold rate in ${city.nameEn} today?`,

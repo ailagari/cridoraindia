@@ -346,6 +346,20 @@ GOLD_CALCULATOR_PATHS = frozenset(
 GOLD_RATES_OG_URL = f"{SITE_URL}/og/gold-rates.svg"
 GOLD_RATES_FEED_URL = f"{SITE_URL}/feed/gold-rates.xml"
 
+# Routes that render nothing but a client-side <Navigate replace> to another page
+# (frontend/src/App.tsx). Served with HTTP 200 + self-referencing canonical by
+# default, these are indistinguishable from a real duplicate page once Googlebot
+# executes the JS and lands on the same content as the redirect target — the
+# classic "Duplicate without user-selected canonical" / stray legacy-URL pattern
+# in Search Console. Canonicalize + noindex them instead of self-referencing.
+CLIENT_REDIRECT_PATHS: dict[str, str] = {
+    "/gold-rates": "/gold-rates/kerala",
+    "/verified-jewellers": "/jewellers",
+    "/marketplace/cart": "/marketplace",
+    "/onboarding/kyc": "/userdashboard",
+    "/onboarding/jeweller-kyb": "/dashboard/jeweller",
+}
+
 
 def _strip_ml_prefix(path: str) -> str:
     if path.startswith("/ml/"):
@@ -711,70 +725,6 @@ _COMMON_GOLD_FAQS = [
 ]
 
 
-def _price_spec_blocks(rates: dict[str, Any] | None, city: str = "India") -> list[dict[str, Any]]:
-    """Generate PriceSpecification schema for live gold rates — enables rich results."""
-    if not rates:
-        return []
-    gold = rates.get("gold") if isinstance(rates.get("gold"), dict) else {}
-    from datetime import date
-    today = date.today().isoformat()
-    blocks = []
-    r22 = gold.get("22K")
-    r24 = gold.get("24K")
-    r18 = gold.get("18K")
-    if r22 is not None:
-        blocks.append({
-            "@context": "https://schema.org",
-            "@type": "Product",
-            "name": f"22K Gold per gram — {city}",
-            "description": f"Live 22K (916 BIS hallmark) gold rate per gram in {city}. Updated every few minutes on Cridora India.",
-            "category": "Precious Metal",
-            "brand": {"@type": "Brand", "name": "BIS 916 Hallmark Gold"},
-            "offers": {
-                "@type": "Offer",
-                "priceCurrency": "INR",
-                "price": f"{float(r22):.2f}",
-                "priceValidUntil": today,
-                "availability": "https://schema.org/InStock",
-                "seller": {"@type": "Organization", "name": SITE_NAME, "url": SITE_URL},
-            },
-        })
-    if r24 is not None:
-        blocks.append({
-            "@context": "https://schema.org",
-            "@type": "Product",
-            "name": f"24K Gold per gram — {city}",
-            "description": f"Live 24K pure gold rate per gram in {city}. Updated every few minutes on Cridora India.",
-            "category": "Precious Metal",
-            "brand": {"@type": "Brand", "name": "24K Pure Gold"},
-            "offers": {
-                "@type": "Offer",
-                "priceCurrency": "INR",
-                "price": f"{float(r24):.2f}",
-                "priceValidUntil": today,
-                "availability": "https://schema.org/InStock",
-                "seller": {"@type": "Organization", "name": SITE_NAME, "url": SITE_URL},
-            },
-        })
-    if r18 is not None:
-        blocks.append({
-            "@context": "https://schema.org",
-            "@type": "Product",
-            "name": f"18K Gold per gram — {city}",
-            "description": f"Live 18K (750 hallmark) gold rate per gram in {city} on Cridora India.",
-            "category": "Precious Metal",
-            "offers": {
-                "@type": "Offer",
-                "priceCurrency": "INR",
-                "price": f"{float(r18):.2f}",
-                "priceValidUntil": today,
-                "availability": "https://schema.org/InStock",
-                "seller": {"@type": "Organization", "name": SITE_NAME, "url": SITE_URL},
-            },
-        })
-    return blocks
-
-
 def _json_ld_for_path(path: str, meta: dict[str, str], rates: dict[str, Any] | None) -> list[dict[str, Any]]:
     url = f"{SITE_URL}{path if path != '/' else '/'}"
     blocks: list[dict[str, Any]] = [
@@ -818,17 +768,6 @@ def _json_ld_for_path(path: str, meta: dict[str, str], rates: dict[str, Any] | N
         if rates:
             date_modified = rates.get("rate_date") or rates.get("source_updated_at")
 
-        # Determine city name for PriceSpec
-        city_name = "Kerala, India"
-        if base.startswith("/gold-rates/") and base not in ("/gold-rates/kerala", "/gold-rates/india", "/gold-rates"):
-            slug = base.rsplit("/", 1)[-1]
-            if slug in INDIA_CITY_BY_SLUG:
-                city_name = INDIA_CITY_BY_SLUG[slug]["name"]
-            elif slug in CITY_BY_SLUG:
-                city_name = f"{CITY_BY_SLUG[slug]['name']}, Kerala"
-        elif base == "/gold-rates/india":
-            city_name = "India"
-
         blocks.append(
             {
                 "@context": "https://schema.org",
@@ -861,9 +800,6 @@ def _json_ld_for_path(path: str, meta: dict[str, str], rates: dict[str, Any] | N
                 "keywords": meta.get("keywords", ""),
             }
         )
-
-        # PriceSpecification — enables Google's gold price rich result
-        blocks.extend(_price_spec_blocks(rates, city=city_name))
 
         if base in ("/gold-rates/kerala", "/gold-rates/india"):
             blocks.append(
@@ -1034,9 +970,10 @@ def inject_route_seo(html_doc: str, request_path: str) -> str:
     from django.conf import settings
 
     path = _normalize_path(request_path)
-    meta = seo_for_path(path)
+    redirect_target = CLIENT_REDIRECT_PATHS.get(path)
+    meta = seo_for_path(redirect_target or path)
     base = _strip_ml_prefix(path)
-    canonical = f"{SITE_URL}{path if path != '/' else '/'}"
+    canonical = f"{SITE_URL}{(redirect_target or path) if path != '/' else '/'}"
     title = meta["title"]
     description = meta["description"]
     keywords = meta.get("keywords", DEFAULT_KEYWORDS)
@@ -1052,7 +989,7 @@ def inject_route_seo(html_doc: str, request_path: str) -> str:
     slug = base.rsplit("/", 1)[-1] if base.startswith("/gold-rates/") else ""
     robots = (
         "noindex, follow"
-        if slug in INDIA_CITY_BY_SLUG
+        if slug in INDIA_CITY_BY_SLUG or redirect_target
         else "index, follow, max-image-preview:large"
     )
     out = _replace_meta_content(out, "name", "robots", robots)
@@ -1077,7 +1014,7 @@ def inject_route_seo(html_doc: str, request_path: str) -> str:
     out = _replace_meta_content(out, "name", "twitter:image", og_image)
 
     out = _inject_link(out, "canonical", canonical)
-    if _is_gold_rate_path(path) or _is_gold_calculator_path(path):
+    if not redirect_target and (_is_gold_rate_path(path) or _is_gold_calculator_path(path)):
         en_url = f"{SITE_URL}{base}"
         ml_url = f"{SITE_URL}/ml{base}"
         out = _inject_link(out, "alternate", en_url, hreflang="en-IN")

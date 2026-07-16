@@ -77,7 +77,7 @@ def notify_personal_holdings_after_rate_change(
             continue
 
         rate = _rate_for_holding(holding, jeweller_id)
-        new_value = calculate_holding_value_inr(holding.weight_grams, rate)
+        new_value = calculate_holding_value_inr(holding.weight_grams, rate, holding.purity)
         state = _get_or_init_state(holding, new_value)
         baseline = state.last_notified_value_inr.quantize(Decimal("0.01"))
         gain = (new_value - baseline).quantize(Decimal("0.01"))
