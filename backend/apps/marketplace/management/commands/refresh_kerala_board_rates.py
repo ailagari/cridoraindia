@@ -1,10 +1,14 @@
 from django.core.management.base import BaseCommand
 
+from apps.marketplace.gold_price_poll import maybe_poll_platform_gold_for_alerts
 from apps.marketplace.spot_prices import refresh_live_kerala_feed
 
 
 class Command(BaseCommand):
-    help = "Poll AKGSMA / Jos / Goodreturns and refresh cached Kerala board rates when prices change."
+    help = (
+        "Poll AKGSMA / Jos / Goodreturns, refresh cached Kerala board rates, "
+        "and ingest the platform 22K reference so automatic rate-move pushes can fire."
+    )
 
     def handle(self, *args, **options):
         payload = refresh_live_kerala_feed(force_fetch=True)
@@ -19,3 +23,5 @@ class Command(BaseCommand):
                 f"silver999={(payload.get('silver') or {}).get('999')}"
             )
         )
+        ingest = maybe_poll_platform_gold_for_alerts(force=True)
+        self.stdout.write(self.style.SUCCESS(f"Gold alert ingest: {ingest}"))

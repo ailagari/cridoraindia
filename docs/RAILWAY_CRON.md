@@ -15,7 +15,9 @@ Replay only (manual SSH): add `--replay` to gold/hourly commands, or run portfol
 1. **Ingest** — `ingest_platform_gold_price()` / jeweller rate PATCH publishes `GoldPriceUpdated`.
 2. **After commit** — recalculate holdings, evaluate threshold/hourly/holding/portfolio rules, enqueue pushes, flush queue.
 
-Triggers: live spot fetch (`/marketplace/spot-prices/`), public gold ticker GET ingest, admin gold ticker PATCH, jeweller manual rate PATCH.
+Triggers: **inline scheduler poll** (~every 2 min when `INLINE_BROADCAST_SCHEDULER=true`), live spot fetch (`/marketplace/spot-prices/`), public gold ticker GET ingest, `refresh_kerala_board_rates` cron, admin gold ticker PATCH, jeweller manual rate PATCH.
+
+Automatic rate-move tray pushes use admin **Gold alerts** settings (`rate_move_alerts_enabled` + threshold ₹). Admin **Send price notification** is optional/manual only.
 
 ## Suggested Railway cron services (housekeeping)
 

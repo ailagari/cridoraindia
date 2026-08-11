@@ -99,6 +99,12 @@ class MarketplaceGoldTickerHistoryView(APIView):
         rk = normalize_range_param(raw_range)
         body = fetch_history_payload(range_key=rk)
         base, src = resolve_cridora_base_22k_inr()
+        try:
+            from .gold_price_events import ingest_platform_gold_price
+
+            ingest_platform_gold_price(base=base.quantize(Decimal("0.01")), source=src)
+        except Exception:
+            logger.exception("Gold ticker history ingest failed")
         now = timezone.now()
         body["latest"] = {
             "t": now.astimezone(py_tz.utc).isoformat().replace("+00:00", "Z"),

@@ -65,6 +65,8 @@ def _release_pg_advisory_lock() -> None:
 
 def _loop() -> None:
     time.sleep(20)
+    from apps.marketplace.gold_price_poll import maybe_poll_platform_gold_for_alerts
+
     from .festival_broadcast_scheduler import maybe_process_scheduled_broadcasts
     from .notification_push_queue import process_pending_push_outbox
 
@@ -75,6 +77,14 @@ def _loop() -> None:
                     n = maybe_process_scheduled_broadcasts(force=True)
                     if n:
                         logger.info("inline scheduler finalized %s broadcast row(s)", n)
+                    gold = maybe_poll_platform_gold_for_alerts()
+                    if gold.get("published"):
+                        logger.info(
+                            "inline gold poll published previous=%s new=%s source=%s",
+                            gold.get("previous_rate"),
+                            gold.get("new_rate"),
+                            gold.get("source"),
+                        )
                     pushed = process_pending_push_outbox(limit=100)
                     if pushed:
                         logger.info("inline scheduler drained %s push outbox row(s)", pushed)

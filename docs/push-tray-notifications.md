@@ -119,7 +119,7 @@ Android APK also needs `google-services.json` in the Capacitor Android project (
 
 ## Automated engines (gold & portfolio) — event-driven
 
-Live alerts are **not** driven by Railway cron. On each platform or jeweller price ingest, the app publishes `GoldPriceUpdated`, recalculates holdings, evaluates rules, enqueues tray pushes, and flushes the queue.
+Live alerts are **event-driven on price ingest**. The main web process polls Kerala board rates about every 2 minutes (`INLINE_BROADCAST_SCHEDULER`) and ingests the 22K reference; visitor ticker/spot hits and jeweller rate saves also ingest. When the move vs baseline reaches the admin threshold, tray pushes go out automatically — admin **Send** is optional.
 
 | Engine | Trigger | Delivery |
 |--------|---------|----------|
