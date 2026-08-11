@@ -199,15 +199,12 @@ def evaluate_hourly_digest_on_price_ingest(
         ),
     )
 
-    def _broadcast() -> None:
-        send_push_broadcast_localized(payloads)
-
-    from apps.accounts.services.notification_push_queue import enqueue_push_delivery
+    from apps.accounts.services.notification_push_queue import enqueue_broadcast_localized
 
     if defer_push:
-        enqueue_push_delivery(_broadcast)
+        enqueue_broadcast_localized(payloads, tag="cridora-gold-hourly")
     else:
-        _broadcast()
+        send_push_broadcast_localized(payloads)
 
     result["sent"] = True
     result["delta_inr"] = str(delta)

@@ -115,7 +115,11 @@ def _dispatch_gold_price_updated(event: GoldPriceUpdated) -> None:
         from apps.marketplace.gold_price_notification_pipeline import handle_gold_price_updated
 
         handle_gold_price_updated(event)
-        flush_push_queue()
     except Exception:
         logger.exception("GoldPriceUpdated pipeline failed scope=%s", event.scope)
-        reset_push_queue()
+    finally:
+        # Always drain durable outbox — do not drop pending rows on pipeline errors.
+        try:
+            flush_push_queue()
+        except Exception:
+            logger.exception("push outbox flush failed after GoldPriceUpdated scope=%s", event.scope)

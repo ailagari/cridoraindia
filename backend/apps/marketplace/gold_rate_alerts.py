@@ -8,7 +8,7 @@ from django.db import transaction
 
 from apps.accounts.push_tap_links import build_tap_push_payload
 from apps.accounts.services.notification_locale import localized_broadcast_payloads
-from apps.accounts.services.notification_push_queue import enqueue_push_delivery
+from apps.accounts.services.notification_push_queue import enqueue_broadcast_localized
 from apps.accounts.webpush_service import push_delivery_configured, send_push_broadcast_localized
 
 from .gold_push_copy import format_gold_price_move_body, gold_rate_alert_title
@@ -93,13 +93,10 @@ def evaluate_platform_threshold_broadcast(
     )
     payloads = localized_broadcast_payloads(en=en_payload, ml=ml_payload)
 
-    def _broadcast() -> None:
-        send_push_broadcast_localized(payloads)
-
     if defer_push:
-        enqueue_push_delivery(_broadcast)
+        enqueue_broadcast_localized(payloads, tag="cridora-gold-rate")
     else:
-        _broadcast()
+        send_push_broadcast_localized(payloads)
 
     result["sent"] = True
     result["delta_inr"] = str(delta)

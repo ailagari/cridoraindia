@@ -102,7 +102,14 @@ function mapInboxApiRow(
 
 function inboxCategoryLabel(n: AppNotification): string | null {
   const nt = (n.notificationType || '').toLowerCase()
-  if (nt === 'gold_rate' || nt === 'gold_hourly') return 'Gold'
+  if (
+    nt === 'gold_rate' ||
+    nt === 'gold_rate_up' ||
+    nt === 'gold_rate_down' ||
+    nt === 'gold_hourly'
+  ) {
+    return 'Gold'
+  }
   if (nt === 'holding_gain' || nt === 'portfolio_gain') return 'Portfolio'
   const cat = (n.apiCategory || '').toLowerCase()
   if (cat === 'portfolio') return 'Portfolio'

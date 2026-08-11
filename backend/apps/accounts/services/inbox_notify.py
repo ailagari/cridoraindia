@@ -89,16 +89,13 @@ def notify_inbox(
             notification_id=str(row.pk),
         )
 
-        def _deliver_push() -> None:
+        if defer_push:
+            from apps.accounts.services.notification_push_queue import enqueue_user_push
+
+            enqueue_user_push(user.pk, payload, tag=str(payload.get("tag") or ""))
+        else:
             try:
                 send_push_to_user(user, payload)
             except Exception:
                 logger.exception("notify_inbox push failed user_id=%s row=%s", user.pk, row.pk)
-
-        if defer_push:
-            from apps.accounts.services.notification_push_queue import enqueue_push_delivery
-
-            enqueue_push_delivery(_deliver_push)
-        else:
-            _deliver_push()
     return row

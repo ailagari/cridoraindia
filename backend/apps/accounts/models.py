@@ -5,6 +5,7 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.dispatch import receiver
 from django.db.models.signals import post_save
+from django.utils import timezone
 
 
 class User(AbstractUser):
@@ -2897,6 +2898,56 @@ class PushDeliveryAttempt(models.Model):
             models.Index(fields=["user", "channel", "status"]),
             models.Index(fields=["portfolio_notification", "status"]),
         ]
+
+
+class PushOutbox(models.Model):
+    """Durable tray-push outbox (survives worker crashes; flushed after ingest + scheduler)."""
+
+    KIND_USER = "user"
+    KIND_BROADCAST_LOCALIZED = "broadcast_localized"
+    KIND_CHOICES = [
+        (KIND_USER, "User"),
+        (KIND_BROADCAST_LOCALIZED, "Broadcast localized"),
+    ]
+
+    STATUS_PENDING = "pending"
+    STATUS_PROCESSING = "processing"
+    STATUS_SENT = "sent"
+    STATUS_FAILED = "failed"
+    STATUS_CHOICES = [
+        (STATUS_PENDING, "Pending"),
+        (STATUS_PROCESSING, "Processing"),
+        (STATUS_SENT, "Sent"),
+        (STATUS_FAILED, "Failed"),
+    ]
+
+    kind = models.CharField(max_length=32, choices=KIND_CHOICES)
+    status = models.CharField(max_length=16, choices=STATUS_CHOICES, default=STATUS_PENDING, db_index=True)
+    user = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="push_outbox_rows",
+    )
+    payload = models.JSONField(default=dict)
+    tag = models.CharField(max_length=64, blank=True, default="")
+    attempts = models.PositiveSmallIntegerField(default=0)
+    max_attempts = models.PositiveSmallIntegerField(default=5)
+    last_error = models.CharField(max_length=255, blank=True, default="")
+    available_at = models.DateTimeField(default=timezone.now, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    sent_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["available_at", "id"]
+        indexes = [
+            models.Index(fields=["status", "available_at"], name="accounts_pu_status_avail_idx"),
+        ]
+
+    def __str__(self):
+        return f"PushOutbox({self.kind}, status={self.status}, id={self.pk})"
 
 
 class NotificationPreference(models.Model):

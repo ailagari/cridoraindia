@@ -13,6 +13,7 @@ const CHANNEL_ID = 'cridora-alerts'
 const CHANNEL_NAME = 'Cridora alerts'
 const TRAY_NOTIFIED_KEY = 'cridora_tray_notified_ids_v1'
 const TRAY_NOTIFIED_MAX = 200
+const FCM_TOKEN_KEY = 'cridora_fcm_token_v1'
 
 /** Use FCM when the native plugin exists unless explicitly disabled at build time. */
 export function isNativeFcmEnabled(): boolean {
@@ -23,7 +24,7 @@ export function isNativeFcmEnabled(): boolean {
 let bridgeReady = false
 let pushListenersAttached = false
 let navigateHandler: ((target: string | NotificationTapPayload) => void) | null = null
-let lastFcmToken: string | null = null
+let lastFcmToken: string | null = loadPersistedFcmToken()
 let tokenWaiters: Array<(token: string) => void> = []
 const notifiedIds = loadNotifiedIds()
 
@@ -44,6 +45,24 @@ function persistNotifiedIds(): void {
   try {
     const ids = [...notifiedIds].slice(-TRAY_NOTIFIED_MAX)
     localStorage.setItem(TRAY_NOTIFIED_KEY, JSON.stringify(ids))
+  } catch {
+    /* private mode / quota */
+  }
+}
+
+function loadPersistedFcmToken(): string | null {
+  try {
+    const raw = localStorage.getItem(FCM_TOKEN_KEY)
+    return raw && raw.trim() ? raw.trim() : null
+  } catch {
+    return null
+  }
+}
+
+function persistFcmToken(token: string): void {
+  lastFcmToken = token
+  try {
+    localStorage.setItem(FCM_TOKEN_KEY, token)
   } catch {
     /* private mode / quota */
   }
@@ -154,8 +173,8 @@ async function ensureFcmRegistered(): Promise<void> {
   await registerFcmToken()
   const token = await waitForFcmToken()
   if (token) {
-    await postNativeSubscribe(token).catch(() => {
-      /* retried on login via claimNativePushForLoggedInUser */
+    await postNativeSubscribe(token).catch((err) => {
+      console.warn('[cridora] native push subscribe failed', err)
     })
   }
 }
@@ -165,21 +184,20 @@ function attachPushListeners(): void {
   pushListenersAttached = true
 
   PushNotifications.addListener('registration', (token) => {
-    lastFcmToken = token.value
+    persistFcmToken(token.value)
     resolveFcmListenerToken()
-    void postNativeSubscribe(token.value).catch(() => {
-      /* retry on next login via claimNativePushForLoggedInUser */
+    void postNativeSubscribe(token.value).catch((err) => {
+      console.warn('[cridora] native push subscribe failed', err)
     })
   })
 
-  PushNotifications.addListener('registrationError', () => {
+  PushNotifications.addListener('registrationError', (err) => {
+    console.warn('[cridora] FCM registration error', err)
     resolveFcmListenerToken()
   })
 
+  // Capacitor fires this in the foreground (OS does not auto-display). Always mirror to tray.
   PushNotifications.addListener('pushNotificationReceived', (notification) => {
-    if (document.visibilityState !== 'visible') {
-      return
-    }
     const tag =
       typeof notification.data?.tag === 'string' ? notification.data.tag : 'cridora-default'
     const stableId =
@@ -246,6 +264,9 @@ export async function initNativeNotificationBridge(): Promise<void> {
   if (!isNativeAndroid() || bridgeReady) return
   bridgeReady = true
   try {
+    if (!lastFcmToken) {
+      lastFcmToken = loadPersistedFcmToken()
+    }
     await ensureAndroidChannel()
     attachLocalTapListener()
     if (isNativeFcmEnabled()) {
@@ -270,6 +291,11 @@ export async function registerNativePushSubscription(): Promise<void> {
     if (!pushOk) {
       throw new Error('Push permission was not granted.')
     }
+    // Local tray (welcome + foreground mirror) needs this permission too.
+    const localOk = await requestLocalPermission()
+    if (!localOk) {
+      throw new Error('Notification permission was not granted.')
+    }
     await registerFcmToken()
     const token = await waitForFcmToken()
     if (!token) {
@@ -277,8 +303,8 @@ export async function registerNativePushSubscription(): Promise<void> {
         'Could not register this device for server push. Rebuild the app with google-services.json or try again.',
       )
     }
+    persistFcmToken(token)
     await postNativeSubscribe(token)
-    await requestLocalPermission()
     return
   }
 
@@ -289,7 +315,7 @@ export async function registerNativePushSubscription(): Promise<void> {
 }
 
 export function getNativeFcmToken(): string | null {
-  return lastFcmToken
+  return lastFcmToken ?? loadPersistedFcmToken()
 }
 
 /** True when the user granted tray permission locally (FCM and/or local notifications). */
@@ -307,7 +333,7 @@ export async function getNativePushActive(): Promise<boolean> {
     return localPermissionGranted()
   }
   if (!(await pushPermissionGranted())) return false
-  const token = lastFcmToken
+  const token = getNativeFcmToken()
   if (!token) return false
   const status = await fetchPushDeviceStatus({ token })
   return isDeviceStatusDeliverable(status)
@@ -318,9 +344,10 @@ export async function claimNativePushForLoggedInUser(): Promise<void> {
   await initNativeNotificationBridge()
   if (isNativeFcmEnabled()) {
     if (!(await pushPermissionGranted())) return
-    if (lastFcmToken) {
-      await postNativeSubscribe(lastFcmToken).catch(() => {
-        /* token may refresh via registration listener */
+    const token = getNativeFcmToken()
+    if (token) {
+      await postNativeSubscribe(token).catch((err) => {
+        console.warn('[cridora] claim native push failed', err)
       })
       return
     }
@@ -427,11 +454,12 @@ export async function showTrayNotification(item: {
 }
 
 /**
- * Local tray fallback when FCM is unavailable (no google-services).
- * When FCM is enabled, server push handles background/killed delivery.
+ * Local tray mirror for new unread bell items.
+ * Always on for Android: covers FCM foreground gap and recovers when server push fails
+ * while the app is open. First feed load seeds ids so existing history is not re-toasted.
  */
 export function notifyBellFeedUpdates(prev: AppNotification[], next: AppNotification[]): void {
-  if (!isNativeAndroid() || isNativeFcmEnabled()) return
+  if (!isNativeAndroid()) return
   const prevIds = new Set(prev.map((x) => x.id))
   const freshUnread = next.filter((x) => !x.read && !prevIds.has(x.id))
   for (const item of freshUnread) {

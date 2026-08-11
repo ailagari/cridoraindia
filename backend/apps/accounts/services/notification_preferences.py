@@ -57,9 +57,15 @@ def should_send_push(
         return False
     if _in_quiet_hours(pref) and priority != "high":
         return False
-    if notification_type in ("gold_rate", "gold_hourly"):
+    if notification_type in (
+        "gold_rate",
+        "gold_rate_up",
+        "gold_rate_down",
+        "gold_hourly",
+    ):
         if not pref.allow_gold_alerts:
             return False
+        return True
     if category == "security":
         return True
     if category == "promo":

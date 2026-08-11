@@ -63,7 +63,8 @@ The app picks the channel automatically (`registerWebPushSubscription` in `front
 
 - **Unified send:** `send_push_to_user()` in `backend/apps/accounts/webpush_service.py` sends to all `WebPushSubscription` rows for the user, then `fcm_service.send_fcm_to_user()`.
 - **Inbox + push:** `notify_inbox()` in `backend/apps/accounts/services/inbox_notify.py` creates inbox rows and calls push when preferences allow.
-- **Preferences:** `NotificationPreference.allow_push_notifications` and per-category flags gate delivery.
+- **Durable outbox:** deferred gold/portfolio pushes write `PushOutbox` rows and are flushed after ingest (`flush_push_queue`) with retries via the inline scheduler / `process_push_outbox`.
+- **Preferences:** `NotificationPreference.allow_push_notifications` and per-category flags gate delivery. Gold types (`gold_rate`, `gold_rate_up`, `gold_rate_down`, `gold_hourly`) use `allow_gold_alerts`.
 
 ### VAPID private key format (important)
 

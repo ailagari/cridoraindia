@@ -67,6 +67,7 @@ def _handle_platform(event: GoldPriceUpdated) -> dict:
     threshold = evaluate_platform_threshold_broadcast(
         previous_rate=event.previous_rate,
         new_rate=event.new_rate,
+        defer_push=True,
     )
     result["threshold"] = threshold
 
@@ -90,7 +91,10 @@ def _handle_platform(event: GoldPriceUpdated) -> dict:
             defer_push=True,
         )
 
-    result["hourly_digest"] = evaluate_hourly_digest_on_price_ingest(new_rate=event.new_rate)
+    result["hourly_digest"] = evaluate_hourly_digest_on_price_ingest(
+        new_rate=event.new_rate,
+        defer_push=True,
+    )
 
     from apps.accounts.services.personal_holding_gain_notify import (
         notify_personal_holdings_after_rate_change,
